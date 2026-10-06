@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  ENTERABLE, NEEDS, OUTFITS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
+  ENTERABLE, NEEDS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
   outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
 } from '@shared/world.js';
 import { useStore } from '../store.js';
@@ -275,28 +275,48 @@ function PlayerSheet({ username, onClose }) {
 
 function AdSheet({ id, onClose }) {
   const slot = billboardById[id];
-  const ads = useStore((s) => s.ads);
+  const ads = useStore((s) => s.ads).filter((a) => a.slot_id === id);
   const run = useStore((s) => s.run);
   const openPhone = useStore((s) => s.openPhone);
-  const ad = ads.find((a) => a.slot_id === id);
+  const host = (url) => {
+    try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
+  };
   return (
-    <Sheet title={loc(slot)} icon="📢" sub={`${L('Bango', 'Billboard')} · ${fmtTsh(slot.pricePerDay)}/${L('siku', 'day')}`} onClose={onClose}>
-      {ad ? (
-        <>
-          <div className="adprev" style={{ background: ad.image ? `url(/uploads/${ad.image}) center/cover` : ad.bg }}>
-            <b>{ad.title}</b>
-            {ad.body && <span>{ad.body}</span>}
-          </div>
-          <div className="small muted" style={{ marginTop: 8 }}>{L('Tangazo la', 'Ad by')} @{ad.username} · {L('linaisha', 'ends')} {new Date(ad.ends_at).toLocaleDateString()}</div>
-          <div className="row" style={{ marginTop: 12 }}>
-            {ad.link && <a className="btn btn-green grow" href={ad.link} target="_blank" rel="noopener noreferrer nofollow">{L('Fungua link', 'Open link')} ↗</a>}
-            <button className="btn btn-ghost" onClick={() => run(`/ads/${ad.id}/report`, { method: 'POST' }).then((r) => r && useStore.getState().toast(L('Asante, tumepokea ripoti yako.', 'Thanks, we got your report.')))}>🚩 {L('Ripoti', 'Report')}</button>
-          </div>
-        </>
-      ) : (
-        <div className="box center" style={{ background: 'var(--chip)' }}>{L('Bango hili liko wazi. Tangaza biashara yako kwa Wabongo wote!', 'This billboard is free. Advertise your business to every player!')}</div>
+    <Sheet title={loc(slot)} icon="📢" sub={L('Skrini ya kidijitali · mjini', 'Digital screen · in town')} onClose={onClose}>
+      <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+        <span className="onair">● ON AIR</span>
+        <span className="small muted">
+          {ads.length
+            ? L(`Matangazo ${ads.length} yanapokezana, sekunde ${AD_ROTATE_SECONDS} kila moja`, `${ads.length} ad${ads.length > 1 ? 's take' : ' takes'} turns, ${AD_ROTATE_SECONDS}s each`)
+            : L('Hakuna tangazo bado — kuwa wa kwanza!', 'No ads yet — be the first!')}
+        </span>
+      </div>
+      {ads.length > 0 && (
+        <div className="ad-carousel">
+          {ads.map((ad) => (
+            <div key={ad.id} className="ad-slide">
+              <div className="adprev" style={{ background: ad.image ? `url(/uploads/${ad.image}) center/cover` : ad.bg }}>
+                <b>{ad.title}</b>
+                {ad.body && <span>{ad.body}</span>}
+              </div>
+              <div className="row between" style={{ marginTop: 8 }}>
+                {ad.link ? (
+                  <a className="btn btn-green btn-sm" href={ad.link} target="_blank" rel="noopener noreferrer nofollow">↗ {L('Tembelea', 'Visit')} {host(ad.link)}</a>
+                ) : <span className="small muted">@{ad.username}</span>}
+                <span className="small muted">{L('hadi', 'until')} {new Date(ad.ends_at).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+              </div>
+              <button className="btn btn-ghost btn-xs" style={{ marginTop: 6 }} onClick={() => run(`/ads/${ad.id}/report`, { method: 'POST' }).then((r) => r && useStore.getState().toast(L('Asante, tumepokea ripoti yako.', 'Thanks, we got your report.')))}>🚩 {L('Ripoti', 'Report')}</button>
+            </div>
+          ))}
+        </div>
       )}
-      <button className="btn btn-dark btn-block" style={{ marginTop: 12 }} onClick={() => openPhone('matangazo', id)}>📢 {L('Weka tangazo hapa', 'Advertise here')}</button>
+      <button className="btn btn-white btn-block" style={{ marginTop: 12, border: '1px solid var(--line)' }} onClick={() => openPhone('matangazo', id)}>＋ {L('Weka tangazo lako hapa', 'Add your ad to this board')}</button>
+      <div className="hint center" style={{ marginTop: 8 }}>
+        {L(
+          `Skrini ya kidijitali: tangazo lako linaanza ukilipia na linapokezana na mengine hapa · ${fmtTsh(slot.pricePerDay * 7)} kwa siku 7`,
+          `A digital board: yours goes live as soon as you pay and takes turns with the ads here · ${fmtTsh(slot.pricePerDay * 7)} for 7 days`,
+        )}
+      </div>
     </Sheet>
   );
 }

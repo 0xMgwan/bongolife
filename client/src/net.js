@@ -12,6 +12,8 @@ export const local = {
   teleported: 0,
 };
 export const input = { jx: 0, jz: 0, keys: new Set() };
+// Camera orientation the player controls by dragging (yaw around the player, pitch above the ground).
+export const view = { yaw: 0, pitch: 1.0, mapX: 0, mapZ: 0, mapDist: 150, homeYaw: 0.75, homePitch: 0.95, homeDist: 30 };
 // id -> { id, name, username, appearance, v, busy, x, z, ry, m, tx, tz, tr, bubble: {text, until}, emote }
 export const remotes = new Map();
 export const bubbles = new Map(); // userId -> { text, until }

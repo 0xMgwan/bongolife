@@ -127,8 +127,19 @@ addColumn('users', 'ban_reason', 'TEXT');
 addColumn('users', 'muted_until', 'INTEGER');
 addColumn('users', 'token_version', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('messages', 'deleted_at', 'INTEGER');
+addColumn('users', 'home_seeded', 'INTEGER NOT NULL DEFAULT 0');
 db.exec(`
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS home_items (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  item TEXT NOT NULL,
+  x REAL NOT NULL,
+  z REAL NOT NULL,
+  rot INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS home_user ON home_items(user_id);
 CREATE TABLE IF NOT EXISTS audit (
   id INTEGER PRIMARY KEY,
   admin_id INTEGER NOT NULL,
@@ -221,6 +232,7 @@ export function rowToUser(r) {
     mutedUntil: r.muted_until,
     tokenVersion: r.token_version,
     lastSeen: r.last_seen,
+    homeSeeded: !!r.home_seeded,
   };
 }
 
@@ -259,7 +271,7 @@ export function addMoney(userId, delta, kind, memo) {
 export function saveFields(userId, fields) {
   const cols = Object.keys(fields);
   if (!cols.length) return;
-  const map = { jobXp: 'job_xp', activeVehicle: 'active_vehicle', lastSeen: 'last_seen' };
+  const map = { jobXp: 'job_xp', activeVehicle: 'active_vehicle', lastSeen: 'last_seen', homeSeeded: 'home_seeded' };
   const sql = `UPDATE users SET ${cols.map((c) => `${map[c] || c} = @${c}`).join(', ')} WHERE id = @id`;
   const params = { id: userId };
   for (const c of cols) {

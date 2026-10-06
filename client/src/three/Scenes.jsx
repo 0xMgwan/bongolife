@@ -343,8 +343,8 @@ function Bar({ me, myBusy, people }) {
     <group>
       <Room w={18} d={14} h={6} floor="#d6c7a1" wall="#fef3c7" back="#b45309" />
       <Box p={[0, 0, -6.84]} s={[18, 1.4, 0.05]} c="#7c2d12" />
-      <Tv p={[0, 2.2, -6.75]} w={6.4} />
-      <Sign text={L('BAR YA KONA · MPIRA LIVE', 'CORNER BAR · LIVE FOOTBALL')} p={[0, 5.5, -6.7]} h={0.55} fg="#fef3c7" />
+      <Tv p={[0, 1.55, -6.75]} w={6.2} />
+      <Sign text={L('BAR YA KONA · MPIRA LIVE', 'CORNER BAR · LIVE FOOTBALL')} p={[0, 5.45, -6.7]} h={0.5} fg="#fef3c7" />
       {slots.map(([x, , z], i) => (
         <group key={i} position={[x, 0, z]}>
           <Box s={[0.7, 0.45, 0.7]} c="#dc2626" />

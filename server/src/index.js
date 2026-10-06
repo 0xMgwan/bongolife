@@ -151,7 +151,8 @@ io.on('connection', (socket) => {
   // Walk into / out of a venue. Must be standing near it.
   socket.on('inside', (placeId) => {
     let inside = null;
-    if (placeId && ENTERABLE[placeId]) {
+    if (placeId === 'home') inside = 'home';
+    else if (placeId && ENTERABLE[placeId]) {
       const pl = placeById[placeId];
       const dx = Math.max(Math.abs(p.x - pl.pos[0]) - pl.size[0] / 2, 0);
       const dz = Math.max(Math.abs(p.z - pl.pos[1]) - pl.size[1] / 2, 0);

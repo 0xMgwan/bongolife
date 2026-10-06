@@ -68,10 +68,10 @@ export function Matangazo({ arg, back }) {
             <div className="label">{L('Bango', 'Billboard')}</div>
             <select className="field" value={f.slotId} onChange={up('slotId')}>
               {slots.map((s) => (
-                <option key={s.id} value={s.id}>{loc(s)} — {fmtTsh(s.pricePerDay)}/{L('siku', 'day')}{s.bookedUntil ? L(' (foleni)', ' (queued)') : ''}</option>
+                <option key={s.id} value={s.id}>{loc(s)} — {fmtTsh(s.pricePerDay)}/{L('siku', 'day')} · {s.live}/{s.capacity}{s.bookedUntil ? L(' (imejaa)', ' (full)') : ''}</option>
               ))}
             </select>
-            {slot?.bookedUntil && <div className="hint">{L(`Bango hili lina tangazo hadi ${new Date(slot.bookedUntil).toLocaleString()}. Lako litaanza baada yake.`, `This billboard is booked until ${new Date(slot.bookedUntil).toLocaleString()}. Yours starts after it.`)}</div>}
+            {slot?.bookedUntil && <div className="hint">{L(`Skrini hii imejaa (${slot.live}/${slot.capacity}). Lako litaanza ${new Date(slot.bookedUntil).toLocaleString()}.`, `This screen is full (${slot.live}/${slot.capacity}). Yours starts ${new Date(slot.bookedUntil).toLocaleString()}.`)}</div>}
             <div className="label">{L('Kichwa', 'Headline')}</div>
             <input className="field" maxLength={40} value={f.title} onChange={up('title')} placeholder={L('mf. Mama Neema Catering', 'e.g. Mama Neema Catering')} />
             <div className="label">{L('Maelezo', 'Description')}</div>

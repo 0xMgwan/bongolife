@@ -6,41 +6,80 @@ import { City } from './City.jsx';
 import { LocalPlayer, RemotePlayers } from './Players.jsx';
 import { AudioDriver } from './AudioDriver.jsx';
 import { ActivityScene, SCENES, SCENE_ORIGIN } from './Scenes.jsx';
-import { local } from '../net.js';
+import { HomeScene, HOME_ORIGIN } from './HomeScene.jsx';
+import { MapPins } from './MapPins.jsx';
+import { useStore } from '../store.js';
+import { local, view } from '../net.js';
 
-const zoom = { value: 0.8, target: 0.8 };
+const zoom = { value: 1, target: 1 };
 export const setZoom = (z) => (zoom.target = Math.max(0.45, Math.min(2.6, z)));
 export const getZoom = () => zoom.target;
 
-function useZoomGestures() {
+/**
+ * Camera gestures on the canvas:
+ *  - wheel / two-finger pinch: zoom
+ *  - one-finger (or mouse) drag: rotate + tilt around the player, or pan in map mode
+ * Taps still reach the 3D scene; R3F ignores clicks that moved more than ~10px.
+ */
+function useCameraGestures(modeRef) {
   const { gl } = useThree();
   useEffect(() => {
     const el = gl.domElement;
+    const isMap = () => modeRef.current === 'map';
+    const isHome = () => modeRef.current === 'home';
     const wheel = (e) => {
       e.preventDefault();
-      setZoom(zoom.target * (1 + Math.sign(e.deltaY) * 0.1));
+      const f = 1 + Math.sign(e.deltaY) * 0.1;
+      if (isMap()) view.mapDist = Math.max(50, Math.min(280, view.mapDist * f));
+      else if (isHome()) view.homeDist = Math.max(14, Math.min(48, view.homeDist * f));
+      else setZoom(zoom.target * f);
     };
     let pinch = null;
+    let drag = null;
     const pts = new Map();
     const down = (e) => {
       pts.set(e.pointerId, [e.clientX, e.clientY]);
       if (pts.size === 2) {
         const [a, b] = [...pts.values()];
-        pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: zoom.target };
-      }
+        pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: zoom.target, m: view.mapDist, h: view.homeDist };
+        drag = null;
+      } else if (pts.size === 1) drag = { x: e.clientX, y: e.clientY };
     };
     const move = (e) => {
       if (!pts.has(e.pointerId)) return;
       pts.set(e.pointerId, [e.clientX, e.clientY]);
       if (pinch && pts.size === 2) {
         const [a, b] = [...pts.values()];
-        const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
-        setZoom(pinch.z * (pinch.d / Math.max(20, d)));
+        const ratio = pinch.d / Math.max(20, Math.hypot(a[0] - b[0], a[1] - b[1]));
+        if (isMap()) view.mapDist = Math.max(50, Math.min(280, pinch.m * ratio));
+        else if (isHome()) view.homeDist = Math.max(14, Math.min(48, pinch.h * ratio));
+        else setZoom(pinch.z * ratio);
+        return;
+      }
+      if (!drag || useStore.getState().placing) return;
+      const dx = e.clientX - drag.x;
+      const dy = e.clientY - drag.y;
+      drag.x = e.clientX;
+      drag.y = e.clientY;
+      if (isMap()) {
+        // Pan along the ground, relative to the current camera yaw.
+        const k = view.mapDist / 450;
+        const c = Math.cos(view.yaw);
+        const s = Math.sin(view.yaw);
+        view.mapX = Math.max(-150, Math.min(150, view.mapX - (dx * c + dy * s) * k));
+        view.mapZ = Math.max(-150, Math.min(150, view.mapZ - (-dx * s + dy * c) * k));
+      } else if (isHome()) {
+        view.homeYaw -= dx * 0.008;
+        view.homePitch = Math.max(0.45, Math.min(1.45, view.homePitch + dy * 0.005));
+      } else {
+        view.yaw -= dx * 0.008;
+        view.pitch = Math.max(0.35, Math.min(1.4, view.pitch + dy * 0.005));
       }
     };
     const up = (e) => {
       pts.delete(e.pointerId);
       if (pts.size < 2) pinch = null;
+      if (pts.size === 0) drag = null;
     };
     el.addEventListener('wheel', wheel, { passive: false });
     el.addEventListener('pointerdown', down);
@@ -54,7 +93,7 @@ function useZoomGestures() {
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
     };
-  }, [gl]);
+  }, [gl, modeRef]);
 }
 
 function CameraRig({ mode, sceneKey }) {
@@ -67,7 +106,9 @@ function CameraRig({ mode, sceneKey }) {
   }, [camera, size, mode]);
   const focus = useRef(new THREE.Vector3(local.x, 0, local.z));
   const t = useRef(0);
-  useZoomGestures();
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  useCameraGestures(modeRef);
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.1);
     zoom.value += (zoom.target - zoom.value) * Math.min(1, dt * 8);
@@ -76,7 +117,12 @@ function CameraRig({ mode, sceneKey }) {
       t.current += dt;
       const { pos, look } = SCENES[sceneKey].camera;
       const [ox, oy, oz] = SCENE_ORIGIN;
-      camera.position.set(ox + pos[0] + Math.sin(t.current * 0.25) * 0.8, oy + pos[1] + Math.sin(t.current * 0.4) * 0.15, oz + pos[2]);
+      // Portrait screens are narrow: pull back so the whole room fits.
+      const k = size.width / size.height < 1 ? 1.35 : 1;
+      const px = look[0] + (pos[0] - look[0]) * k;
+      const py = look[1] + (pos[1] - look[1]) * k;
+      const pz = look[2] + (pos[2] - look[2]) * k;
+      camera.position.set(ox + px + Math.sin(t.current * 0.25) * 0.8, oy + py + Math.sin(t.current * 0.4) * 0.15, oz + pz);
       camera.lookAt(ox + look[0], oy + look[1], oz + look[2]);
       return;
     }
@@ -88,12 +134,24 @@ function CameraRig({ mode, sceneKey }) {
       camera.lookAt(cx, 0, cz);
       return;
     }
+    if (mode === 'home') {
+      const dist = view.homeDist;
+      const flat = Math.cos(view.homePitch) * dist;
+      camera.position.set(HOME_ORIGIN[0] + Math.sin(view.homeYaw) * flat, 1 + Math.sin(view.homePitch) * dist, HOME_ORIGIN[2] + Math.cos(view.homeYaw) * flat);
+      camera.lookAt(HOME_ORIGIN[0], 0.5, HOME_ORIGIN[2]);
+      return;
+    }
     const a = 1 - Math.exp(-dt * 6);
-    focus.current.x += (local.x - focus.current.x) * a;
-    focus.current.z += (local.z - focus.current.z) * a;
-    if (Math.hypot(local.x - focus.current.x, local.z - focus.current.z) > 40) focus.current.set(local.x, 0, local.z);
-    const z = zoom.value;
-    camera.position.set(focus.current.x, 4 + 26 * z, focus.current.z + 17 * z);
+    const map = mode === 'map';
+    const fx = map ? view.mapX : local.x;
+    const fz = map ? view.mapZ : local.z;
+    focus.current.x += (fx - focus.current.x) * a;
+    focus.current.z += (fz - focus.current.z) * a;
+    if (!map && Math.hypot(fx - focus.current.x, fz - focus.current.z) > 40) focus.current.set(fx, 0, fz);
+    const dist = map ? view.mapDist : 31 * zoom.value;
+    const pitch = map ? 1.1 : view.pitch;
+    const flat = Math.cos(pitch) * dist;
+    camera.position.set(focus.current.x + Math.sin(view.yaw) * flat, 1 + Math.sin(pitch) * dist, focus.current.z + Math.cos(view.yaw) * flat);
     camera.lookAt(focus.current.x, 1, focus.current.z);
   });
   return null;
@@ -110,7 +168,7 @@ function DayNight({ interior }) {
   const last = useRef(-1);
   useMemo(() => {
     scene.background = DAY_SKY.clone();
-    scene.fog = new THREE.Fog(DAY_SKY.clone(), 150, 320);
+    scene.fog = new THREE.Fog(DAY_SKY.clone(), 220, 560);
   }, [scene]);
   useFrame(() => {
     if (interior) {
@@ -150,6 +208,7 @@ function DayNight({ interior }) {
 
 export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPlot, onBillboard, onGround, onPlayer, quality = 'auto', scene = null }) {
   const sceneCfg = scene && SCENES[scene.key];
+  const home = mode === 'home';
   const lowEnd = useMemo(() => {
     if (quality === 'low') return true;
     if (quality === 'high') return false;
@@ -160,7 +219,7 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
     <Canvas
       dpr={lowEnd ? [1, 1.25] : [1, 2]}
       gl={{ antialias: !lowEnd, powerPreference: 'high-performance', stencil: false }}
-      camera={{ fov: 40, near: 1, far: 420, position: [0, 60, 60] }}
+      camera={{ fov: 40, near: 0.5, far: 900, position: [0, 60, 60] }}
       flat
       onCreated={(state) => {
         state.gl.setClearColor('#cfe6f7');
@@ -170,7 +229,7 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
       <Suspense fallback={null}>
         <DayNight interior={sceneCfg ? { bg: sceneCfg.bg, light: sceneCfg.light } : null} />
         <CameraRig mode={mode} sceneKey={sceneCfg ? scene.key : null} />
-        <group visible={!sceneCfg}>
+        <group visible={!sceneCfg && !home}>
         <City
           world={world}
           ads={ads}
@@ -181,12 +240,15 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
           myUsername={me?.username}
           walkers={lowEnd ? 5 : 10}
           showLabels={mode === 'play'}
+          mapMode={mode === 'map'}
         />
         </group>
-        {mode === 'play' && me && (
+        {home && me && <HomeScene me={me} />}
+        {mode === 'map' && <MapPins me={me} onPlayer={onPlayer} />}
+        {(mode === 'play' || mode === 'map' || home) && me && (
           <>
-            <LocalPlayer me={me} frozen={!!sceneCfg} />
-            <AudioDriver me={me} scene={sceneCfg ? scene.key : null} />
+            <LocalPlayer me={me} frozen={!!sceneCfg || home} />
+            <AudioDriver me={me} scene={home ? 'home' : sceneCfg ? scene.key : null} />
             {sceneCfg && <ActivityScene scene={scene.key} placeId={scene.placeId} me={me} myBusy={scene.busy} />}
             <RemotePlayers onPlayer={onPlayer} />
           </>

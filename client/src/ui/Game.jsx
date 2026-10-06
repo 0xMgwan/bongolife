@@ -5,12 +5,13 @@ import GameScene from '../three/GameScene.jsx';
 import { walkTo, goToPlace } from '../nav.js';
 import { loc } from '../i18n.js';
 import { useStore } from '../store.js';
-import { api } from '../api.js';
-import { connect, local, input } from '../net.js';
+import { api, visitorId } from '../api.js';
+import { connect, local, input, setInside } from '../net.js';
 import { sfx } from '../audio.js';
 import { HUD } from './HUD.jsx';
 import { Sheets } from './Sheets.jsx';
 import { Phone } from './Phone.jsx';
+import { HomeUI, loadHome } from './HomeUI.jsx';
 
 export default function Game() {
   const me = useStore((s) => s.me);
@@ -18,14 +19,30 @@ export default function Game() {
   const ads = useStore((s) => s.ads);
   const quality = useStore((s) => s.quality);
   const inside = useStore((s) => s.inside);
+  const tab = useStore((s) => s.tab);
+  const cityView = useStore((s) => s.cityView);
   const set = useStore((s) => s.set);
   const finishing = useRef(false);
 
   useEffect(() => {
     connect();
     api('/world').then((w) => set({ world: { plots: w.plots, businesses: w.businesses, event: w.event }, ads: w.ads, announcement: w.announcement })).catch(() => {});
+    const stats = () => api(`/public/stats?v=${visitorId()}`).then((s) => set({ visits: s.visits, online: s.online })).catch(() => {});
+    stats();
+    const statsTimer = setInterval(stats, 60_000);
     api('/messages/public').then((rows) => set({ publicFeed: rows.map((r) => ({ ...r, mid: r.id, text: r.body, at: r.created_at })) })).catch(() => {});
+    return () => clearInterval(statsTimer);
   }, [set]);
+
+  // Kwangu/Duka put you at home (others stop seeing you in town); Mjini brings you back.
+  useEffect(() => {
+    const home = tab === 'home' || tab === 'shop';
+    const cur = useStore.getState().inside;
+    if (home && cur !== 'home') {
+      setInside('home');
+      loadHome();
+    } else if (!home && cur === 'home') setInside(null);
+  }, [tab]);
 
   // Keyboard movement for desktop.
   useEffect(() => {
@@ -81,7 +98,11 @@ export default function Game() {
   }, [me?.busy?.endsAt, set]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const inScene = () => !!useStore.getState().inside || !!activeScene(useStore.getState());
-  const onPlace = useCallback((id) => !inScene() && goToPlace(id), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const onPlace = useCallback((id) => {
+    if (inScene()) return;
+    if (useStore.getState().cityView === 'map') useStore.setState({ cityView: 'follow', mapFilter: null });
+    goToPlace(id);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const onPlot = useCallback((id) => {
     if (inScene()) return;
     const p = plotById[id];
@@ -96,11 +117,14 @@ export default function Game() {
   const onPlayer = useCallback((r) => useStore.setState({ sheet: { type: 'player', id: r.username } }), []);
 
   if (!me) return null;
-  const scene = activeScene({ me, inside });
+  const homeTab = tab === 'home' || tab === 'shop';
+  const scene = homeTab ? null : activeScene({ me, inside });
+  const mode = homeTab ? 'home' : cityView === 'map' ? 'map' : 'play';
   return (
     <div className="app">
-      <GameScene mode="play" me={me} world={world} ads={ads} quality={quality} scene={scene} onPlace={onPlace} onPlot={onPlot} onBillboard={onBillboard} onGround={onGround} onPlayer={onPlayer} />
+      <GameScene mode={mode} me={me} world={world} ads={ads} quality={quality} scene={scene} onPlace={onPlace} onPlot={onPlot} onBillboard={onBillboard} onGround={onGround} onPlayer={onPlayer} />
       <HUD />
+      <HomeUI />
       <Sheets />
       <Phone />
     </div>

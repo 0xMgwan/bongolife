@@ -4,7 +4,7 @@ import { isWater, vehicleById, placeById } from '@shared/world.js';
 import { Avatar } from './Avatar.jsx';
 import { Vehicle, riderOffset } from './Vehicle.jsx';
 import { labelTexture, bubbleTexture, emojiTexture } from './textures.js';
-import { local, input, remotes, bubbles, emotes, sendMove } from '../net.js';
+import { local, input, remotes, bubbles, emotes, sendMove, view } from '../net.js';
 import { useStore } from '../store.js';
 
 const DANCE = new Set(['cheza', 'vip', 'mzunguko', 'sundowner', 'dabi']);
@@ -139,6 +139,12 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
     if (k.has('d') || k.has('arrowright')) dx += 1;
     dx += input.jx;
     dz += input.jz;
+    // Input is relative to where the camera looks.
+    if (dx || dz) {
+      const c = Math.cos(view.yaw);
+      const sn = Math.sin(view.yaw);
+      [dx, dz] = [dx * c + dz * sn, -dx * sn + dz * c];
+    }
     let manual = Math.hypot(dx, dz) > 0.08;
     if (manual) {
       local.target = null;

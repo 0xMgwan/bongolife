@@ -38,7 +38,8 @@ export function AudioDriver({ me, scene }) {
     acc.current = 0;
     const { x, z } = local;
     if (scene) {
-      const [style, level] = SCENE_MUSIC[scene] || [null, 0];
+      const radio = scene === 'home' && busy?.id === 'burudika';
+      const [style, level] = radio ? ['bongo', 0.8] : SCENE_MUSIC[scene] || [null, 0];
       setVenueMusic(style, level);
       setAmbience({ city: 0, waves: scene === 'beach' ? 1 : 0, engine: 0 });
       return;

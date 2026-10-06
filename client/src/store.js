@@ -33,6 +33,14 @@ export const useStore = create((set, get) => ({
   })(),
   announcement: null,
   inside: null, // venue the player is inside (placeId) or null
+  tab: 'town', // bottom nav: home | shop | town (phone opens as an overlay)
+  cityView: 'follow', // town camera: follow the player, or 'map' overview
+  mapFilter: null, // ads | homes | sea | people
+  homeItems: [],
+  visits: 0,
+  placing: null, // furniture being placed: { def, x, z, rot, id? }
+  homeSel: null, // furniture item id whose sheet is open
+  cleanScreen: (() => { try { return localStorage.getItem('bl_clean') === '1'; } catch { return false; } })(),
   quality: (() => { try { return localStorage.getItem('bl_q') || 'auto'; } catch { return 'auto'; } })(),
   dmVersion: 0,
   publicFeed: [],
@@ -83,3 +91,6 @@ export const useStore = create((set, get) => ({
     }
   },
 }));
+
+// Dev-only handle for debugging in the browser console.
+if (import.meta.env.DEV) window.__store = useStore;

@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById } from '@shared/world.js';
+import { NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById } from '@shared/world.js';
 import { L, loc, pick, isEn } from '../i18n.js';
 import { useStore } from '../store.js';
-import { input, sendChat, sendEmote } from '../net.js';
+import { input, sendChat, sendEmote, setInside, remotes, local, view } from '../net.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
 import { setZoom, getZoom } from '../three/GameScene.jsx';
-import { setAudioSettings } from '../audio.js';
+import { setAudioSettings, sfx } from '../audio.js';
 import { useAudioSettings } from './useAudioSettings.js';
 import { activeScene } from '../scene.js';
-import { setInside, remotes } from '../net.js';
-import { placeById } from '@shared/world.js';
+import { goToPlace } from '../nav.js';
+import { goHomeTo } from './homeNav.js';
 
 /** Banner shown while inside a venue or doing a scene activity. */
 function InsideBar({ scene, me }) {
@@ -30,31 +30,6 @@ function InsideBar({ scene, me }) {
       {inside && !me.busy && <button className="btn btn-ghost btn-xs" onClick={() => setInside(null)}>{L('Toka nje', 'Leave')}</button>}
     </div>
   );
-}
-
-function NeedRing({ need, value }) {
-  const r = 15;
-  const c = 2 * Math.PI * r;
-  const low = value < 20;
-  return (
-    <div className={`need ${low ? 'low' : ''}`} title={`${loc(need)}: ${Math.round(value)}%`}>
-      <svg viewBox="0 0 34 34">
-        <circle cx="17" cy="17" r={r} fill="none" stroke="#eef0f3" strokeWidth="3.5" />
-        <circle cx="17" cy="17" r={r} fill="none" stroke={low ? '#ef4444' : need.color} strokeWidth="3.5" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - value / 100)} style={{ transition: 'stroke-dashoffset .6s' }} />
-      </svg>
-      <span>{need.icon}</span>
-    </div>
-  );
-}
-
-function Clock() {
-  const [c, setC] = useState(gameClock());
-  useEffect(() => {
-    const t = setInterval(() => setC(gameClock()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const night = c.hour < 6 || c.hour >= 19;
-  return <div className="clock">{night ? '🌙' : '☀️'} {String(c.hour).padStart(2, '0')}:{String(c.minute).padStart(2, '0')}</div>;
 }
 
 function Joystick() {
@@ -142,48 +117,223 @@ function Result() {
   );
 }
 
+
+function useClock() {
+  const [c, setC] = useState(gameClock());
+  useEffect(() => {
+    const t = setInterval(() => setC(gameClock()), 5000);
+    return () => clearInterval(t);
+  }, []);
+  return c;
+}
+const fmtTime = ({ hour, minute }) => {
+  if (!isEn()) return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  const h = hour % 12 || 12;
+  return `${h}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`;
+};
+
+/** Top pill: time · mood · sound · wallet (+). */
+function TopBar({ me }) {
+  const clock = useClock();
+  const sound = useAudioSettings();
+  const openPhone = useStore((s) => s.openPhone);
+  const online = useStore((s) => s.online);
+  const visits = useStore((s) => s.visits);
+  const clean = useStore((s) => s.cleanScreen);
+  const night = clock.hour < 6 || clock.hour >= 19;
+  const mood = (isEn() ? moodLabelEn : moodLabel)(me.mood ?? 60);
+  const k = (n) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '')}k` : String(n || 0));
+  return (
+    <div className="topbar-wrap">
+      <div className="topbar">
+        <span className="tb-time">{night ? '🌙' : '☀️'} {fmtTime(clock)}</span>
+        <span className="tb-sep" />
+        <button className="tb-mood" onClick={() => openPhone('mipangilio')}>{mood.emoji} <span>{mood.text}</span></button>
+        <span className="tb-sep" />
+        <button className="tb-sound" onClick={() => setAudioSettings({ muted: !sound.muted })} aria-label={L('Sauti', 'Sound')}>{sound.muted ? '🔇' : '🔊'}</button>
+        <button className="tb-money" onClick={() => openPhone('pesa', 'topup')}>
+          TSh {fmtShort(me.money)} <i>＋</i>
+        </button>
+      </div>
+      {!clean && (
+        <div className="tb-pills">
+          <span className="mini-pill">👀 {k(visits)} {L('wageni', 'visits')}</span>
+          <span className="mini-pill"><i className="dot" /> {k(online)} online</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Context tips: what your Sim needs right now, and how to fix it. */
+function useTips(me) {
+  const openPhone = useStore((s) => s.openPhone);
+  const set = useStore((s) => s.set);
+  const n = me.needs || {};
+  const tips = [];
+  if (me.busy) return tips;
+  if ((n.energy ?? 100) < 35) tips.push({ icon: '😴', c: '#3b82f6', t: L('Umechoka', 'Tired'), s: L('Nenda Kwangu, gusa kitanda', 'Go home and tap your bed'), go: () => goHomeTo('sleep') });
+  if ((n.hygiene ?? 100) < 35) tips.push({ icon: '🧼', c: '#06b6d4', t: L('Jisafishe', 'Freshen up'), s: L('Gusa ndoo au bafu Kwangu', 'Tap the bucket or shower at home'), go: () => goHomeTo('bath') });
+  if ((n.hunger ?? 100) < 35) tips.push({ icon: '🍛', c: '#f59e0b', t: L('Njaa inauma', 'Hungry'), s: L('Pika Kwangu au kula kwa Mama Ntilie', 'Cook at home or eat at Mama Ntilie'), go: () => goHomeTo('kitchen') });
+  if ((n.fun ?? 100) < 35) tips.push({ icon: '🎉', c: '#ec4899', t: L('Kula bata', 'Have some fun'), s: L('Club Mzuka au Coco Beach', 'Club Mzuka or Coco Beach'), go: () => { set({ tab: 'town' }); goToPlace('club'); } });
+  if ((n.social ?? 100) < 35) tips.push({ icon: '💬', c: '#8b5cf6', t: L('Piga stori', 'Catch up'), s: L('Ongea na watu kwenye chat', 'Talk to people in chat'), go: () => openPhone('mtaa') });
+  if (me.pendingIncome > 0) tips.push({ icon: '🏦', c: '#16a34a', t: L('Kodi iko tayari', 'Income ready'), s: fmtTsh(me.pendingIncome), go: () => openPhone('mali') });
+  if (me.unread > 0) tips.push({ icon: '✉️', c: '#2563eb', t: L(`Meseji ${me.unread} mpya`, `${me.unread} new messages`), s: L('Fungua Ujumbe', 'Open Messages'), go: () => openPhone('ujumbe') });
+  if (!tips.length && me.money < 30_000) tips.push({ icon: '💼', c: '#334155', t: L('Tafuta mshiko', 'Earn some money'), s: L('Chagua kazi uchakarike', 'Pick a job and hustle'), go: () => openPhone('kazi') });
+  if (!tips.length && !Object.keys(me.jobXp || {}).length && useStore.getState().tab === 'town') tips.push({ icon: '👆', c: '#2fb06f', t: L('Karibu mtaani!', 'Welcome to town!'), s: L('Gusa jengo lenye alama', 'Tap a building with an icon') });
+  return tips.slice(0, 2);
+}
+
+function Tips({ me }) {
+  const clean = useStore((s) => s.cleanScreen);
+  const tips = useTips(me);
+  const toggle = () => {
+    const v = !clean;
+    try { localStorage.setItem('bl_clean', v ? '1' : '0'); } catch {}
+    useStore.setState({ cleanScreen: v });
+  };
+  return (
+    <div className="tips">
+      {!clean && tips.map((t, i) => (
+        <button key={i} className="tip" onClick={() => { sfx('click'); t.go?.(); }}>
+          <span className="tip-ic" style={{ background: t.c }}>{t.icon}</span>
+          <span><b>{t.t}</b><small>{t.s}</small></span>
+        </button>
+      ))}
+      <button className="clean-btn" onClick={toggle}>{clean ? L('˅ Onyesha vidokezo', '˅ Show tips') : L('˄ Safisha skrini', '˄ Clean screen')}</button>
+    </div>
+  );
+}
+
+/** Avatar + compact need bars (bottom-left). */
+function NeedsPanel({ me }) {
+  const openPhone = useStore((s) => s.openPhone);
+  const mood = me.mood ?? 60;
+  const bars = [...NEEDS.map((n) => ({ icon: n.icon, v: me.needs?.[n.id] ?? 50, c: n.color, name: loc(n) })), { icon: '😊', v: mood, c: '#2fb06f', name: 'Mood' }];
+  return (
+    <div className="needs-panel">
+      <button className="big-avatar" onClick={() => openPhone('kabati')} aria-label={L('Kabati', 'Wardrobe')}>{avatarEmoji(me.appearance)}</button>
+      <div className="need-bars">
+        {bars.map((b, i) => (
+          <div key={i} className="nb" title={`${b.name}: ${Math.round(b.v)}%`}>
+            <span>{b.icon}</span>
+            <i><em style={{ width: `${b.v}%`, background: b.v < 20 ? '#ef4444' : b.v < 40 ? '#f59e0b' : b.c }} /></i>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const NAV_ICONS = {
+  home: <path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h13V9.5M10 20v-5h4v5" />,
+  shop: <path d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3M3 13a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4ZM6 19v2M18 19v2" />,
+  town: <path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5L9 4Zm0 0v13.5m6-11v13.5" />,
+  phone: <path d="M8 3h8a1.5 1.5 0 0 1 1.5 1.5v15A1.5 1.5 0 0 1 16 21H8a1.5 1.5 0 0 1-1.5-1.5v-15A1.5 1.5 0 0 1 8 3Zm3 15h2" />,
+};
+function BottomNav({ me }) {
+  const tab = useStore((s) => s.tab);
+  const phone = useStore((s) => s.phone);
+  const openPhone = useStore((s) => s.openPhone);
+  const go = (t) => {
+    sfx('click');
+    if (t === 'phone') return openPhone('home');
+    useStore.setState({ tab: t, placing: null, homeSel: null, sheet: null, phone: null });
+  };
+  const items = [
+    ['home', L('Kwangu', 'Home')],
+    ['shop', L('Duka', 'Shop')],
+    ['town', L('Mjini', 'Town')],
+    ['phone', L('Simu', 'Phone')],
+  ];
+  return (
+    <nav className="bottom-nav">
+      {items.map(([id, label]) => {
+        const on = id === 'phone' ? !!phone : !phone && tab === id;
+        return (
+          <button key={id} className={on ? 'on' : ''} onClick={() => go(id)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{NAV_ICONS[id]}</svg>
+            <span>{label}</span>
+            {id === 'phone' && me.unread > 0 && <b className="badge">{me.unread}</b>}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+/** Town chips: jump the map to ads, plots, the sea or people — or walk again. */
+function TownChips() {
+  const cityView = useStore((s) => s.cityView);
+  const filter = useStore((s) => s.mapFilter);
+  const openPhone = useStore((s) => s.openPhone);
+  const fly = (id) => {
+    sfx('click');
+    const avg = (pts) => pts.reduce((a, p) => [a[0] + p[0] / pts.length, a[1] + p[1] / pts.length], [0, 0]);
+    let target = [local.x, local.z, 150];
+    if (id === 'ads') target = [...avg(BILLBOARDS.map((b) => b.pos)), 230];
+    if (id === 'homes') target = [...avg(PLOTS.map((p) => p.pos)), 260];
+    if (id === 'sea') target = [62, 92, 105];
+    if (id === 'people') {
+      const pts = [[local.x, local.z], ...[...remotes.values()].filter((r) => !r.inside).map((r) => [r.tx, r.tz])];
+      target = [...avg(pts), pts.length > 1 ? 190 : 120];
+    }
+    view.mapX = target[0];
+    view.mapZ = target[1];
+    view.mapDist = target[2];
+    useStore.setState({ cityView: 'map', mapFilter: id });
+  };
+  const chips = [
+    ['ads', '📢', L('Matangazo', 'Ads')],
+    ['homes', '🏘️', L('Viwanja', 'Homes')],
+    ['sea', '🌊', L('Bahari', 'Sea')],
+    ['people', '👥', L('Watu', 'People')],
+  ];
+  return (
+    <div className="town-chips">
+      {chips.map(([id, icon, label]) => (
+        <button key={id} className={cityView === 'map' && filter === id ? 'on' : ''} onClick={() => fly(id)}>{icon} {label}</button>
+      ))}
+      <button onClick={() => openPhone('viongozi')}>🏛️ {L('Mkuu', 'Mayor')}</button>
+      <button className={cityView === 'follow' ? 'on' : ''} onClick={() => { sfx('click'); useStore.setState({ cityView: 'follow', mapFilter: null }); }}>🚶 {L('Tembea', 'Walk')}</button>
+    </div>
+  );
+}
+
 const EMOTES = ['👋', '😂', '🔥', '❤️', '🙏', '💃', '😎', '🇹🇿'];
 
-function ChatBar() {
+function ChatDock() {
   const open = useStore((s) => s.chatOpen);
   const set = useStore((s) => s.set);
   const feed = useStore((s) => s.publicFeed);
   const [text, setText] = useState('');
-  const [emotes, setEmotes] = useState(false);
   const inputRef = useRef();
   useEffect(() => {
-    if (open) inputRef.current?.focus();
+    if (open) setTimeout(() => inputRef.current?.focus(), 50);
   }, [open]);
-  const recent = feed.filter((m) => Date.now() - (m.at || 0) < 10_000).slice(-4);
+  const recent = feed.filter((m) => Date.now() - (m.at || 0) < 10_000).slice(-3);
   const submit = (e) => {
     e.preventDefault();
     const t = text.trim();
     if (t) sendChat(t);
     setText('');
     set({ chatOpen: false });
-    inputRef.current?.blur();
   };
   return (
     <>
       <div className="feed">
-        {recent.map((m) => (
-          <div key={`${m.id}-${m.at}`}><b>@{m.username}</b> {m.text}</div>
-        ))}
+        {recent.map((m) => <div key={`${m.mid ?? m.id}-${m.at}`}><b>@{m.username}</b> {m.text}</div>)}
       </div>
-      <div className="chatbar">
-        <div style={{ position: 'relative' }}>
-          {emotes && (
-            <div className="emotes">
-              {EMOTES.map((e) => <button key={e} onClick={() => { sendEmote(e); setEmotes(false); }}>{e}</button>)}
-            </div>
-          )}
-          <button className="round" style={{ width: 48, height: 48 }} onClick={() => setEmotes(!emotes)} aria-label="Emoji">😀</button>
+      {open && (
+        <div className="chat-dock">
+          <div className="emote-row">{EMOTES.map((e) => <button key={e} onClick={() => { sendEmote(e); set({ chatOpen: false }); }}>{e}</button>)}</div>
+          <form onSubmit={submit}>
+            <input ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} placeholder={L('Sema kitu mtaani…', 'Say something…')} maxLength={200} enterKeyHint="send" />
+            <button className="btn btn-green btn-xs" disabled={!text.trim()}>{L('Tuma', 'Send')}</button>
+            <button type="button" className="btn btn-ghost btn-xs" onClick={() => set({ chatOpen: false })}>✕</button>
+          </form>
         </div>
-        <form onSubmit={submit}>
-          <input ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} placeholder={L('Sema kitu mtaani…', 'Say something…')} maxLength={200} onFocus={() => set({ chatOpen: true })} onBlur={() => setTimeout(() => set({ chatOpen: false }), 150)} enterKeyHint="send" />
-          <button className="btn btn-green btn-xs" disabled={!text.trim()}>{L('Tuma', 'Send')}</button>
-        </form>
-      </div>
+      )}
     </>
   );
 }
@@ -191,17 +341,19 @@ function ChatBar() {
 export function HUD() {
   const me = useStore((s) => s.me);
   const world = useStore((s) => s.world);
-  const online = useStore((s) => s.online);
   const announcement = useStore((s) => s.announcement);
-  const sound = useAudioSettings();
   const inside = useStore((s) => s.inside);
+  const tab = useStore((s) => s.tab);
+  const cityView = useStore((s) => s.cityView);
+  const clean = useStore((s) => s.cleanScreen);
+  const chatOpen = useStore((s) => s.chatOpen);
   const openPhone = useStore((s) => s.openPhone);
   const run = useStore((s) => s.run);
   const [touch] = useState(() => matchMedia('(pointer: coarse)').matches);
   if (!me) return null;
-  const scene = activeScene({ me, inside });
-  const mood = (isEn() ? moodLabelEn : moodLabel)(me.mood ?? 60);
-  
+  const town = tab === 'town';
+  const scene = town ? activeScene({ me, inside }) : null;
+  const shop = tab === 'shop';
   const vehicle = me.vehicles?.find((v) => v.id === me.activeVehicle);
   const anyVehicle = me.vehicles?.[0];
   const toggleVehicle = () => {
@@ -209,41 +361,33 @@ export function HUD() {
     else if (anyVehicle) run('/vehicle/use', { method: 'POST', body: { vehicleId: anyVehicle.id } });
     else openPhone('mali');
   };
+  const walking = town && !scene && cityView === 'follow';
   return (
     <div className="layer">
-      <div className="hud-top">
-        <div className="hud-bar">
-          <button className="avatar-dot" onClick={() => openPhone('mipangilio')}>{avatarEmoji(me.appearance)}</button>
-          <div className="grow">
-            <div className="hud-name">@{me.username}</div>
-            <div className="hud-sub">{mood.emoji} {mood.text} · ⭐ {me.fame} · 🟢 {online}</div>
-          </div>
-          <button className="money" onClick={() => openPhone('pesa')}>
-            <small>TSh</small> {fmtShort(me.money)} <span style={{ opacity: 0.9 }}>＋</span>
-          </button>
+      {!shop && <TopBar me={me} />}
+      {!shop && (
+        <div className="hud-left">
+          {!clean && world?.event && town && !scene && <div className="event">{loc(world.event, 'text')}</div>}
+          {!clean && announcement && <div className="announce">📣 {loc(announcement, 'text')}</div>}
+          {town && !scene && <TownChips />}
+          <Tips me={me} />
         </div>
-        <div className="hud-row2">
-          <div className="needs">
-            {NEEDS.map((n) => <NeedRing key={n.id} need={n} value={me.needs?.[n.id] ?? 50} />)}
-          </div>
-          <Clock />
-        </div>
-        {world?.event && <div className="event">{loc(world.event, 'text')}</div>}
-        {announcement && <div className="announce" style={{ alignSelf: 'center' }}>📣 {loc(announcement, 'text')}</div>}
-      </div>
+      )}
       <Busy me={me} />
       {scene && <InsideBar scene={scene} me={me} />}
-      <div className="side">
-        <button onClick={() => openPhone('home')} aria-label={L('Simu', 'Phone')}>📱{me.unread > 0 && <span className="badge">{me.unread}</span>}</button>
-        <button onClick={() => openPhone('ramani')} aria-label={L('Ramani', 'Map')}>🗺️</button>
-        {!scene && <button onClick={toggleVehicle} className={vehicle ? 'on' : ''} aria-label={L('Gari', 'Vehicle')}>{vehicle ? vehicleById[vehicle.model]?.emoji : anyVehicle ? '🚶' : '🚗'}</button>}
-        <button onClick={() => openPhone('kazi')} aria-label={L('Kazi', 'Jobs')}>💼</button>
-        <button onClick={() => setAudioSettings({ muted: !sound.muted })} aria-label={sound.muted ? L('Washa sauti', 'Unmute') : L('Zima sauti', 'Mute')}>{sound.muted ? '🔇' : '🔊'}</button>
-        {!scene && <button onClick={() => setZoom(getZoom() * 0.8)} aria-label="Zoom in">＋</button>}
-        {!scene && <button onClick={() => setZoom(getZoom() * 1.25)} aria-label="Zoom out">－</button>}
-      </div>
-      {touch && !scene && <Joystick />}
-      <ChatBar />
+      {!shop && (
+        <div className="side">
+          <button onClick={() => { Object.assign(view, { yaw: 0, pitch: 1.0, homeYaw: 0.75, homePitch: 0.95, homeDist: 30 }); sfx('click'); }} aria-label={L('Rudisha kamera', 'Reset camera')}>🧭</button>
+          {walking && <button onClick={toggleVehicle} className={vehicle ? 'on' : ''} aria-label={L('Gari', 'Vehicle')}>{vehicle ? vehicleById[vehicle.model]?.emoji : anyVehicle ? '🚶' : '🚗'}</button>}
+          {town && <button onClick={() => useStore.setState({ chatOpen: !chatOpen })} className={chatOpen ? 'on' : ''} aria-label="Chat">💬</button>}
+          <button onClick={() => (town ? setZoom(getZoom() * 0.8) : (view.homeDist = Math.max(14, view.homeDist * 0.8)))} aria-label="Zoom in">＋</button>
+          <button onClick={() => (town ? setZoom(getZoom() * 1.25) : (view.homeDist = Math.min(48, view.homeDist * 1.25)))} aria-label="Zoom out">－</button>
+        </div>
+      )}
+      {touch && walking && <Joystick />}
+      {town && <ChatDock />}
+      {!shop && <NeedsPanel me={me} />}
+      {!shop && <BottomNav me={me} />}
       <Result />
     </div>
   );

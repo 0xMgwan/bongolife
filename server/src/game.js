@@ -1,7 +1,8 @@
 import {
   GAME, NEEDS, PLACES, PLOTS, VEHICLES, BUILDINGS, ALLOWED_BUILDINGS, VEHICLE_COLORS,
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
-  shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, ENTERABLE, currentEvent, travelCost, isWater, TRAVEL,
+  shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, ENTERABLE,
+  furnitureById, STARTER_HOME, homeFits, HOME, currentEvent, travelCost, isWater, TRAVEL,
 } from '../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
 
@@ -164,9 +165,68 @@ function setBusy(userId, busy) {
   }
 }
 
+// ---------------------------------------------------------------- home
+const hq = {
+  items: db.prepare('SELECT id, item, x, z, rot FROM home_items WHERE user_id = ? ORDER BY id'),
+  item: db.prepare('SELECT * FROM home_items WHERE id = ? AND user_id = ?'),
+  insert: db.prepare('INSERT INTO home_items (user_id, item, x, z, rot, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
+  move: db.prepare('UPDATE home_items SET x = ?, z = ?, rot = ? WHERE id = ?'),
+  del: db.prepare('DELETE FROM home_items WHERE id = ?'),
+  count: db.prepare('SELECT COUNT(*) n FROM home_items WHERE user_id = ?'),
+};
+const snap = (v) => Math.round(Number(v) * 2) / 2;
+const turn = (r) => ((Math.trunc(Number(r) || 0) % 4) + 4) % 4;
+
+/** A player's furniture; new homes get the starter set once. */
+export const homeItems = db.transaction((userId) => {
+  if (!getUser(userId).homeSeeded) {
+    for (const s of STARTER_HOME) hq.insert.run(userId, s.item, s.x, s.z, s.rot, now());
+    saveFields(userId, { homeSeeded: 1 });
+  }
+  return hq.items.all(userId);
+});
+
+export const buyFurniture = db.transaction((userId, { item, x, z, rot }) => {
+  const def = furnitureById[item];
+  if (!def) throw new GameError(['Kitu hicho hakipo.', 'That item does not exist.'], 404);
+  x = snap(x); z = snap(z); rot = turn(rot);
+  if (!homeFits(def, x, z, rot, hq.items.all(userId))) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
+  if (hq.count.get(userId).n >= 80) throw new GameError(['Nyumba imejaa vitu.', 'Your home is full.']);
+  if (def.price) addMoney(userId, -discount(getUser(userId), def.price), 'purchase', `Fanicha: ${def.name}`);
+  hq.insert.run(userId, item, x, z, rot, now());
+});
+
+export const moveFurniture = db.transaction((userId, id, { x, z, rot }) => {
+  const row = hq.item.get(id, userId);
+  if (!row) throw new GameError(['Kitu hicho si chako.', "That's not your item."], 404);
+  x = snap(x); z = snap(z); rot = turn(rot);
+  const others = hq.items.all(userId).filter((o) => o.id !== row.id);
+  if (!homeFits(furnitureById[row.item], x, z, rot, others)) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
+  hq.move.run(x, z, rot, row.id);
+});
+
+export const sellFurniture = db.transaction((userId, id) => {
+  const row = hq.item.get(id, userId);
+  if (!row) throw new GameError(['Kitu hicho si chako.', "That's not your item."], 404);
+  const def = furnitureById[row.item];
+  const refund = Math.floor((def?.price || 0) * HOME.sellBack);
+  hq.del.run(row.id);
+  if (refund) addMoney(userId, refund, 'refund', `Umeuza: ${def.name}`);
+  return refund;
+});
+
 export const startAction = db.transaction((userId, { kind, placeId, id }) => {
   const user = getUser(userId);
   if (user.busy && user.busy.endsAt > now()) throw new GameError(['Bado uko bize na kitu kingine.', 'You\'re still busy with something else.']);
+  if (kind === 'home') {
+    const row = hq.item.get(Number(id), userId);
+    const def = row && furnitureById[row.item];
+    if (!def?.use) throw new GameError(['Kitu hicho hakitumiki.', "You can't use that."]);
+    if (def.use.cost) addMoney(userId, -def.use.cost, 'spend', `${def.use.name} nyumbani`);
+    const busy = { kind, id: def.use.act, itemId: row.id, item: row.item, placeId: 'home', emoji: def.use.emoji, label: def.use.name, labelEn: def.use.nameEn, startedAt: now(), endsAt: now() + def.use.secs * 1000 };
+    setBusy(userId, busy);
+    return busy;
+  }
   const place = placeById[placeId];
   if (!place) throw new GameError(['Sehemu haipo', 'Place not found'], 404);
   if (place.comingSoon) throw new GameError(['Inakuja hivi karibuni!', 'Coming soon!']);
@@ -210,7 +270,15 @@ export const finishAction = db.transaction((userId) => {
   const result = { kind: busy.kind, lines: [] };
   const fields = { busy: null };
 
-  if (busy.kind === 'activity') {
+  if (busy.kind === 'home') {
+    const def = furnitureById[busy.item];
+    fields.needs = applyNeeds(user.needs, def?.use?.effects || {});
+    for (const n of NEEDS) {
+      const d = Math.round(fields.needs[n.id] - user.needs[n.id]);
+      if (d) result.lines.push([`${n.icon} ${n.name} ${d > 0 ? '+' : ''}${d}`, `${n.icon} ${n.nameEn} ${d > 0 ? '+' : ''}${d}`]);
+    }
+    result.title = [`${def?.use?.emoji} ${def?.use?.name}`, `${def?.use?.emoji} ${def?.use?.nameEn}`];
+  } else if (busy.kind === 'activity') {
     const act = findActivity(busy.placeId, busy.id);
     const mult = eventMult(place, 'activity');
     fields.needs = applyNeeds(user.needs, act.effects, mult);

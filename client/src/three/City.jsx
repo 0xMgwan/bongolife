@@ -1,9 +1,9 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   WATER, LAND_PATCHES, BRIDGES, BEACHES, ROADS, PLACES, PLOTS, BILLBOARDS, DISTRICTS, WORLD_SIZE,
-  isWater, onRoad, buildingById, fmtShort, randomAppearance,
+  isWater, onRoad, buildingById, fmtShort, randomAppearance, AD_ROTATE_SECONDS,
 } from '@shared/world.js';
 import { mat, geo, emojiTexture, labelTexture, windowTexture, adTexture } from './textures.js';
 import { Vehicle, Boat } from './Vehicle.jsx';
@@ -405,17 +405,23 @@ function towerFacade(color) {
   return m;
 }
 
+/**
+ * Map icon: a constant on-screen size (like a map pin) at any zoom.
+ * `scale` is the old world size; it maps to a fraction of the screen height.
+ */
 export function Marker({ emoji, y, scale = 3.2, label, onClick, ring }) {
   const tex = useMemo(() => emojiTexture(emoji, { ring }), [emoji, ring]);
   const lab = useMemo(() => (label ? labelTexture(label, { size: 34 }) : null), [label]);
+  const s = scale * 0.016;
+  const lh = 0.022;
   return (
     <group position={[0, y, 0]}>
-      <sprite scale={[scale, scale, 1]} onClick={onClick} renderOrder={5}>
-        <spriteMaterial map={tex} depthWrite={false} />
+      <sprite scale={[s, s, 1]} onClick={onClick} renderOrder={5}>
+        <spriteMaterial map={tex} depthWrite={false} sizeAttenuation={false} />
       </sprite>
       {lab && (
-        <sprite scale={[1.1 * lab.aspect, 1.1, 1]} position={[0, -scale * 0.62, 0]} renderOrder={5}>
-          <spriteMaterial map={lab.texture} depthWrite={false} />
+        <sprite scale={[lh * lab.aspect, lh, 1]} center={[0.5, 1 + (s * 0.55) / lh]} renderOrder={5}>
+          <spriteMaterial map={lab.texture} depthWrite={false} sizeAttenuation={false} />
         </sprite>
       )}
     </group>
@@ -505,33 +511,58 @@ const Plots = memo(function Plots({ plots, onPlot, myUsername }) {
 });
 
 // ----------------------------------------------------------- billboards
-function Billboard({ slot, ad, onClick }) {
-  const tex = useMemo(() => adTexture(ad, loc(slot)), [ad?.id, ad?.image, slot.name]);
-  useEffect(() => () => tex.dispose(), [tex]);
+/** Digital screen: ads on this board take turns every AD_ROTATE_SECONDS. */
+function Billboard({ slot, ads, onClick, big }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    if (ads.length < 2) return setIdx(0);
+    const tick = () => setIdx(Math.floor(Date.now() / (AD_ROTATE_SECONDS * 1000)) % ads.length);
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [ads.length]);
+  const ad = ads[idx % Math.max(1, ads.length)] || null;
+  // One texture per ad, reused as the board rotates.
+  const cache = useMemo(() => new Map(), []);
+  useEffect(() => () => cache.forEach((t) => t.dispose()), [cache]);
+  const key = ad ? `${ad.id}:${ad.image}` : 'empty';
+  if (!cache.has(key)) cache.set(key, adTexture(ad, loc(slot)));
+  const tex = cache.get(key);
   const click = (e) => {
     if (e.delta > 10) return;
     e.stopPropagation();
     onClick?.(slot.id);
   };
   return (
-    <group position={[slot.pos[0], 0, slot.pos[1]]} rotation={[0, slot.rot, 0]}>
+    <group position={[slot.pos[0], 0, slot.pos[1]]} rotation={[0, slot.rot, 0]} scale={big ? 2.2 : 1}>
       {[-2.6, 2.6].map((x) => <mesh key={x} geometry={geo('box', 0.3, 5, 0.3)} material={mat('#374151')} position={[x, 2.5, 0]} />)}
       <mesh geometry={geo('box', 8.4, 4.4, 0.3)} material={mat('#111827')} position={[0, 6.6, -0.1]} />
       <mesh position={[0, 6.6, 0.06]} onClick={click}>
         <planeGeometry args={[8, 4]} />
-        <meshBasicMaterial map={tex} />
+        <meshBasicMaterial map={tex} toneMapped={false} />
       </mesh>
       <mesh position={[0, 6.6, -0.26]} rotation={[0, Math.PI, 0]} onClick={click}>
         <planeGeometry args={[8, 4]} />
-        <meshBasicMaterial map={tex} />
+        <meshBasicMaterial map={tex} toneMapped={false} />
       </mesh>
+      {ads.length > 1 && (
+        <group position={[0, 4.25, 0.07]}>
+          {ads.map((a, i) => <mesh key={a.id} geometry={geo('circle', 0.09, 10)} material={i === idx ? DOT_ON : DOT_OFF} position={[(i - (ads.length - 1) / 2) * 0.3, 0, 0]} />)}
+        </group>
+      )}
     </group>
   );
 }
+const DOT_ON = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+const DOT_OFF = new THREE.MeshBasicMaterial({ color: '#6b7280' });
 
-const Billboards = memo(function Billboards({ ads, onBillboard }) {
-  const bySlot = useMemo(() => Object.fromEntries((ads || []).map((a) => [a.slot_id, a])), [ads]);
-  return BILLBOARDS.map((b) => <Billboard key={b.id} slot={b} ad={bySlot[b.id]} onClick={onBillboard} />);
+const Billboards = memo(function Billboards({ ads, onBillboard, big }) {
+  const bySlot = useMemo(() => {
+    const m = {};
+    for (const a of ads || []) (m[a.slot_id] ||= []).push(a);
+    return m;
+  }, [ads]);
+  return BILLBOARDS.map((b) => <Billboard key={b.id} slot={b} ads={bySlot[b.id] || []} onClick={onBillboard} big={big} />);
 });
 
 // -------------------------------------------------------------- traffic
@@ -632,7 +663,7 @@ function Districts() {
   return DISTRICTS.map((d) => <FlatText key={d.id} text={d.name.toUpperCase()} pos={[d.pos[0], d.pos[1] + 12]} size={3.2} color="rgba(55,65,81,.35)" />);
 }
 
-export function City({ world, ads, onPlace, onPlot, onBillboard, onGround, myUsername, walkers = 10, showLabels = true }) {
+export function City({ world, ads, onPlace, onPlot, onBillboard, onGround, myUsername, walkers = 10, showLabels = true, mapMode = false }) {
   return (
     <group>
       <Terrain onGround={onGround} />
@@ -641,7 +672,7 @@ export function City({ world, ads, onPlace, onPlot, onBillboard, onGround, myUse
       <Districts />
       <Places onPlace={onPlace} businesses={world?.businesses} showLabels={showLabels} />
       <Plots plots={world?.plots} onPlot={onPlot} myUsername={myUsername} />
-      <Billboards ads={ads} onBillboard={onBillboard} />
+      <Billboards ads={ads} onBillboard={onBillboard} big={mapMode} />
       <Traffic />
       {walkers > 0 && <Walkers count={walkers} />}
     </group>

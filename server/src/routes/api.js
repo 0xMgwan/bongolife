@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   GAME, HAIRSTYLES, SKIN_TONES, HAIR_COLORS, OUTFITS, TRAITS, SPAWNS, BILLBOARDS, AD_MAX_DAYS,
-  billboardById, outfitById,
+  billboardById, outfitById, ADS_PER_BOARD,
 } from '../../../shared/world.js';
 import { db, getUser, getUserByUsername, createUser, saveFields, addMoney, GameError, now, UPLOAD_DIR, getSettings } from '../db.js';
 import { hashPassword, checkPassword, signToken, requireAuth, requireAdmin, rateLimit, USERNAME_RE, normalizePhone } from '../auth.js';
@@ -137,6 +137,25 @@ api.post('/act/cancel', (req, res) => {
   game.cancelAction(req.user.id);
   res.json({ me: game.playerState(req.user.id) });
 });
+// ---- Kwangu (player apartment)
+api.get('/home', (req, res) => res.json({ items: game.homeItems(req.user.id) }));
+api.post('/home/items', (req, res) => {
+  game.buyFurniture(req.user.id, { item: str(req.body.item, 30), x: req.body.x, z: req.body.z, rot: req.body.rot });
+  res.json({ items: game.homeItems(req.user.id), me: game.playerState(req.user.id) });
+});
+api.patch('/home/items/:id', (req, res) => {
+  game.moveFurniture(req.user.id, Number(req.params.id), { x: req.body.x, z: req.body.z, rot: req.body.rot });
+  res.json({ items: game.homeItems(req.user.id) });
+});
+api.delete('/home/items/:id', (req, res) => {
+  const refund = game.sellFurniture(req.user.id, Number(req.params.id));
+  res.json({ refund, items: game.homeItems(req.user.id), me: game.playerState(req.user.id) });
+});
+api.post('/home/items/:id/use', (req, res) => {
+  const busy = game.startAction(req.user.id, { kind: 'home', id: req.params.id });
+  res.json({ busy, me: game.playerState(req.user.id) });
+});
+
 api.post('/home/:plotId/:act', (req, res) => {
   game.homeActivity(req.user.id, req.params.plotId, req.params.act);
   res.json({ me: game.playerState(req.user.id) });
@@ -329,9 +348,13 @@ export function liveAds() {
 
 api.get('/ads/slots', (_req, res) => {
   const t = now();
-  const busy = db.prepare("SELECT slot_id, MAX(ends_at) until FROM ads WHERE status = 'live' AND ends_at > ? GROUP BY slot_id").all(t);
-  const map = Object.fromEntries(busy.map((b) => [b.slot_id, b.until]));
-  res.json(BILLBOARDS.map((b) => ({ ...b, bookedUntil: map[b.id] || null })));
+  const live = db.prepare("SELECT slot_id, COUNT(*) n, MIN(ends_at) next_free FROM ads WHERE status = 'live' AND starts_at <= @t AND ends_at > @t GROUP BY slot_id").all({ t });
+  const map = Object.fromEntries(live.map((b) => [b.slot_id, b]));
+  res.json(BILLBOARDS.map((b) => {
+    const l = map[b.id];
+    const full = (l?.n || 0) >= ADS_PER_BOARD;
+    return { ...b, live: l?.n || 0, capacity: ADS_PER_BOARD, bookedUntil: full ? l.next_free : null };
+  }));
 });
 api.get('/ads/mine', (req, res) => {
   res.json(db.prepare('SELECT * FROM ads WHERE user_id = ? ORDER BY id DESC LIMIT 30').all(req.user.id));
@@ -356,9 +379,9 @@ api.post('/ads', rateLimit('ads', 10, 60 * 60_000), upload.single('image'), (req
     image = `ads/${crypto.randomUUID()}.${kind.ext}`;
   }
   const result = db.transaction(() => {
-    // Queue after whatever is currently booked on this billboard.
-    const until = db.prepare("SELECT MAX(ends_at) u FROM ads WHERE slot_id = ? AND status = 'live' AND ends_at > ?").get(slot.id, now()).u;
-    const startsAt = Math.max(now(), until || 0);
+    // Digital board: goes live now if there's a free turn, otherwise when the next ad ends.
+    const ends = db.prepare("SELECT ends_at FROM ads WHERE slot_id = ? AND status = 'live' AND ends_at > ? ORDER BY ends_at").all(slot.id, now()).map((r) => r.ends_at);
+    const startsAt = ends.length < ADS_PER_BOARD ? now() : ends[ends.length - ADS_PER_BOARD];
     const cost = slot.pricePerDay * days;
     addMoney(req.user.id, -cost, 'ads', `Tangazo "${title}" — ${slot.name} siku ${days}`);
     const info = db.prepare(

@@ -5,8 +5,8 @@ export const GAME = {
   name: 'Bongo Life',
   city: 'Dar es Salaam',
   startMoney: 50_000,
-  // 1 real second = 1 game minute → one game day is 24 real minutes.
-  minutesPerSecond: 1,
+  // The game runs on real Dar es Salaam time (EAT, UTC+3, no daylight saving).
+  utcOffsetMinutes: 180,
   // Real TZS paid on top-up → in-game TSh credited.
   defaultTopupRate: 100,
   minTopupTzs: 1_000,
@@ -87,11 +87,11 @@ export const SPAWNS = {
 
 // ------------------------------------------------------------------ needs
 export const NEEDS = [
-  { id: 'hunger', name: 'Njaa', icon: '🍛', color: '#f59e0b', decay: 0.8 },
-  { id: 'energy', name: 'Nguvu', icon: '⚡', color: '#3b82f6', decay: 0.55 },
-  { id: 'fun', name: 'Raha', icon: '🎉', color: '#ec4899', decay: 0.7 },
-  { id: 'hygiene', name: 'Usafi', icon: '🚿', color: '#06b6d4', decay: 0.5 },
-  { id: 'social', name: 'Jamii', icon: '💬', color: '#8b5cf6', decay: 0.6 },
+  { id: 'hunger', name: 'Njaa', icon: '🍛', color: '#f59e0b', decay: 0.4 },
+  { id: 'energy', name: 'Nguvu', icon: '⚡', color: '#3b82f6', decay: 0.28 },
+  { id: 'fun', name: 'Raha', icon: '🎉', color: '#ec4899', decay: 0.35 },
+  { id: 'hygiene', name: 'Usafi', icon: '🚿', color: '#06b6d4', decay: 0.25 },
+  { id: 'social', name: 'Jamii', icon: '💬', color: '#8b5cf6', decay: 0.3 },
 ];
 export const NEED_TICK_SECONDS = 10; // decay values above are per tick
 
@@ -471,6 +471,9 @@ export const BILLBOARDS = [
 ];
 export const billboardById = Object.fromEntries(BILLBOARDS.map((b) => [b.id, b]));
 export const AD_MAX_DAYS = 14;
+// Billboards are digital screens: up to this many ads share a board, taking turns.
+export const ADS_PER_BOARD = 9;
+export const AD_ROTATE_SECONDS = 10;
 
 // ---------------------------------------------------------- fast travel
 export const TRAVEL = {
@@ -497,7 +500,7 @@ export function currentEvent(now = Date.now()) {
 }
 
 export function gameClock(now = Date.now()) {
-  const totalMin = Math.floor((now / 1000) * GAME.minutesPerSecond) % 1440;
+  const totalMin = (Math.floor(now / 60000) + GAME.utcOffsetMinutes) % 1440;
   return { hour: Math.floor(totalMin / 60), minute: totalMin % 60, totalMin };
 }
 
@@ -652,4 +655,79 @@ export function sceneFor(busy) {
   if (!busy) return null;
   if (busy.kind === 'job') return JOB_SCENES[busy.id] ?? null;
   return ENTERABLE[busy.placeId] || ACTIVITY_SCENES[busy.placeId]?.[busy.id] || null;
+}
+
+// ------------------------------------------------------------------ home
+// Every player has an apartment ("Kwangu"). Furniture sits on a grid; x/z are the
+// item's centre in world units, rot is quarter turns. size = [w, d] in cells.
+export const HOME = { w: 12, d: 10, sellBack: 0.5 };
+export const FURNITURE_CATS = [
+  { id: 'sleep', name: 'Kulala', nameEn: 'Sleep', icon: '🛏️' },
+  { id: 'sit', name: 'Kukaa', nameEn: 'Seating', icon: '🛋️' },
+  { id: 'kitchen', name: 'Jikoni', nameEn: 'Kitchen', icon: '🍳' },
+  { id: 'bath', name: 'Bafuni', nameEn: 'Bath', icon: '🚿' },
+  { id: 'tech', name: 'Elektroniki', nameEn: 'Electronics', icon: '📺' },
+  { id: 'decor', name: 'Mapambo', nameEn: 'Decor', icon: '🪴' },
+];
+// use: what tapping the item does. effects scale with stars.
+const U = {
+  lala: (s) => ({ act: 'lala', emoji: '😴', name: 'Lala', nameEn: 'Sleep', secs: 30, effects: { energy: 35 + s * 15, hunger: -4 } }),
+  oga: (s) => ({ act: 'oga', emoji: '🚿', name: 'Oga', nameEn: 'Shower', secs: 10, effects: { hygiene: 45 + s * 14 } }),
+  pika: (s) => ({ act: 'pika', emoji: '🍲', name: 'Pika', nameEn: 'Cook', secs: 15, cost: 2_000, effects: { hunger: 35 + s * 8, fun: 3 } }),
+  snack: () => ({ act: 'snack', emoji: '🥤', name: 'Chukua kinywaji', nameEn: 'Grab a snack', secs: 4, cost: 1_000, effects: { hunger: 18, energy: 6 } }),
+  kaa: (s) => ({ act: 'kaa', emoji: '🛋️', name: 'Pumzika', nameEn: 'Relax', secs: 10, effects: { fun: 4 + s * 3, energy: 4 + s * 2 } }),
+  burudika: (s) => ({ act: 'burudika', emoji: '📺', name: 'Burudika', nameEn: 'Have fun', secs: 15, effects: { fun: 10 + s * 8 } }),
+  surf: () => ({ act: 'surf', emoji: '💻', name: 'Chati mtandaoni', nameEn: 'Chat online', secs: 12, effects: { social: 22, fun: 6, energy: -3 } }),
+  choo: () => ({ act: 'choo', emoji: '🚽', name: 'Tumia choo', nameEn: 'Use the toilet', secs: 5, effects: { hygiene: 15 } }),
+};
+const F = (id, cat, name, nameEn, price, stars, size, color, use) => ({ id, cat, name, nameEn, price, stars, size, color, use: use ? U[use](stars) : null });
+export const FURNITURE = [
+  F('mkeka', 'sleep', 'Godoro na Mkeka', 'Floor Mattress', 0, 1, [1, 2], '#a16207', 'lala'),
+  F('bed-single', 'sleep', 'Kitanda cha Mtu Mmoja', 'Single Bed', 45_000, 2, [1, 2], '#1d4ed8', 'lala'),
+  F('bed-double', 'sleep', 'Kitanda cha Watu Wawili', 'Double Bed', 180_000, 3, [2, 2], '#f97316', 'lala'),
+  F('bed-king', 'sleep', 'Kitanda cha Kifahari', 'King Bed', 650_000, 4, [2, 3], '#7c3aed', 'lala'),
+  F('chair-plastic', 'sit', 'Kiti cha Plastiki', 'Plastic Chair', 5_000, 1, [1, 1], '#dc2626', 'kaa'),
+  F('armchair', 'sit', 'Kiti cha Kupumzikia', 'Lounge Armchair', 90_000, 2, [1, 1], '#eab308', 'kaa'),
+  F('sofa-velvet', 'sit', 'Sofa ya Velvet', 'Velvet Sofa', 120_000, 2, [2, 1], '#15803d', 'kaa'),
+  F('sofa-3', 'sit', 'Sofa ya Watu Watatu', '3-Seater Family Sofa', 260_000, 3, [3, 1], '#c2410c', 'kaa'),
+  F('sofa-leather', 'sit', 'Sofa ya Ngozi', 'Italian Leather Sofa', 480_000, 4, [2, 1], '#111827', 'kaa'),
+  F('jiko', 'kitchen', 'Jiko la Mkaa', 'Charcoal Stove', 0, 1, [1, 1], '#374151', 'pika'),
+  F('cooker', 'kitchen', 'Jiko la Gesi', 'Gas Cooker', 140_000, 3, [1, 1], '#e5e7eb', 'pika'),
+  F('fridge', 'kitchen', 'Friji', 'Fridge', 220_000, 3, [1, 1], '#f8fafc', 'snack'),
+  F('table-dining', 'kitchen', 'Meza ya Chakula', 'Dining Table', 66_000, 2, [2, 2], '#92400e', null),
+  F('ndoo', 'bath', 'Ndoo ya Kuogea', 'Bucket Bath', 0, 1, [1, 1], '#2563eb', 'oga'),
+  F('shower', 'bath', 'Bafu la Shower', 'Shower', 160_000, 3, [1, 1], '#bae6fd', 'oga'),
+  F('toilet', 'bath', 'Choo cha Kisasa', 'Toilet', 70_000, 2, [1, 1], '#f8fafc', 'choo'),
+  F('bathtub', 'bath', 'Bafu la Kuogelea', 'Bathtub', 520_000, 4, [2, 1], '#f8fafc', 'oga'),
+  F('radio', 'tech', 'Redio', 'Radio', 15_000, 1, [1, 1], '#7c2d12', 'burudika'),
+  F('speaker', 'tech', 'Spika ya Bongo Flava', 'Party Speaker', 180_000, 3, [1, 1], '#111827', 'burudika'),
+  F('tv', 'tech', 'TV ya Flat', 'Flat TV', 300_000, 3, [2, 1], '#0b0f17', 'burudika'),
+  F('laptop', 'tech', 'Meza na Laptop', 'Desk & Laptop', 350_000, 3, [2, 1], '#a16207', 'surf'),
+  F('plant', 'decor', 'Mmea', 'Potted Plant', 8_000, 1, [1, 1], '#16a34a', null),
+  F('lamp', 'decor', 'Taa ya Sakafu', 'Floor Lamp', 18_000, 1, [1, 1], '#fde68a', null),
+  F('rug', 'decor', 'Zulia la Kitenge', 'Kitenge Rug', 25_000, 2, [2, 2], '#f59e0b', null),
+  F('art', 'decor', 'Picha ya Tingatinga', 'Tingatinga Painting', 60_000, 3, [1, 1], '#0ea5e9', null),
+];
+export const furnitureById = Object.fromEntries(FURNITURE.map((f) => [f.id, f]));
+// Starter furniture every new home gets.
+export const STARTER_HOME = [
+  { item: 'mkeka', x: 4, z: -3, rot: 0 },
+  { item: 'radio', x: 2.5, z: -4.5, rot: 0 },
+  { item: 'ndoo', x: -4.5, z: 4.5, rot: 0 },
+  { item: 'jiko', x: 5.5, z: 3.5, rot: 0 },
+  { item: 'chair-plastic', x: -1.5, z: -1.5, rot: 0 },
+  { item: 'chair-plastic', x: -0.5, z: -1.5, rot: 0 },
+  { item: 'plant', x: -5.5, z: -4.5, rot: 0 },
+];
+/** Footprint of an item after rotation, as [w, d]. */
+export const footprint = (def, rot) => (rot % 2 ? [def.size[1], def.size[0]] : def.size);
+export function homeFits(def, x, z, rot, others = []) {
+  const [w, d] = footprint(def, rot);
+  if (Math.abs(x) + w / 2 > HOME.w / 2 + 1e-6 || Math.abs(z) + d / 2 > HOME.d / 2 + 1e-6) return false;
+  return !others.some((o) => {
+    const od = furnitureById[o.item];
+    if (!od) return false;
+    const [ow, odd] = footprint(od, o.rot);
+    return Math.abs(o.x - x) * 2 < w + ow - 1e-6 && Math.abs(o.z - z) * 2 < d + odd - 1e-6;
+  });
 }
