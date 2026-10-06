@@ -6,6 +6,7 @@ import { loc } from '../i18n.js';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
 import { connect, local, input } from '../net.js';
+import { sfx } from '../audio.js';
 import { HUD } from './HUD.jsx';
 import { Sheets } from './Sheets.jsx';
 import { Phone } from './Phone.jsx';
@@ -59,6 +60,8 @@ export default function Game() {
       try {
         const r = await api('/act/finish', { method: 'POST' });
         set({ me: r.me, result: r.result });
+        const promoted = r.result.lines?.some((l) => String(Array.isArray(l) ? l[1] : l).startsWith('🎉 Promoted'));
+        sfx(promoted ? 'levelup' : r.result.kind === 'job' ? 'coin' : 'pop');
         if (r.result.teleport) {
           local.x = r.result.teleport[0];
           local.z = r.result.teleport[1];

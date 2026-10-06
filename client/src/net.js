@@ -2,6 +2,7 @@ import { io } from 'socket.io-client';
 import { token } from './api.js';
 import { useStore } from './store.js';
 import { L } from './i18n.js';
+import { sfx } from './audio.js';
 
 // ---- Mutable, per-frame game state kept outside React for performance.
 export const local = {
@@ -78,10 +79,14 @@ export function connect() {
     bubbles.set(msg.id, { text: msg.text, until: Date.now() + 6000 });
     useStore.setState((s) => ({ publicFeed: [...s.publicFeed.slice(-40), msg] }));
   });
-  socket.on('emote', ({ id, e }) => emotes.set(id, { e, until: Date.now() + 3000 }));
+  socket.on('emote', ({ id, e }) => {
+    emotes.set(id, { e, until: Date.now() + 3000 });
+    sfx('pop');
+  });
   socket.on('dm', (msg) => {
     const s = st();
     if (msg.from_id !== s.myId) {
+      sfx('notify');
       const reading = s.phone === 'dm' && s.phoneArg === msg.from;
       if (!reading) {
         s.toast(`💬 @${msg.from}: ${msg.body.slice(0, 60)}`);
@@ -105,6 +110,7 @@ export function connect() {
   });
   socket.on('toast', ({ text, refresh }) => {
     st().toast(text);
+    sfx(refresh ? 'cash' : 'notify');
     if (refresh) st().refreshMe().catch(() => {});
   });
   return socket;

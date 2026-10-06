@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api, token } from './api.js';
+import { sfx } from './audio.js';
 
 let toastId = 0;
 
@@ -44,11 +45,15 @@ export const useStore = create((set, get) => ({
   },
   toast: (text, kind) => {
     if (Array.isArray(text)) text = get().lang === 'en' ? text[1] : text[0];
+    if (kind === 'err') sfx('error');
     const id = ++toastId;
     set((s) => ({ toasts: [...s.toasts.slice(-3), { id, text, kind }] }));
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 3300);
   },
-  openPhone: (app = 'home', arg = null) => set({ phone: app, phoneArg: arg, sheet: null }),
+  openPhone: (app = 'home', arg = null) => {
+    if (!get().phone) sfx('open');
+    set({ phone: app, phoneArg: arg, sheet: null });
+  },
   refreshMe: async () => {
     const me = await api('/me');
     set({ me });
@@ -67,6 +72,9 @@ export const useStore = create((set, get) => ({
     try {
       const r = await api(path, opts);
       if (r.me) set({ me: r.me });
+      if (/^\/(shop|plots|business|ads$)/.test(path) || /\/build$/.test(path)) sfx('cash');
+      else if (path === '/income/collect') sfx('coin');
+      else if (path === '/vehicle/use' && opts?.body?.vehicleId) sfx('horn');
       return r;
     } catch (e) {
       get().toast(e.message, 'err');

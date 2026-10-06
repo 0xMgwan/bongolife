@@ -5,6 +5,30 @@ import { AppHead } from '../Phone.jsx';
 import { AvatarPreview, Swatch } from '../Creator.jsx';
 import { LangToggle } from '../LangToggle.jsx';
 import { L, loc } from '../../i18n.js';
+import { setAudioSettings, sfx } from '../../audio.js';
+import { useAudioSettings } from '../useAudioSettings.js';
+
+function SoundSettings() {
+  const s = useAudioSettings();
+  const row = (key, label, hint) => (
+    <div style={{ marginTop: 12 }}>
+      <div className="row between small"><b>{label}</b><span className="muted">{Math.round(s[key] * 100)}%</span></div>
+      <input type="range" min="0" max="1" step="0.05" value={s[key]} disabled={s.muted} onChange={(e) => setAudioSettings({ [key]: Number(e.target.value) })} onPointerUp={() => key === 'sfx' && sfx('coin')} style={{ width: '100%', accentColor: 'var(--green)' }} />
+      {hint && <div className="hint" style={{ marginTop: 0 }}>{hint}</div>}
+    </div>
+  );
+  return (
+    <div className="box">
+      <div className="row between">
+        <div className="bold">{L('Sauti', 'Sound')}</div>
+        <button className={`btn btn-xs ${s.muted ? 'btn-green' : 'btn-ghost'}`} onClick={() => setAudioSettings({ muted: !s.muted })}>{s.muted ? L('🔇 Imezimwa', '🔇 Muted') : L('🔊 Inawaka', '🔊 On')}</button>
+      </div>
+      {row('music', L('Muziki wa mtaani', 'Venue music'), L('Club, bar na studio. Punguza kama unasikiliza muziki wako mwenyewe.', 'Clubs, bars and the studio. Turn down if you are playing your own music.'))}
+      {row('sfx', L('Sauti za mchezo', 'Game effects'))}
+      {row('ambience', L('Mazingira', 'Ambience'), L('Kelele za mji, mawimbi ya bahari na injini.', 'City hum, ocean waves and engines.'))}
+    </div>
+  );
+}
 
 export function Kabati({ back }) {
   const me = useStore((s) => s.me);
@@ -64,6 +88,7 @@ export function Mipangilio({ back }) {
           {row(L('Umaarufu', 'Fame'), `⭐ ${me.fame}`)}
           {row(L('Mjini tangu', 'In the city since'), new Date(me.createdAt).toLocaleDateString())}
         </div>
+        <SoundSettings />
         <div className="box">
           <div className="bold" style={{ marginBottom: 8 }}>{L('Lugha', 'Language')}</div>
           <LangToggle full />

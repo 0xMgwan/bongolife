@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { gameClock } from '@shared/world.js';
 import { useStore } from '../store.js';
+import { sfx } from '../audio.js';
 import { L, loc } from '../i18n.js';
 import { Threads, Dm, Mtaa } from './apps/Messages.jsx';
 import { Pesa } from './apps/Pesa.jsx';
@@ -52,7 +53,10 @@ export function Phone() {
   const set = useStore((s) => s.set);
   const time = useClock();
   if (!phone) return null;
-  const close = () => set({ phone: null, phoneArg: null });
+  const close = () => {
+    sfx('close');
+    set({ phone: null, phoneArg: null });
+  };
   const app = byId[phone];
   const open = (id, a = null) => set({ phone: id, phoneArg: a });
   const back = () => open(app?.back || 'home');

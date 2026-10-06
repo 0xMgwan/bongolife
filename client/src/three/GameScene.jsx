@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { gameClock } from '@shared/world.js';
 import { City } from './City.jsx';
 import { LocalPlayer, RemotePlayers } from './Players.jsx';
+import { AudioDriver } from './AudioDriver.jsx';
 import { local } from '../net.js';
 
 const zoom = { value: 0.8, target: 0.8 };
@@ -161,6 +162,7 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
         {mode === 'play' && me && (
           <>
             <LocalPlayer me={me} />
+            <AudioDriver me={me} />
             <RemotePlayers onPlayer={onPlayer} />
           </>
         )}

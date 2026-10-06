@@ -5,6 +5,8 @@ import { useStore } from '../store.js';
 import { input, sendChat, sendEmote } from '../net.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
 import { setZoom, getZoom } from '../three/GameScene.jsx';
+import { setAudioSettings } from '../audio.js';
+import { useAudioSettings } from './useAudioSettings.js';
 
 function NeedRing({ need, value }) {
   const r = 15;
@@ -167,6 +169,7 @@ export function HUD() {
   const world = useStore((s) => s.world);
   const online = useStore((s) => s.online);
   const announcement = useStore((s) => s.announcement);
+  const sound = useAudioSettings();
   const openPhone = useStore((s) => s.openPhone);
   const run = useStore((s) => s.run);
   const [touch] = useState(() => matchMedia('(pointer: coarse)').matches);
@@ -208,6 +211,7 @@ export function HUD() {
         <button onClick={() => openPhone('ramani')} aria-label={L('Ramani', 'Map')}>🗺️</button>
         <button onClick={toggleVehicle} className={vehicle ? 'on' : ''} aria-label={L('Gari', 'Vehicle')}>{vehicle ? vehicleById[vehicle.model]?.emoji : anyVehicle ? '🚶' : '🚗'}</button>
         <button onClick={() => openPhone('kazi')} aria-label={L('Kazi', 'Jobs')}>💼</button>
+        <button onClick={() => setAudioSettings({ muted: !sound.muted })} aria-label={sound.muted ? L('Washa sauti', 'Unmute') : L('Zima sauti', 'Mute')}>{sound.muted ? '🔇' : '🔊'}</button>
         <button onClick={() => setZoom(getZoom() * 0.8)} aria-label="Zoom in">＋</button>
         <button onClick={() => setZoom(getZoom() * 1.25)} aria-label="Zoom out">－</button>
       </div>

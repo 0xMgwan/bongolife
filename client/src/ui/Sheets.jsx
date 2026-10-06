@@ -7,6 +7,7 @@ import { useStore } from '../store.js';
 import { api } from '../api.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
 import { AvatarPreview } from './Creator.jsx';
+import { sfx } from '../audio.js';
 import { L, loc, isEn } from '../i18n.js';
 
 const jt = (j, n) => (isEn() ? jobTitleEn(j, n) : jobTitle(j, n));
@@ -108,7 +109,10 @@ function PlaceSheet({ id, onClose }) {
   const busy = !!me.busy;
   const start = async (kind, actId) => {
     const r = await run('/act/start', { method: 'POST', body: { kind, placeId: id, id: actId } });
-    if (r) onClose();
+    if (r) {
+      if (/^ogelea/.test(actId)) sfx('splash');
+      onClose();
+    }
   };
   return (
     <Sheet title={loc(p)} icon={p.icon} sub={`${p.district} · ${loc(p, 'blurb')}`} onClose={onClose}>
