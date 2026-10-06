@@ -2,7 +2,7 @@ import {
   GAME, NEEDS, PLACES, PLOTS, VEHICLES, BUILDINGS, ALLOWED_BUILDINGS, VEHICLE_COLORS,
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, ENTERABLE,
-  furnitureById, STARTER_HOME, homeFits, HOME, currentEvent, travelCost, isWater, TRAVEL,
+  furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL,
 } from '../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
 
@@ -219,7 +219,8 @@ export const startAction = db.transaction((userId, { kind, placeId, id }) => {
   const user = getUser(userId);
   if (user.busy && user.busy.endsAt > now()) throw new GameError(['Bado uko bize na kitu kingine.', 'You\'re still busy with something else.']);
   if (kind === 'home') {
-    const row = hq.item.get(Number(id), userId);
+    const visiting = online.get(userId)?.home;
+    const row = hq.item.get(Number(id), userId) || (visiting ? hq.item.get(Number(id), visiting) : null);
     const def = row && furnitureById[row.item];
     if (!def?.use) throw new GameError(['Kitu hicho hakitumiki.', "You can't use that."]);
     if (def.use.cost) addMoney(userId, -def.use.cost, 'spend', `${def.use.name} nyumbani`);
@@ -253,6 +254,7 @@ export const startAction = db.transaction((userId, { kind, placeId, id }) => {
       if (!job.requires.vehicle.some((m) => owned.includes(m)))
         throw new GameError([`Unahitaji ${job.requires.vehicle.map((m) => vehicleById[m].name).join(' / ')} kufanya kazi hii.`, `You need a ${job.requires.vehicle.map((m) => vehicleById[m].nameEn).join(' / ')} for this job.`]);
     }
+    if ((user.health ?? 100) < HEALTH.injuredBelow) throw new GameError(['Uko mgonjwa — nenda hospitali kwanza. 🏥', "You're injured — get treated at the hospital first. 🏥"]);
     if ((user.needs.energy ?? 0) < job.energy) throw new GameError(['Umechoka sana! Nenda kalale kwanza. 😴', 'You\'re exhausted! Go sleep first. 😴']);
     const busy = { kind, id, placeId, emoji: '💼', label: jobTitle(job, user.jobXp[id] || 0), labelEn: jobTitleEn(job, user.jobXp[id] || 0), startedAt: now(), endsAt: now() + job.secs * 1000 };
     setBusy(userId, busy);
@@ -290,6 +292,11 @@ export const finishAction = db.transaction((userId) => {
     if (act.fame) {
       fields.fame = user.fame + act.fame * (user.trait === 'msanii' && place.type === 'studio' ? 2 : 1);
       result.lines.push([`⭐ Umaarufu +${fields.fame - user.fame}`, `⭐ Fame +${fields.fame - user.fame}`]);
+    }
+    if (act.special?.health) {
+      fields.health = Math.min(100, (user.health ?? 100) + act.special.health);
+      if (act.special.heal || fields.health >= HEALTH.injuredBelow) fields.injuredAt = null;
+      result.lines.push([`❤️ Afya sasa ${fields.health}%`, `❤️ Health now ${fields.health}%`]);
     }
     if (act.special?.elimu) {
       fields.elimu = user.elimu + act.special.elimu;
@@ -466,4 +473,35 @@ export function leaderboard() {
   const famous = [...scored].sort((a, b) => b.fame - a.fame).slice(0, 20);
   lbCache = { at: now(), data: { rich, famous } };
   return lbCache.data;
+}
+
+// ---------------------------------------------------------------- health
+/** Knocked down by traffic (reported by the victim's client). Cooldown stops repeats. */
+export const accident = db.transaction((userId, { byUsername } = {}) => {
+  const u = getUser(userId);
+  if (u.injuredAt && now() - u.injuredAt < HEALTH.accidentCooldownMs) return null;
+  const health = Math.max(5, (u.health ?? 100) - HEALTH.accidentDamage);
+  const needs = applyNeeds(u.needs, { energy: -20, fun: -15 });
+  saveFields(userId, { health, injuredAt: now(), needs, busy: null });
+  setBusy(userId, null);
+  return { health, by: byUsername || null };
+});
+
+/** Ambulance ride straight to the hospital entrance. */
+export const ambulance = db.transaction((userId) => {
+  const u = getUser(userId);
+  const h = placeById[HOSPITAL_ID];
+  const pos = [h.pos[0], h.pos[1] + h.size[1] / 2 + 3];
+  const cost = (u.health ?? 100) < HEALTH.injuredBelow ? HEALTH.ambulanceCost : HEALTH.ambulanceCost * 2;
+  addMoney(userId, -Math.min(cost, u.money), 'travel', 'Gari la wagonjwa 🚑');
+  saveFields(userId, { x: pos[0], z: pos[1] });
+  const p = online.get(userId);
+  if (p) Object.assign(p, { x: pos[0], z: pos[1], inside: null });
+  return { pos };
+});
+
+/** Neglect hurts: starving or exhausted players slowly lose health (called from the needs tick). */
+export function neglectHealth(user, needs) {
+  if ((needs.hunger ?? 50) > 5 && (needs.energy ?? 50) > 5) return null;
+  return Math.max(1, (user.health ?? 100) - 1);
 }

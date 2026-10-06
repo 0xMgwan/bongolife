@@ -5,6 +5,7 @@ import { remotes } from '../../net.js';
 import { avatarEmoji } from '../../three/Avatar.jsx';
 import { AppHead } from '../Phone.jsx';
 import { L } from '../../i18n.js';
+import { inviteHome } from '../social.js';
 
 export function Contacts({ back, open }) {
   const me = useStore((s) => s.me);
@@ -46,8 +47,9 @@ export function Contacts({ back, open }) {
               <span className="avatar-dot">{avatarEmoji(c.appearance)}{c.online && <span className="dot" style={{ position: 'absolute', right: 0, bottom: 0 }} />}</span>
               <div className="grow">
                 <b>{c.name}</b>
-                <div className="small muted">@{c.username} · {c.online ? L('yuko online', 'online') : 'offline'}</div>
+                <div className="small muted">@{c.username} · {c.mutual ? L('rafiki', 'friend') + ' · ' : ''}{c.online ? L('yuko online', 'online') : 'offline'}</div>
               </div>
+              {c.online && <button className="round" style={{ width: 36, height: 36, fontSize: 15 }} onClick={() => inviteHome(c.username)} aria-label={L('Mwalike nyumbani', 'Invite home')}>🏠</button>}
               <button className="round" style={{ width: 36, height: 36, fontSize: 15 }} onClick={() => open('dm', c.username)} aria-label={L('Ujumbe', 'Message')}>💬</button>
               <button className="round" style={{ width: 36, height: 36, fontSize: 15 }} onClick={() => open('pesa', { send: c.username })} aria-label={L('Tuma pesa', 'Send money')}>💸</button>
               <button className="round" style={{ width: 36, height: 36, fontSize: 13 }} onClick={() => remove(c.username)} aria-label={L('Ondoa', 'Remove')}>✕</button>

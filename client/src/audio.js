@@ -142,6 +142,11 @@ const SFX = {
     tone(sfxBus, { type: 'sawtooth', freq: 494, t, d: 0.25, peak: 0.05 });
   },
   splash: (t) => noise(sfxBus, { t, d: 0.5, peak: 0.25, type: 'lowpass', freq: 1500 }),
+  crash: (t) => {
+    tone(sfxBus, { type: 'sawtooth', freq: 440, t, d: 0.35, peak: 0.07 }); // screech
+    tone(sfxBus, { type: 'sawtooth', freq: 466, t, d: 0.35, peak: 0.05 });
+    noise(sfxBus, { t: t + 0.3, d: 0.45, peak: 0.4, type: 'lowpass', freq: 600 }); // thud
+  },
 };
 
 /** Play a one-shot effect by name. Safe to call before audio is unlocked. */

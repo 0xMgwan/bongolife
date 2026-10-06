@@ -128,6 +128,8 @@ addColumn('users', 'muted_until', 'INTEGER');
 addColumn('users', 'token_version', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('messages', 'deleted_at', 'INTEGER');
 addColumn('users', 'home_seeded', 'INTEGER NOT NULL DEFAULT 0');
+addColumn('users', 'health', 'INTEGER NOT NULL DEFAULT 100');
+addColumn('users', 'injured_at', 'INTEGER');
 db.exec(`
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS home_items (
@@ -145,6 +147,24 @@ CREATE TABLE IF NOT EXISTS contacts (
   contact_id INTEGER NOT NULL REFERENCES users(id),
   created_at INTEGER NOT NULL,
   PRIMARY KEY (user_id, contact_id)
+);
+CREATE TABLE IF NOT EXISTS events (
+  id INTEGER PRIMARY KEY,
+  host_id INTEGER NOT NULL REFERENCES users(id),
+  title TEXT NOT NULL,
+  description TEXT,
+  place_id TEXT NOT NULL,
+  starts_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  cancelled INTEGER NOT NULL DEFAULT 0,
+  notified INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS events_time ON events(starts_at);
+CREATE TABLE IF NOT EXISTS event_rsvps (
+  event_id INTEGER NOT NULL REFERENCES events(id),
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (event_id, user_id)
 );
 CREATE TABLE IF NOT EXISTS phone_apps (
   id INTEGER PRIMARY KEY,
@@ -258,6 +278,8 @@ export function rowToUser(r) {
     tokenVersion: r.token_version,
     lastSeen: r.last_seen,
     homeSeeded: !!r.home_seeded,
+    health: r.health ?? 100,
+    injuredAt: r.injured_at,
   };
 }
 
@@ -296,7 +318,7 @@ export function addMoney(userId, delta, kind, memo) {
 export function saveFields(userId, fields) {
   const cols = Object.keys(fields);
   if (!cols.length) return;
-  const map = { jobXp: 'job_xp', activeVehicle: 'active_vehicle', lastSeen: 'last_seen', homeSeeded: 'home_seeded' };
+  const map = { jobXp: 'job_xp', activeVehicle: 'active_vehicle', lastSeen: 'last_seen', homeSeeded: 'home_seeded', injuredAt: 'injured_at' };
   const sql = `UPDATE users SET ${cols.map((c) => `${map[c] || c} = @${c}`).join(', ')} WHERE id = @id`;
   const params = { id: userId };
   for (const c of cols) {

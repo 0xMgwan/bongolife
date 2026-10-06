@@ -37,6 +37,12 @@ export const useStore = create((set, get) => ({
   cityView: 'follow', // town camera: follow the player, or 'map' overview
   mapFilter: null, // ads | homes | sea | people
   homeItems: [],
+  homeHost: null, // id of the home you're in (yours or a friend's)
+  visiting: null, // { host, items } when you're a guest in someone's home
+  homeRoster: 0, // bumps when people join/leave the home you're in
+  invite: null, // incoming home invite { fromId, from, fromName }
+  accident: null, // { health } — knocked down by a car
+  eventsVersion: 0,
   phoneApps: null, // partner apps on the phone home screen
   visits: 0,
   placing: null, // furniture being placed: { def, x, z, rot, id? }

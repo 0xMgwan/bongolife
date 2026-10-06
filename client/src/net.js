@@ -18,9 +18,14 @@ export const view = { yaw: 0, pitch: 1.0, mapX: 0, mapZ: 0, mapDist: 150, homeYa
 export const remotes = new Map();
 export const bubbles = new Map(); // userId -> { text, until }
 export const emotes = new Map(); // userId -> { e, until }
+// Other people in the same home as you: id -> { id, username, name, appearance, x, z, ry, mode, y }
+export const homeGuests = new Map();
+// Positions of NPC traffic, written by City every frame (for collisions).
+export const trafficCars = [];
 
 let socket = null;
 const bump = () => useStore.setState((s) => ({ roster: s.roster + 1 }));
+const bumpHome = () => useStore.setState((s) => ({ homeRoster: s.homeRoster + 1 }));
 
 export function connect() {
   if (socket) return socket;
@@ -112,9 +117,29 @@ export function connect() {
     }
     useStore.setState((x) => ({ dmVersion: x.dmVersion + 1, lastDm: msg }));
   });
-  socket.on('needs', ({ needs, mood }) => {
+  socket.on('needs', ({ needs, mood, health }) => {
     const me = st().me;
-    if (me) useStore.setState({ me: { ...me, needs, mood } });
+    if (me) useStore.setState({ me: { ...me, needs, mood, ...(health != null ? { health } : {}) } });
+  });
+  socket.on('invite', (inv) => {
+    sfx('notify');
+    useStore.setState({ invite: { ...inv, at: Date.now() } });
+  });
+  socket.on('event:start', (e) => {
+    sfx('notify');
+    st().toast(L(`🎉 "${e.title}" imeanza sasa! Fungua Matukio.`, `🎉 "${e.title}" is starting now! Open Events.`));
+    useStore.setState((s) => ({ eventsVersion: s.eventsVersion + 1 }));
+  });
+  socket.on('home:join', (g) => { homeGuests.set(g.id, g); bumpHome(); sfx('pop'); });
+  socket.on('home:pos', (g) => {
+    const cur = homeGuests.get(g.id);
+    if (cur) Object.assign(cur, g);
+  });
+  socket.on('home:leave', ({ id }) => { homeGuests.delete(id); bumpHome(); });
+  socket.on('connect', () => {
+    // Re-join the home room after a reconnect.
+    const h = st().homeHost;
+    if (h) enterHome(h);
   });
   socket.on('online', (n) => useStore.setState({ online: n }));
   socket.on('world', (world) => useStore.setState({ world }));
@@ -134,6 +159,43 @@ export function connect() {
 }
 
 export const getSocket = () => socket;
+
+/** Join a home's live room (yours or one you're invited to). */
+export function enterHome(hostId) {
+  return new Promise((resolve) => {
+    if (!socket?.connected) return resolve({ error: 'offline' });
+    socket.emit('home:enter', hostId, (r) => {
+      homeGuests.clear();
+      for (const g of r?.others || []) homeGuests.set(g.id, g);
+      bumpHome();
+      resolve(r || {});
+    });
+  });
+}
+export function leaveHome() {
+  homeGuests.clear();
+  bumpHome();
+  socket?.emit('home:leave');
+}
+let lastHome = 0;
+let lastHomeKey = '';
+export function sendHomePos(x, z, ry, mode, y = 0) {
+  const t = performance.now();
+  const key = `${x.toFixed(2)},${z.toFixed(2)},${mode}`;
+  if (!socket?.connected || t - lastHome < 120 || key === lastHomeKey) return;
+  lastHome = t;
+  lastHomeKey = key;
+  socket.emit('home:pos', { x, z, ry, mode, y });
+}
+export function sendInvite(username) {
+  return new Promise((resolve) => {
+    if (!socket?.connected) return resolve({ error: 'offline' });
+    socket.emit('invite', { to: username }, (r) => resolve(r || {}));
+  });
+}
+export function replyInvite(fromId, accept) {
+  socket?.emit('invite:reply', { fromId, accept });
+}
 
 /** Walk into a venue (placeId) or back out (null). */
 export function setInside(placeId) {

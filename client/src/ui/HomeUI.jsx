@@ -156,7 +156,9 @@ function PlacePanel() {
 /** Tapping furniture at home: use it, move it or sell it. */
 function ItemSheet() {
   const id = useStore((s) => s.homeSel);
-  const items = useStore((s) => s.homeItems);
+  const own = useStore((s) => s.homeItems);
+  const visiting = useStore((s) => s.visiting);
+  const items = visiting ? visiting.items : own;
   const me = useStore((s) => s.me);
   const item = items.find((i) => i.id === id);
   const def = item && furnitureById[item.item];
@@ -193,9 +195,9 @@ function ItemSheet() {
           ) : (
             <div className="box small muted" style={{ background: 'var(--chip)' }}>{L('Pambo tu — linapendezesha nyumba yako.', 'Decoration — it makes your home look great.')}</div>
           )}
-          <div className="row" style={{ marginTop: 10 }}>
+          {!visiting && <div className="row" style={{ marginTop: 10 }}>
             <button className="btn btn-ghost grow" onClick={() => { close(); useStore.setState({ tab: 'shop', placing: { def, x: item.x, z: item.z, rot: item.rot, id: item.id } }); }}>✥ {L('Hamisha', 'Move')}</button>
-          </div>
+          </div>}
         </div>
       </div>
     </div>

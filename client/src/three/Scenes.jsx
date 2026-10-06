@@ -744,6 +744,92 @@ function Classroom({ me, myBusy, people }) {
   );
 }
 
+// -------------------------------------------------------------- hospital
+function drawEcg(ctx, t) {
+  const w = ctx.canvas.width, h = ctx.canvas.height;
+  ctx.fillStyle = '#04140c';
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let x = 0; x <= w; x += 2) {
+    const ph = ((x / w) * 3 + t * 1.2) % 1;
+    const y = ph > 0.42 && ph < 0.46 ? -0.8 : ph > 0.46 && ph < 0.5 ? 0.55 : ph > 0.6 && ph < 0.7 ? -0.12 : 0;
+    ctx[x ? 'lineTo' : 'moveTo'](x, h * 0.55 + y * h * 0.45);
+  }
+  ctx.stroke();
+  ctx.fillStyle = '#22c55e';
+  ctx.font = 'bold 22px system-ui';
+  ctx.fillText(`♥ ${72 + Math.round(Math.sin(t * 0.7) * 4)}`, 8, 24);
+}
+function Monitor({ p }) {
+  const tex = useCanvasTexture(160, 96, drawEcg, 12);
+  return (
+    <group position={p}>
+      <Box p={[0, 0, 0]} s={[0.08, 1.5, 0.08]} c="#9ca3af" />
+      <Box p={[0, 1.5, -0.05]} s={[0.8, 0.52, 0.1]} c="#1f2937" />
+      <mesh position={[0, 1.76, 0.01]}><planeGeometry args={[0.7, 0.42]} /><meshBasicMaterial map={tex} toneMapped={false} /></mesh>
+    </group>
+  );
+}
+function Bed({ x }) {
+  return (
+    <group position={[x, 0, -2.5]}>
+      <Box s={[1.7, 0.5, 3.3]} c="#cbd5e1" />
+      <Box p={[0, 0.5, 0]} s={[1.6, 0.2, 3.1]} c="#ffffff" />
+      <Box p={[0, 0.7, 0.75]} s={[1.62, 0.06, 1.6]} c="#93c5fd" />
+      <Box p={[0, 0.7, -1.15]} s={[1.1, 0.18, 0.55]} c="#f8fafc" />
+      <Box p={[0, 0, -1.65]} s={[1.7, 1.3, 0.1]} c="#94a3b8" />
+      {/* IV drip */}
+      <Box p={[-1.15, 0, -1.2]} s={[0.05, 2.2, 0.05]} c="#9ca3af" />
+      <Box p={[-1.15, 1.9, -1.2]} s={[0.25, 0.35, 0.08]} m={basic('#e0f2fe', { transparent: true, opacity: 0.85 })} />
+      <Monitor p={[1.2, 0, -1.3]} />
+      {/* privacy curtain rail + curtain */}
+      <Box p={[1.45, 0, 0.1]} s={[0.04, 3.2, 0.04]} c="#cbd5e1" />
+      <Box p={[1.45, 0.4, -0.7]} s={[0.03, 2.7, 1.5]} c="#a7f3d0" />
+    </group>
+  );
+}
+const STAFF_LOOK = [
+  { body: 'woman', skin: 2, hair: 'misuko', outfit: 'scrubs', hairColor: 0 },
+  { body: 'man', skin: 1, hair: 'kiduku', outfit: 'scrubs', hairColor: 0 },
+];
+function Hospital({ me, myBusy, people }) {
+  const beds = [-6, -2, 2, 6];
+  const slots = beds.map((x) => [x, 0.72, -1.4, 0]);
+  const staffish = (b) => b?.kind === 'job' || b?.id === 'pima';
+  const patients = people.filter((r) => !staffish(r.busy));
+  const staff = people.filter((r) => staffish(r.busy));
+  const meMode = myBusy?.kind === 'job' ? 'idle' : myBusy?.id === 'pima' ? 'sit' : myBusy ? 'sleep' : 'idle';
+  const standSlots = [[-0.2, 0, 1.6, Math.PI], [3.8, 0, 1.4, Math.PI * 0.85], [-3.8, 0, 1.4, Math.PI * 1.15], [0, 0, 3, Math.PI]];
+  const meSlot = meMode === 'sleep' ? slots[1] : meMode === 'sit' ? [-0.2, 0, 1.2, Math.PI] : standSlots[0];
+  return (
+    <group>
+      <Room w={18} d={11} h={5} floor="#e2e8f0" wall="#f1f5f9" back="#dbeafe" />
+      <Box p={[0, 0, -5.3]} s={[18, 1.1, 0.05]} c="#bfdbfe" />
+      <Sign text="✚ MUHIMBILI · WODI YA DHARURA" p={[0, 3.7, -5.3]} h={0.6} fg="#dc2626" />
+      {beds.map((x) => <Bed key={x} x={x} />)}
+      {/* check-up desk */}
+      <group position={[-0.2, 0, -0.1]}>
+        {meMode === 'sit' && <Box p={[0, 0, -0.6]} s={[1.8, 0.85, 0.7]} c="#e5e7eb" />}
+      </group>
+      {beds.map((x, i) => <pointLight key={i} color="#f0f9ff" intensity={2.5} distance={6} position={[x, 3.6, -2]} />)}
+      <Crowd
+        me={me}
+        myBusy={myBusy}
+        people={patients}
+        slots={slots.filter((sl) => sl !== meSlot)}
+        localSlot={meSlot}
+        crowd={3}
+        modeFor={(kind) => (kind === 'me' ? meMode : 'sleep')}
+      />
+      {staff.slice(0, 3).map((r, i) => <Person key={r.id} slot={standSlots[i + 1]} appearance={r.appearance} mode="idle" id={r.id} username={r.username} />)}
+      {meMode !== 'idle' && <Person slot={[2.4, 0, 0.9, Math.PI * 1.1]} appearance={STAFF_LOOK[0]} mode="idle" />}
+      <Person slot={[-4, 0, 0.9, Math.PI * 0.9]} appearance={STAFF_LOOK[1]} mode="idle" />
+    </group>
+  );
+}
+
 // ---------------------------------------------------------------- config
 export const SCENES = {
   club: { C: Club, camera: { pos: [0, 8.5, 13], look: [0, 1.2, -1.5] }, dark: true, bg: '#0b0614', light: 0.25 },
@@ -756,6 +842,7 @@ export const SCENES = {
   studio: { C: Studio, camera: { pos: [0, 4.5, 7.5], look: [0, 1.4, 0] }, bg: '#0b0614', light: 0.4 },
   cinema: { C: Cinema, camera: { pos: [0, 6.5, 10.5], look: [0, 2.6, -8] }, bg: '#000000', light: 0.25 },
   gym: { C: Gym, camera: { pos: [0, 5, 8], look: [0, 1, -1] }, bg: '#1c1917', light: 0.9 },
+  hospital: { C: Hospital, camera: { pos: [0, 8.5, 12], look: [0, 0.6, -2.2] }, bg: '#0f172a', light: 1 },
   classroom: { C: Classroom, camera: { pos: [0, 5.5, 9], look: [0, 1.6, -4] }, bg: '#1c1917', light: 0.9 },
 };
 

@@ -9,6 +9,7 @@ import { avatarEmoji } from '../three/Avatar.jsx';
 import { AvatarPreview } from './Creator.jsx';
 import { sfx } from '../audio.js';
 import { setInside } from '../net.js';
+import { inviteHome, goToPlayer } from './social.js';
 import { L, loc, isEn } from '../i18n.js';
 
 const jt = (j, n) => (isEn() ? jobTitleEn(j, n) : jobTitle(j, n));
@@ -29,13 +30,14 @@ export function Sheet({ title, icon, sub, onClose, children }) {
   );
 }
 
-export function Effects({ effects, fame }) {
+export function Effects({ effects, fame, health }) {
   const map = Object.fromEntries(NEEDS.map((n) => [n.id, n]));
   return (
     <div className="fx">
       {Object.entries(effects || {}).map(([k, v]) => (
         <span key={k} className={v > 0 ? 'up' : 'dn'}>{map[k]?.icon} {v > 0 ? '+' : ''}{v}</span>
       ))}
+      {health ? <span className="up">❤️ +{health}</span> : null}
       {fame ? <span className="up">⭐ +{fame}</span> : null}
     </div>
   );
@@ -146,7 +148,7 @@ function PlaceSheet({ id, onClose }) {
           <div className="grow">
             <div className="t">{loc(a)}</div>
             <div className="s">{a.cost ? fmtTsh(a.cost) : L('Bure', 'Free')} · {a.secs}s</div>
-            <Effects effects={a.effects} fame={a.fame} />
+            <Effects effects={a.effects} fame={a.fame} health={a.special?.health} />
           </div>
           <button className="btn btn-green btn-sm" disabled={busy || me.money < a.cost} onClick={() => start('activity', a.id)}>{L('Fanya', 'Do')}</button>
         </div>
@@ -271,8 +273,14 @@ function PlayerSheet({ username, onClose }) {
         <button className="btn btn-ghost grow" onClick={() => openPhone('pesa', { send: p.username })}>💸 {L('Tuma pesa', 'Send money')}</button>
       </div>
       <div className="row" style={{ marginTop: 8 }}>
-        <button className="btn btn-white grow" style={{ border: '1px solid var(--line)' }} onClick={() => run('/contacts', { method: 'POST', body: { username: p.username } }).then((r) => r && useStore.getState().toast(L(`📇 @${p.username} ameongezwa kwenye anwani`, `📇 @${p.username} added to contacts`)))}>📇 {L('Ongeza kwenye anwani', 'Add to contacts')}</button>
+        <button className="btn btn-white grow" style={{ border: '1px solid var(--line)' }} onClick={() => run('/contacts', { method: 'POST', body: { username: p.username } }).then((r) => r && useStore.getState().toast(r.find((c) => c.username === p.username)?.mutual ? L(`🤝 Sasa wewe na @${p.username} ni marafiki!`, `🤝 You and @${p.username} are now friends!`) : L(`📨 Ombi la urafiki limetumwa kwa @${p.username}`, `📨 Friend request sent to @${p.username}`)))}>➕ {L('Ongeza rafiki', 'Add friend')}</button>
       </div>
+      {p.online && (
+        <div className="row" style={{ marginTop: 8 }}>
+          <button className="btn btn-dark grow" onClick={() => inviteHome(p.username)}>🏠 {L('Mwalike kwako', 'Invite home')}</button>
+          <button className="btn btn-ghost grow" onClick={() => goToPlayer(p.username)}>📍 {L('Nenda kwake', 'Go to them')}</button>
+        </div>
+      )}
     </Sheet>
   );
 }

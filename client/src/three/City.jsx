@@ -9,6 +9,7 @@ import { mat, geo, emojiTexture, labelTexture, windowTexture, adTexture } from '
 import { Vehicle, Boat } from './Vehicle.jsx';
 import { Avatar } from './Avatar.jsx';
 import { L, loc } from '../i18n.js';
+import { trafficCars } from '../net.js';
 
 const GRASS = '#c7dca6';
 const PAD = '#eceee6';
@@ -599,8 +600,12 @@ function Traffic() {
       const dx = (x2 - x1) * s.dir;
       const dz = (z2 - z1) * s.dir;
       g.rotation.y = Math.atan2(dx, dz);
+      // Shared with the player for collisions: half-length along travel, half-width across.
+      const c = trafficCars[i] || (trafficCars[i] = {});
+      c.x = x; c.z = z; c.horiz = horiz; c.len = s.kind === 'bus' ? 3.2 : s.kind === 'moto' || s.kind === 'bajaji' ? 1.1 : 2.1; c.wid = s.kind === 'moto' ? 0.5 : 1;
     });
   });
+  useEffect(() => () => { trafficCars.length = 0; }, []);
   return state.map((s, i) => (
     <group key={i} ref={(el) => (refs.current[i] = el)}>
       <Vehicle kind={s.kind} color={s.color} />

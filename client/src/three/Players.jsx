@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { isWater, vehicleById, placeById } from '@shared/world.js';
+import { isWater, vehicleById, placeById, HEALTH } from '@shared/world.js';
 import { Avatar } from './Avatar.jsx';
 import { Vehicle, riderOffset } from './Vehicle.jsx';
 import { labelTexture, bubbleTexture, emojiTexture } from './textures.js';
-import { local, input, remotes, bubbles, emotes, sendMove, view } from '../net.js';
+import { local, input, remotes, bubbles, emotes, sendMove, view, trafficCars } from '../net.js';
+import { api } from '../api.js';
+import { sfx } from '../audio.js';
 import { useStore } from '../store.js';
 
 const DANCE = new Set(['cheza', 'vip', 'mzunguko', 'sundowner', 'dabi']);
@@ -94,6 +96,39 @@ const overheadHeight = (vehicle) => {
 };
 
 // ------------------------------------------------------------- local
+const HIT_GRACE_MS = HEALTH.accidentCooldownMs;
+/** Pedestrian vs traffic: NPC cars, plus other players driving past. Returns the driver's username, '' for NPCs, or null. */
+function hitBy() {
+  for (const c of trafficCars) {
+    const ax = c.horiz ? c.len : c.wid;
+    const az = c.horiz ? c.wid : c.len;
+    if (Math.abs(c.x - local.x) < ax + 0.3 && Math.abs(c.z - local.z) < az + 0.3) return '';
+  }
+  for (const r of remotes.values()) {
+    if (!r.v || !r.m || r.inside) continue;
+    const v = vehicleById[r.v.model];
+    if (!v || v.kind === 'boat' || v.kind === 'bike') continue;
+    if (Math.hypot(r.tx - local.x, r.tz - local.z) < 1.5) return r.username;
+  }
+  return null;
+}
+function knockDown(by) {
+  const t = Date.now();
+  local.lastHit = t;
+  local.knockedUntil = t + 3500;
+  local.target = null;
+  local.arrive = null;
+  sfx('crash');
+  navigator.vibrate?.(200);
+  api('/accident', { method: 'POST', body: { by: by || null } })
+    .then((r) => {
+      if (!r.hit) return;
+      useStore.setState({ me: r.me });
+      setTimeout(() => useStore.setState({ accident: { health: r.me.health, by } }), 1400);
+    })
+    .catch(() => {});
+}
+
 export function LocalPlayer({ me, onArrive, frozen = false }) {
   const group = useRef();
   const motion = useRef({ moving: false, mode: 'idle', speed: 1 });
@@ -103,6 +138,8 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
   busyRef.current = me.busy && me.busy.endsAt > Date.now() - 2000 ? me.busy : null;
   const energyRef = useRef(me.needs?.energy ?? 50);
   energyRef.current = me.needs?.energy ?? 50;
+  const healthRef = useRef(100);
+  healthRef.current = me.health ?? 100;
   const seen = useRef(local.teleported);
 
   useEffect(() => {
@@ -129,6 +166,17 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
     if (frozen) {
       local.moving = false;
       return;
+    }
+    const nowMs = Date.now();
+    if (local.knockedUntil > nowMs) {
+      local.moving = false;
+      motion.current.mode = 'knocked';
+      g.position.set(local.x, 0.1, local.z);
+      return;
+    }
+    if (!vehicle && !busy && !(nowMs - (local.lastHit || 0) < HIT_GRACE_MS)) {
+      const by = hitBy();
+      if (by !== null) return knockDown(by);
     }
     let dx = 0;
     let dz = 0;
@@ -164,7 +212,7 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
     const len = Math.hypot(dx, dz);
     const moving = !busy && len > 0.05;
     if (moving) {
-      const tired = energyRef.current < 12 ? 0.6 : 1;
+      const tired = (energyRef.current < 12 ? 0.6 : 1) * (healthRef.current < HEALTH.injuredBelow ? 0.55 : 1);
       const speed = 7.5 * speedMult * tired * Math.min(1, manual ? len : 1);
       const step = Math.min(speed * dt, manual ? Infinity : len);
       const nx = local.x + (dx / len) * step;

@@ -6,7 +6,7 @@ import { L } from '../i18n.js';
 
 /** Open Kwangu and walk to the first item of a category (sleep/bath/kitchen), then open it. */
 export async function goHomeTo(cat) {
-  useStore.setState({ tab: 'home', phone: null, sheet: null });
+  useStore.setState({ tab: 'home', phone: null, sheet: null, visiting: null });
   if (!useStore.getState().homeItems.length) await loadHome();
   const item = useStore.getState().homeItems.find((i) => furnitureById[i.item]?.cat === cat && furnitureById[i.item]?.use);
   if (!item) {

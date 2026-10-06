@@ -5,11 +5,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   GAME, HAIRSTYLES, SKIN_TONES, HAIR_COLORS, OUTFITS, TRAITS, SPAWNS, BILLBOARDS, AD_MAX_DAYS,
-  billboardById, outfitById, ADS_PER_BOARD,
+  billboardById, outfitById, ADS_PER_BOARD, EVENT_LIMITS, EVENT_PLACES, placeById,
 } from '../../../shared/world.js';
 import { db, getUser, getUserByUsername, createUser, saveFields, addMoney, GameError, now, UPLOAD_DIR, getSettings } from '../db.js';
 import { hashPassword, checkPassword, signToken, requireAuth, requireAdmin, rateLimit, USERNAME_RE, normalizePhone } from '../auth.js';
 import { admin } from './admin.js';
+import { canVisit } from '../social.js';
 import * as game from '../game.js';
 import { online, onlineCount, broadcast, emitTo } from '../presence.js';
 import { provider, providers, TOPUP_RATE } from '../payments/index.js';
@@ -139,6 +140,13 @@ api.post('/act/cancel', (req, res) => {
 });
 // ---- Kwangu (player apartment)
 api.get('/home', (req, res) => res.json({ items: game.homeItems(req.user.id) }));
+// Visit someone else's home (invite or RSVP to their house party required).
+api.get('/visit/:username', (req, res) => {
+  const host = getUserByUsername(req.params.username);
+  if (!host) throw new GameError(['Mtumiaji hayupo', 'User not found'], 404);
+  if (!canVisit(req.user.id, host.id)) throw new GameError(['Hujaalikwa nyumbani kwa mtu huyu.', "You haven't been invited to this home."], 403, 'not_invited');
+  res.json({ host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance }, items: game.homeItems(host.id) });
+});
 api.post('/home/items', (req, res) => {
   game.buyFurniture(req.user.id, { item: str(req.body.item, 30), x: req.body.x, z: req.body.z, rot: req.body.rot });
   res.json({ items: game.homeItems(req.user.id), me: game.playerState(req.user.id) });
@@ -327,10 +335,18 @@ api.post('/phone/apps/:id/open', (req, res) => {
 });
 
 // -------------------------------------------------------- contacts
+// Contacts are one-way; when both sides added each other they are friends (mutual).
 const contactList = (userId) =>
-  db.prepare(`SELECT u.id, u.username, u.name, u.appearance, u.fame FROM contacts c JOIN users u ON u.id = c.contact_id
-    WHERE c.user_id = ? AND u.banned_at IS NULL ORDER BY u.username COLLATE NOCASE`).all(userId)
-    .map((u) => ({ ...u, appearance: JSON.parse(u.appearance || 'null'), online: online.has(u.id) }));
+  db.prepare(`SELECT u.id, u.username, u.name, u.appearance, u.fame,
+      EXISTS (SELECT 1 FROM contacts b WHERE b.user_id = u.id AND b.contact_id = c.user_id) AS mutual
+    FROM contacts c JOIN users u ON u.id = c.contact_id
+    WHERE c.user_id = ? AND u.banned_at IS NULL ORDER BY mutual DESC, u.username COLLATE NOCASE`).all(userId)
+    .map((u) => ({ ...u, mutual: !!u.mutual, appearance: JSON.parse(u.appearance || 'null'), online: online.has(u.id), inside: online.get(u.id)?.inside || null }));
+api.get('/contacts/requests', (req, res) => {
+  res.json(db.prepare(`SELECT u.id, u.username, u.name, u.appearance FROM contacts c JOIN users u ON u.id = c.user_id
+    WHERE c.contact_id = ? AND u.banned_at IS NULL AND NOT EXISTS (SELECT 1 FROM contacts b WHERE b.user_id = c.contact_id AND b.contact_id = c.user_id)
+    ORDER BY c.created_at DESC LIMIT 50`).all(req.user.id).map((u) => ({ ...u, appearance: JSON.parse(u.appearance || 'null'), online: online.has(u.id) })));
+});
 api.get('/contacts', (req, res) => res.json(contactList(req.user.id)));
 api.post('/contacts', (req, res) => {
   const other = getUserByUsername(str(req.body.username, 30).replace(/^@/, ''));
@@ -346,6 +362,63 @@ api.delete('/contacts/:username', (req, res) => {
   const other = getUserByUsername(req.params.username);
   if (other) db.prepare('DELETE FROM contacts WHERE user_id = ? AND contact_id = ?').run(req.user.id, other.id);
   res.json(contactList(req.user.id));
+});
+
+// ---------------------------------------------------------- health
+api.post('/accident', (req, res) => {
+  const r = game.accident(req.user.id, { byUsername: str(req.body.by, 30) || null });
+  if (r?.by) {
+    const driver = getUserByUsername(r.by);
+    if (driver) emitTo(driver.id, 'toast', { text: [`🚗💥 Umemgonga @${req.user.username}! Endesha kwa uangalifu.`, `🚗💥 You hit @${req.user.username}! Drive carefully.`] });
+  }
+  res.json({ hit: !!r, me: game.playerState(req.user.id) });
+});
+api.post('/ambulance', (req, res) => {
+  const r = game.ambulance(req.user.id);
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
+
+// ---------------------------------------------------------- events
+const eventRows = (userId, where = 'e.starts_at + @after >= @t', params = {}) =>
+  db.prepare(`SELECT e.*, u.username host, u.name host_name, u.appearance host_appearance,
+      (SELECT COUNT(*) FROM event_rsvps r WHERE r.event_id = e.id) going,
+      EXISTS (SELECT 1 FROM event_rsvps r WHERE r.event_id = e.id AND r.user_id = @me) mine
+    FROM events e JOIN users u ON u.id = e.host_id
+    WHERE e.cancelled = 0 AND ${where} ORDER BY e.starts_at LIMIT 60`)
+    .all({ me: userId, t: now(), after: EVENT_LIMITS.windowAfterMs, ...params })
+    .map((e) => ({ ...e, mine: !!e.mine, host_appearance: JSON.parse(e.host_appearance || 'null') }));
+api.get('/events', (req, res) => res.json(eventRows(req.user.id)));
+api.post('/events', (req, res) => {
+  const title = str(req.body.title, EVENT_LIMITS.titleMax);
+  const description = str(req.body.description, EVENT_LIMITS.descMax);
+  const placeId = str(req.body.placeId, 20);
+  const startsAt = Math.floor(Number(req.body.startsAt));
+  if (title.length < 3) throw new GameError(['Andika jina la tukio.', 'Give your event a name.']);
+  if (!EVENT_PLACES.includes(placeId) || (placeId !== 'home' && !placeById[placeId])) throw new GameError(['Chagua mahali.', 'Pick a place.']);
+  if (!(startsAt >= now() + EVENT_LIMITS.minLeadMs - 60_000 && startsAt <= now() + EVENT_LIMITS.maxAheadMs))
+    throw new GameError(['Muda uwe kuanzia dakika 5 hadi siku 7 zijazo.', 'Pick a time between 5 minutes and 7 days from now.']);
+  const active = db.prepare('SELECT COUNT(*) n FROM events WHERE host_id = ? AND cancelled = 0 AND starts_at > ?').get(req.user.id, now()).n;
+  if (active >= EVENT_LIMITS.maxActivePerHost) throw new GameError(['Una matukio mengi yanayokuja.', 'You already have several upcoming events.']);
+  const info = db.prepare('INSERT INTO events (host_id, title, description, place_id, starts_at, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(req.user.id, title, description || null, placeId, startsAt, now());
+  db.prepare('INSERT INTO event_rsvps (event_id, user_id, created_at) VALUES (?, ?, ?)').run(info.lastInsertRowid, req.user.id, now());
+  broadcast('toast', { text: [`🎉 Tukio jipya: "${title}" na @${req.user.username}`, `🎉 New event: "${title}" by @${req.user.username}`] });
+  res.status(201).json(eventRows(req.user.id));
+});
+api.post('/events/:id/rsvp', (req, res) => {
+  const e = db.prepare('SELECT * FROM events WHERE id = ? AND cancelled = 0').get(Number(req.params.id));
+  if (!e) throw new GameError(['Tukio halipo.', 'Event not found.'], 404);
+  const has = db.prepare('SELECT 1 FROM event_rsvps WHERE event_id = ? AND user_id = ?').get(e.id, req.user.id);
+  if (has) db.prepare('DELETE FROM event_rsvps WHERE event_id = ? AND user_id = ?').run(e.id, req.user.id);
+  else {
+    db.prepare('INSERT INTO event_rsvps (event_id, user_id, created_at) VALUES (?, ?, ?)').run(e.id, req.user.id, now());
+    if (e.host_id !== req.user.id) emitTo(e.host_id, 'toast', { text: [`🙋 @${req.user.username} atakuja "${e.title}"`, `🙋 @${req.user.username} is coming to "${e.title}"`] });
+  }
+  res.json(eventRows(req.user.id));
+});
+api.delete('/events/:id', (req, res) => {
+  db.prepare('UPDATE events SET cancelled = 1 WHERE id = ? AND host_id = ?').run(Number(req.params.id), req.user.id);
+  res.json(eventRows(req.user.id));
 });
 
 // -------------------------------------------------------- players

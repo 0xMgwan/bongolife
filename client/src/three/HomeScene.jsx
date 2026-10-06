@@ -8,6 +8,7 @@ import { mat, geo } from './textures.js';
 import { FurnitureModel } from './Furniture.jsx';
 import { Body, Overhead } from './Players.jsx';
 import { useStore } from '../store.js';
+import { homeGuests, sendHomePos } from '../net.js';
 
 export const HOME_ORIGIN = [-4000, 0, 4000];
 const WALL = '#15806b';
@@ -104,6 +105,7 @@ function Sim({ me, items }) {
       h.x = pose.x;
       h.z = pose.z;
       h.target = null;
+      sendHomePos(pose.x, pose.z, pose.ry, pose.mode, pose.y);
       return;
     }
     let moving = false;
@@ -127,6 +129,7 @@ function Sim({ me, items }) {
     motion.current.mode = moving ? 'walk' : 'idle';
     g.current.position.set(h.x, 0, h.z);
     g.current.rotation.y = h.ry;
+    sendHomePos(h.x, h.z, h.ry, motion.current.mode);
   });
   return (
     <group ref={g}>
@@ -134,6 +137,38 @@ function Sim({ me, items }) {
       <Overhead id={me.id} username={me.username} height={1.95} getBusy={() => busy} />
     </group>
   );
+}
+
+/** Someone else in the same home (host or fellow guest), smoothed toward their last position. */
+function Guest({ g }) {
+  const ref = useRef();
+  const motion = useRef({ mode: 'idle' });
+  const pos = useRef({ x: g.x, z: g.z, y: g.y || 0, ry: g.ry || 0 });
+  useFrame((_, dt) => {
+    const p = pos.current;
+    const a = 1 - Math.exp(-Math.min(dt, 0.1) * 10);
+    const d = Math.hypot(g.x - p.x, g.z - p.z);
+    p.x += (g.x - p.x) * a;
+    p.z += (g.z - p.z) * a;
+    p.y += ((g.y || 0) - p.y) * a;
+    let diff = (g.ry || 0) - p.ry;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    p.ry += diff * a;
+    motion.current.mode = g.mode && g.mode !== 'idle' && g.mode !== 'walk' ? g.mode : d > 0.05 ? 'walk' : 'idle';
+    ref.current.position.set(p.x, p.y, p.z);
+    ref.current.rotation.y = p.ry;
+  });
+  return (
+    <group ref={ref}>
+      <Body appearance={g.appearance} motion={motion} />
+      <Overhead id={g.id} username={g.username} height={1.95} />
+    </group>
+  );
+}
+function Guests() {
+  const roster = useStore((s) => s.homeRoster);
+  const list = useMemo(() => [...homeGuests.values()], [roster]); // eslint-disable-line react-hooks/exhaustive-deps
+  return list.map((g) => <Guest key={`${g.id}-${g.appearance?.outfit}`} g={g} />);
 }
 
 function Ghost({ items }) {
@@ -162,7 +197,9 @@ export function snapCenter(v, size, half) {
 }
 
 export function HomeScene({ me }) {
-  const items = useStore((s) => s.homeItems);
+  const own = useStore((s) => s.homeItems);
+  const visiting = useStore((s) => s.visiting);
+  const items = visiting ? visiting.items : own;
   const placing = useStore((s) => s.placing);
   const dragging = useRef(false);
 
@@ -225,6 +262,7 @@ export function HomeScene({ me }) {
       })}
       <Ghost items={items} />
       <Sim me={me} items={items} />
+      <Guests />
       <pointLight color="#fff7ed" intensity={14} distance={20} position={[0, 4, 0]} />
     </group>
   );

@@ -3,10 +3,11 @@ import { plotById } from '@shared/world.js';
 import { activeScene } from '../scene.js';
 import GameScene from '../three/GameScene.jsx';
 import { walkTo, goToPlace } from '../nav.js';
-import { loc } from '../i18n.js';
+import { L, loc } from '../i18n.js';
 import { useStore } from '../store.js';
 import { api, visitorId } from '../api.js';
-import { connect, local, input, setInside } from '../net.js';
+import { connect, local, input, setInside, enterHome, leaveHome } from '../net.js';
+import { SocialModals, VisitBar } from './Social.jsx';
 import { sfx } from '../audio.js';
 import { HUD } from './HUD.jsx';
 import { Sheets } from './Sheets.jsx';
@@ -35,14 +36,32 @@ export default function Game() {
   }, [set]);
 
   // Kwangu/Duka put you at home (others stop seeing you in town); Mjini brings you back.
+  // At home you join that home's live room so hosts and guests see each other.
+  const visitingId = useStore((s) => s.visiting?.host.id);
   useEffect(() => {
     const home = tab === 'home' || tab === 'shop';
-    const cur = useStore.getState().inside;
-    if (home && cur !== 'home') {
-      setInside('home');
-      loadHome();
-    } else if (!home && cur === 'home') setInside(null);
-  }, [tab]);
+    const st = useStore.getState();
+    if (home) {
+      if (st.inside !== 'home') setInside('home');
+      if (!visitingId) loadHome();
+      const host = visitingId || st.me?.id;
+      if (host && st.homeHost !== host) {
+        useStore.setState({ homeHost: host });
+        enterHome(host).then((r) => {
+          if (r.error === 'not_invited') {
+            useStore.getState().toast(L('Mwaliko umeisha muda.', 'That invite has expired.'), 'err');
+            useStore.setState({ visiting: null });
+          }
+        });
+      }
+    } else {
+      if (st.inside === 'home') setInside(null);
+      if (st.homeHost) {
+        useStore.setState({ homeHost: null, visiting: null });
+        leaveHome();
+      }
+    }
+  }, [tab, visitingId]);
 
   // Keyboard movement for desktop.
   useEffect(() => {
@@ -127,6 +146,8 @@ export default function Game() {
       <HomeUI />
       <Sheets />
       <Phone />
+      <VisitBar />
+      <SocialModals />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById } from '@shared/world.js';
+import { NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH } from '@shared/world.js';
 import { L, loc, pick, isEn } from '../i18n.js';
 import { useStore } from '../store.js';
 import { input, sendChat, sendEmote, setInside, remotes, local, view } from '../net.js';
@@ -10,6 +10,7 @@ import { useAudioSettings } from './useAudioSettings.js';
 import { activeScene } from '../scene.js';
 import { goToPlace } from '../nav.js';
 import { goHomeTo } from './homeNav.js';
+import { goHospital } from './social.js';
 
 /** Banner shown while inside a venue or doing a scene activity. */
 function InsideBar({ scene, me }) {
@@ -172,6 +173,8 @@ function useTips(me) {
   const n = me.needs || {};
   const tips = [];
   if (me.busy) return tips;
+  if ((me.health ?? 100) < HEALTH.injuredBelow) tips.push({ icon: '🏥', c: '#ef4444', t: L('Umeumia!', "You're hurt!"), s: L('Nenda Muhimbili upate matibabu', 'Get treated at Muhimbili'), go: () => goHospital() });
+  else if ((me.health ?? 100) < 70) tips.push({ icon: '❤️', c: '#f43f5e', t: L('Afya iko chini', 'Health is low'), s: L('Pita hospitali, kula & lala vizuri', 'Visit the hospital, eat & sleep well'), go: () => goHospital() });
   if ((n.energy ?? 100) < 35) tips.push({ icon: '😴', c: '#3b82f6', t: L('Umechoka', 'Tired'), s: L('Nenda Kwangu, gusa kitanda', 'Go home and tap your bed'), go: () => goHomeTo('sleep') });
   if ((n.hygiene ?? 100) < 35) tips.push({ icon: '🧼', c: '#06b6d4', t: L('Jisafishe', 'Freshen up'), s: L('Gusa ndoo au bafu Kwangu', 'Tap the bucket or shower at home'), go: () => goHomeTo('bath') });
   if ((n.hunger ?? 100) < 35) tips.push({ icon: '🍛', c: '#f59e0b', t: L('Njaa inauma', 'Hungry'), s: L('Pika Kwangu au kula kwa Mama Ntilie', 'Cook at home or eat at Mama Ntilie'), go: () => goHomeTo('kitchen') });
@@ -209,7 +212,8 @@ function Tips({ me }) {
 function NeedsPanel({ me }) {
   const openPhone = useStore((s) => s.openPhone);
   const mood = me.mood ?? 60;
-  const bars = [...NEEDS.map((n) => ({ icon: n.icon, v: me.needs?.[n.id] ?? 50, c: n.color, name: loc(n) })), { icon: '😊', v: mood, c: '#2fb06f', name: 'Mood' }];
+  const bars = [...NEEDS.map((n) => ({ icon: n.icon, v: me.needs?.[n.id] ?? 50, c: n.color, name: loc(n) })), { icon: '❤️', v: me.health ?? 100, c: '#f43f5e', name: L('Afya', 'Health') }];
+  void mood;
   return (
     <div className="needs-panel">
       <button className="big-avatar" onClick={() => openPhone('kabati')} aria-label={L('Kabati', 'Wardrobe')}>{avatarEmoji(me.appearance)}</button>
@@ -238,7 +242,7 @@ function BottomNav({ me }) {
   const go = (t) => {
     sfx('click');
     if (t === 'phone') return openPhone('home');
-    useStore.setState({ tab: t, placing: null, homeSel: null, sheet: null, phone: null });
+    useStore.setState({ tab: t, placing: null, homeSel: null, sheet: null, phone: null, ...(t === 'shop' ? { visiting: null } : {}) });
   };
   const items = [
     ['home', L('Kwangu', 'Home')],

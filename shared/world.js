@@ -163,6 +163,7 @@ export const OUTFITS = [
   { id: 'jezi-yanga', name: 'Jezi ya Yanga', nameEn: 'Yanga Jersey', price: 35_000, for: 'all', top: '#facc15', pattern: 'jersey', bottom: '#15803d', bottomType: 'shorts', sleeves: 'short' },
   { id: 'gym', name: 'Nguo za Gym', nameEn: 'Gym Wear', price: 25_000, for: 'all', top: '#22c55e', pattern: 'stripes', bottom: '#111827', bottomType: 'shorts', sleeves: 'none' },
   { id: 'reflekta', name: 'Jaketi la Bodaboda', nameEn: 'Bodaboda Reflector Jacket', price: 45_000, for: 'all', top: '#f97316', pattern: 'stripes', bottom: '#1f2937', bottomType: 'pants', sleeves: 'long' },
+  { id: 'scrubs', name: 'Sare za Hospitali', nameEn: 'Hospital Scrubs', price: 30_000, for: 'all', top: '#14b8a6', bottom: '#0f766e', bottomType: 'pants', sleeves: 'short' },
   { id: 'hoodie', name: 'Hoodie ya Bongo Flava', nameEn: 'Bongo Flava Hoodie', price: 60_000, for: 'all', top: '#111827', pattern: 'stripes', bottom: '#374151', bottomType: 'pants', sleeves: 'long' },
   { id: 'jaketi-ngozi', name: 'Jaketi la Ngozi', nameEn: 'Leather Jacket', price: 120_000, for: 'all', top: '#1c1917', bottom: '#1e293b', bottomType: 'pants', sleeves: 'long' },
   { id: 'kanzu-eid', name: 'Kanzu ya Eid', nameEn: 'Eid Kanzu', price: 150_000, for: 'man', top: '#fef3c7', bottom: '#fef3c7', bottomType: 'robe', sleeves: 'long', head: 'kofia' },
@@ -425,6 +426,19 @@ export const PLACES = [
     ],
   },
   {
+    id: 'hospitali', name: 'Hospitali ya Muhimbili', district: 'Upanga', type: 'hospital', icon: '🏥', pos: [-80, 20], size: [16, 12], h: 12, color: '#f8fafc',
+    blurb: 'Matibabu ya dharura na ukaguzi wa afya — saa 24.',
+    activities: [
+      { id: 'matibabu', name: 'Pata matibabu', cost: 20_000, secs: 25, effects: { energy: 10 }, emoji: '🩺', special: { health: 70, heal: true } },
+      { id: 'pima', name: 'Pima afya (checkup)', cost: 5_000, secs: 12, effects: {}, emoji: '🩻', special: { health: 15 } },
+      { id: 'pumzika-wodini', name: 'Pumzika wodini', cost: 8_000, secs: 30, effects: { energy: 45 }, emoji: '🛏️', special: { health: 25 } },
+    ],
+    jobs: [
+      { id: 'nesi', title: 'Nesi', titles: ['Nesi', 'Nesi mkuu', 'Msimamizi wa wodi'], secs: 60, pay: 38_000, energy: 12, requires: { elimu: 1 } },
+      { id: 'daktari', title: 'Daktari', titles: ['Daktari', 'Daktari bingwa', 'Mkurugenzi wa hospitali'], secs: 80, pay: 120_000, energy: 15, requires: { elimu: 3 } },
+    ],
+  },
+  {
     id: 'airport', name: 'JNIA Airport', district: 'Temeke', type: 'airport', icon: '✈️', pos: [-82, 96], size: [36, 22], h: 8, color: '#cbd5e1',
     blurb: 'Safari za Zanzibar, Arusha na nje ya nchi — zinakuja hivi karibuni!',
     comingSoon: true, activities: [],
@@ -579,6 +593,8 @@ const EN = {
     masakigrill: ['Masaki Seafood Grill', 'Prawns, octopus and the Msasani sunset.', { seafood: 'Seafood platter', date: 'Fancy dinner date' }],
     lounge: ['Msasani Rooftop Lounge', 'The celebs’ rooftop — enjoy life in style.', { sundowner: 'Rooftop sundowner' }],
     kigbeach: ['Kigamboni Beach Resort', 'Clean beaches far from the city noise.', { pumzika: 'Relax on the beach', ogelea2: 'Swim' }],
+    hospitali: ['Muhimbili Hospital', 'Emergency care and health check-ups — open 24 hours.', {
+      matibabu: 'Get treatment', pima: 'Health check-up', 'pumzika-wodini': 'Rest on the ward' }],
     airport: ['JNIA Airport', 'Flights to Zanzibar, Arusha and abroad — coming soon!', {}],
   },
   jobs: {
@@ -598,6 +614,8 @@ const EN = {
     taxi: ['Ride-hailing Driver', ['Driver', '5-star driver', 'Fleet owner']],
     mlinzi: ['Stadium Guard', ['Guard', 'Head of security']],
     chef: ['Chef', ['Commis chef', 'Sous chef', 'Head chef']],
+    nesi: ['Nurse', ['Nurse', 'Head nurse', 'Ward manager']],
+    daktari: ['Doctor', ['Doctor', 'Specialist', 'Hospital director']],
   },
 };
 
@@ -647,8 +665,9 @@ const ACTIVITY_SCENES = {
   kigbeach: { ogelea2: 'beach', pumzika: 'beach' },
   gym: { mazoezi: 'gym' },
   chuo: { kozi: 'classroom', maktaba: 'classroom' },
+  hospitali: { matibabu: 'hospital', pima: 'hospital', 'pumzika-wodini': 'hospital' },
 };
-const JOB_SCENES = { dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', cashier: null };
+const JOB_SCENES = { dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', cashier: null, nesi: 'hospital', daktari: 'hospital' };
 
 /** Scene for a busy state ({ kind, id, placeId }), or null to stay outdoors. */
 export function sceneFor(busy) {
@@ -731,3 +750,18 @@ export function homeFits(def, x, z, rot, others = []) {
     return Math.abs(o.x - x) * 2 < w + ow - 1e-6 && Math.abs(o.z - z) * 2 < d + odd - 1e-6;
   });
 }
+
+// ---------------------------------------------------------------- health
+// Health is separate from the needs: traffic accidents and neglect lower it, the hospital restores it.
+export const HEALTH = {
+  injuredBelow: 40, // below this you walk slowly and can't work
+  accidentDamage: 45,
+  accidentCooldownMs: 120_000,
+  ambulanceCost: 5_000,
+  neglectDrain: 0.5, // per needs tick while starving or exhausted
+};
+export const HOSPITAL_ID = 'hospitali';
+
+// ---------------------------------------------------------------- events
+export const EVENT_LIMITS = { titleMax: 40, descMax: 140, maxActivePerHost: 3, minLeadMs: 5 * 60_000, maxAheadMs: 7 * 86400_000, windowBeforeMs: 30 * 60_000, windowAfterMs: 3 * 3600_000 };
+export const EVENT_PLACES = ['home', 'club', 'bar', 'lounge', 'coco', 'kigbeach', 'uwanja', 'mall', 'masakigrill', 'studio'];

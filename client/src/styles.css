@@ -399,3 +399,26 @@ textarea.field { border-radius: 18px; resize: none; }
 .url-pill { flex: 1; min-width: 0; background: var(--chip); border-radius: 999px; padding: 8px 12px; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .phone-frame { flex: 1; width: 100%; border: 0; background: #fff; min-height: 0; }
 .app-body form.row .btn { white-space: nowrap; flex: none; }
+
+/* ---- social & health */
+.btn-red { background: var(--red); color: #fff; box-shadow: 0 6px 18px rgba(239,68,68,.3); }
+.visit-bar { position: absolute; bottom: calc(158px + var(--safe-bottom, 0px)); left: 10px; right: 10px; display: flex; justify-content: center; align-items: center; gap: 8px; z-index: 12; pointer-events: none; }
+.visit-bar > * { pointer-events: auto; }
+.person { display: flex; gap: 10px; align-items: flex-start; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+.person:last-child { border-bottom: 0; }
+.person .grow { min-width: 0; }
+.person .grow .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.person .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.person .acts .mini { background: var(--chip); border-radius: 999px; padding: 5px 10px; font-size: 12.5px; font-weight: 700; }
+.person .acts .mini:active { transform: scale(.96); }
+.tag { display: inline-block; font-size: 11px; font-weight: 800; border-radius: 999px; padding: 2px 8px; background: var(--chip); color: var(--mute); vertical-align: middle; }
+.tag.friend { background: #dcfce7; color: #166534; }
+.tag.live { background: #fee2e2; color: #b91c1c; }
+.ev { background: #fff; border-radius: 18px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+.ev h4 { margin: 2px 0 4px; font-size: 16px; }
+.ev .when { font-weight: 800; font-size: 12.5px; color: #7c3aed; text-transform: uppercase; letter-spacing: .04em; }
+.ev-form { display: grid; gap: 10px; background: #fff; border-radius: 18px; padding: 14px; margin-bottom: 12px; }
+.ev-form .field { padding: 11px 16px; font-size: 15px; }
+.ev-form select.field { appearance: none; }
+.nb.health i em { transition: width .4s; }
+.app-body .seg button { white-space: nowrap; padding: 9px 4px; font-size: 13px; }

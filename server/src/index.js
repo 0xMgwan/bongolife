@@ -10,7 +10,8 @@ import { verifyToken } from './auth.js';
 import { api, settleTopup, applyTopupStatus } from './routes/api.js';
 import { verifyNtzsWebhook } from './payments/index.js';
 import { online, setIO, publicPlayer, broadcast, emitTo } from './presence.js';
-import { decayNeeds, vehicleSummary } from './game.js';
+import { decayNeeds, vehicleSummary, neglectHealth } from './game.js';
+import { addInvite, canVisit } from './social.js';
 
 const PORT = Number(process.env.PORT) || 8787;
 const app = express();
@@ -159,16 +160,58 @@ io.on('connection', (socket) => {
       if (Math.hypot(dx, dz) > 16) return socket.emit('inside:denied', placeId);
       inside = placeId;
     }
+    if (inside !== 'home') leaveHome();
     if (p.inside === inside) return;
     p.inside = inside;
     broadcast('player:inside', { id: uid, inside });
   });
+
+  // ---- invites & home visits
+  socket.on('invite', ({ to } = {}, ack) => {
+    const target = typeof to === 'string' && db.prepare('SELECT id, username FROM users WHERE username = ?').get(to.replace(/^@/, ''));
+    if (!target || target.id === uid) return ack?.({ error: 'not_found' });
+    if (!online.has(target.id)) return ack?.({ error: 'offline' });
+    addInvite(uid, target.id);
+    emitTo(target.id, 'invite', { fromId: uid, from: p.username, fromName: p.name, appearance: p.appearance });
+    ack?.({ ok: true });
+  });
+  socket.on('invite:reply', ({ fromId, accept } = {}) => {
+    if (online.has(fromId)) emitTo(fromId, 'toast', { text: accept ? [`🏠 @${p.username} amekubali — anakuja!`, `🏠 @${p.username} accepted — on the way!`] : [`@${p.username} hawezi kuja sasa.`, `@${p.username} can't come right now.`] });
+  });
+  const leaveHome = () => {
+    if (!p.home) return;
+    socket.to(`home:${p.home}`).emit('home:leave', { id: uid });
+    socket.leave(`home:${p.home}`);
+    p.home = null;
+  };
+  socket.on('home:enter', (hostId, ack) => {
+    hostId = Number(hostId) || uid;
+    if (!canVisit(uid, hostId)) return ack?.({ error: 'not_invited' });
+    leaveHome();
+    p.home = hostId;
+    p.homePos = { x: 0, z: 3.5, ry: Math.PI, mode: 'idle' };
+    socket.join(`home:${hostId}`);
+    const others = [...online].filter(([id, o]) => id !== uid && o.home === hostId).map(([id, o]) => ({ id, username: o.username, name: o.name, appearance: o.appearance, ...o.homePos }));
+    socket.to(`home:${hostId}`).emit('home:join', { id: uid, username: p.username, name: p.name, appearance: p.appearance, ...p.homePos });
+    if (p.inside !== 'home') {
+      p.inside = 'home';
+      broadcast('player:inside', { id: uid, inside: 'home' });
+    }
+    ack?.({ ok: true, others });
+  });
+  socket.on('home:pos', (d = {}) => {
+    if (!p.home || !Number.isFinite(d.x) || !Number.isFinite(d.z)) return;
+    p.homePos = { x: d.x, z: d.z, y: Number(d.y) || 0, ry: Number(d.ry) || 0, mode: typeof d.mode === 'string' ? d.mode.slice(0, 10) : 'idle' };
+    socket.to(`home:${p.home}`).emit('home:pos', { id: uid, ...p.homePos });
+  });
+  socket.on('home:leave', leaveHome);
 
   socket.on('emote', (e) => {
     if (typeof e === 'string' && e.length <= 8) broadcast('emote', { id: uid, e });
   });
 
   socket.on('disconnect', () => {
+    if (p.home) socket.to(`home:${p.home}`).emit('home:leave', { id: uid });
     p.sockets.delete(socket.id);
     if (p.sockets.size) return;
     online.delete(uid);
@@ -193,12 +236,23 @@ setInterval(() => {
       if (!u) continue;
       // Sleeping / busy players don't decay while the activity runs.
       const needs = u.busy && u.busy.endsAt > now() ? u.needs : decayNeeds(u);
-      saveFields(uid, { needs, x: p.x, z: p.z, lastSeen: now() });
-      emitTo(uid, 'needs', { needs, mood: moodOf(needs) });
+      const health = neglectHealth(u, needs);
+      saveFields(uid, { needs, x: p.x, z: p.z, lastSeen: now(), ...(health != null ? { health } : {}) });
+      emitTo(uid, 'needs', { needs, mood: moodOf(needs), health: health ?? u.health });
     }
   });
   tx();
 }, NEED_TICK_SECONDS * 1000);
+
+// Event reminders: ping everyone who RSVP'd when an event starts.
+setInterval(() => {
+  const due = db.prepare('SELECT e.*, u.username host FROM events e JOIN users u ON u.id = e.host_id WHERE e.cancelled = 0 AND e.notified = 0 AND e.starts_at <= ?').all(now());
+  for (const e of due) {
+    db.prepare('UPDATE events SET notified = 1 WHERE id = ?').run(e.id);
+    for (const r of db.prepare('SELECT user_id FROM event_rsvps WHERE event_id = ?').all(e.id))
+      emitTo(r.user_id, 'event:start', { id: e.id, title: e.title, placeId: e.place_id, host: e.host, hostId: e.host_id });
+  }
+}, 30_000);
 
 // Settle pending top-ups in the background (webhook-free, idempotent).
 setInterval(async () => {

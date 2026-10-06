@@ -139,6 +139,12 @@ export function Avatar({ appearance, motion, scale = 1 }) {
         armR_ = -1.5 - Math.max(0, Math.sin(p)) * 0.9; // spoon to mouth
         bob = -0.38;
         break;
+      case 'knocked':
+        tilt = -Math.PI / 2;
+        armL_ = -2.6; armR_ = 0.6; zL = 0.5; zR = -0.5;
+        legL_ = 0.25; legR_ = -0.2;
+        bob = 0.1;
+        break;
       case 'sleep':
         tilt = -Math.PI / 2;
         armL_ = armR_ = 0.1;

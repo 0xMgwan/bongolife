@@ -14,12 +14,16 @@ import { Mipangilio, Kabati } from './apps/Mipangilio.jsx';
 import { Contacts } from './apps/Contacts.jsx';
 import { Browser } from './apps/Browser.jsx';
 import { Msaada } from './apps/Msaada.jsx';
+import { Watu } from './apps/Watu.jsx';
+import { Matukio } from './apps/Matukio.jsx';
 import { api } from '../api.js';
 
 // Built-in apps. `g` is the icon gradient.
 export const APPS = [
   { id: 'kazi', name: 'Kazi', nameEn: 'Jobs', icon: '💼', g: ['#34d399', '#059669'], C: Kazi },
   { id: 'ujumbe', name: 'Ujumbe', nameEn: 'Messages', icon: '💬', g: ['#60a5fa', '#2563eb'], C: Threads },
+  { id: 'watu', name: 'Watu', nameEn: 'People', icon: '🤝', g: ['#f472b6', '#db2777'], C: Watu },
+  { id: 'matukio', name: 'Matukio', nameEn: 'Events', icon: '🎉', g: ['#c084fc', '#7c3aed'], C: Matukio },
   { id: 'anwani', name: 'Anwani', nameEn: 'Contacts', icon: '📞', g: ['#4ade80', '#16a34a'], C: Contacts },
   { id: 'mtaa', name: 'Mtaa', nameEn: 'Street Chat', icon: '📣', g: ['#fb923c', '#ea580c'], C: Mtaa },
   { id: 'pesa', name: 'Bongo Pesa', nameEn: 'Bank', icon: '🏦', g: ['#a78bfa', '#7c3aed'], C: Pesa },
