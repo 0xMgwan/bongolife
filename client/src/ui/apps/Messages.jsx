@@ -70,7 +70,9 @@ export function Dm({ arg: username, back }) {
     const involved = (lastDm.from_id === data.user.id && lastDm.to_id === me.id) || (lastDm.from_id === me.id && lastDm.to_id === data.user.id);
     if (involved && !data.messages.some((m) => m.id === lastDm.id)) setData({ ...data, messages: [...data.messages, lastDm] });
   }, [lastDm]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => end.current?.scrollIntoView({ block: 'end' }), [data?.messages.length]);
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: 'end' });
+  }, [data?.messages.length]);
   const send = async (e) => {
     e.preventDefault();
     const t = text.trim();
@@ -108,7 +110,9 @@ export function Mtaa({ back, open }) {
   const myName = useStore((s) => s.me?.username);
   const [text, setText] = useState('');
   const end = useRef();
-  useEffect(() => end.current?.scrollIntoView({ block: 'end' }), [feed.length]);
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: 'end' });
+  }, [feed.length]);
   const send = (e) => {
     e.preventDefault();
     if (text.trim()) sendChat(text.trim());

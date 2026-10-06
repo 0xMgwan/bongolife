@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="sw">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Bongo Life — Ishi maisha yako ya Dar es Salaam | Live your Dar life</title>
+  <meta name="description" content="Bongo Life ni mchezo wa maisha ya Dar es Salaam kwenye simu yako. Fanya kazi, kula bata, endesha bodaboda, nunua kiwanja Kigamboni na chat na watu halisi. Bure — hakuna kudownload." />
+  <meta name="theme-color" content="#2fb06f" />
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/icon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Bongo Life — Ishi maisha yako ya Dar" />
+  <meta property="og:description" content="Kazi, starehe, magari, viwanja na washkaji halisi. Mchezo wa maisha ya Dar es Salaam — bure kwenye simu yako." />
+  <meta property="og:image" content="assets/og.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"VideoGame","name":"Bongo Life","genre":["Life simulation","Social"],"gamePlatform":"Web browser","applicationCategory":"Game","inLanguage":["sw","en"],"offers":{"@type":"Offer","price":"0","priceCurrency":"TZS"},"description":"A multiplayer life-sim set in Dar es Salaam."}
+  </script>
+</head>
+<body>
+  <header class="nav">
+    <a href="#" class="brand" aria-label="Bongo Life">
+      <img src="assets/icon.svg" alt="" width="34" height="34" />
+      <span>Bongo Life</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#features" data-sw="Vipengele" data-en="Features">Vipengele</a>
+      <a href="#how" data-sw="Jinsi ya kuanza" data-en="How it works">Jinsi ya kuanza</a>
+      <a href="#brands" data-sw="Matangazo" data-en="Advertise">Matangazo</a>
+      <a href="#faq" data-sw="Maswali" data-en="FAQ">Maswali</a>
+    </nav>
+    <div class="nav-right">
+      <button class="lang" id="lang" aria-label="Lugha / Language">🇬🇧 EN</button>
+      <a class="btn btn-green btn-sm play" href="#" data-sw="Cheza" data-en="Play">Cheza</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- ------------------------------------------------------------ hero -->
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="badge" data-sw="🇹🇿 Mchezo wa maisha ya Dar es Salaam" data-en="🇹🇿 The Dar es Salaam life-sim">🇹🇿 Mchezo wa maisha ya Dar es Salaam</span>
+        <h1 data-sw="Ishi maisha yako ya Dar — <em>na watu halisi.</em>" data-en="Live your Dar story — <em>with real people.</em>" data-html>Ishi maisha yako ya Dar — <em>na watu halisi.</em></h1>
+        <p class="lead" data-sw="Tafuta kazi, kula chipsi mayai, kula bata Sinza, endesha bodaboda, nunua kiwanja Kigamboni na uwe Mkuu wa Mkoa. Bure kwenye simu yako — hakuna kudownload." data-en="Get a job, grab chipsi mayai, party in Sinza, ride a bodaboda, buy a sea plot in Kigamboni and become Mayor. Free on your phone — no download.">Tafuta kazi, kula chipsi mayai, kula bata Sinza, endesha bodaboda, nunua kiwanja Kigamboni na uwe Mkuu wa Mkoa. Bure kwenye simu yako — hakuna kudownload.</p>
+        <div class="cta">
+          <a class="btn btn-green play" href="#" data-sw="Cheza bure sasa →" data-en="Play free now →">Cheza bure sasa →</a>
+          <a class="btn btn-white" href="#how" data-sw="Jinsi inavyofanya kazi" data-en="How it works">Jinsi inavyofanya kazi</a>
+        </div>
+        <div class="stats" id="stats" hidden>
+          <span class="pill"><i class="dot"></i> <b id="s-online">0</b>&nbsp;<span data-sw="online sasa" data-en="online now">online sasa</span></span>
+          <span class="pill">👥 <b id="s-players">0</b>&nbsp;<span data-sw="Wabongo" data-en="players">Wabongo</span></span>
+          <span class="pill" id="s-mayor-wrap" hidden>🏛️ <span data-sw="Mkuu wa Mkoa" data-en="Mayor">Mkuu wa Mkoa</span>&nbsp;<b id="s-mayor"></b></span>
+        </div>
+        <p class="event" id="s-event" hidden></p>
+      </div>
+      <div class="hero-art">
+        <div class="phone phone-main"><img src="assets/shot-street.jpg" alt="Bongo Life — mtaa wa Kariakoo" loading="eager" /></div>
+        <div class="phone phone-side"><img src="assets/shot-creator.jpg" alt="Tengeneza Sim wako" loading="eager" /></div>
+        <div class="float f1">🏍️ <span data-sw="Bodaboda imenunuliwa!" data-en="Bodaboda bought!">Bodaboda imenunuliwa!</span></div>
+        <div class="float f2">💰 +TSh 24,000 <small data-sw="shifti imeisha" data-en="shift done">shifti imeisha</small></div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ places -->
+    <section class="places" aria-label="Places">
+      <div class="marquee">
+        <div class="track">
+          <span>🧺 Kariakoo</span><span>🏢 Posta</span><span>🪩 Sinza</span><span>🦞 Masaki</span><span>🏖️ Coco Beach</span><span>🌴 Kigamboni</span><span>⛴️ Kivukoni Feri</span><span>🛒 Mlimani City</span><span>🏟️ Uwanja wa Taifa</span><span>🚌 Ubungo</span><span>🎓 UDSM</span><span>✈️ JNIA <em data-sw="inakuja" data-en="soon">inakuja</em></span>
+          <span aria-hidden="true">🧺 Kariakoo</span><span aria-hidden="true">🏢 Posta</span><span aria-hidden="true">🪩 Sinza</span><span aria-hidden="true">🦞 Masaki</span><span aria-hidden="true">🏖️ Coco Beach</span><span aria-hidden="true">🌴 Kigamboni</span><span aria-hidden="true">⛴️ Kivukoni Feri</span><span aria-hidden="true">🛒 Mlimani City</span><span aria-hidden="true">🏟️ Uwanja wa Taifa</span><span aria-hidden="true">🚌 Ubungo</span><span aria-hidden="true">🎓 UDSM</span><span aria-hidden="true">✈️ JNIA</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ features -->
+    <section class="section" id="features">
+      <h2 data-sw="Kila kitu cha mtaani, kiganjani mwako" data-en="Everything about the streets, in your pocket">Kila kitu cha mtaani, kiganjani mwako</h2>
+      <p class="sub" data-sw="Dar es Salaam nzima imejengwa upya — kuanzia Kariakoo mpaka fukwe za Kigamboni." data-en="All of Dar es Salaam rebuilt — from Kariakoo to the beaches of Kigamboni.">Dar es Salaam nzima imejengwa upya — kuanzia Kariakoo mpaka fukwe za Kigamboni.</p>
+      <div class="grid">
+        <article class="card"><div class="ic">💼</div><h3 data-sw="Chakarika" data-en="Hustle">Chakarika</h3><p data-sw="Kazi 16 — machinga Kariakoo, konda wa daladala, DJ, mvuvi, teller wa benki mpaka developer. Fanya shifti, pandishwa cheo, mshahara upande." data-en="16 jobs — Kariakoo hawker, daladala conductor, DJ, fisherman, bank teller, all the way to developer. Work shifts, get promoted, earn more.">Kazi 16 — machinga Kariakoo, konda wa daladala, DJ, mvuvi, teller wa benki mpaka developer. Fanya shifti, pandishwa cheo, mshahara upande.</p></article>
+        <article class="card"><div class="ic">🍛</div><h3 data-sw="Ishi" data-en="Live">Ishi</h3><p data-sw="Njaa, nguvu, raha, usafi na jamii. Kula kwa Mama Ntilie, ogelea Coco Beach, lala chumbani kwako Manzese." data-en="Hunger, energy, fun, hygiene and social. Eat at Mama Ntilie's, swim at Coco Beach, sleep in your Manzese room.">Njaa, nguvu, raha, usafi na jamii. Kula kwa Mama Ntilie, ogelea Coco Beach, lala chumbani kwako Manzese.</p></article>
+        <article class="card"><div class="ic">🪩</div><h3 data-sw="Kula bata" data-en="Party">Kula bata</h3><p data-sw="Cheza Club Mzuka, nunua mzunguko kwa washkaji, tazama dabi ya Simba vs Yanga na rekodi ngoma yako studio." data-en="Dance at Club Mzuka, buy a round for the crew, watch the Simba vs Yanga derby and record your track in the studio.">Cheza Club Mzuka, nunua mzunguko kwa washkaji, tazama dabi ya Simba vs Yanga na rekodi ngoma yako studio.</p></article>
+        <article class="card"><div class="ic">🏍️</div><h3 data-sw="Endesha" data-en="Drive">Endesha</h3><p data-sw="Baiskeli, bodaboda, bajaji, IST, Noah, Harrier mpaka V8. Au panda daladala na bajaji kuzunguka mji." data-en="Bicycle, bodaboda, bajaji, IST, Noah, Harrier up to a V8. Or hop on a daladala or bajaji across town.">Baiskeli, bodaboda, bajaji, IST, Noah, Harrier mpaka V8. Au panda daladala na bajaji kuzunguka mji.</p></article>
+        <article class="card"><div class="ic">🏡</div><h3 data-sw="Miliki" data-en="Own">Miliki</h3><p data-sw="Nunua viwanja Kigamboni, Masaki na Mbezi. Jenga villa au ghorofa la kupangisha. Miliki bar, genge au club upate mapato kila saa." data-en="Buy plots in Kigamboni, Masaki and Mbezi. Build a villa or an apartment block. Own a bar, food stall or club that earns every hour.">Nunua viwanja Kigamboni, Masaki na Mbezi. Jenga villa au ghorofa la kupangisha. Miliki bar, genge au club upate mapato kila saa.</p></article>
+        <article class="card"><div class="ic">📱</div><h3 data-sw="Simu yako" data-en="Your phone">Simu yako</h3><p data-sw="Chat ya mtaa, meseji za faragha, Bongo Pesa, ramani ya Dar na matangazo — vyote ndani ya simu ya mchezo." data-en="Street chat, private messages, Bongo Pesa wallet, a map of Dar and ads — all inside your in-game phone.">Chat ya mtaa, meseji za faragha, Bongo Pesa, ramani ya Dar na matangazo — vyote ndani ya simu ya mchezo.</p></article>
+        <article class="card"><div class="ic">👗</div><h3 data-sw="Pendeza" data-en="Style">Pendeza</h3><p data-sw="Kitenge, kanga, buibui, kanzu, shuka la Kimasai, suti ya Kaunda na jezi za Simba na Yanga." data-en="Kitenge, kanga, buibui, kanzu, Maasai shuka, Kaunda suit and Simba or Yanga jerseys.">Kitenge, kanga, buibui, kanzu, shuka la Kimasai, suti ya Kaunda na jezi za Simba na Yanga.</p></article>
+        <article class="card"><div class="ic">👑</div><h3 data-sw="Tawala" data-en="Rule">Tawala</h3><p data-sw="Tajiri namba moja wa Dar anakuwa Mkuu wa Mkoa — jina lake linaonekana kwa kila mtu anayeingia." data-en="The richest player in Dar becomes Mayor — their name is shown to everyone who opens the game.">Tajiri namba moja wa Dar anakuwa Mkuu wa Mkoa — jina lake linaonekana kwa kila mtu anayeingia.</p></article>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ showcase -->
+    <section class="section showcase">
+      <div class="show-row">
+        <div class="phone"><img src="assets/shot-place.jpg" alt="Club Mzuka" loading="lazy" /></div>
+        <div class="show-copy">
+          <h2 data-sw="Gusa jengo, ishi maisha" data-en="Tap a building, live your life">Gusa jengo, ishi maisha</h2>
+          <p data-sw="Kila sehemu ina shughuli zake: ingia club ucheze, nunua meza ya VIP, au anza shifti kama DJ. Kila kitu kinabadilisha njaa, nguvu na raha yako — na mfuko wako." data-en="Every place has its own activities: hit the dance floor, get a VIP table, or start a shift as the DJ. Everything changes your hunger, energy and fun — and your wallet.">Kila sehemu ina shughuli zake: ingia club ucheze, nunua meza ya VIP, au anza shifti kama DJ. Kila kitu kinabadilisha njaa, nguvu na raha yako — na mfuko wako.</p>
+        </div>
+      </div>
+      <div class="show-row rev">
+        <div class="phone"><img src="assets/shot-phone.jpg" alt="Simu ya mchezo" loading="lazy" /></div>
+        <div class="show-copy">
+          <h2 data-sw="Washkaji halisi, kila mahali" data-en="Real people, everywhere">Washkaji halisi, kila mahali</h2>
+          <p data-sw="Kila mtu unayemwona mtaani ni mchezaji halisi. Piga stori kwenye chat ya mtaa, tuma DM, mtumie mshkaji pesa, au tangaza biashara yako kwenye mabango ya mji." data-en="Everyone you see on the street is a real player. Chat on the street, send DMs, send a friend money, or advertise your business on the city's billboards.">Kila mtu unayemwona mtaani ni mchezaji halisi. Piga stori kwenye chat ya mtaa, tuma DM, mtumie mshkaji pesa, au tangaza biashara yako kwenye mabango ya mji.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ how -->
+    <section class="section" id="how">
+      <h2 data-sw="Anza ndani ya dakika moja" data-en="Start in under a minute">Anza ndani ya dakika moja</h2>
+      <ol class="steps">
+        <li><b>1</b><h3 data-sw="Jisajili bure" data-en="Sign up free">Jisajili bure</h3><p data-sw="Jina, username na password tu. Lazima uwe na miaka 18+." data-en="Just a name, username and password. You must be 18+.">Jina, username na password tu. Lazima uwe na miaka 18+.</p></li>
+        <li><b>2</b><h3 data-sw="Tengeneza Sim wako" data-en="Create your Sim">Tengeneza Sim wako</h3><p data-sw="Chagua mwili, nywele, mavazi, tabia na mtaa unaoanzia." data-en="Choose your body, hair, outfit, personality and starting neighbourhood.">Chagua mwili, nywele, mavazi, tabia na mtaa unaoanzia.</p></li>
+        <li><b>3</b><h3 data-sw="Ingia mtaani" data-en="Hit the streets">Ingia mtaani</h3><p data-sw="Unaanza na TSh 50,000 mfukoni na chumba Manzese. Mengine ni juu yako." data-en="You start with TSh 50,000 and a room in Manzese. The rest is up to you.">Unaanza na TSh 50,000 mfukoni na chumba Manzese. Mengine ni juu yako.</p></li>
+      </ol>
+      <div class="center"><a class="btn btn-green play" href="#" data-sw="Cheza bure sasa →" data-en="Play free now →">Cheza bure sasa →</a></div>
+    </section>
+
+    <!-- ------------------------------------------------------------ wallet -->
+    <section class="section wallet">
+      <div class="wallet-card">
+        <div>
+          <h2 data-sw="Ongeza salio kwa M-Pesa" data-en="Top up with M-Pesa">Ongeza salio kwa M-Pesa</h2>
+          <p data-sw="Unataka kununua V8 haraka? Ongeza salio la mchezo kwa M-Pesa, Mixx by Yas au Airtel Money — sekunde chache tu. Si lazima: unaweza kufika juu kwa kuchakarika tu." data-en="Want that V8 sooner? Top up your in-game wallet with M-Pesa, Mixx by Yas or Airtel Money in seconds. It's optional — you can reach the top just by hustling.">Unataka kununua V8 haraka? Ongeza salio la mchezo kwa M-Pesa, Mixx by Yas au Airtel Money — sekunde chache tu. Si lazima: unaweza kufika juu kwa kuchakarika tu.</p>
+          <p class="fine" data-sw="Pesa ya mchezo ni ya burudani tu: haiwezi kutolewa wala kubadilishwa kuwa pesa taslimu." data-en="In-game money is for fun only: it can't be withdrawn or converted back into cash.">Pesa ya mchezo ni ya burudani tu: haiwezi kutolewa wala kubadilishwa kuwa pesa taslimu.</p>
+        </div>
+        <div class="networks"><span>M-Pesa</span><span>Mixx by Yas</span><span>Airtel Money</span><span>HaloPesa</span></div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ brands -->
+    <section class="section" id="brands">
+      <div class="brands">
+        <div>
+          <span class="badge" data-sw="📢 Kwa biashara" data-en="📢 For businesses">📢 Kwa biashara</span>
+          <h2 data-sw="Tangaza kwa Wabongo wanaocheza kila siku" data-en="Reach players every single day">Tangaza kwa Wabongo wanaocheza kila siku</h2>
+          <p data-sw="Mabango 11 katikati ya mji — Posta, Kariakoo, Coco Beach, Masaki na Daraja la Nyerere. Weka picha, ujumbe na link ya biashara yako moja kwa moja ndani ya mchezo kupitia Simu → Matangazo." data-en="11 billboards across the city — Posta, Kariakoo, Coco Beach, Masaki and the Nyerere Bridge. Put your image, message and link up directly in the game through Phone → Ads.">Mabango 11 katikati ya mji — Posta, Kariakoo, Coco Beach, Masaki na Daraja la Nyerere. Weka picha, ujumbe na link ya biashara yako moja kwa moja ndani ya mchezo kupitia Simu → Matangazo.</p>
+          <div class="cta">
+            <a class="btn btn-dark play" href="#" data-sw="Weka tangazo ndani ya mchezo" data-en="Place an ad in the game">Weka tangazo ndani ya mchezo</a>
+            <a class="btn btn-white" id="ads-policy" href="#" data-sw="Sera ya Matangazo" data-en="Advertising Policy">Sera ya Matangazo</a>
+          </div>
+        </div>
+        <div class="billboard">
+          <div class="bb-board"><b data-sw="Tangaza Hapa!" data-en="Advertise Here!">Tangaza Hapa!</b><span>📢 Posta CBD</span></div>
+          <div class="bb-legs"><i></i><i></i></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ faq -->
+    <section class="section" id="faq">
+      <h2 data-sw="Maswali ya mara kwa mara" data-en="Frequently asked questions">Maswali ya mara kwa mara</h2>
+      <div class="faq">
+        <details><summary data-sw="Je, ni bure?" data-en="Is it free?">Je, ni bure?</summary><p data-sw="Ndiyo. Kujisajili na kucheza ni bure. Kuongeza salio ni hiari kabisa." data-en="Yes. Signing up and playing are free. Topping up is completely optional.">Ndiyo. Kujisajili na kucheza ni bure. Kuongeza salio ni hiari kabisa.</p></details>
+        <details><summary data-sw="Nahitaji kudownload app?" data-en="Do I need to download an app?">Nahitaji kudownload app?</summary><p data-sw="Hapana. Bongo Life inafunguka moja kwa moja kwenye browser ya simu (Chrome au Safari). Unaweza kuiweka kwenye home screen kama app." data-en="No. Bongo Life opens straight in your phone's browser (Chrome or Safari). You can add it to your home screen like an app.">Hapana. Bongo Life inafunguka moja kwa moja kwenye browser ya simu (Chrome au Safari). Unaweza kuiweka kwenye home screen kama app.</p></details>
+        <details><summary data-sw="Inafanya kazi kwenye simu yangu?" data-en="Will it run on my phone?">Inafanya kazi kwenye simu yangu?</summary><p data-sw="Simu nyingi za Android na iPhone za miaka ya karibuni zinaweza. Kama inakwama, chagua Graphics → Chini kwenye Mipangilio." data-en="Most recent Android phones and iPhones can. If it lags, choose Graphics → Low in Settings.">Simu nyingi za Android na iPhone za miaka ya karibuni zinaweza. Kama inakwama, chagua Graphics → Chini kwenye Mipangilio.</p></details>
+        <details><summary data-sw="Naweza kutoa pesa ya mchezo?" data-en="Can I withdraw in-game money?">Naweza kutoa pesa ya mchezo?</summary><p data-sw="Hapana. TSh za ndani ya mchezo ni za burudani tu — haziwezi kutolewa, kuuzwa wala kubadilishwa kuwa pesa halisi." data-en="No. In-game TSh are for fun only — they can't be withdrawn, sold or converted into real money.">Hapana. TSh za ndani ya mchezo ni za burudani tu — haziwezi kutolewa, kuuzwa wala kubadilishwa kuwa pesa halisi.</p></details>
+        <details><summary data-sw="Ni kwa umri gani?" data-en="What's the age limit?">Ni kwa umri gani?</summary><p data-sw="Bongo Life ni kwa watu wenye miaka 18 na kuendelea." data-en="Bongo Life is for people aged 18 and over.">Bongo Life ni kwa watu wenye miaka 18 na kuendelea.</p></details>
+        <details><summary data-sw="Ni kwa Kiswahili au Kiingereza?" data-en="Is it in Swahili or English?">Ni kwa Kiswahili au Kiingereza?</summary><p data-sw="Vyote viwili. Badilisha lugha muda wowote kwa kitufe cha 🇹🇿/🇬🇧." data-en="Both. Switch any time with the 🇹🇿/🇬🇧 button.">Vyote viwili. Badilisha lugha muda wowote kwa kitufe cha 🇹🇿/🇬🇧.</p></details>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ final cta -->
+    <section class="final">
+      <h2 data-sw="Mtaa unakusubiri." data-en="The streets are waiting.">Mtaa unakusubiri.</h2>
+      <p data-sw="Jiunge na Wabongo wanaoishi maisha yao ya Dar sasa hivi." data-en="Join the players living their Dar life right now.">Jiunge na Wabongo wanaoishi maisha yao ya Dar sasa hivi.</p>
+      <a class="btn btn-white play" href="#" data-sw="Cheza bure sasa →" data-en="Play free now →">Cheza bure sasa →</a>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="foot-brand"><img src="assets/icon.svg" alt="" width="28" height="28" /> Bongo Life <span>© <span id="year">2026</span> NEDA Labs Limited · Dar es Salaam</span></div>
+    <nav>
+      <a class="legal" data-path="/terms" href="#" data-sw="Masharti" data-en="Terms">Masharti</a>
+      <a class="legal" data-path="/privacy" href="#" data-sw="Faragha" data-en="Privacy">Faragha</a>
+      <a class="legal" data-path="/ads-policy" href="#" data-sw="Sera ya Matangazo" data-en="Ad Policy">Sera ya Matangazo</a>
+      <a href="mailto:support@bongolife.app">support@bongolife.app</a>
+    </nav>
+  </footer>
+
+  <script src="main.js" defer></script>
+</body>
+</html>

@@ -6,6 +6,7 @@ import { Logo } from './ui/Logo.jsx';
 import { Toasts } from './ui/Toasts.jsx';
 import Auth from './ui/Auth.jsx';
 import Legal from './ui/Legal.jsx';
+import { ErrorBoundary } from './ui/ErrorBoundary.jsx';
 
 const Landing = lazy(() => import('./ui/Landing.jsx'));
 const Creator = lazy(() => import('./ui/Creator.jsx'));
@@ -49,6 +50,7 @@ export default function App() {
   return (
     // Keyed by language so every screen (including 3D labels) re-renders in the new language.
     <div className="app" key={lang}>
+      <ErrorBoundary>
       <Suspense fallback={<Loading />}>
         {screen === 'loading' && <Loading />}
         {screen === 'landing' && <Landing />}
@@ -58,6 +60,7 @@ export default function App() {
         {screen === 'legal' && <Legal />}
         {screen === 'admin' && <Admin />}
       </Suspense>
+      </ErrorBoundary>
       <Toasts />
     </div>
   );

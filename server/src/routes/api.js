@@ -21,6 +21,9 @@ const adminNames = new Set((process.env.ADMIN_USERNAMES || '').split(',').map((s
 
 // ------------------------------------------------------------ public
 api.get('/public/stats', (req, res) => {
+  // Read-only and non-personal, so any site (e.g. the marketing landing page) may read it.
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Cache-Control', 'public, max-age=15');
   const vid = str(req.query.v, 40);
   if (/^[a-z0-9-]{8,40}$/i.test(vid)) db.prepare('INSERT OR IGNORE INTO visitors (id, first_seen) VALUES (?, ?)').run(vid, now());
   const lb = game.leaderboard();

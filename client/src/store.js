@@ -18,6 +18,12 @@ export const useStore = create((set, get) => ({
   toasts: [],
   chatOpen: false,
   lang: (() => {
+    // ?lang=en|sw (e.g. from the landing page) wins and is remembered.
+    const q = new URLSearchParams(location.search).get('lang');
+    if (q === 'sw' || q === 'en') {
+      try { localStorage.setItem('bl_lang', q); } catch {}
+      return q;
+    }
     try {
       const saved = localStorage.getItem('bl_lang');
       if (saved) return saved;
