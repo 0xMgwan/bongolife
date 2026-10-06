@@ -7,7 +7,8 @@ import { Server } from 'socket.io';
 import { NEED_TICK_SECONDS, isWater, moodOf } from '../../shared/world.js';
 import { db, getUser, saveFields, now, UPLOAD_DIR, getSettings } from './db.js';
 import { verifyToken } from './auth.js';
-import { api, settleTopup } from './routes/api.js';
+import { api, settleTopup, applyTopupStatus } from './routes/api.js';
+import { verifyNtzsWebhook } from './payments/index.js';
 import { online, setIO, publicPlayer, broadcast, emitTo } from './presence.js';
 import { decayNeeds, vehicleSummary } from './game.js';
 
@@ -21,6 +22,28 @@ app.use((_req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   next();
+});
+// nTZS webhooks need the raw body for signature verification, so they come before express.json.
+app.post('/api/webhooks/ntzs', express.raw({ type: '*/*', limit: '100kb' }), (req, res) => {
+  const raw = req.body?.toString('utf8') || '';
+  if (!verifyNtzsWebhook(raw, req.get('x-webhook-signature'), req.get('x-webhook-timestamp'))) {
+    console.warn('[webhook] invalid nTZS signature');
+    return res.status(400).json({ error: 'invalid signature' });
+  }
+  let event;
+  try {
+    event = JSON.parse(raw);
+  } catch {
+    return res.status(400).json({ error: 'invalid json' });
+  }
+  if (event.type === 'deposit.completed' && event.data?.depositId) {
+    const t = db.prepare("SELECT * FROM topups WHERE provider = 'ntzs' AND provider_ref = ?").get(String(event.data.depositId));
+    if (t) {
+      // Credits the amount WE recorded for this deposit, exactly once (compare-and-set).
+      applyTopupStatus(t, 'paid');
+    } else console.warn('[webhook] unknown deposit', event.data.depositId);
+  }
+  res.json({ received: true });
 });
 app.use(express.json({ limit: '50kb' }));
 app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d', immutable: true, fallthrough: false }));

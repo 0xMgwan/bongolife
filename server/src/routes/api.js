@@ -206,7 +206,12 @@ api.post('/wallet/topup', rateLimit('topup', 10, 10 * 60_000), wrap(async (req, 
   if (!phone) throw new GameError(['Namba ya simu si sahihi (mfano 0712 345 678).', 'Invalid phone number (e.g. 0712 345 678).']);
   const pending = db.prepare("SELECT COUNT(*) n FROM topups WHERE user_id = ? AND status = 'pending'").get(req.user.id).n;
   if (pending >= 3) throw new GameError(['Una malipo 3 yanayosubiri. Yamalize kwanza.', 'You have 3 pending payments. Finish them first.']);
-  const created = await provider.create({ amountTzs, phone, method });
+  let created;
+  try {
+    created = await provider.create({ amountTzs, phone, method, user: req.user });
+  } catch (e) {
+    throw new GameError(e.userMessage || ['Imeshindikana kuanzisha malipo. Jaribu tena.', 'Could not start the payment. Please try again.'], e.status || 502, e.code);
+  }
   const coins = amountTzs * TOPUP_RATE;
   const info = db.prepare(
     'INSERT INTO topups (user_id, provider, provider_ref, method, phone, amount_tzs, coins, status, instructions, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -226,6 +231,11 @@ export async function settleTopup(t) {
     return 'pending';
   }
   if (status === 'pending' && now() - t.created_at > 72 * 3600_000) status = 'expired';
+  return applyTopupStatus(t, status);
+}
+
+/** Move a pending top-up to its final state; credits the player exactly once. */
+export function applyTopupStatus(t, status) {
   if (status === 'pending') return status;
   const credited = db.transaction(() => {
     // Compare-and-set so a topup is only ever credited once.

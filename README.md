@@ -42,7 +42,8 @@ JWT_SECRET=... npm start   # serves the API + built client on $PORT (default 878
 3. Service → **Variables**:
    - `JWT_SECRET` = a long random string (`openssl rand -hex 48`)
    - `ADMIN_USERNAMES` = your username
-   - `NTZS_API_KEY`, `NTZS_TREASURY_USER_ID` (and optionally `TOPUP_RATE`)
+   - `NTZS_API_KEY`, `NTZS_WEBHOOK_SECRET` (and optionally `TOPUP_RATE`)
+   - In the nTZS dashboard, set the webhook URL to `https://<your-domain>/api/webhooks/ntzs`
 4. Settings → Networking → Generate Domain (or add your own). Health check: `/healthz`.
 
 Keep it to **one replica**: SQLite and Socket.IO presence live on a single instance.
@@ -58,7 +59,7 @@ Deploy it on a host that supports WebSockets and a persistent disk (Render, Fly.
 | `server/` | Express + Socket.IO + SQLite (better-sqlite3). The server is authoritative for money, needs, timers, ownership and proximity. Passwords use bcrypt, sessions use JWT. |
 | `client/` | React + three.js (react-three-fiber). A low-poly procedural city, instanced filler buildings and trees, canvas-sprite labels and LOD for remote players. |
 
-**Wallet:** `server/src/payments/index.js`. When `NTZS_API_KEY` and `NTZS_TREASURY_USER_ID` are set, top-ups go through nTZS mobile money (push/STK or Lipa Namba). A background job polls each deposit and credits in-game TSh exactly once (compare-and-set). Without keys, dev runs a clearly labelled **demo** provider. Demo is disabled in production.
+**Wallet:** `server/src/payments/index.js`. When `NTZS_API_KEY` is set, top-ups go through nTZS mobile money (push/STK or Lipa Namba) into your nTZS **platform wallet**. No `userId` is sent; each deposit is tagged with `endUser.reference = bl_<playerId>`. Players are credited as soon as the signed `deposit.completed` webhook arrives (HMAC-SHA256 over `timestamp.body`). A background poller is the fallback. Either way, a top-up is credited exactly once (compare-and-set). Without keys, dev runs a clearly labelled **demo** provider. Demo is disabled in production.
 
 **Cheating guards:** the server checks every purchase, shift and activity: you must be near the place, have the money, the job's requirements and enough energy, and the timer must have finished. Movement packets that jump too far are rejected.
 
