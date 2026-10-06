@@ -22,7 +22,7 @@ export function positionOf(user) {
 }
 
 export function publicPlayer(id, p) {
-  return { id, name: p.name, username: p.username, appearance: p.appearance, x: p.x, z: p.z, ry: p.ry, m: p.m, v: p.vehicle, busy: p.busy };
+  return { id, name: p.name, username: p.username, appearance: p.appearance, x: p.x, z: p.z, ry: p.ry, m: p.m, v: p.vehicle, busy: p.busy, inside: p.inside || null };
 }
 
 export function onlineCount() {

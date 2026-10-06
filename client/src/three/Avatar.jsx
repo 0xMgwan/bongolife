@@ -102,32 +102,81 @@ export function Avatar({ appearance, motion, scale = 1 }) {
   useFrame((_, dt) => {
     const mo = motion?.current || {};
     const mode = mo.mode || (mo.moving ? 'walk' : 'idle');
-    phase.current += dt * (mode === 'walk' ? 9 * (mo.speed || 1) : mode === 'dance' ? 7 : 2);
+    const rate = { walk: 9 * (mo.speed || 1), dance: 7, cheer: 6, swim: 5, lift: 3, sing: 4, dj: 7, eat: 2.5 }[mode] || 2;
+    phase.current += dt * rate;
     const p = phase.current;
-    let leg = 0, arm = 0, bob = 0, armUp = 0, sit = 0;
-    if (mode === 'walk') {
-      leg = Math.sin(p) * 0.6;
-      arm = -Math.sin(p) * 0.5;
-      bob = Math.abs(Math.cos(p)) * 0.04;
-    } else if (mode === 'dance') {
-      arm = Math.sin(p) * 0.4;
-      armUp = 2.2 + Math.sin(p * 2) * 0.3;
-      bob = Math.abs(Math.sin(p)) * 0.12;
-      leg = Math.sin(p) * 0.2;
-    } else if (mode === 'sit') {
-      sit = 1;
-    } else {
-      arm = Math.sin(p) * 0.03;
+    let legL_ = 0, legR_ = 0, armL_ = 0, armR_ = 0, zL = 0.06, zR = -0.06, bob = 0, tilt = 0, yaw = null;
+    switch (mode) {
+      case 'walk':
+        legL_ = Math.sin(p) * 0.6; legR_ = -legL_;
+        armL_ = -Math.sin(p) * 0.5; armR_ = -armL_;
+        bob = Math.abs(Math.cos(p)) * 0.04;
+        break;
+      case 'dance':
+        armL_ = -(2.2 + Math.sin(p * 2) * 0.3) + Math.sin(p) * 0.4; armR_ = -(1.9 + Math.sin(p * 2) * 0.3) - Math.sin(p) * 0.4;
+        zL = 0.3; zR = -0.3;
+        bob = Math.abs(Math.sin(p)) * 0.12;
+        legL_ = Math.sin(p) * 0.2; legR_ = -legL_;
+        yaw = Math.sin(p * 0.5) * 0.5;
+        break;
+      case 'cheer': {
+        // Seated fan: arms shoot up every few seconds.
+        const up = Math.sin(p * 0.35) > 0.55;
+        legL_ = legR_ = -1.4;
+        armL_ = up ? -2.8 + Math.sin(p * 3) * 0.25 : -0.9; armR_ = up ? -2.8 - Math.sin(p * 3) * 0.25 : -0.9;
+        zL = up ? 0.25 : 0.06; zR = up ? -0.25 : -0.06;
+        bob = -0.38 + (up ? Math.abs(Math.sin(p * 3)) * 0.06 : 0);
+        break;
+      }
+      case 'sit':
+        legL_ = legR_ = -1.4;
+        armL_ = armR_ = -0.9;
+        bob = -0.38;
+        break;
+      case 'eat':
+        legL_ = legR_ = -1.4;
+        armL_ = -0.9;
+        armR_ = -1.5 - Math.max(0, Math.sin(p)) * 0.9; // spoon to mouth
+        bob = -0.38;
+        break;
+      case 'sleep':
+        tilt = -Math.PI / 2;
+        armL_ = armR_ = 0.1;
+        bob = 0.12 + Math.sin(p) * 0.01;
+        break;
+      case 'swim':
+        tilt = 1.25; // face down, head forward
+        armL_ = Math.sin(p) * 2.6; armR_ = Math.sin(p + Math.PI) * 2.6;
+        legL_ = Math.sin(p * 2) * 0.35; legR_ = -legL_;
+        bob = -0.9 + Math.sin(p * 2) * 0.05;
+        break;
+      case 'lift':
+        armL_ = armR_ = -(1.6 + Math.sin(p) * 1.3);
+        bob = Math.sin(p) * 0.02;
+        break;
+      case 'sing':
+        armR_ = -2.0 + Math.sin(p) * 0.08; // mic hand
+        armL_ = -0.6 - Math.max(0, Math.sin(p * 0.5)) * 1.2; zL = 0.3;
+        bob = Math.abs(Math.sin(p)) * 0.04;
+        yaw = Math.sin(p * 0.5) * 0.25;
+        break;
+      case 'dj':
+        armL_ = -1.25 + Math.sin(p) * 0.15; armR_ = -1.25 - Math.sin(p) * 0.15;
+        bob = Math.abs(Math.sin(p)) * 0.06;
+        break;
+      default:
+        armL_ = Math.sin(p) * 0.03; armR_ = -armL_;
     }
     if (legL.current) {
-      legL.current.rotation.x = sit ? -1.4 : leg;
-      legR.current.rotation.x = sit ? -1.4 : -leg;
-      armL.current.rotation.x = sit ? -0.9 : armUp ? -armUp : arm;
-      armR.current.rotation.x = sit ? -0.9 : armUp ? -armUp + 0.3 : -arm;
-      armL.current.rotation.z = armUp ? 0.3 : 0.06;
-      armR.current.rotation.z = armUp ? -0.3 : -0.06;
-      body.current.position.y = bob - sit * 0.38;
-      if (mode === 'dance') body.current.rotation.y = Math.sin(p * 0.5) * 0.5;
+      legL.current.rotation.x = legL_;
+      legR.current.rotation.x = legR_;
+      armL.current.rotation.x = armL_;
+      armR.current.rotation.x = armR_;
+      armL.current.rotation.z = zL;
+      armR.current.rotation.z = zR;
+      body.current.position.y = bob;
+      body.current.rotation.x = tilt;
+      if (yaw !== null) body.current.rotation.y = yaw;
       else body.current.rotation.y *= 0.9;
     }
   });

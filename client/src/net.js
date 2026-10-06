@@ -67,7 +67,22 @@ export function connect() {
   });
   socket.on('player:busy', ({ id, busy }) => {
     const r = remotes.get(id);
-    if (r) r.busy = busy;
+    if (r) {
+      r.busy = busy;
+      bump();
+    }
+  });
+  socket.on('player:inside', ({ id, inside }) => {
+    if (id === st().myId) return useStore.setState({ inside });
+    const r = remotes.get(id);
+    if (r) {
+      r.inside = inside;
+      bump();
+    }
+  });
+  socket.on('inside:denied', () => {
+    useStore.setState({ inside: null });
+    st().toast(L('Sogea karibu na mlango kwanza.', 'Get closer to the entrance first.'), 'err');
   });
   socket.on('moves', (list) => {
     for (const [id, x, z, ry, m] of list) {
@@ -117,6 +132,14 @@ export function connect() {
 }
 
 export const getSocket = () => socket;
+
+/** Walk into a venue (placeId) or back out (null). */
+export function setInside(placeId) {
+  useStore.setState({ inside: placeId });
+  local.target = null;
+  socket?.emit('inside', placeId);
+  sendMove(true);
+}
 
 let lastSent = 0;
 let lastPos = '';

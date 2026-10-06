@@ -7,6 +7,30 @@ import { avatarEmoji } from '../three/Avatar.jsx';
 import { setZoom, getZoom } from '../three/GameScene.jsx';
 import { setAudioSettings } from '../audio.js';
 import { useAudioSettings } from './useAudioSettings.js';
+import { activeScene } from '../scene.js';
+import { setInside, remotes } from '../net.js';
+import { placeById } from '@shared/world.js';
+
+/** Banner shown while inside a venue or doing a scene activity. */
+function InsideBar({ scene, me }) {
+  const set = useStore((s) => s.set);
+  const roster = useStore((s) => s.roster);
+  const place = placeById[scene.placeId];
+  const count = 1 + [...remotes.values()].filter((r) => r.inside === scene.placeId || r.busy?.placeId === scene.placeId).length;
+  const inside = useStore((s) => s.inside);
+  void roster;
+  return (
+    <div className="inside-bar card">
+      <span className="em">{place?.icon}</span>
+      <div className="grow">
+        <div className="bold">{loc(place)}</div>
+        <div className="small muted">👥 {count} {L('hapa sasa', 'here now')}{me.busy ? '' : ` · ${L('chagua shughuli', 'pick an activity')}`}</div>
+      </div>
+      {!me.busy && <button className="btn btn-green btn-xs" onClick={() => set({ sheet: { type: 'place', id: scene.placeId } })}>{L('Shughuli', 'Activities')}</button>}
+      {inside && !me.busy && <button className="btn btn-ghost btn-xs" onClick={() => setInside(null)}>{L('Toka nje', 'Leave')}</button>}
+    </div>
+  );
+}
 
 function NeedRing({ need, value }) {
   const r = 15;
@@ -170,10 +194,12 @@ export function HUD() {
   const online = useStore((s) => s.online);
   const announcement = useStore((s) => s.announcement);
   const sound = useAudioSettings();
+  const inside = useStore((s) => s.inside);
   const openPhone = useStore((s) => s.openPhone);
   const run = useStore((s) => s.run);
   const [touch] = useState(() => matchMedia('(pointer: coarse)').matches);
   if (!me) return null;
+  const scene = activeScene({ me, inside });
   const mood = (isEn() ? moodLabelEn : moodLabel)(me.mood ?? 60);
   
   const vehicle = me.vehicles?.find((v) => v.id === me.activeVehicle);
@@ -206,16 +232,17 @@ export function HUD() {
         {announcement && <div className="announce" style={{ alignSelf: 'center' }}>📣 {loc(announcement, 'text')}</div>}
       </div>
       <Busy me={me} />
+      {scene && <InsideBar scene={scene} me={me} />}
       <div className="side">
         <button onClick={() => openPhone('home')} aria-label={L('Simu', 'Phone')}>📱{me.unread > 0 && <span className="badge">{me.unread}</span>}</button>
         <button onClick={() => openPhone('ramani')} aria-label={L('Ramani', 'Map')}>🗺️</button>
-        <button onClick={toggleVehicle} className={vehicle ? 'on' : ''} aria-label={L('Gari', 'Vehicle')}>{vehicle ? vehicleById[vehicle.model]?.emoji : anyVehicle ? '🚶' : '🚗'}</button>
+        {!scene && <button onClick={toggleVehicle} className={vehicle ? 'on' : ''} aria-label={L('Gari', 'Vehicle')}>{vehicle ? vehicleById[vehicle.model]?.emoji : anyVehicle ? '🚶' : '🚗'}</button>}
         <button onClick={() => openPhone('kazi')} aria-label={L('Kazi', 'Jobs')}>💼</button>
         <button onClick={() => setAudioSettings({ muted: !sound.muted })} aria-label={sound.muted ? L('Washa sauti', 'Unmute') : L('Zima sauti', 'Mute')}>{sound.muted ? '🔇' : '🔊'}</button>
-        <button onClick={() => setZoom(getZoom() * 0.8)} aria-label="Zoom in">＋</button>
-        <button onClick={() => setZoom(getZoom() * 1.25)} aria-label="Zoom out">－</button>
+        {!scene && <button onClick={() => setZoom(getZoom() * 0.8)} aria-label="Zoom in">＋</button>}
+        {!scene && <button onClick={() => setZoom(getZoom() * 1.25)} aria-label="Zoom out">－</button>}
       </div>
-      {touch && <Joystick />}
+      {touch && !scene && <Joystick />}
       <ChatBar />
       <Result />
     </div>

@@ -4,7 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
 import { Server } from 'socket.io';
-import { NEED_TICK_SECONDS, isWater, moodOf } from '../../shared/world.js';
+import { NEED_TICK_SECONDS, isWater, moodOf, ENTERABLE, placeById } from '../../shared/world.js';
 import { db, getUser, saveFields, now, UPLOAD_DIR, getSettings } from './db.js';
 import { verifyToken } from './auth.js';
 import { api, settleTopup, applyTopupStatus } from './routes/api.js';
@@ -87,7 +87,8 @@ io.on('connection', (socket) => {
   if (!p) {
     p = {
       sockets: new Set(), x: user.x, z: user.z, ry: 0, m: 0, name: user.name, username: user.username, appearance: user.appearance,
-      vehicle: vehicleSummary(user.activeVehicle), busy: user.busy && user.busy.endsAt > now() ? { kind: user.busy.kind, id: user.busy.id, emoji: user.busy.emoji, endsAt: user.busy.endsAt } : null,
+      vehicle: vehicleSummary(user.activeVehicle), busy: user.busy && user.busy.endsAt > now() ? { kind: user.busy.kind, id: user.busy.id, placeId: user.busy.placeId, emoji: user.busy.emoji, endsAt: user.busy.endsAt } : null,
+      inside: null,
       lastChat: 0, chatCount: 0,
     };
     online.set(uid, p);
@@ -102,6 +103,11 @@ io.on('connection', (socket) => {
     if (!d || !Number.isFinite(d.x) || !Number.isFinite(d.z)) return;
     // Loose anti-teleport: ignore jumps larger than a fast car could make between packets.
     if (Math.hypot(d.x - p.x, d.z - p.z) > 40) return socket.emit('teleport', { pos: [p.x, p.z] });
+    if (p.inside && d.m) {
+      // Walking away means you left the venue.
+      p.inside = null;
+      broadcast('player:inside', { id: uid, inside: null });
+    }
     if (isWater(d.x, d.z)) return;
     p.x = d.x;
     p.z = d.z;
@@ -140,6 +146,21 @@ io.on('connection', (socket) => {
     emitTo(target.id, 'dm', msg);
     for (const sid of p.sockets) if (sid !== socket.id) io.to(sid).emit('dm', msg);
     ack?.({ ok: true, msg });
+  });
+
+  // Walk into / out of a venue. Must be standing near it.
+  socket.on('inside', (placeId) => {
+    let inside = null;
+    if (placeId && ENTERABLE[placeId]) {
+      const pl = placeById[placeId];
+      const dx = Math.max(Math.abs(p.x - pl.pos[0]) - pl.size[0] / 2, 0);
+      const dz = Math.max(Math.abs(p.z - pl.pos[1]) - pl.size[1] / 2, 0);
+      if (Math.hypot(dx, dz) > 16) return socket.emit('inside:denied', placeId);
+      inside = placeId;
+    }
+    if (p.inside === inside) return;
+    p.inside = inside;
+    broadcast('player:inside', { id: uid, inside });
   });
 
   socket.on('emote', (e) => {

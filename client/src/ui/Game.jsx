@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { plotById } from '@shared/world.js';
+import { activeScene } from '../scene.js';
 import GameScene from '../three/GameScene.jsx';
 import { walkTo, goToPlace } from '../nav.js';
 import { loc } from '../i18n.js';
@@ -16,6 +17,7 @@ export default function Game() {
   const world = useStore((s) => s.world);
   const ads = useStore((s) => s.ads);
   const quality = useStore((s) => s.quality);
+  const inside = useStore((s) => s.inside);
   const set = useStore((s) => s.set);
   const finishing = useRef(false);
 
@@ -78,22 +80,26 @@ export default function Game() {
     return () => clearTimeout(t);
   }, [me?.busy?.endsAt, set]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onPlace = useCallback((id) => goToPlace(id), []);
+  const inScene = () => !!useStore.getState().inside || !!activeScene(useStore.getState());
+  const onPlace = useCallback((id) => !inScene() && goToPlace(id), []); // eslint-disable-line react-hooks/exhaustive-deps
   const onPlot = useCallback((id) => {
+    if (inScene()) return;
     const p = plotById[id];
     walkTo([p.pos[0], p.pos[1] + p.size / 2 + 1.5], () => useStore.setState({ sheet: { type: "plot", id } }), loc(p));
   }, []);
   const onBillboard = useCallback((id) => useStore.setState({ sheet: { type: 'ad', id } }), []);
   const onGround = useCallback((pt) => {
+    if (inScene()) return;
     local.target = pt;
     local.arrive = null;
   }, []);
   const onPlayer = useCallback((r) => useStore.setState({ sheet: { type: 'player', id: r.username } }), []);
 
   if (!me) return null;
+  const scene = activeScene({ me, inside });
   return (
     <div className="app">
-      <GameScene mode="play" me={me} world={world} ads={ads} quality={quality} onPlace={onPlace} onPlot={onPlot} onBillboard={onBillboard} onGround={onGround} onPlayer={onPlayer} />
+      <GameScene mode="play" me={me} world={world} ads={ads} quality={quality} scene={scene} onPlace={onPlace} onPlot={onPlot} onBillboard={onBillboard} onGround={onGround} onPlayer={onPlayer} />
       <HUD />
       <Sheets />
       <Phone />

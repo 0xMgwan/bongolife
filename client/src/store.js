@@ -32,6 +32,7 @@ export const useStore = create((set, get) => ({
     return /^sw/i.test(navigator.language || '') ? 'sw' : 'en';
   })(),
   announcement: null,
+  inside: null, // venue the player is inside (placeId) or null
   quality: (() => { try { return localStorage.getItem('bl_q') || 'auto'; } catch { return 'auto'; } })(),
   dmVersion: 0,
   publicFeed: [],

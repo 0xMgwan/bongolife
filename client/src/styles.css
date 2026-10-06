@@ -282,3 +282,5 @@ textarea.field { border-radius: 18px; resize: none; }
 .legal-tabs { scrollbar-width: none; } .legal-tabs::-webkit-scrollbar { display: none; }
 .outfit-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; margin-right: 7px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); flex: none; }
 .chip.on .outfit-dot { box-shadow: 0 0 0 2px #fff; }
+.inside-bar { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(70px + var(--safe-bottom)); width: min(94vw, 420px); padding: 10px 12px; display: flex; gap: 10px; align-items: center; }
+.inside-bar .em { font-size: 28px; }

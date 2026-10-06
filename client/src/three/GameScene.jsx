@@ -5,6 +5,7 @@ import { gameClock } from '@shared/world.js';
 import { City } from './City.jsx';
 import { LocalPlayer, RemotePlayers } from './Players.jsx';
 import { AudioDriver } from './AudioDriver.jsx';
+import { ActivityScene, SCENES, SCENE_ORIGIN } from './Scenes.jsx';
 import { local } from '../net.js';
 
 const zoom = { value: 0.8, target: 0.8 };
@@ -56,7 +57,7 @@ function useZoomGestures() {
   }, [gl]);
 }
 
-function CameraRig({ mode }) {
+function CameraRig({ mode, sceneKey }) {
   const { camera, size } = useThree();
   // Portrait phones need a wider lens to see enough of the street.
   useEffect(() => {
@@ -70,6 +71,15 @@ function CameraRig({ mode }) {
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.1);
     zoom.value += (zoom.target - zoom.value) * Math.min(1, dt * 8);
+    if (sceneKey && SCENES[sceneKey]) {
+      // Interior camera with a slow handheld sway.
+      t.current += dt;
+      const { pos, look } = SCENES[sceneKey].camera;
+      const [ox, oy, oz] = SCENE_ORIGIN;
+      camera.position.set(ox + pos[0] + Math.sin(t.current * 0.25) * 0.8, oy + pos[1] + Math.sin(t.current * 0.4) * 0.15, oz + pos[2]);
+      camera.lookAt(ox + look[0], oy + look[1], oz + look[2]);
+      return;
+    }
     if (mode === 'overview') {
       t.current += dt * 0.035;
       const cx = Math.sin(t.current) * 45;
@@ -93,7 +103,7 @@ const DAY_SKY = new THREE.Color('#cfe6f7');
 const DUSK_SKY = new THREE.Color('#f6c48f');
 const NIGHT_SKY = new THREE.Color('#2c3e66');
 
-function DayNight() {
+function DayNight({ interior }) {
   const { scene } = useThree();
   const hemi = useRef();
   const sun = useRef();
@@ -103,6 +113,17 @@ function DayNight() {
     scene.fog = new THREE.Fog(DAY_SKY.clone(), 150, 320);
   }, [scene]);
   useFrame(() => {
+    if (interior) {
+      // Indoor scenes set their own mood: fixed backdrop + dimmed world light.
+      if (interior.bg) {
+        scene.background.set(interior.bg);
+        scene.fog.color.set(interior.bg);
+      }
+      hemi.current.intensity = 1.3 * (interior.light ?? 1);
+      sun.current.intensity = 1.2 * (interior.light ?? 1);
+      last.current = -1;
+      if (interior.bg) return;
+    }
     const { totalMin } = gameClock();
     if (totalMin === last.current) return;
     last.current = totalMin;
@@ -127,7 +148,8 @@ function DayNight() {
   );
 }
 
-export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPlot, onBillboard, onGround, onPlayer, quality = 'auto' }) {
+export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPlot, onBillboard, onGround, onPlayer, quality = 'auto', scene = null }) {
+  const sceneCfg = scene && SCENES[scene.key];
   const lowEnd = useMemo(() => {
     if (quality === 'low') return true;
     if (quality === 'high') return false;
@@ -146,8 +168,9 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
       }}
     >
       <Suspense fallback={null}>
-        <DayNight />
-        <CameraRig mode={mode} />
+        <DayNight interior={sceneCfg ? { bg: sceneCfg.bg, light: sceneCfg.light } : null} />
+        <CameraRig mode={mode} sceneKey={sceneCfg ? scene.key : null} />
+        <group visible={!sceneCfg}>
         <City
           world={world}
           ads={ads}
@@ -159,10 +182,12 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
           walkers={lowEnd ? 5 : 10}
           showLabels={mode === 'play'}
         />
+        </group>
         {mode === 'play' && me && (
           <>
-            <LocalPlayer me={me} />
-            <AudioDriver me={me} />
+            <LocalPlayer me={me} frozen={!!sceneCfg} />
+            <AudioDriver me={me} scene={sceneCfg ? scene.key : null} />
+            {sceneCfg && <ActivityScene scene={scene.key} placeId={scene.placeId} me={me} myBusy={scene.busy} />}
             <RemotePlayers onPlayer={onPlayer} />
           </>
         )}

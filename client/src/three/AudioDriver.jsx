@@ -25,7 +25,9 @@ function placeDist(p, x, z) {
 }
 
 /** Maps the player's surroundings to music + ambience, a few times per second. */
-export function AudioDriver({ me }) {
+const SCENE_MUSIC = { club: ['amapiano', 1], lounge: ['chill', 1], bar: ['bongo', 0.45], studio: ['bongo', 1], cinema: ['chill', 0.25] };
+
+export function AudioDriver({ me, scene }) {
   const acc = useRef(0);
   const vehicle = me.vehicles?.find((v) => v.id === me.activeVehicle);
   const speed = vehicle ? vehicleById[vehicle.model]?.speed || 1 : 0;
@@ -35,6 +37,12 @@ export function AudioDriver({ me }) {
     if (acc.current < 0.25) return;
     acc.current = 0;
     const { x, z } = local;
+    if (scene) {
+      const [style, level] = SCENE_MUSIC[scene] || [null, 0];
+      setVenueMusic(style, level);
+      setAmbience({ city: 0, waves: scene === 'beach' ? 1 : 0, engine: 0 });
+      return;
+    }
 
     // Loudest venue wins; being on the dance floor maxes it out.
     let best = { style: null, level: 0 };

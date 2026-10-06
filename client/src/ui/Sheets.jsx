@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  NEEDS, OUTFITS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
+  ENTERABLE, NEEDS, OUTFITS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
   outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
 } from '@shared/world.js';
 import { useStore } from '../store.js';
@@ -8,6 +8,7 @@ import { api } from '../api.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
 import { AvatarPreview } from './Creator.jsx';
 import { sfx } from '../audio.js';
+import { setInside } from '../net.js';
 import { L, loc, isEn } from '../i18n.js';
 
 const jt = (j, n) => (isEn() ? jobTitleEn(j, n) : jobTitle(j, n));
@@ -116,6 +117,13 @@ function PlaceSheet({ id, onClose }) {
   };
   return (
     <Sheet title={loc(p)} icon={p.icon} sub={`${p.district} · ${loc(p, 'blurb')}`} onClose={onClose}>
+      {ENTERABLE[p.id] && (
+        useStore.getState().inside === p.id ? (
+          <button className="btn btn-ghost btn-block" style={{ marginTop: 6 }} onClick={() => { setInside(null); onClose(); }}>🚪 {L('Toka nje', 'Leave')}</button>
+        ) : (
+          <button className="btn btn-dark btn-block" style={{ marginTop: 6 }} onClick={() => { setInside(p.id); sfx('open'); onClose(); }}>🚪 {L('Ingia ndani', 'Go inside')} · {L('ona nani yupo', "see who's here")}</button>
+        )
+      )}
       {p.comingSoon && <div className="box center" style={{ background: '#fef9c3' }}>🚧 {L('Inakuja hivi karibuni! Safari za ndege zitafunguliwa update ijayo.', 'Coming soon! Flights open in the next update.')}</div>}
       {p.business && (
         <div className="row between" style={{ marginTop: 6 }}>

@@ -18,7 +18,7 @@ export function busyMode(busy) {
 }
 
 /** Name tag, chat bubble, emote & busy indicator above a player. */
-function Overhead({ id, username, height, getBusy }) {
+export function Overhead({ id, username, height, getBusy }) {
   const tag = useMemo(() => labelTexture(`@${username}`, { size: 30, bg: 'rgba(17,24,39,.72)', fg: '#ffffff', bold: 700 }), [username]);
   const bubbleRef = useRef();
   const iconRef = useRef();
@@ -71,7 +71,7 @@ function Overhead({ id, username, height, getBusy }) {
   );
 }
 
-function Body({ appearance, vehicle, motion }) {
+export function Body({ appearance, vehicle, motion }) {
   const v = vehicle && vehicleById[vehicle.model];
   if (!v) return <Avatar appearance={appearance} motion={motion} />;
   const seat = riderOffset(v.kind);
@@ -94,7 +94,7 @@ const overheadHeight = (vehicle) => {
 };
 
 // ------------------------------------------------------------- local
-export function LocalPlayer({ me, onArrive }) {
+export function LocalPlayer({ me, onArrive, frozen = false }) {
   const group = useRef();
   const motion = useRef({ moving: false, mode: 'idle', speed: 1 });
   const vehicle = useMemo(() => me.vehicles?.find((v) => v.id === me.activeVehicle) || null, [me.vehicles, me.activeVehicle]);
@@ -125,6 +125,11 @@ export function LocalPlayer({ me, onArrive }) {
       g.position.set(local.x, 0.1, local.z);
     }
     const busy = busyRef.current;
+    g.visible = !frozen;
+    if (frozen) {
+      local.moving = false;
+      return;
+    }
     let dx = 0;
     let dz = 0;
     const k = input.keys;
@@ -209,7 +214,7 @@ function RemotePlayer({ r, onClick }) {
     g.position.set(p.x, 0.1, p.z);
     g.rotation.y = p.ry;
     // Cheap LOD: hide players far from the camera focus.
-    g.visible = Math.hypot(camera.position.x - p.x, camera.position.z - p.z) < 140;
+    g.visible = !r.inside && Math.hypot(camera.position.x - p.x, camera.position.z - p.z) < 140;
     const busy = r.busy && r.busy.endsAt > Date.now() ? r.busy : null;
     motion.current.moving = !!r.m || dist > 0.3;
     motion.current.mode = busy ? busyMode(busy) : motion.current.moving ? 'walk' : 'idle';

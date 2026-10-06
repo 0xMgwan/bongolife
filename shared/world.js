@@ -629,3 +629,27 @@ export function moodLabelEn(m) {
   if (m >= 20) return { text: 'Struggling', emoji: '😩' };
   return { text: 'Wrecked', emoji: '🥴' };
 }
+
+// ------------------------------------------------------------ interiors
+// Venues you can walk into (others see you there), and which scene an activity shows.
+export const ENTERABLE = { club: 'club', lounge: 'lounge', bar: 'bar', uwanja: 'stadium', studio: 'studio' };
+const ACTIVITY_SCENES = {
+  gesti: { lala: 'room', oga: 'room', pika: 'room' },
+  mamantilie: { chipsi: 'dining', walimaharage: 'dining', ugalisamaki: 'dining', chai: 'dining' },
+  kariakoo: { mishkaki: 'dining' },
+  fishmarket: { samakichoma: 'dining' },
+  masakigrill: { seafood: 'dining', date: 'dining' },
+  mall: { sinema: 'cinema', burger: 'dining' },
+  coco: { ogelea: 'beach', 'piga-stori': 'beach', mihogo: 'beach', madafu: 'beach' },
+  kigbeach: { ogelea2: 'beach', pumzika: 'beach' },
+  gym: { mazoezi: 'gym' },
+  chuo: { kozi: 'classroom', maktaba: 'classroom' },
+};
+const JOB_SCENES = { dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', cashier: null };
+
+/** Scene for a busy state ({ kind, id, placeId }), or null to stay outdoors. */
+export function sceneFor(busy) {
+  if (!busy) return null;
+  if (busy.kind === 'job') return JOB_SCENES[busy.id] ?? null;
+  return ENTERABLE[busy.placeId] || ACTIVITY_SCENES[busy.placeId]?.[busy.id] || null;
+}
