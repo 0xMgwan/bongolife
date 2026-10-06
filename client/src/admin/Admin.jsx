@@ -4,7 +4,7 @@ import { api, token } from '../api.js';
 import { useStore } from '../store.js';
 import { Logo } from '../ui/Logo.jsx';
 import { Users, UserDetail } from './AdminUsers.jsx';
-import { Economy, Topups, Ads, Chat, Property } from './AdminData.jsx';
+import { Economy, Topups, Ads, Chat, Property, PhoneApps } from './AdminData.jsx';
 import './admin.css';
 
 // ------------------------------------------------------------ helpers
@@ -139,6 +139,7 @@ const SECTIONS = [
   ['ads', '📢', 'Ads'],
   ['chat', '💬', 'Chat'],
   ['property', '🏘️', 'Property'],
+  ['apps', '📱', 'Phone apps'],
   ['settings', '⚙️', 'Settings'],
   ['audit', '🧾', 'Audit log'],
 ];
@@ -439,6 +440,7 @@ export default function Admin() {
         {section === 'ads' && <Ads />}
         {section === 'chat' && <Chat />}
         {section === 'property' && <Property />}
+        {section === 'apps' && <PhoneApps />}
         {section === 'settings' && <Settings />}
         {section === 'audit' && <Audit />}
       </main>

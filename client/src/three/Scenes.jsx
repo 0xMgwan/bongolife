@@ -54,7 +54,7 @@ function useCanvasTexture(w, h, draw, fps = 12) {
     t.colorSpace = THREE.SRGBColorSpace;
     return t;
   }, [w, h]);
-  const acc = useRef(1);
+  const acc = useRef(Infinity); // draw on the first frame, then at `fps`
   const time = useRef(0);
   useFrame((_, dt) => {
     time.current += dt;
@@ -163,7 +163,13 @@ function Crowd({ me, myBusy, people, slots, localSlot, crowd, modeFor, extra }) 
     used.push(i);
     return slots[i];
   };
-  const ls = localSlot || take();
+  // You get the most central seat so you're always in frame.
+  let ls = localSlot;
+  if (!ls) {
+    const centre = slots.reduce((best, sl, i) => (Math.abs(sl[0]) + Math.abs(sl[2]) * 0.3 < Math.abs(slots[best][0]) + Math.abs(slots[best][2]) * 0.3 ? i : best), 0);
+    used.push(centre);
+    ls = slots[centre];
+  }
   out.push(<Person key="me" slot={ls} appearance={me.appearance} mode={modeFor('me', myBusy)} id={me.id} username={me.username} prop={extra?.(ls, 'me')} />);
   for (const r of people) {
     const s = take();
@@ -523,7 +529,8 @@ function Dining({ me, myBusy, people }) {
           <Person slot={[0.5, 0, 0.9, Math.PI]} appearance={{ body: 'woman', skin: 2, hair: 'kilemba', outfit: 'kanga', hairColor: 0 }} mode="idle" />
         </group>
       )}
-      <Crowd me={me} myBusy={myBusy} people={people} slots={slots} crowd={4} modeFor={(who) => (who === 'me' ? 'eat' : 'eat')}
+      {slots.map(([x, , z], i) => <Box key={'stool' + i} p={[x, 0, z]} s={[0.55, 0.42, 0.55]} c={fancy ? '#e7e5e4' : '#dc2626'} />)}
+      <Crowd me={me} myBusy={myBusy} people={people} slots={slots} localSlot={[0, 0.1, -1.4, 0]} crowd={4} modeFor={() => 'eat'}
         extra={(slot, who) => (who === 'me' ? <Plate emoji={act?.emoji} /> : <Plate emoji={['🍛', '🍚', '🐟', '🍢'][slot[0] > 0 ? 1 : 2]} />)} />
     </group>
   );
@@ -586,7 +593,7 @@ function Sea() {
     <group>
       <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.15, -16]}>
         <planeGeometry args={[80, 24]} />
-        <meshLambertMaterial color="#38bdf8" transparent opacity={0.92} />
+        <meshLambertMaterial color="#38bdf8" transparent opacity={0.72} depthWrite={false} />
       </mesh>
       <Box p={[0, -0.12, -4.2]} s={[80, 0.06, 0.6]} m={basic('#f0f9ff')} />
     </group>
@@ -689,7 +696,7 @@ function Cinema({ me, myBusy, people }) {
 
 // ------------------------------------------------------------------- gym
 function Gym({ me, myBusy, people }) {
-  const slots = [[0, 0, 0.5, Math.PI], [-3, 0, -0.5, Math.PI], [3, 0, -0.5, Math.PI], [-1.5, 0, -2.5, Math.PI]];
+  const slots = [[0, 0, 0.5, 0], [-3, 0, -0.5, 0.4], [3, 0, -0.5, -0.4], [-1.5, 0, -2.5, 0.2]];
   return (
     <group>
       <Room w={12} d={9} h={4.5} floor="#1f2937" wall="#e5e7eb" back="#bae6fd" />
@@ -742,7 +749,7 @@ export const SCENES = {
   club: { C: Club, camera: { pos: [0, 8.5, 13], look: [0, 1.2, -1.5] }, dark: true, bg: '#0b0614', light: 0.25 },
   lounge: { C: (p) => <Club {...p} lounge />, camera: { pos: [0, 7, 13], look: [0, 1.2, -2] }, bg: '#f59e0b', light: 0.7 },
   bar: { C: Bar, camera: { pos: [0, 6.2, 9.5], look: [0, 2, -5] }, bg: '#1c1917', light: 0.65 },
-  stadium: { C: Stadium, camera: { pos: [0, 12, 33], look: [0, 0, -2] }, light: 1 },
+  stadium: { C: Stadium, camera: { pos: [0, 8, 27], look: [0, 1.5, 6] }, light: 1 },
   dining: { C: Dining, camera: { pos: [0, 6, 8.5], look: [0, 0.8, -1] }, bg: '#1c1917', light: 0.9 },
   room: { C: Room1, camera: { pos: [0.4, 5.5, 6], look: [-0.4, 0.6, -1.5] }, bg: '#1c1917', light: 0.6 },
   beach: { C: Beach, camera: { pos: [0, 6, 11], look: [0, 0.3, -4] }, light: 1 },

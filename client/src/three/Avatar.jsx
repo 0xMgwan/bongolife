@@ -148,7 +148,7 @@ export function Avatar({ appearance, motion, scale = 1 }) {
         tilt = 1.25; // face down, head forward
         armL_ = Math.sin(p) * 2.6; armR_ = Math.sin(p + Math.PI) * 2.6;
         legL_ = Math.sin(p * 2) * 0.35; legR_ = -legL_;
-        bob = -0.9 + Math.sin(p * 2) * 0.05;
+        bob = -0.45 + Math.sin(p * 2) * 0.05;
         break;
       case 'lift':
         armL_ = armR_ = -(1.6 + Math.sin(p) * 1.3);

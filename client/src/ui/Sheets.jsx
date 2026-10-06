@@ -246,6 +246,7 @@ function PlotSheet({ id, onClose }) {
 
 function PlayerSheet({ username, onClose }) {
   const [p, setP] = useState(null);
+  const run = useStore((s) => s.run);
   const openPhone = useStore((s) => s.openPhone);
   useEffect(() => {
     api(`/players/${encodeURIComponent(username)}`).then(setP).catch((e) => useStore.getState().toast(e.message, 'err'));
@@ -268,6 +269,9 @@ function PlayerSheet({ username, onClose }) {
       <div className="row" style={{ marginTop: 16 }}>
         <button className="btn btn-green grow" onClick={() => openPhone('dm', p.username)}>💬 {L('Tuma ujumbe', 'Message')}</button>
         <button className="btn btn-ghost grow" onClick={() => openPhone('pesa', { send: p.username })}>💸 {L('Tuma pesa', 'Send money')}</button>
+      </div>
+      <div className="row" style={{ marginTop: 8 }}>
+        <button className="btn btn-white grow" style={{ border: '1px solid var(--line)' }} onClick={() => run('/contacts', { method: 'POST', body: { username: p.username } }).then((r) => r && useStore.getState().toast(L(`📇 @${p.username} ameongezwa kwenye anwani`, `📇 @${p.username} added to contacts`)))}>📇 {L('Ongeza kwenye anwani', 'Add to contacts')}</button>
       </div>
     </Sheet>
   );

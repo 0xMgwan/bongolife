@@ -444,6 +444,39 @@ admin.post('/grant-all', (req, res) => {
   res.json({ ok: true, count: ids.length });
 });
 
+// --------------------------------------------------------- phone apps
+const appFields = (b) => {
+  const url = str(b.url, 300);
+  if (!/^https:\/\/[^\s]+$/i.test(url)) throw new GameError('URL must start with https://');
+  const icon = str(b.icon_url, 300);
+  if (icon && !/^https:\/\/[^\s]+$/i.test(icon)) throw new GameError('Icon URL must start with https://');
+  const name = str(b.name, 24);
+  if (name.length < 2) throw new GameError('Name is required');
+  return {
+    name, url, icon_url: icon || null, emoji: str(b.emoji, 8) || null,
+    color: /^#[0-9a-f]{6}$/i.test(b.color || '') ? b.color : '#111827',
+    badge: str(b.badge, 8) || null, sort: int(b.sort), active: b.active === false ? 0 : 1,
+  };
+};
+admin.get('/phone-apps', (_req, res) => res.json(db.prepare('SELECT * FROM phone_apps ORDER BY sort, id').all()));
+admin.post('/phone-apps', (req, res) => {
+  const f = appFields(req.body);
+  const info = db.prepare('INSERT INTO phone_apps (name, url, icon_url, emoji, color, badge, sort, active, created_at) VALUES (@name, @url, @icon_url, @emoji, @color, @badge, @sort, @active, @t)').run({ ...f, t: now() });
+  audit(req.user.id, 'phone_app.create', 'phone_app', info.lastInsertRowid, f);
+  res.status(201).json({ id: info.lastInsertRowid });
+});
+admin.put('/phone-apps/:id', (req, res) => {
+  const f = appFields(req.body);
+  db.prepare('UPDATE phone_apps SET name=@name, url=@url, icon_url=@icon_url, emoji=@emoji, color=@color, badge=@badge, sort=@sort, active=@active WHERE id=@id').run({ ...f, id: int(req.params.id) });
+  audit(req.user.id, 'phone_app.update', 'phone_app', req.params.id, f);
+  res.json({ ok: true });
+});
+admin.delete('/phone-apps/:id', (req, res) => {
+  db.prepare('DELETE FROM phone_apps WHERE id = ?').run(int(req.params.id));
+  audit(req.user.id, 'phone_app.delete', 'phone_app', req.params.id);
+  res.json({ ok: true });
+});
+
 // -------------------------------------------------------------- audit
 admin.get('/audit', (req, res) => {
   const { limit, offset, page: p } = page(req, 60);

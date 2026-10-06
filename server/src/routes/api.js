@@ -317,6 +317,37 @@ api.get('/messages/dm/:username', (req, res) => {
   res.json({ user: { id: other.id, username: other.username, name: other.name, appearance: other.appearance, online: online.has(other.id) }, messages: rows.reverse() });
 });
 
+// ---------------------------------------------------------- phone
+api.get('/phone/apps', (_req, res) => {
+  res.json(db.prepare('SELECT id, name, url, icon_url, emoji, color, badge FROM phone_apps WHERE active = 1 ORDER BY sort, id').all());
+});
+api.post('/phone/apps/:id/open', (req, res) => {
+  db.prepare('UPDATE phone_apps SET opens = opens + 1 WHERE id = ?').run(Number(req.params.id));
+  res.json({ ok: true });
+});
+
+// -------------------------------------------------------- contacts
+const contactList = (userId) =>
+  db.prepare(`SELECT u.id, u.username, u.name, u.appearance, u.fame FROM contacts c JOIN users u ON u.id = c.contact_id
+    WHERE c.user_id = ? AND u.banned_at IS NULL ORDER BY u.username COLLATE NOCASE`).all(userId)
+    .map((u) => ({ ...u, appearance: JSON.parse(u.appearance || 'null'), online: online.has(u.id) }));
+api.get('/contacts', (req, res) => res.json(contactList(req.user.id)));
+api.post('/contacts', (req, res) => {
+  const other = getUserByUsername(str(req.body.username, 30).replace(/^@/, ''));
+  if (!other || other.bannedAt) throw new GameError(['Hakuna mtu mwenye username hiyo.', 'No one has that username.'], 404);
+  if (other.id === req.user.id) throw new GameError(['Huwezi kujiongeza mwenyewe 😅', "You can't add yourself 😅"]);
+  const n = db.prepare('SELECT COUNT(*) n FROM contacts WHERE user_id = ?').get(req.user.id).n;
+  if (n >= 300) throw new GameError(['Anwani zimejaa.', 'Your contact list is full.']);
+  db.prepare('INSERT OR IGNORE INTO contacts (user_id, contact_id, created_at) VALUES (?, ?, ?)').run(req.user.id, other.id, now());
+  emitTo(other.id, 'toast', { text: [`📇 @${req.user.username} amekuongeza kwenye anwani`, `📇 @${req.user.username} added you as a contact`] });
+  res.status(201).json(contactList(req.user.id));
+});
+api.delete('/contacts/:username', (req, res) => {
+  const other = getUserByUsername(req.params.username);
+  if (other) db.prepare('DELETE FROM contacts WHERE user_id = ? AND contact_id = ?').run(req.user.id, other.id);
+  res.json(contactList(req.user.id));
+});
+
 // -------------------------------------------------------- players
 api.get('/players/:username', (req, res) => {
   const u = getUserByUsername(req.params.username);

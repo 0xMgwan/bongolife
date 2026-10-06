@@ -140,6 +140,25 @@ CREATE TABLE IF NOT EXISTS home_items (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS home_user ON home_items(user_id);
+CREATE TABLE IF NOT EXISTS contacts (
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  contact_id INTEGER NOT NULL REFERENCES users(id),
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, contact_id)
+);
+CREATE TABLE IF NOT EXISTS phone_apps (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  icon_url TEXT,
+  emoji TEXT,
+  color TEXT NOT NULL DEFAULT '#111827',
+  badge TEXT,
+  sort INTEGER NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1,
+  opens INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS audit (
   id INTEGER PRIMARY KEY,
   admin_id INTEGER NOT NULL,
@@ -155,6 +174,12 @@ CREATE INDEX IF NOT EXISTS topups_status ON topups(status, created_at);
 `);
 
 export const now = () => Date.now();
+
+// Featured partner apps on the in-game phone; seeded once with Guap.
+if (!db.prepare('SELECT COUNT(*) n FROM phone_apps').get().n) {
+  db.prepare('INSERT INTO phone_apps (name, url, icon_url, color, badge, sort, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run('Guap', 'https://guap.gold/markets', 'https://guap.gold/guap.svg', '#0b0b0b', 'NEW', 0, Date.now());
+}
 
 // ------------------------------------------------------------ settings
 export const DEFAULT_SETTINGS = {

@@ -346,3 +346,70 @@ export function Property() {
     </>
   );
 }
+
+// ------------------------------------------------------------ phone apps
+const EMPTY_APP = { name: '', url: 'https://', icon_url: '', emoji: '', color: '#111827', badge: 'NEW', sort: 0, active: true };
+export function PhoneApps() {
+  const { data, reload } = useApi('/admin/phone-apps');
+  const [form, setForm] = useState(EMPTY_APP);
+  const [editing, setEditing] = useState(null);
+  const save = async () => {
+    const body = { ...form, sort: Number(form.sort) || 0 };
+    const r = editing ? await act(`/phone-apps/${editing}`, { method: 'PUT', body, ok: '✅ App updated' }) : await act('/phone-apps', { body, ok: '✅ App added' });
+    if (r) {
+      setForm(EMPTY_APP);
+      setEditing(null);
+      reload();
+    }
+  };
+  const f = (k) => (e) => setForm({ ...form, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
+  return (
+    <>
+      <div className="adm-head"><div><h1>Phone apps</h1><div className="sub">Partner apps on every player's in-game phone. They open in the phone's browser; "Opens" counts taps.</div></div></div>
+      <div className="adm-cols">
+        <div className="panel">
+          <h2>{editing ? `Edit app #${editing}` : 'Add an app'}</h2>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <input className="in" placeholder="Name (e.g. Guap)" value={form.name} onChange={f('name')} maxLength={24} />
+            <input className="in" placeholder="https://… (page to open)" value={form.url} onChange={f('url')} />
+            <input className="in" placeholder="Icon image URL (https://…) — optional" value={form.icon_url} onChange={f('icon_url')} />
+            <div className="toolbar" style={{ margin: 0 }}>
+              <input className="in" style={{ width: 90 }} placeholder="Emoji" value={form.emoji} onChange={f('emoji')} maxLength={8} />
+              <input type="color" value={form.color} onChange={f('color')} title="Icon background" />
+              <input className="in" style={{ width: 90 }} placeholder="Badge" value={form.badge} onChange={f('badge')} maxLength={8} />
+              <input className="in" style={{ width: 80 }} type="number" placeholder="Order" value={form.sort} onChange={f('sort')} />
+              <label className="small row" style={{ gap: 6 }}><input type="checkbox" checked={form.active} onChange={f('active')} /> visible</label>
+            </div>
+            <div className="actions">
+              <button className="btn btn-green" onClick={save}>{editing ? 'Save changes' : 'Add app'}</button>
+              {editing && <button className="btn btn-outline" onClick={() => { setEditing(null); setForm(EMPTY_APP); }}>Cancel</button>}
+            </div>
+          </div>
+        </div>
+        <div className="panel tbl-wrap">
+          <h2>Live on phones</h2>
+          <table className="tbl">
+            <thead><tr><th>App</th><th>URL</th><th className="num">Opens</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              {data?.map((a) => (
+                <tr key={a.id}>
+                  <td><span className="row" style={{ gap: 8 }}>{a.icon_url ? <img src={a.icon_url} alt="" width="26" height="26" style={{ borderRadius: 7, background: '#fff' }} /> : <span>{a.emoji || '🌐'}</span>}<b>{a.name}</b>{a.badge && <span className="bdg r">{a.badge}</span>}</span></td>
+                  <td className="small" style={{ maxWidth: 220, wordBreak: 'break-all' }}><a href={a.url} target="_blank" rel="noopener noreferrer">{a.url}</a></td>
+                  <td className="num">{a.opens}</td>
+                  <td>{a.active ? <span className="bdg g">visible</span> : <span className="bdg">hidden</span>}</td>
+                  <td className="num">
+                    <div className="actions" style={{ gap: 4, justifyContent: 'flex-end' }}>
+                      <button className="btn btn-outline btn-xs" onClick={() => { setEditing(a.id); setForm({ name: a.name, url: a.url, icon_url: a.icon_url || '', emoji: a.emoji || '', color: a.color, badge: a.badge || '', sort: a.sort, active: !!a.active }); }}>Edit</button>
+                      <button className="btn btn-outline btn-xs" onClick={async () => { if (await act(`/phone-apps/${a.id}`, { method: 'DELETE', confirm: `Delete ${a.name}?`, ok: '🗑️ Deleted' })) reload(); }}>Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {data?.length === 0 && <tr><td colSpan={5} className="empty">No apps yet</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+}

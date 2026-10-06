@@ -37,6 +37,7 @@ export const useStore = create((set, get) => ({
   cityView: 'follow', // town camera: follow the player, or 'map' overview
   mapFilter: null, // ads | homes | sea | people
   homeItems: [],
+  phoneApps: null, // partner apps on the phone home screen
   visits: 0,
   placing: null, // furniture being placed: { def, x, z, rot, id? }
   homeSel: null, // furniture item id whose sheet is open
