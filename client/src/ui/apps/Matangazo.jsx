@@ -90,6 +90,7 @@ export function Matangazo({ arg, back }) {
             <button className="btn btn-green btn-block" style={{ marginTop: 14 }} disabled={busy || !f.title || me.money < cost} onClick={submit}>
               {busy ? L('Subiri…', 'Please wait…') : L(`Lipa ${fmtTsh(cost)} & weka hewani`, `Pay ${fmtTsh(cost)} & go live`)}
             </button>
+            <div className="hint center">{L('Kwa kuweka tangazo unakubali', 'By posting you agree to the')} <a href="/ads-policy" target="_blank">{L('Sera ya Matangazo', 'Advertising Policy')}</a>.</div>
             {me.money < cost && <div className="hint center red">{L('Salio halitoshi — ongeza kwenye Bongo Pesa.', 'Not enough balance — top up in your Wallet.')}</div>}
           </div>
         )}

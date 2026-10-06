@@ -30,12 +30,12 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.lang = lang;
-    if (!location.pathname.startsWith('/admin')) document.title = lang === 'en' ? 'Bongo Life — Life in Dar es Salaam' : 'Bongo Life — Maisha ya Dar es Salaam';
+    if (!/^\/(admin|terms|privacy|ads-policy)/.test(location.pathname)) document.title = lang === 'en' ? 'Bongo Life — Life in Dar es Salaam' : 'Bongo Life — Maisha ya Dar es Salaam';
   }, [lang]);
 
   useEffect(() => {
     const path = location.pathname;
-    if (path === '/terms' || path === '/privacy') return set({ screen: 'legal' });
+    if (['/terms', '/privacy', '/ads-policy'].includes(path)) return set({ screen: 'legal' });
     if (path.startsWith('/admin')) return set({ screen: 'admin' });
     if (!token.get()) return set({ screen: 'landing' });
     api('/me')

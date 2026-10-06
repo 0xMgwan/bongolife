@@ -90,6 +90,7 @@ export function Mipangilio({ back }) {
         <div className="row small" style={{ justifyContent: 'center', gap: 16, marginBottom: 10 }}>
           <a href="/terms" target="_blank">{L('Masharti', 'Terms')}</a>
           <a href="/privacy" target="_blank">{L('Faragha', 'Privacy')}</a>
+          <a href="/ads-policy" target="_blank">{L('Matangazo', 'Ad Policy')}</a>
         </div>
         <button className="btn btn-ghost btn-block red" onClick={logout}>{L('Toka (Logout)', 'Log out')}</button>
       </div>

@@ -63,6 +63,11 @@ export default function Landing() {
             <button className="btn btn-green grow" onClick={() => go('signup')}>{L('Jisajili bure', 'Sign up free')}</button>
             <button className="btn btn-white" onClick={() => go('login')}>{L('Ingia', 'Log in')}</button>
           </div>
+          <div className="land-legal">
+            <a href="/terms">{L('Masharti', 'Terms')}</a>
+            <a href="/privacy">{L('Faragha', 'Privacy')}</a>
+            <a href="/ads-policy">{L('Sera ya Matangazo', 'Ad Policy')}</a>
+          </div>
         </div>
       </div>
     </div>
