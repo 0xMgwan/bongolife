@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   NEEDS, OUTFITS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
-  shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
+  outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
 } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
@@ -44,12 +44,12 @@ function OutfitShop({ me }) {
   return (
     <>
       <div className="section-t">{L('Duka la nguo', 'Clothes shop')}</div>
-      {OUTFITS.filter((o) => o.price > 0).map((o) => {
+      {OUTFITS.filter((o) => o.price > 0).sort((x, y) => outfitFits(y, me.appearance?.body) - outfitFits(x, me.appearance?.body)).map((o) => {
         const owned = me.outfits.includes(o.id);
         const wearing = me.appearance?.outfit === o.id;
         return (
           <div key={o.id} className="item">
-            <span className="em" style={{ background: o.top }}>👕</span>
+            <span className="em" style={{ background: `linear-gradient(135deg, ${o.top} 50%, ${o.bottom} 50%)` }}>{o.bottomType === 'robe' || o.bottomType === 'maxi' || o.bottomType === 'dress' ? '👗' : '👕'}</span>
             <div className="grow">
               <div className="t">{loc(o)}</div>
               <div className="s">{owned ? L('Unayo tayari', 'You own this') : fmtTsh(o.price)}</div>

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { SKIN_TONES, HAIR_COLORS, HAIRSTYLES, OUTFITS, TRAITS, SPAWNS, randomAppearance, fmtTsh } from '@shared/world.js';
+import { SKIN_TONES, HAIR_COLORS, HAIRSTYLES, OUTFITS, TRAITS, SPAWNS, randomAppearance, fmtTsh, outfitById, outfitFits } from '@shared/world.js';
 import { Avatar } from '../three/Avatar.jsx';
 import { useStore } from '../store.js';
 import { L, loc } from '../i18n.js';
@@ -24,6 +24,11 @@ function Spinner({ appearance, spin }) {
       <Avatar appearance={appearance} motion={motion} />
     </group>
   );
+}
+
+/** Two-tone dot showing an outfit's top and bottom colours. */
+export function Swatch({ o }) {
+  return <span className="outfit-dot" style={{ background: `linear-gradient(135deg, ${o.top} 50%, ${o.bottom} 50%)` }} />;
 }
 
 export function AvatarPreview({ appearance, height = '100%' }) {
@@ -62,8 +67,14 @@ export default function Creator() {
   const [trait, setTrait] = useState('mchakarikaji');
   const [spawn, setSpawn] = useState('manzese');
   const [saving, setSaving] = useState(false);
-  const up = (patch) => setA({ ...a, ...patch });
-  const free = OUTFITS.filter((o) => o.price === 0);
+  const up = (patch) => {
+    const next = { ...a, ...patch };
+    // Switching body keeps the outfit only if it fits; otherwise pick the first free one that does.
+    if (!outfitFits(outfitById[next.outfit] || {}, next.body)) next.outfit = OUTFITS.find((o) => o.price === 0 && outfitFits(o, next.body)).id;
+    setA(next);
+  };
+  const free = OUTFITS.filter((o) => o.price === 0 && outfitFits(o, a.body));
+  const shop = OUTFITS.filter((o) => o.price > 0 && outfitFits(o, a.body));
 
   const finish = async () => {
     setSaving(true);
@@ -73,8 +84,7 @@ export default function Creator() {
   };
   const next = () => (step < steps.length - 1 ? setStep(step + 1) : finish());
   const shuffle = () => {
-    const r = randomAppearance();
-    setA({ ...r, outfit: free[Math.floor(Math.random() * free.length)].id });
+    setA(randomAppearance());
   };
 
   return (
@@ -125,11 +135,11 @@ export default function Creator() {
             <>
               <div className="label">{L('Mavazi ya kuanzia (bure)', 'Starter outfits (free)')}</div>
               <div className="chips">
-                {free.map((o) => <button key={o.id} className={`chip ${a.outfit === o.id ? 'on' : ''}`} onClick={() => up({ outfit: o.id })}>{loc(o)}</button>)}
+                {free.map((o) => <button key={o.id} className={`chip ${a.outfit === o.id ? 'on' : ''}`} onClick={() => up({ outfit: o.id })}><Swatch o={o} />{loc(o)}</button>)}
               </div>
               <div className="label">{L('Dukani (nunua ndani ya mchezo)', 'In the shops (buy in-game)')}</div>
               <div className="chips">
-                {OUTFITS.filter((o) => o.price > 0).map((o) => (
+                {shop.map((o) => (
                   <span key={o.id} className="chip lock">🔒 {loc(o)} · {fmtTsh(o.price)}</span>
                 ))}
               </div>

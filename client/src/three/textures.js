@@ -199,6 +199,34 @@ export function fabricTexture(pattern, color) {
     } else if (pattern === 'stripes') {
       ctx.fillStyle = alt;
       for (let y = 0; y < h; y += 32) ctx.fillRect(0, y, w, 6);
+    } else if (pattern === 'shuka') {
+      // Maasai shuka: bold red plaid with dark and blue bands.
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = '#111827';
+      for (let i = 0; i < 4; i++) {
+        ctx.fillRect(i * 32 + 6, 0, 8, h);
+        ctx.fillRect(0, i * 32 + 6, w, 8);
+      }
+      ctx.fillStyle = '#1d4ed8';
+      for (let i = 0; i < 4; i++) {
+        ctx.fillRect(i * 32 + 20, 0, 3, h);
+        ctx.fillRect(0, i * 32 + 20, w, 3);
+      }
+      ctx.globalAlpha = 1;
+    } else if (pattern === 'dots') {
+      ctx.fillStyle = '#ffffff';
+      for (let y = 0; y < 4; y++)
+        for (let x = 0; x < 4; x++) {
+          ctx.beginPath();
+          ctx.arc(x * 32 + (y % 2) * 16 + 8, y * 32 + 16, 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+    } else if (pattern === 'check') {
+      ctx.fillStyle = 'rgba(255,255,255,.35)';
+      for (let i = 0; i < 8; i++) {
+        ctx.fillRect(i * 16, 0, 8, h);
+        ctx.fillRect(0, i * 16, w, 8);
+      }
     } else if (pattern === 'jersey') {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 54, w, 12);

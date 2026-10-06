@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { HAIRSTYLES, HAIR_COLORS, OUTFITS, TRAITS } from '@shared/world.js';
+import { HAIRSTYLES, HAIR_COLORS, OUTFITS, TRAITS, outfitFits } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { AppHead } from '../Phone.jsx';
-import { AvatarPreview } from '../Creator.jsx';
+import { AvatarPreview, Swatch } from '../Creator.jsx';
 import { LangToggle } from '../LangToggle.jsx';
 import { L, loc } from '../../i18n.js';
 
@@ -10,7 +10,7 @@ export function Kabati({ back }) {
   const me = useStore((s) => s.me);
   const run = useStore((s) => s.run);
   const [a, setA] = useState(me.appearance);
-  const owned = OUTFITS.filter((o) => o.price === 0 || me.outfits.includes(o.id));
+  const owned = OUTFITS.filter((o) => (o.price === 0 && outfitFits(o, a.body)) || me.outfits.includes(o.id));
   const save = async () => {
     const r = await run('/me/profile', { method: 'POST', body: { appearance: a } });
     if (r) {
@@ -27,7 +27,7 @@ export function Kabati({ back }) {
         </div>
         <div className="label">{L('Nguo zako', 'Your outfits')}</div>
         <div className="chips">
-          {owned.map((o) => <button key={o.id} className={`chip ${a.outfit === o.id ? 'on' : ''}`} onClick={() => setA({ ...a, outfit: o.id })}>{loc(o)}</button>)}
+          {owned.map((o) => <button key={o.id} className={`chip ${a.outfit === o.id ? 'on' : ''}`} onClick={() => setA({ ...a, outfit: o.id })}><Swatch o={o} />{loc(o)}</button>)}
         </div>
         <div className="hint">{L('Nunua nguo zaidi Kariakoo Fashion au Mlimani City.', 'Buy more outfits at Kariakoo Fashion or Mlimani City.')}</div>
         <div className="label">{L('Nywele', 'Hairstyle')}</div>

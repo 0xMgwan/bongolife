@@ -130,26 +130,53 @@ export const HAIRSTYLES = [
   { id: 'kofia', name: 'Kofia' },
   { id: 'kipara', name: 'Kipara' },
 ];
-// pattern: plain | kitenge | kanga | stripes | jersey
+// Outfits are built from garment pieces the avatar knows how to draw:
+//   bottom:  pants | shorts | skirt | dress | maxi | wrap | robe (full-length from the shoulders)
+//   sleeves: short | long | none
+//   head:    kofia | hijab (optional)   extra: tie (optional)
+//   pattern / bottomPattern: plain | kitenge | kanga | stripes | jersey | shuka | dots | check
+//   for:     all | woman | man  — which body the outfit is offered to in the creator
 export const OUTFITS = [
-  { id: 'tshirt', name: 'T-shirt na Jeans', price: 0, top: '#f8fafc', bottom: '#1e3a8a', pattern: 'plain', style: 'casual' },
-  { id: 'kitenge', name: 'Gauni la Kitenge', price: 0, top: '#f59e0b', bottom: '#f59e0b', pattern: 'kitenge', style: 'dress' },
-  { id: 'kanga', name: 'Kanga', price: 0, top: '#16a34a', bottom: '#16a34a', pattern: 'kanga', style: 'dress' },
-  { id: 'kanzu', name: 'Kanzu na Kofia', price: 0, top: '#f8fafc', bottom: '#f8fafc', pattern: 'plain', style: 'robe' },
-  { id: 'shati', name: 'Shati la Kitenge', price: 0, top: '#dc2626', bottom: '#111827', pattern: 'kitenge', style: 'casual' },
-  { id: 'jezi-simba', name: 'Jezi ya Simba', price: 35_000, top: '#dc2626', bottom: '#f8fafc', pattern: 'jersey', style: 'casual' },
-  { id: 'jezi-yanga', name: 'Jezi ya Yanga', price: 35_000, top: '#facc15', bottom: '#15803d', pattern: 'jersey', style: 'casual' },
-  { id: 'hoodie', name: 'Hoodie ya Bongo Flava', price: 60_000, top: '#111827', bottom: '#374151', pattern: 'stripes', style: 'casual' },
-  { id: 'suti', name: 'Suti ya Kibosile', price: 250_000, top: '#0f172a', bottom: '#0f172a', pattern: 'plain', style: 'suit' },
-  { id: 'gauni-sendoff', name: 'Gauni la Send-off', price: 400_000, top: '#a21caf', bottom: '#a21caf', pattern: 'kitenge', style: 'dress' },
-  { id: 'gym', name: 'Nguo za Gym', price: 25_000, top: '#22c55e', bottom: '#111827', pattern: 'stripes', style: 'casual' },
+  // ---- free · everyone
+  { id: 'tshirt', name: 'T-shirt na Jeans', nameEn: 'T-shirt & Jeans', price: 0, for: 'all', top: '#f8fafc', bottom: '#1e3a8a', bottomType: 'pants', sleeves: 'short' },
+  { id: 'shati', name: 'Shati la Kitenge', nameEn: 'Kitenge Shirt', price: 0, for: 'all', top: '#dc2626', pattern: 'kitenge', bottom: '#111827', bottomType: 'pants', sleeves: 'short' },
+  { id: 'polo', name: 'Polo na Khaki', nameEn: 'Polo & Khakis', price: 0, for: 'all', top: '#0f766e', bottom: '#c8b48a', bottomType: 'pants', sleeves: 'short' },
+  { id: 'tracksuit', name: 'Tracksuit', nameEn: 'Tracksuit', price: 0, for: 'all', top: '#1d4ed8', pattern: 'stripes', bottom: '#1e3a8a', bottomType: 'pants', sleeves: 'long' },
+  { id: 'ufukweni', name: 'Vesti na Bukta', nameEn: 'Vest & Shorts', price: 0, for: 'all', top: '#f97316', bottom: '#0ea5e9', bottomType: 'shorts', sleeves: 'none' },
+  { id: 'shuka', name: 'Shuka la Kimasai', nameEn: 'Maasai Shuka', price: 0, for: 'all', top: '#dc2626', pattern: 'shuka', bottom: '#dc2626', bottomType: 'robe', sleeves: 'none' },
+  { id: 'jeans-nyeusi', name: 'T-shirt Nyeusi na Jeans', nameEn: 'Black Tee & Jeans', price: 0, for: 'all', top: '#111827', bottom: '#475569', bottomType: 'pants', sleeves: 'short' },
+  // ---- free · women
+  { id: 'kitenge', name: 'Gauni la Kitenge', nameEn: 'Kitenge Dress', price: 0, for: 'woman', top: '#f59e0b', pattern: 'kitenge', bottom: '#f59e0b', bottomPattern: 'kitenge', bottomType: 'dress', sleeves: 'short' },
+  { id: 'kanga', name: 'Kanga', nameEn: 'Kanga', price: 0, for: 'woman', top: '#16a34a', pattern: 'kanga', bottom: '#16a34a', bottomPattern: 'kanga', bottomType: 'dress', sleeves: 'none' },
+  { id: 'sketi-kitenge', name: 'Blauzi na Sketi ya Kitenge', nameEn: 'Blouse & Kitenge Skirt', price: 0, for: 'woman', top: '#f8fafc', bottom: '#7c3aed', bottomPattern: 'kitenge', bottomType: 'skirt', sleeves: 'short' },
+  { id: 'blauzi-jeans', name: 'Blauzi na Jeans', nameEn: 'Blouse & Jeans', price: 0, for: 'woman', top: '#f472b6', bottom: '#1e40af', bottomType: 'pants', sleeves: 'short' },
+  { id: 'maxi', name: 'Gauni Refu la Madoa', nameEn: 'Polka Maxi Dress', price: 0, for: 'woman', top: '#0ea5e9', pattern: 'dots', bottom: '#0ea5e9', bottomPattern: 'dots', bottomType: 'maxi', sleeves: 'none' },
+  { id: 'buibui', name: 'Buibui na Hijabu', nameEn: 'Buibui & Hijab', price: 0, for: 'woman', top: '#111827', bottom: '#111827', bottomType: 'robe', sleeves: 'long', head: 'hijab' },
+  { id: 'ofisi-sketi', name: 'Suti ya Ofisini (Sketi)', nameEn: 'Office Skirt Suit', price: 0, for: 'woman', top: '#1e3a8a', bottom: '#1e3a8a', bottomType: 'skirt', sleeves: 'long' },
+  // ---- free · men
+  { id: 'kanzu', name: 'Kanzu na Kofia', nameEn: 'Kanzu & Kofia', price: 0, for: 'man', top: '#f8fafc', bottom: '#f8fafc', bottomType: 'robe', sleeves: 'long', head: 'kofia' },
+  { id: 'kaunda', name: 'Suti ya Kaunda', nameEn: 'Kaunda Suit', price: 0, for: 'man', top: '#a8916b', bottom: '#a8916b', bottomType: 'pants', sleeves: 'short' },
+  { id: 'kikoi', name: 'Shati na Kikoi', nameEn: 'Shirt & Kikoi', price: 0, for: 'man', top: '#e0f2fe', bottom: '#0f766e', bottomPattern: 'stripes', bottomType: 'wrap', sleeves: 'short' },
+  { id: 'shati-check', name: 'Shati la Cheki na Kadeti', nameEn: 'Check Shirt & Chinos', price: 0, for: 'man', top: '#b91c1c', pattern: 'check', bottom: '#57534e', bottomType: 'pants', sleeves: 'long' },
+  // ---- shops
+  { id: 'jezi-simba', name: 'Jezi ya Simba', nameEn: 'Simba Jersey', price: 35_000, for: 'all', top: '#dc2626', pattern: 'jersey', bottom: '#f8fafc', bottomType: 'shorts', sleeves: 'short' },
+  { id: 'jezi-yanga', name: 'Jezi ya Yanga', nameEn: 'Yanga Jersey', price: 35_000, for: 'all', top: '#facc15', pattern: 'jersey', bottom: '#15803d', bottomType: 'shorts', sleeves: 'short' },
+  { id: 'gym', name: 'Nguo za Gym', nameEn: 'Gym Wear', price: 25_000, for: 'all', top: '#22c55e', pattern: 'stripes', bottom: '#111827', bottomType: 'shorts', sleeves: 'none' },
+  { id: 'reflekta', name: 'Jaketi la Bodaboda', nameEn: 'Bodaboda Reflector Jacket', price: 45_000, for: 'all', top: '#f97316', pattern: 'stripes', bottom: '#1f2937', bottomType: 'pants', sleeves: 'long' },
+  { id: 'hoodie', name: 'Hoodie ya Bongo Flava', nameEn: 'Bongo Flava Hoodie', price: 60_000, for: 'all', top: '#111827', pattern: 'stripes', bottom: '#374151', bottomType: 'pants', sleeves: 'long' },
+  { id: 'jaketi-ngozi', name: 'Jaketi la Ngozi', nameEn: 'Leather Jacket', price: 120_000, for: 'all', top: '#1c1917', bottom: '#1e293b', bottomType: 'pants', sleeves: 'long' },
+  { id: 'kanzu-eid', name: 'Kanzu ya Eid', nameEn: 'Eid Kanzu', price: 150_000, for: 'man', top: '#fef3c7', bottom: '#fef3c7', bottomType: 'robe', sleeves: 'long', head: 'kofia' },
+  { id: 'gauni-kitenge-refu', name: 'Gauni Refu la Kitenge', nameEn: 'Kitenge Maxi Gown', price: 180_000, for: 'woman', top: '#be123c', pattern: 'kitenge', bottom: '#be123c', bottomPattern: 'kitenge', bottomType: 'maxi', sleeves: 'short' },
+  { id: 'suti', name: 'Suti ya Kibosile', nameEn: 'Boss Suit', price: 250_000, for: 'all', top: '#0f172a', bottom: '#0f172a', bottomType: 'pants', sleeves: 'long', extra: 'tie' },
+  { id: 'gauni-sendoff', name: 'Gauni la Send-off', nameEn: 'Send-off Gown', price: 400_000, for: 'woman', top: '#a21caf', pattern: 'kitenge', bottom: '#a21caf', bottomPattern: 'kitenge', bottomType: 'maxi', sleeves: 'none' },
 ];
 export const outfitById = Object.fromEntries(OUTFITS.map((o) => [o.id, o]));
+export const outfitFits = (o, body) => !o.for || o.for === 'all' || o.for === body;
 
 export function randomAppearance(seed = Math.random()) {
   const r = (n, k = 1) => Math.floor(((seed * 9301 * k + 49297) % 233280) / 233280 * n);
   const body = Math.random() < 0.5 ? 'woman' : 'man';
-  const freeOutfits = OUTFITS.filter((o) => o.price === 0 && (body === 'woman' || o.style !== 'dress'));
+  const freeOutfits = OUTFITS.filter((o) => o.price === 0 && outfitFits(o, body));
   return {
     body,
     skin: Math.floor(Math.random() * SKIN_TONES.length),
@@ -575,7 +602,7 @@ for (const n of NEEDS) n.nameEn = EN.needs[n.id];
 for (const t of TRAITS) [t.nameEn, t.perkEn] = EN.traits[t.id];
 for (const [id, s] of Object.entries(SPAWNS)) s.blurbEn = EN.spawns[id];
 for (const h of HAIRSTYLES) h.nameEn = EN.hair[h.id];
-for (const o of OUTFITS) o.nameEn = EN.outfits[o.id];
+for (const o of OUTFITS) o.nameEn = o.nameEn || EN.outfits[o.id] || o.name;
 for (const v of VEHICLES) v.nameEn = EN.vehicles[v.id] || v.name;
 for (const b of BUILDINGS) b.nameEn = EN.buildings[b.id];
 for (const b of BILLBOARDS) b.nameEn = EN.billboards[b.id] || b.name;

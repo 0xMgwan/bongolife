@@ -81,11 +81,15 @@ export function Avatar({ appearance, motion, scale = 1 }) {
   const woman = a.body === 'woman';
   const skin = mat(SKIN_TONES[a.skin] || SKIN_TONES[2]);
   const hairColor = HAIR_COLORS[a.hairColor] || HAIR_COLORS[0];
-  const topMat = fabricMat(outfit.pattern, outfit.top);
-  const bottomMat = outfit.style === 'casual' && outfit.pattern !== 'plain' && outfit.pattern !== 'jersey' ? mat(outfit.bottom) : fabricMat(outfit.style === 'dress' ? outfit.pattern : 'plain', outfit.bottom);
-  const dress = outfit.style === 'dress';
-  const robe = outfit.style === 'robe';
-  const suit = outfit.style === 'suit';
+  const topMat = fabricMat(outfit.pattern || 'plain', outfit.top);
+  const bottomMat = fabricMat(outfit.bottomPattern || 'plain', outfit.bottom);
+  const bt = outfit.bottomType || 'pants';
+  const robe = bt === 'robe';
+  const longSkirt = bt === 'maxi' || bt === 'wrap';
+  const bareLegs = bt !== 'pants'; // legs show skin (or are hidden under fabric)
+  const sleeves = outfit.sleeves || 'short';
+  const hijab = outfit.head === 'hijab';
+  const kofia = outfit.head === 'kofia' && a.hair !== 'kilemba';
   const sw = woman ? 0.36 : 0.42; // shoulder width
 
   const legL = useRef();
@@ -128,7 +132,8 @@ export function Avatar({ appearance, motion, scale = 1 }) {
     }
   });
 
-  const legMat = dress || robe ? skin : bottomMat;
+  const legMat = bareLegs ? skin : bottomMat;
+  const shoeMat = woman && (bt === 'dress' || bt === 'skirt' || bt === 'maxi') ? mat('#7c2d12') : SHOE;
   return (
     <group scale={scale}>
       <mesh geometry={geo('circle', 0.42, 16)} material={shadowMat} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} />
@@ -137,12 +142,15 @@ export function Avatar({ appearance, motion, scale = 1 }) {
         {[[-1, legL], [1, legR]].map(([s, ref]) => (
           <group key={s} ref={ref} position={[s * 0.1, 0.9, 0]}>
             <mesh geometry={geo('capsule', 0.085, 0.66, 4, 10)} material={legMat} position={[0, -0.42, 0]} />
-            <mesh geometry={geo('capsule', 0.07, 0.14, 4, 8)} material={woman && dress ? mat('#7c2d12') : SHOE} position={[0, -0.84, 0.06]} rotation={[Math.PI / 2, 0, 0]} />
+            {bt === 'shorts' && <mesh geometry={geo('capsule', 0.094, 0.2, 4, 10)} material={bottomMat} position={[0, -0.16, 0]} />}
+            <mesh geometry={geo('capsule', 0.07, 0.14, 4, 8)} material={shoeMat} position={[0, -0.84, 0.06]} rotation={[Math.PI / 2, 0, 0]} />
           </group>
         ))}
         {/* hips */}
-        {!dress && !robe && <mesh geometry={geo('cyl', 0.19, woman ? 0.22 : 0.2, 0.22, 14)} material={bottomMat} position={[0, 0.9, 0]} scale={[1, 1, 0.7]} />}
-        {dress && <mesh geometry={geo('cyl', 0.19, 0.34, 0.66, 16)} material={bottomMat} position={[0, 0.72, 0]} scale={[1, 1, 0.8]} />}
+        {(bt === 'pants' || bt === 'shorts') && <mesh geometry={geo('cyl', 0.19, woman ? 0.22 : 0.2, 0.22, 14)} material={bottomMat} position={[0, 0.9, 0]} scale={[1, 1, 0.7]} />}
+        {bt === 'skirt' && <mesh geometry={geo('cyl', 0.19, 0.29, 0.44, 16)} material={bottomMat} position={[0, 0.8, 0]} scale={[1, 1, 0.8]} />}
+        {bt === 'dress' && <mesh geometry={geo('cyl', 0.19, 0.34, 0.66, 16)} material={bottomMat} position={[0, 0.72, 0]} scale={[1, 1, 0.8]} />}
+        {longSkirt && <mesh geometry={geo('cyl', 0.19, bt === 'maxi' ? 0.31 : 0.25, 0.9, 16)} material={bottomMat} position={[0, 0.55, 0]} scale={[1, 1, 0.8]} />}
         {robe && <mesh geometry={geo('cyl', 0.2, 0.3, 1.32, 16)} material={topMat} position={[0, 0.78, 0]} scale={[1, 1, 0.8]} />}
         {/* torso */}
         <mesh geometry={geo('cyl', sw / 2, woman ? sw / 2 - 0.05 : sw / 2 - 0.03, 0.58, 16)} material={topMat} position={[0, 1.2, 0]} scale={[1, 1, 0.62]} />
@@ -153,7 +161,7 @@ export function Avatar({ appearance, motion, scale = 1 }) {
             <mesh geometry={geo('sphere', 0.085, 10, 8)} material={topMat} position={[0.075, 0, 0]} />
           </group>
         )}
-        {suit && (
+        {outfit.extra === 'tie' && (
           <group position={[0, 1.32, 0.115]}>
             <mesh geometry={geo('box', 0.11, 0.28, 0.01)} material={WHITE} />
             <mesh geometry={geo('box', 0.045, 0.24, 0.012)} material={mat('#b91c1c')} position={[0, -0.03, 0.004]} />
@@ -162,8 +170,8 @@ export function Avatar({ appearance, motion, scale = 1 }) {
         {/* arms */}
         {[[-1, armL], [1, armR]].map(([s, ref]) => (
           <group key={s} ref={ref} position={[s * (sw / 2 + 0.05), 1.45, 0]}>
-            <mesh geometry={geo('capsule', 0.065, 0.16, 4, 10)} material={topMat} position={[0, -0.1, 0]} />
-            <mesh geometry={geo('capsule', 0.055, 0.42, 4, 10)} material={suit || robe ? topMat : skin} position={[0, -0.34, 0]} />
+            <mesh geometry={geo('capsule', 0.065, 0.16, 4, 10)} material={sleeves === 'none' ? skin : topMat} position={[0, -0.1, 0]} />
+            <mesh geometry={geo('capsule', 0.055, 0.42, 4, 10)} material={sleeves === 'long' ? topMat : skin} position={[0, -0.34, 0]} />
             <mesh geometry={geo('sphere', 0.06, 8, 8)} material={skin} position={[0, -0.6, 0]} />
           </group>
         ))}
@@ -178,8 +186,15 @@ export function Avatar({ appearance, motion, scale = 1 }) {
             </group>
           ))}
           <mesh geometry={geo('box', 0.07, 0.015, 0.01)} material={mat('#5b2a1a')} position={[0, -0.07, 0.155]} />
-          {robe && a.hair !== 'kilemba' ? (
-            <mesh geometry={geo('cyl', 0.165, 0.17, 0.12, 12)} material={WHITE} position={[0, 0.12, 0]} />
+          {hijab ? (
+            // Headscarf: wraps the head with the face left open, draping to the shoulders.
+            <group>
+              <mesh geometry={geo('sphere', 0.19, 18, 14, Math.PI / 2 + 0.95, Math.PI * 2 - 1.9)} material={topMat} position={[0, 0.01, -0.01]} scale={[1, 1.1, 1]} />
+              <mesh geometry={geo('sphere', 0.192, 18, 8, 0, Math.PI * 2, 0, 1.05)} material={topMat} position={[0, 0.01, -0.01]} scale={[1, 1.1, 1]} />
+              <mesh geometry={geo('cyl', 0.15, 0.24, 0.24, 16, 1, true)} material={topMat} position={[0, -0.2, -0.01]} />
+            </group>
+          ) : kofia ? (
+            <mesh geometry={geo('cyl', 0.165, 0.17, 0.12, 12)} material={outfit.top === '#f8fafc' ? WHITE : mat('#f8fafc')} position={[0, 0.12, 0]} />
           ) : (
             <Hair style={a.hair} color={hairColor} />
           )}
