@@ -6,7 +6,7 @@ import {
   isWater, onRoad, buildingById, fmtShort, randomAppearance, AD_ROTATE_SECONDS,
 } from '@shared/world.js';
 import { mat, geo, emojiTexture, labelTexture, windowTexture, adTexture } from './textures.js';
-import { Vehicle, Boat } from './Vehicle.jsx';
+import { Vehicle, Boat, Plane } from './Vehicle.jsx';
 import { Avatar } from './Avatar.jsx';
 import { L, loc } from '../i18n.js';
 import { trafficCars } from '../net.js';
@@ -339,6 +339,7 @@ function PlaceModel({ place, owner }) {
     case 'airport':
       return (
         <group>
+          <AirportTraffic w={w} z={d / 2 + 5} />
           <Box w={w} h={0.1} d={6} color="#4b5563" z={d / 2 + 5} />
           <Box w={w * 0.7} h={h} d={d * 0.6} color={c} />
           <Box w={w * 0.72} h={0.6} d={d * 0.64} color="#64748b" y={h} />
@@ -611,6 +612,43 @@ function Traffic() {
       <Vehicle kind={s.kind} color={s.color} />
     </group>
   ));
+}
+
+// ------------------------------------------------------- airport traffic
+/** A plane that taxis, takes off over the runway and later lands again, on a loop. */
+function AirportTraffic({ w, z }) {
+  const ref = useRef();
+  const marks = useMemo(() => Array.from({ length: 8 }, (_, i) => -w / 2 + 2 + i * ((w - 4) / 7)), [w]);
+  useFrame(({ clock }) => {
+    const g = ref.current;
+    if (!g) return;
+    const T = 48; // seconds per loop
+    const t = clock.elapsedTime % T;
+    // 0–14 take-off roll + climb (east), 14–30 gone, 30–44 approach + touchdown (from the east), 44–48 parked
+    let x = 0, y = 0.75, pitch = 0, vis = true, dir = 1;
+    if (t < 14) {
+      const k = t / 14;
+      x = -w / 2 + 4 + k * k * (w + 120);
+      y = 0.75 + Math.max(0, x - 6) * 0.25;
+      pitch = x > 6 ? -0.18 : 0;
+    } else if (t < 30) vis = false;
+    else if (t < 44) {
+      const k = (t - 30) / 14;
+      dir = -1;
+      x = 140 - (1 - (1 - k) * (1 - k)) * (140 + w / 2 - 6);
+      y = 0.75 + Math.max(0, x - 4) * 0.22;
+      pitch = x > 4 ? 0.05 : 0;
+    } else x = -w / 2 + 6, dir = -1;
+    g.visible = vis;
+    g.position.set(x, y, z);
+    g.rotation.set(pitch * dir, dir > 0 ? Math.PI / 2 : -Math.PI / 2, 0, 'YXZ');
+  });
+  return (
+    <group>
+      {marks.map((x) => <mesh key={x} geometry={geo('box', 2, 0.02, 0.3)} material={mat('#f8fafc')} position={[x, 0.12, z]} />)}
+      <group ref={ref} scale={0.45}><Plane /></group>
+    </group>
+  );
 }
 
 // ------------------------------------------------------------ walkers

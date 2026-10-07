@@ -1,4 +1,4 @@
-import { fmtTsh, vehicleById, plotById, placeById, buildingById } from '@shared/world.js';
+import { GAME, fmtTsh, vehicleById, plotById, placeById, buildingById } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { walkTo, goToPlace } from '../../nav.js';
 import { AppHead } from '../Phone.jsx';
@@ -61,7 +61,7 @@ export function Mali({ back, close }) {
             </div>
           );
         })}
-        <div className="hint center">{L('Kodi hujilimbikiza hadi saa 12 — kusanya mara kwa mara!', 'Income builds up for 12 hours max — collect often!')}</div>
+        <div className="hint center">{L(`Kodi hujilimbikiza hadi saa ${GAME.incomeCapHours} — kusanya kila siku!`, `Income builds up for ${GAME.incomeCapHours} hours max — collect daily!`)}</div>
       </div>
     </>
   );

@@ -85,6 +85,19 @@ function poseFor(item, def, act) {
   if (def.id === 'tv') { const [x, z] = off(0, 2); return { x, z, y: 0, ry: r + Math.PI, mode: 'sit' }; }
   if (def.id === 'laptop') { const [x, z] = off(-0.5, 0.55); return { x, z, y: 0, ry: r + Math.PI, mode: 'sit' }; }
   if (def.id === 'radio' || def.id === 'speaker') { const [x, z] = off(0, 1.3); return { x, z, y: 0, ry: r + Math.PI, mode: 'dance' }; }
+  if (def.id === 'jacuzzi') return { x: item.x, z: item.z, y: 0.15, ry: r, mode: 'sit' };
+  if (def.id === 'machela') return { x: item.x - 0.6, z: item.z, y: 0.6, ry: r - Math.PI / 2, mode: 'sleep' };
+  if (def.id === 'egg-chair') return { x: item.x, z: item.z + 0.1, y: 0.45, ry: r, mode: 'sit' };
+  if (def.id === 'treadmill') return { x: item.x, z: item.z, y: 0.22, ry: r + Math.PI, mode: 'walk' };
+  // Stand/sit in front of the item facing it: [mode, distance in front].
+  const POSE = { game: ['type', def.id === 'ps5' ? 0.4 : 0.8], pool: ['lift', def.size[1] > 1 ? 1.3 : 0.8], dj: ['dj', 0.75], imba: ['sing', 0.9], gitaa: ['sing', 0.6],
+    kinanda: ['dj', 0.6], soma: ['idle', 0.8], bao: ['sit', 0.75], mazoezi: ['lift', 0.8], chora: ['lift', 0.8], tazama: ['idle', 1], jitazame: ['idle', 0.9],
+    cheza: ['cheer', 0.9], kahawa: ['lift', 0.7], juisi: ['lift', 0.7], nawa: ['idle', 0.6] };
+  if (POSE[act]) {
+    const [mode, dist] = POSE[act];
+    const [x, z] = off(0, dist);
+    return { x, z, y: 0, ry: r + Math.PI, mode };
+  }
   if (def.cat === 'bath') return { x: item.x, z: item.z, y: 0, ry: r, mode: 'idle' };
   const [x, z] = off(0, w > 1 ? 1.2 : 0.75);
   return { x, z, y: 0, ry: r + Math.PI, mode: act === 'snack' ? 'eat' : 'lift' };

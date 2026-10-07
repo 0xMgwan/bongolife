@@ -11,6 +11,7 @@ import { db, getUser, getUserByUsername, createUser, saveFields, addMoney, GameE
 import { hashPassword, checkPassword, signToken, requireAuth, requireAdmin, rateLimit, USERNAME_RE, normalizePhone } from '../auth.js';
 import { admin } from './admin.js';
 import { canVisit } from '../social.js';
+import { sendMail } from '../mail.js';
 import * as game from '../game.js';
 import { online, onlineCount, broadcast, emitTo } from '../presence.js';
 import { provider, providers, TOPUP_RATE } from '../payments/index.js';
@@ -65,6 +66,7 @@ api.post('/auth/signup', rateLimit('signup', 8, 15 * 60_000), wrap(async (req, r
   if (getUserByUsername(username)) throw new GameError(['Username hiyo imeshachukuliwa. Jaribu nyingine.', 'That username is taken. Try another.'], 409);
   const passwordHash = await hashPassword(password);
   const user = db.transaction(() => createUser({ username, name, passwordHash, email, isAdmin: adminNames.has(username.toLowerCase()) }))();
+  game.ensureStarterCar(user.id);
   res.status(201).json({ token: signToken(user), me: game.playerState(user.id) });
 }));
 
@@ -80,8 +82,65 @@ api.post('/auth/login', rateLimit('login', 20, 15 * 60_000), wrap(async (req, re
   res.json({ token: signToken({ id: row.id, tokenVersion: row.token_version }), me: game.playerState(row.id) });
 }));
 
+// Forgot password: email a 6-digit code (valid 15 min, 5 tries). Always answers the same
+// way so it can't be used to discover which usernames/emails exist.
+const RESET_TTL = 15 * 60_000;
+const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
+api.post('/auth/forgot', rateLimit('forgot', 6, 15 * 60_000), wrap(async (req, res) => {
+  const id = str(req.body.username, 120).replace(/^@/, '');
+  const row = id && db.prepare('SELECT id, username, name, email FROM users WHERE (username = ? OR lower(email) = lower(?)) AND banned_at IS NULL').get(id, id);
+  if (row?.email) {
+    const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+    db.prepare('INSERT OR REPLACE INTO password_resets (user_id, code_hash, expires_at, attempts) VALUES (?, ?, ?, 0)').run(row.id, sha(`${row.id}:${code}`), now() + RESET_TTL);
+    await sendMail({
+      to: row.email,
+      subject: `Bongo Life: ${code} ni code yako / is your reset code`,
+      text: `Mambo ${row.name},\n\nCode yako ya kubadilisha password ya @${row.username}: ${code}\nYour Bongo Life password reset code for @${row.username}: ${code}\n\nInaisha baada ya dakika 15 / Expires in 15 minutes. Kama hukuomba, puuza / If you didn't ask, ignore this email.`,
+      html: `<div style="font-family:system-ui,sans-serif;max-width:420px"><h2>Bongo Life 🇹🇿</h2><p>Mambo ${row.name}, code yako ya kubadilisha password ya <b>@${row.username}</b>:<br/>Your password reset code for <b>@${row.username}</b>:</p><p style="font-size:34px;font-weight:800;letter-spacing:6px">${code}</p><p style="color:#666">Inaisha baada ya dakika 15 · Expires in 15 minutes.<br/>Kama hukuomba, puuza email hii · If you didn't ask, ignore this email.</p></div>`,
+    }).catch(() => {});
+  }
+  res.json({ ok: true });
+}));
+api.post('/auth/reset', rateLimit('reset', 15, 15 * 60_000), wrap(async (req, res) => {
+  const id = str(req.body.username, 120).replace(/^@/, '');
+  const code = str(req.body.code, 10).replace(/\D/g, '');
+  const password = typeof req.body.password === 'string' ? req.body.password : '';
+  if (password.length < 6 || password.length > 200) throw new GameError(['Password iwe na herufi angalau 6.', 'Password must be at least 6 characters.']);
+  const row = id && db.prepare('SELECT id FROM users WHERE (username = ? OR lower(email) = lower(?)) AND banned_at IS NULL').get(id, id);
+  const pr = row && db.prepare('SELECT * FROM password_resets WHERE user_id = ?').get(row.id);
+  const bad = () => new GameError(['Code si sahihi au imeisha muda. Omba nyingine.', 'Wrong or expired code. Request a new one.'], 400, 'bad_code');
+  if (!pr || pr.expires_at < now() || pr.attempts >= 5) throw bad();
+  if (pr.code_hash !== sha(`${row.id}:${code}`)) {
+    db.prepare('UPDATE password_resets SET attempts = attempts + 1 WHERE user_id = ?').run(row.id);
+    throw bad();
+  }
+  const hash = await hashPassword(password);
+  db.prepare('UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?').run(hash, row.id);
+  db.prepare('DELETE FROM password_resets WHERE user_id = ?').run(row.id);
+  const tv = db.prepare('SELECT token_version FROM users WHERE id = ?').get(row.id).token_version;
+  res.json({ token: signToken({ id: row.id, tokenVersion: tv }), me: game.playerState(row.id) });
+}));
+
 // ------------------------------------------------------------- me
 api.use(requireAuth);
+
+// Change password (signs out other devices) and recovery email.
+api.post('/me/password', rateLimit('chpw', 10, 15 * 60_000), wrap(async (req, res) => {
+  const current = typeof req.body.current === 'string' ? req.body.current : '';
+  const next = typeof req.body.password === 'string' ? req.body.password : '';
+  const row = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user.id);
+  if (!(await checkPassword(current, row.password_hash))) throw new GameError(['Password ya sasa si sahihi.', 'Your current password is wrong.'], 400, 'bad_password');
+  if (next.length < 6 || next.length > 200) throw new GameError(['Password mpya iwe na herufi angalau 6.', 'New password must be at least 6 characters.']);
+  db.prepare('UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?').run(await hashPassword(next), req.user.id);
+  const tv = db.prepare('SELECT token_version FROM users WHERE id = ?').get(req.user.id).token_version;
+  res.json({ ok: true, token: signToken({ id: req.user.id, tokenVersion: tv }) });
+}));
+api.post('/me/email', (req, res) => {
+  const email = str(req.body.email, 120).toLowerCase();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new GameError(['Email si sahihi.', 'Invalid email.']);
+  db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email || null, req.user.id);
+  res.json({ ok: true, me: game.playerState(req.user.id) });
+});
 
 // Maintenance mode locks the game for everyone except admins.
 api.use((req, _res, next) => {
@@ -92,7 +151,10 @@ api.use((req, _res, next) => {
 
 api.use('/admin', requireAdmin, admin);
 
-api.get('/me', (req, res) => res.json(game.playerState(req.user.id)));
+api.get('/me', (req, res) => {
+  game.ensureStarterCar(req.user.id);
+  res.json(game.playerState(req.user.id));
+});
 
 api.post('/me/profile', (req, res) => {
   const a = req.body.appearance || {};
@@ -130,9 +192,13 @@ api.post('/act/start', (req, res) => {
   res.json({ busy, me: game.playerState(req.user.id) });
 });
 api.post('/act/finish', (req, res) => {
-  const result = game.finishAction(req.user.id);
+  const result = game.finishAction(req.user.id, { early: req.body?.early === true });
   if (result.teleport) emitTo(req.user.id, 'teleport', { pos: result.teleport });
   res.json({ result, me: game.playerState(req.user.id) });
+});
+api.post('/act/task', (req, res) => {
+  const r = game.workTask(req.user.id, str(req.body.task, 20));
+  res.json({ ...r, me: game.playerState(req.user.id) });
 });
 api.post('/act/cancel', (req, res) => {
   game.cancelAction(req.user.id);

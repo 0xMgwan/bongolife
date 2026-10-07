@@ -2,7 +2,7 @@ import {
   GAME, NEEDS, PLACES, PLOTS, VEHICLES, BUILDINGS, ALLOWED_BUILDINGS, VEHICLE_COLORS,
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, ENTERABLE,
-  furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL,
+  furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult,
 } from '../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
 
@@ -256,18 +256,42 @@ export const startAction = db.transaction((userId, { kind, placeId, id }) => {
     }
     if ((user.health ?? 100) < HEALTH.injuredBelow) throw new GameError(['Uko mgonjwa — nenda hospitali kwanza. 🏥', "You're injured — get treated at the hospital first. 🏥"]);
     if ((user.needs.energy ?? 0) < job.energy) throw new GameError(['Umechoka sana! Nenda kalale kwanza. 😴', 'You\'re exhausted! Go sleep first. 😴']);
-    const busy = { kind, id, placeId, emoji: '💼', label: jobTitle(job, user.jobXp[id] || 0), labelEn: jobTitleEn(job, user.jobXp[id] || 0), startedAt: now(), endsAt: now() + job.secs * 1000 };
+    const busy = { kind, id, placeId, emoji: '💼', label: jobTitle(job, user.jobXp[id] || 0), labelEn: jobTitleEn(job, user.jobXp[id] || 0), startedAt: now(), endsAt: now() + job.secs * 1000, perf: 50, done: 0, cd: {} };
     setBusy(userId, busy);
     return busy;
   }
   throw new GameError(['Ombi si sahihi', 'Invalid request']);
 });
 
-export const finishAction = db.transaction((userId) => {
+/** Something to do during a shift: affects performance (pay) and needs. Cooldowns are server-side. */
+export const workTask = db.transaction((userId, taskId) => {
+  const user = getUser(userId);
+  const busy = user.busy;
+  if (!busy || busy.kind !== 'job' || now() > busy.endsAt) throw new GameError(['Huko kazini sasa hivi.', "You're not at work right now."]);
+  const task = WORK.tasks.find((t) => t.id === taskId);
+  if (!task) throw new GameError(['Kazi hiyo haipo', 'Unknown task'], 404);
+  const frac = (now() - busy.startedAt) / (busy.endsAt - busy.startedAt);
+  if (frac < WORK.stages[3][0]) throw new GameError(['Subiri kikao kiishe kwanza.', 'Wait for the brief to finish first.']);
+  const cd = busy.cd || {};
+  if (task.once && cd[task.id]) throw new GameError(['Umeshafanya hivyo leo.', 'You already did that this shift.']);
+  if (cd[task.id] && now() - cd[task.id] < task.cooldown * 1000) throw new GameError(['Pumzika kidogo kwanza.', 'Give it a moment.'], 429, 'cooldown');
+  const perf = Math.max(0, Math.min(100, (busy.perf ?? 50) + task.perf));
+  const done = (busy.done || 0) + (task.good ? 1 : 0);
+  const next = { ...busy, perf, done, cd: { ...cd, [task.id]: now() } };
+  saveFields(userId, { busy: next, ...(task.needs ? { needs: applyNeeds(user.needs, task.needs) } : {}) });
+  return { perf, done };
+});
+
+export const finishAction = db.transaction((userId, { early = false } = {}) => {
   const user = getUser(userId);
   const busy = user.busy;
   if (!busy) throw new GameError(['Hakuna shughuli inayoendelea.', 'Nothing in progress.']);
-  if (now() < busy.endsAt - 1500) throw new GameError(['Bado haijaisha, subiri kidogo.', 'Not finished yet, wait a bit.']);
+  // Jobs may clock out early once past the minimum stay, for pro-rated pay.
+  let frac = 1;
+  if (early && busy.kind === 'job' && now() < busy.endsAt) {
+    frac = (now() - busy.startedAt) / (busy.endsAt - busy.startedAt);
+    if (frac < WORK.minStayFrac) throw new GameError(['Kaa angalau nusu ya shifti ndipo ulipwe.', 'Stay at least half the shift to get paid.'], 400, 'too_early');
+  } else if (now() < busy.endsAt - 1500) throw new GameError(['Bado haijaisha, subiri kidogo.', 'Not finished yet, wait a bit.'], 400, 'too_early');
   const place = placeById[busy.placeId];
   const result = { kind: busy.kind, lines: [] };
   const fields = { busy: null };
@@ -275,6 +299,14 @@ export const finishAction = db.transaction((userId) => {
   if (busy.kind === 'home') {
     const def = furnitureById[busy.item];
     fields.needs = applyNeeds(user.needs, def?.use?.effects || {});
+    if (def?.use?.fame) {
+      fields.fame = user.fame + def.use.fame;
+      result.lines.push([`⭐ Umaarufu +${def.use.fame}`, `⭐ Fame +${def.use.fame}`]);
+    }
+    if (def?.use?.health) {
+      fields.health = Math.min(100, (user.health ?? 100) + def.use.health);
+      result.lines.push([`❤️ Afya +${fields.health - (user.health ?? 100)}`, `❤️ Health +${fields.health - (user.health ?? 100)}`]);
+    }
     for (const n of NEEDS) {
       const d = Math.round(fields.needs[n.id] - user.needs[n.id]);
       if (d) result.lines.push([`${n.icon} ${n.name} ${d > 0 ? '+' : ''}${d}`, `${n.icon} ${n.nameEn} ${d > 0 ? '+' : ''}${d}`]);
@@ -316,14 +348,16 @@ export const finishAction = db.transaction((userId) => {
     const shifts = user.jobXp[busy.id] || 0;
     const before = jobLevel(shifts);
     let pay = shiftPay(job, { shifts, mood: moodOf(user.needs), trait: user.trait, fame: user.fame });
-    pay = Math.round(pay * eventMult(place, 'job'));
+    pay = Math.round((pay * eventMult(place, 'job') * perfMult(busy.perf, busy.done) * frac) / 100) * 100;
     addMoney(userId, pay, 'salary', `${jobTitle(job, shifts)} — ${place.name}`);
-    fields.jobXp = { ...user.jobXp, [busy.id]: shifts + 1 };
+    fields.jobXp = { ...user.jobXp, [busy.id]: shifts + (frac >= 1 ? 1 : 0) };
     fields.needs = applyNeeds(user.needs, { energy: -job.energy, hunger: -6, hygiene: -6, social: 4 });
     if (job.fameBonus) fields.fame = user.fame + 1;
-    result.title = ['💼 Shifti imeisha!', '💼 Shift complete!'];
+    result.title = frac < 1 ? ['💼 Umetoka mapema', '💼 Clocked out early'] : ['💼 Shifti imeisha!', '💼 Shift complete!'];
+    result.lines.push([`📈 Utendaji ${busy.perf ?? 50}% · ⭐ ${busy.done || 0}/${WORK.starsAt}`, `📈 Performance ${busy.perf ?? 50}% · ⭐ ${busy.done || 0}/${WORK.starsAt}`]);
+    if ((busy.done || 0) >= WORK.starsAt) result.lines.push([`🌟 Bonasi ya bidii +${WORK.starBonus * 100}%`, `🌟 Hard-work bonus +${WORK.starBonus * 100}%`]);
     result.pay = pay;
-    if (jobLevel(shifts + 1) > before) result.lines.push([`🎉 Umepandishwa cheo: ${jobTitle(job, shifts + 1)}!`, `🎉 Promoted: ${jobTitleEn(job, shifts + 1)}!`]);
+    if (frac >= 1 && jobLevel(shifts + 1) > before) result.lines.push([`🎉 Umepandishwa cheo: ${jobTitle(job, shifts + 1)}!`, `🎉 Promoted: ${jobTitleEn(job, shifts + 1)}!`]);
   }
   saveFields(userId, fields);
   setBusy(userId, null);
@@ -345,6 +379,18 @@ export const buyVehicle = db.transaction((userId, model, color) => {
   const info = q.insertVehicle.run(userId, model, color, plate(), now());
   saveFields(userId, { activeVehicle: info.lastInsertRowid });
   return info.lastInsertRowid;
+});
+
+/** Hand every player a used starter car once (new and existing accounts). */
+export const ensureStarterCar = db.transaction((userId) => {
+  const u = getUser(userId);
+  if (!u || u.carSeeded) return false;
+  saveFields(userId, { carSeeded: 1 });
+  if (q.vehicles.all(userId).length) return false;
+  const v = vehicleById[STARTER_CAR];
+  const color = VEHICLE_COLORS[Math.floor(Math.random() * VEHICLE_COLORS.length)] || v.color;
+  q.insertVehicle.run(userId, v.id, color, plate(), now());
+  return true;
 });
 
 export function useVehicle(userId, vehicleId) {

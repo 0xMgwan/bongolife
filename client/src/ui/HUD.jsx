@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH } from '@shared/world.js';
+import { NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH, TRAVEL, flightPhase, findActivity } from '@shared/world.js';
 import { L, loc, pick, isEn } from '../i18n.js';
 import { useStore } from '../store.js';
 import { input, sendChat, sendEmote, setInside, remotes, local, view } from '../net.js';
@@ -8,11 +8,48 @@ import { setZoom, getZoom } from '../three/GameScene.jsx';
 import { setAudioSettings, sfx } from '../audio.js';
 import { useAudioSettings } from './useAudioSettings.js';
 import { activeScene } from '../scene.js';
-import { goToPlace } from '../nav.js';
+import { goToPlace, skipRide } from '../nav.js';
 import { goHomeTo } from './homeNav.js';
 import { goHospital } from './social.js';
+import { WorkPanel } from './WorkPanel.jsx';
+import { haptic } from '../haptics.js';
 
 /** Banner shown while inside a venue or doing a scene activity. */
+/** In-flight bar: phase + destination, camera toggle (auto / cabin / outside). */
+function FlightBar({ me }) {
+  const view = useStore((s) => s.flightView);
+  const [, tick] = useState(0);
+  const b = me.busy;
+  const f = b ? Math.min(1, (Date.now() - b.startedAt) / (b.endsAt - b.startedAt)) : 0;
+  const ph = flightPhase(b?.kind === 'job' ? 0.5 : f);
+  const last = useRef(ph[1]);
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => {
+    if (last.current !== ph[1]) {
+      last.current = ph[1];
+      if (ph[1] === 'takeoff') { haptic('takeoff'); sfx('horn'); }
+      if (ph[1] === 'landing') haptic('engine');
+    }
+  }, [ph]);
+  useEffect(() => () => useStore.setState({ flightView: null }), []);
+  const act = b?.kind === 'activity' ? findActivity(b.placeId, b.id) : null;
+  const icon = { boarding: '🧳', takeoff: '🛫', cruise: '✈️', landing: '🛬' }[ph[1]];
+  const opt = (v, label) => <button className={view === v ? 'on' : ''} onClick={() => { sfx('click'); useStore.setState({ flightView: v }); }}>{label}</button>;
+  return (
+    <div className="flight-bar">
+      <div className="pill">{icon} {L(ph[2], ph[3])}{act ? ` · ${act.flight.dest}` : ''}</div>
+      <div className="seg-mini">
+        {opt(null, '🎬')}
+        {opt('inside', L('👀 Ndani', '👀 Inside'))}
+        {opt('outside', L('🎥 Nje', '🎥 Outside'))}
+      </div>
+    </div>
+  );
+}
+
 function InsideBar({ scene, me }) {
   const set = useStore((s) => s.set);
   const roster = useStore((s) => s.roster);
@@ -76,6 +113,18 @@ function Joystick() {
   );
 }
 
+function RideBanner() {
+  const r = useStore((s) => s.riding);
+  if (!r) return null;
+  const p = placeById[r.placeId];
+  return (
+    <div className="ride-banner">
+      <div className="pill">{TRAVEL[r.mode]?.emoji} {L(`Njiani kwenda ${p?.name}…`, `On the way to ${loc(p)}…`)}</div>
+      <button className="pill" onClick={() => { sfx('click'); skipRide(); }}>⏭ {L('Ruka', 'Skip')}</button>
+    </div>
+  );
+}
+
 function Busy({ me }) {
   const run = useStore((s) => s.run);
   const [now, setNow] = useState(Date.now());
@@ -85,6 +134,7 @@ function Busy({ me }) {
   }, []);
   const b = me.busy;
   if (!b) return null;
+  if (b.kind === 'job') return <WorkPanel me={me} />;
   const total = b.endsAt - b.startedAt;
   const pct = Math.min(100, ((now - b.startedAt) / total) * 100);
   const left = Math.max(0, Math.ceil((b.endsAt - now) / 1000));
@@ -354,6 +404,7 @@ export function HUD() {
   const openPhone = useStore((s) => s.openPhone);
   const run = useStore((s) => s.run);
   const [touch] = useState(() => matchMedia('(pointer: coarse)').matches);
+  const riding = useStore((s) => s.riding);
   if (!me) return null;
   const town = tab === 'town';
   const scene = town ? activeScene({ me, inside }) : null;
@@ -365,29 +416,34 @@ export function HUD() {
     else if (anyVehicle) run('/vehicle/use', { method: 'POST', body: { vehicleId: anyVehicle.id } });
     else openPhone('mali');
   };
-  const walking = town && !scene && cityView === 'follow';
+  const walking = town && !scene && cityView === 'follow' && !riding;
   return (
     <div className="layer">
       {!shop && <TopBar me={me} />}
-      {!shop && (
+      {!shop && !riding && (
         <div className="hud-left">
           {!clean && world?.event && town && !scene && <div className="event">{loc(world.event, 'text')}</div>}
           {!clean && announcement && <div className="announce">📣 {loc(announcement, 'text')}</div>}
-          {town && !scene && <TownChips />}
+          {town && !scene && me.busy?.kind !== 'job' && <TownChips />}
           <Tips me={me} />
         </div>
       )}
       <Busy me={me} />
-      {scene && <InsideBar scene={scene} me={me} />}
+      {scene && scene.key === 'flight' ? <FlightBar me={me} /> : scene && <InsideBar scene={scene} me={me} />}
       {!shop && (
         <div className="side">
           <button onClick={() => { Object.assign(view, { yaw: 0, pitch: 1.0, homeYaw: 0.75, homePitch: 0.95, homeDist: 30 }); sfx('click'); }} aria-label={L('Rudisha kamera', 'Reset camera')}>🧭</button>
-          {walking && <button onClick={toggleVehicle} className={vehicle ? 'on' : ''} aria-label={L('Gari', 'Vehicle')}>{vehicle ? vehicleById[vehicle.model]?.emoji : anyVehicle ? '🚶' : '🚗'}</button>}
           {town && <button onClick={() => useStore.setState({ chatOpen: !chatOpen })} className={chatOpen ? 'on' : ''} aria-label="Chat">💬</button>}
           <button onClick={() => (town ? setZoom(getZoom() * 0.8) : (view.homeDist = Math.max(14, view.homeDist * 0.8)))} aria-label="Zoom in">＋</button>
           <button onClick={() => (town ? setZoom(getZoom() * 1.25) : (view.homeDist = Math.min(48, view.homeDist * 1.25)))} aria-label="Zoom out">－</button>
         </div>
       )}
+      {walking && (
+        <button className={`drive-btn ${vehicle ? 'on' : ''}`} onClick={() => { sfx(vehicle ? 'click' : 'horn'); toggleVehicle(); }}>
+          {vehicle ? <>🚶 {L('Shuka', 'Get out')}</> : anyVehicle ? <>{vehicleById[anyVehicle.model]?.emoji} {L('Endesha', 'Drive')}</> : <>🚗 {L('Nunua gari', 'Get a ride')}</>}
+        </button>
+      )}
+      <RideBanner />
       {touch && walking && <Joystick />}
       {town && <ChatDock />}
       {!shop && <NeedsPanel me={me} />}

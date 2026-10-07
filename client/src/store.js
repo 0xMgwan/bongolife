@@ -43,6 +43,8 @@ export const useStore = create((set, get) => ({
   invite: null, // incoming home invite { fromId, from, fromName }
   accident: null, // { health } — knocked down by a car
   eventsVersion: 0,
+  flightView: null, // null = auto | 'inside' | 'outside'
+  riding: null, // { mode, placeId, kind, color } while a cab drives you somewhere
   phoneApps: null, // partner apps on the phone home screen
   visits: 0,
   placing: null, // furniture being placed: { def, x, z, rot, id? }

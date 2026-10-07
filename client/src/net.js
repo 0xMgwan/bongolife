@@ -145,6 +145,7 @@ export function connect() {
   socket.on('world', (world) => useStore.setState({ world }));
   socket.on('ads', (ads) => useStore.setState({ ads }));
   socket.on('teleport', ({ pos }) => {
+    if (local.ride) return;
     local.x = pos[0];
     local.z = pos[1];
     local.target = null;

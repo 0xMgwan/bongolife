@@ -43,6 +43,7 @@ JWT_SECRET=... npm start   # serves the API + built client on $PORT (default 878
    - `JWT_SECRET` = a long random string (`openssl rand -hex 48`)
    - `ADMIN_USERNAMES` = your username
    - `NTZS_API_KEY`, `NTZS_WEBHOOK_SECRET` (and optionally `TOPUP_RATE`)
+   - `RESEND_API_KEY`, `MAIL_FROM` — emails "Forgot password" reset codes (optional; without them codes only appear in the logs)
    - In the nTZS dashboard, set the webhook URL to `https://<your-domain>/api/webhooks/ntzs`
 4. Settings → Networking → Generate Domain (or add your own). Health check: `/healthz`.
 

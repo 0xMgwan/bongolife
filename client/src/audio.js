@@ -1,3 +1,4 @@
+import { haptic, SFX_HAPTIC } from './haptics.js';
 // Bongo Life sound engine — everything is synthesised with the Web Audio API,
 // so there are no audio files to download on mobile data.
 //
@@ -151,6 +152,7 @@ const SFX = {
 
 /** Play a one-shot effect by name. Safe to call before audio is unlocked. */
 export function sfx(name) {
+  haptic(SFX_HAPTIC[name]);
   if (!ctx || ctx.state !== 'running' || audioSettings.muted) return;
   SFX[name]?.(ctx.currentTime + 0.01);
 }

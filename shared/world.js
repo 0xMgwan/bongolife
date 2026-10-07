@@ -11,7 +11,7 @@ export const GAME = {
   defaultTopupRate: 100,
   minTopupTzs: 1_000,
   maxTopupTzs: 1_000_000,
-  incomeCapHours: 12,
+  incomeCapHours: 24,
 };
 
 export const WORLD_SIZE = 300; // square, centred on origin
@@ -193,6 +193,7 @@ export const VEHICLES = [
   { id: 'baiskeli', name: 'Baiskeli', kind: 'bike', price: 180_000, speed: 1.5, emoji: '🚲', color: '#0ea5e9' },
   { id: 'bodaboda', name: 'Bodaboda (Boxer)', kind: 'moto', price: 1_800_000, speed: 2.1, emoji: '🏍️', color: '#dc2626' },
   { id: 'bajaji', name: 'Bajaji', kind: 'bajaji', price: 6_500_000, speed: 1.9, emoji: '🛺', color: '#facc15' },
+  { id: 'vitz', name: 'Toyota Vitz (used)', kind: 'car', price: 9_500_000, speed: 2.2, emoji: '🚗', color: '#2563eb' },
   { id: 'ist', name: 'Toyota IST', kind: 'car', price: 16_000_000, speed: 2.4, emoji: '🚗', color: '#e5e7eb' },
   { id: 'noah', name: 'Toyota Noah', kind: 'van', price: 28_000_000, speed: 2.4, emoji: '🚐', color: '#1f2937' },
   { id: 'harrier', name: 'Toyota Harrier', kind: 'suv', price: 60_000_000, speed: 2.7, emoji: '🚙', color: '#7f1d1d' },
@@ -440,8 +441,20 @@ export const PLACES = [
   },
   {
     id: 'airport', name: 'JNIA Airport', district: 'Temeke', type: 'airport', icon: '✈️', pos: [-82, 96], size: [36, 22], h: 8, color: '#cbd5e1',
-    blurb: 'Safari za Zanzibar, Arusha na nje ya nchi — zinakuja hivi karibuni!',
-    comingSoon: true, activities: [],
+    blurb: 'Panda ndege — Zanzibar, Arusha, Mwanza, Nairobi hadi Dubai. Safari njema!',
+    // `flight` = destination shown on landing; secs is the whole trip (boarding → landing).
+    activities: [
+      { id: 'zanzibar', name: 'Ruka hadi Zanzibar', cost: 180_000, secs: 80, effects: { fun: 45, social: 15, energy: -8 }, emoji: '🏝️', fame: 2, flight: { dest: 'ZANZIBAR', ground: '#0e7490', land: '#fde68a' } },
+      { id: 'arusha', name: 'Ruka hadi Arusha (Safari)', cost: 260_000, secs: 90, effects: { fun: 55, social: 10, energy: -12 }, emoji: '🦒', fame: 3, flight: { dest: 'ARUSHA · KILIMANJARO', ground: '#4d7c0f', land: '#a3e635' } },
+      { id: 'mwanza', name: 'Ruka hadi Mwanza', cost: 150_000, secs: 80, effects: { fun: 35, social: 12, energy: -8 }, emoji: '🐟', fame: 1, flight: { dest: 'MWANZA', ground: '#1d4ed8', land: '#86efac' } },
+      { id: 'nairobi', name: 'Ruka hadi Nairobi', cost: 420_000, secs: 100, effects: { fun: 50, social: 20, energy: -12 }, emoji: '🇰🇪', fame: 4, flight: { dest: 'NAIROBI', ground: '#65a30d', land: '#d9f99d' } },
+      { id: 'dubai', name: 'Ruka hadi Dubai (Business class)', cost: 1_800_000, secs: 120, effects: { fun: 80, social: 25, hygiene: 10, energy: -5 }, emoji: '🏙️', fame: 8, flight: { dest: 'DUBAI', ground: '#d6b77a', land: '#fcd34d' } },
+    ],
+    jobs: [
+      { id: 'mbebaji', title: 'Mbeba mizigo', titles: ['Mbeba mizigo', 'Msimamizi wa mizigo'], secs: 45, pay: 14_000, energy: 10 },
+      { id: 'mhudumu-ndege', title: 'Mhudumu wa ndege', titles: ['Mhudumu wa ndege', 'Mhudumu mkuu', 'Purser'], secs: 70, pay: 48_000, energy: 12, requires: { elimu: 1 } },
+      { id: 'rubani', title: 'Rubani', titles: ['Rubani msaidizi', 'Rubani', 'Kapteni', 'Kapteni mkuu'], secs: 90, pay: 160_000, energy: 15, requires: { elimu: 3 } },
+    ],
   },
 ];
 export const placeById = Object.fromEntries(PLACES.map((p) => [p.id, p]));
@@ -460,6 +473,36 @@ export function jobTitle(job, shifts) {
   const lvl = jobLevel(shifts);
   return job.titles[Math.min(lvl, job.titles.length - 1)];
 }
+// ------------------------------------------------------------------ work
+// Shifts are real stretches of time (2–4 min) with things to do while you're there.
+export const WORK = {
+  minStayFrac: 0.5, // clock out early after half the shift for pro-rated pay
+  starsAt: 4, // finish this many good tasks for the bonus
+  starBonus: 0.15,
+  tasks: [
+    { id: 'work', emoji: '👷', name: 'Fanya kazi', nameEn: 'Do your work', perf: 7, cooldown: 6, good: true },
+    { id: 'hustle', emoji: '🔥', name: 'Chakarika', nameEn: 'Hustle hard', perf: 14, cooldown: 25, needs: { energy: -4 }, good: true },
+    { id: 'chat', emoji: '💬', name: 'Piga stori', nameEn: 'Chat with coworkers', perf: -2, cooldown: 15, needs: { social: 8, fun: 3 } },
+    { id: 'boss', emoji: '🙇', name: 'Mfurahishe bosi', nameEn: 'Impress the boss', perf: 18, cooldown: 60, once: true, good: true },
+    { id: 'nap', emoji: '😴', name: 'Sinzia kidogo', nameEn: 'Sneak a nap', perf: -8, cooldown: 30, needs: { energy: 6 } },
+  ],
+  // [fraction of shift, sw, en]
+  stages: [
+    [0, 'Njiani kazini', 'Commute'],
+    [0.07, 'Kubadili nguo kabatini', 'Changing at the locker'],
+    [0.14, 'Kikao cha asubuhi', 'Morning brief'],
+    [0.22, 'Kazini', 'On the job'],
+    [0.9, 'Kumalizia', 'Wrapping up'],
+  ],
+};
+export const workStage = (frac) => {
+  let i = 0;
+  WORK.stages.forEach((s, k) => { if (frac >= s[0]) i = k; });
+  return i;
+};
+/** Pay multiplier from performance (0–100) and good tasks done. */
+export const perfMult = (perf = 50, done = 0) => (0.8 + (perf / 100) * 0.4) * (done >= WORK.starsAt ? 1 + WORK.starBonus : 1);
+
 export function shiftPay(job, { shifts = 0, mood = 70, trait, fame = 0 }) {
   const lvl = jobLevel(shifts);
   let pay = job.pay * (1 + 0.3 * lvl) * (0.6 + 0.4 * (mood / 100));
@@ -490,10 +533,14 @@ export const ADS_PER_BOARD = 9;
 export const AD_ROTATE_SECONDS = 10;
 
 // ---------------------------------------------------------- fast travel
+// `kind` is the vehicle model shown during the ride.
 export const TRAVEL = {
-  bajaji: { name: 'Bajaji', emoji: '🛺', perUnit: 25, min: 1_000 },
-  daladala: { name: 'Daladala', emoji: '🚌', perUnit: 6, min: 500 },
+  daladala: { name: 'Daladala', emoji: '🚌', perUnit: 6, min: 500, kind: 'bus', color: '#fde047', speed: 16 },
+  bajaji: { name: 'Bajaji', emoji: '🛺', perUnit: 25, min: 1_000, kind: 'bajaji', color: '#facc15', speed: 20 },
+  taxi: { name: 'Taxi Mtandao', emoji: '🚕', perUnit: 45, min: 2_500, kind: 'car', color: '#f8fafc', speed: 26 },
 };
+// Every new player gets a used car to drive around in.
+export const STARTER_CAR = 'vitz';
 export function travelCost(mode, from, to) {
   const t = TRAVEL[mode];
   const d = Math.hypot(to[0] - from[0], to[1] - from[1]);
@@ -554,7 +601,7 @@ const EN = {
   vehicles: { baiskeli: 'Bicycle' },
   buildings: { banda: 'Simple House', kisasa: 'Modern House', ghorofa: 'Apartment Block', villa: 'Luxury Villa', hoteli: 'Beach Hotel' },
   billboards: { 'bb-ferry': 'Kivukoni Ferry', 'bb-stadium': 'National Stadium', 'bb-kigamboni': 'Nyerere Bridge' },
-  travel: { bajaji: 'Bajaji (tuk-tuk)', daladala: 'Daladala (minibus)' },
+  travel: { bajaji: 'Bajaji (tuk-tuk)', daladala: 'Daladala (minibus)', taxi: 'Ride-hail taxi' },
   events: [
     '💃 Send-off season — party all week!',
     '⚽ Derby week: Simba vs Yanga at the National Stadium!',
@@ -595,7 +642,8 @@ const EN = {
     kigbeach: ['Kigamboni Beach Resort', 'Clean beaches far from the city noise.', { pumzika: 'Relax on the beach', ogelea2: 'Swim' }],
     hospitali: ['Muhimbili Hospital', 'Emergency care and health check-ups — open 24 hours.', {
       matibabu: 'Get treatment', pima: 'Health check-up', 'pumzika-wodini': 'Rest on the ward' }],
-    airport: ['JNIA Airport', 'Flights to Zanzibar, Arusha and abroad — coming soon!', {}],
+    airport: ['JNIA Airport', 'Catch a flight — Zanzibar, Arusha, Mwanza, Nairobi, even Dubai. Safe travels!', {
+      zanzibar: 'Fly to Zanzibar', arusha: 'Fly to Arusha (Safari)', mwanza: 'Fly to Mwanza', nairobi: 'Fly to Nairobi', dubai: 'Fly to Dubai (Business class)' }],
   },
   jobs: {
     msaidizi: ['Food Stall Helper', ['Dishwasher', 'Assistant cook', 'Head cook', 'Stall manager']],
@@ -616,6 +664,9 @@ const EN = {
     chef: ['Chef', ['Commis chef', 'Sous chef', 'Head chef']],
     nesi: ['Nurse', ['Nurse', 'Head nurse', 'Ward manager']],
     daktari: ['Doctor', ['Doctor', 'Specialist', 'Hospital director']],
+    mbebaji: ['Baggage handler', ['Baggage handler', 'Baggage supervisor']],
+    'mhudumu-ndege': ['Cabin crew', ['Cabin crew', 'Senior cabin crew', 'Purser']],
+    rubani: ['Pilot', ['First officer', 'Pilot', 'Captain', 'Chief captain']],
   },
 };
 
@@ -635,7 +686,12 @@ for (const p of PLACES) {
   p.nameEn = name;
   p.blurbEn = blurb;
   for (const a of p.activities || []) a.nameEn = acts[a.id] || a.name;
-  for (const j of p.jobs || []) [j.titleEn, j.titlesEn] = EN.jobs[j.id];
+  for (const j of p.jobs || []) {
+    [j.titleEn, j.titlesEn] = EN.jobs[j.id];
+    // Longer, more real shifts (2–4 min) that pay accordingly.
+    j.secs = Math.round(Math.max(120, Math.min(240, j.secs * 3)) / 10) * 10;
+    j.pay = Math.round((j.pay * 2.5) / 100) * 100;
+  }
   if (p.business?.label) p.business.labelEn = 'Wholesale Shop';
 }
 
@@ -666,8 +722,9 @@ const ACTIVITY_SCENES = {
   gym: { mazoezi: 'gym' },
   chuo: { kozi: 'classroom', maktaba: 'classroom' },
   hospitali: { matibabu: 'hospital', pima: 'hospital', 'pumzika-wodini': 'hospital' },
+  airport: { zanzibar: 'flight', arusha: 'flight', mwanza: 'flight', nairobi: 'flight', dubai: 'flight' },
 };
-const JOB_SCENES = { dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', cashier: null, nesi: 'hospital', daktari: 'hospital' };
+const JOB_SCENES = { dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', msaidizi: 'dining', cashier: 'shop', machinga: 'shop', nesi: 'hospital', daktari: 'hospital', teller: 'bank', karani: 'office', developer: 'office', mlinzi: 'stadium', mvuvi: 'beach', 'mhudumu-ndege': 'flight', rubani: 'flight' };
 
 /** Scene for a busy state ({ kind, id, placeId }), or null to stay outdoors. */
 export function sceneFor(busy) {
@@ -686,7 +743,11 @@ export const FURNITURE_CATS = [
   { id: 'kitchen', name: 'Jikoni', nameEn: 'Kitchen', icon: '🍳' },
   { id: 'bath', name: 'Bafuni', nameEn: 'Bath', icon: '🚿' },
   { id: 'tech', name: 'Elektroniki', nameEn: 'Electronics', icon: '📺' },
+  { id: 'fun', name: 'Burudani', nameEn: 'Fun', icon: '🎮' },
+  { id: 'skills', name: 'Ujuzi', nameEn: 'Skills', icon: '🎸' },
+  { id: 'light', name: 'Taa', nameEn: 'Light', icon: '💡' },
   { id: 'decor', name: 'Mapambo', nameEn: 'Decor', icon: '🪴' },
+  { id: 'pets', name: 'Wanyama', nameEn: 'Pets', icon: '🐶' },
 ];
 // use: what tapping the item does. effects scale with stars.
 const U = {
@@ -698,6 +759,23 @@ const U = {
   burudika: (s) => ({ act: 'burudika', emoji: '📺', name: 'Burudika', nameEn: 'Have fun', secs: 15, effects: { fun: 10 + s * 8 } }),
   surf: () => ({ act: 'surf', emoji: '💻', name: 'Chati mtandaoni', nameEn: 'Chat online', secs: 12, effects: { social: 22, fun: 6, energy: -3 } }),
   choo: () => ({ act: 'choo', emoji: '🚽', name: 'Tumia choo', nameEn: 'Use the toilet', secs: 5, effects: { hygiene: 15 } }),
+  game: (s) => ({ act: 'game', emoji: '🎮', name: 'Cheza game', nameEn: 'Play games', secs: 15, effects: { fun: 14 + s * 7, energy: -3 } }),
+  pool: (s) => ({ act: 'pool', emoji: '🎱', name: 'Cheza', nameEn: 'Play a round', secs: 14, effects: { fun: 12 + s * 6, social: 6 } }),
+  dj: (s) => ({ act: 'dj', emoji: '🎧', name: 'Changanya ngoma', nameEn: 'Mix some tracks', secs: 16, effects: { fun: 14 + s * 5 }, fame: 1 }),
+  imba: (s) => ({ act: 'imba', emoji: '🎤', name: 'Imba karaoke', nameEn: 'Sing karaoke', secs: 14, effects: { fun: 12 + s * 5, social: 8 } }),
+  gitaa: (s) => ({ act: 'gitaa', emoji: '🎸', name: 'Piga gitaa', nameEn: 'Practise guitar', secs: 16, effects: { fun: 8 + s * 4, energy: -3 }, fame: 1 }),
+  kinanda: (s) => ({ act: 'kinanda', emoji: '🎹', name: 'Piga kinanda', nameEn: 'Play the keys', secs: 16, effects: { fun: 9 + s * 4, energy: -3 }, fame: 1 }),
+  soma: (s) => ({ act: 'soma', emoji: '📚', name: 'Soma kitabu', nameEn: 'Read a book', secs: 14, effects: { fun: 6 + s * 4, energy: -2 } }),
+  bao: (s) => ({ act: 'bao', emoji: '♟️', name: 'Cheza bao', nameEn: 'Play bao', secs: 12, effects: { fun: 8 + s * 4, social: 8 } }),
+  mazoezi: (s) => ({ act: 'mazoezi', emoji: '💪', name: 'Fanya mazoezi', nameEn: 'Work out', secs: 15, effects: { energy: -10, hygiene: -10, fun: 4 + s * 2 }, health: 3 + s * 2 }),
+  chora: (s) => ({ act: 'chora', emoji: '🎨', name: 'Chora picha', nameEn: 'Paint', secs: 16, effects: { fun: 10 + s * 4 }, fame: 1 }),
+  tazama: (s) => ({ act: 'tazama', emoji: '🐠', name: 'Tazama samaki', nameEn: 'Watch the fish', secs: 10, effects: { fun: 6 + s * 3, energy: 3 } }),
+  jitazame: () => ({ act: 'jitazame', emoji: '🪞', name: 'Jiweke sawa', nameEn: 'Fix your look', secs: 6, effects: { hygiene: 8, fun: 3 } }),
+  cheza: (s) => ({ act: 'cheza', emoji: '🐾', name: 'Cheza naye', nameEn: 'Play with your pet', secs: 12, effects: { fun: 12 + s * 4, social: 8 + s * 2 } }),
+  kahawa: (s) => ({ act: 'kahawa', emoji: '☕', name: 'Tengeneza kahawa', nameEn: 'Make coffee', secs: 6, cost: 500, effects: { energy: 12 + s * 3, fun: 2 } }),
+  juisi: () => ({ act: 'juisi', emoji: '🥭', name: 'Tengeneza juisi ya embe', nameEn: 'Blend a mango juice', secs: 6, cost: 1_000, effects: { hunger: 12, energy: 6 } }),
+  nawa: () => ({ act: 'nawa', emoji: '🧼', name: 'Nawa uso', nameEn: 'Wash up', secs: 5, effects: { hygiene: 22 } }),
+  jacuzzi: (s) => ({ act: 'jacuzzi', emoji: '🛁', name: 'Jipumzishe kwenye jacuzzi', nameEn: 'Soak in the jacuzzi', secs: 18, effects: { hygiene: 60, fun: 20 + s * 4, energy: 10 } }),
 };
 const F = (id, cat, name, nameEn, price, stars, size, color, use) => ({ id, cat, name, nameEn, price, stars, size, color, use: use ? U[use](stars) : null });
 export const FURNITURE = [
@@ -723,9 +801,51 @@ export const FURNITURE = [
   F('tv', 'tech', 'TV ya Flat', 'Flat TV', 300_000, 3, [2, 1], '#0b0f17', 'burudika'),
   F('laptop', 'tech', 'Meza na Laptop', 'Desk & Laptop', 350_000, 3, [2, 1], '#a16207', 'surf'),
   F('plant', 'decor', 'Mmea', 'Potted Plant', 8_000, 1, [1, 1], '#16a34a', null),
-  F('lamp', 'decor', 'Taa ya Sakafu', 'Floor Lamp', 18_000, 1, [1, 1], '#fde68a', null),
+  F('lamp', 'light', 'Taa ya Sakafu', 'Floor Lamp', 18_000, 1, [1, 1], '#fde68a', null),
   F('rug', 'decor', 'Zulia la Kitenge', 'Kitenge Rug', 25_000, 2, [2, 2], '#f59e0b', null),
   F('art', 'decor', 'Picha ya Tingatinga', 'Tingatinga Painting', 60_000, 3, [1, 1], '#0ea5e9', null),
+  // ---- more seating, sleep, kitchen & bath
+  F('beanbag', 'sit', 'Bean Bag', 'Bean Bag', 55_000, 2, [1, 1], '#db2777', 'kaa'),
+  F('egg-chair', 'sit', 'Kiti cha Kuning’inia', 'Hanging Egg Chair', 210_000, 3, [1, 1], '#f5f5f4', 'kaa'),
+  F('machela', 'sleep', 'Machela ya Kamba', 'Rope Hammock', 70_000, 2, [2, 1], '#ea580c', 'lala'),
+  F('coffee', 'kitchen', 'Mashine ya Kahawa', 'Coffee Machine', 160_000, 3, [1, 1], '#292524', 'kahawa'),
+  F('blender', 'kitchen', 'Blenda ya Juisi', 'Juice Blender', 60_000, 2, [1, 1], '#fb923c', 'juisi'),
+  F('counter', 'kitchen', 'Kaunta ya Jikoni', 'Kitchen Island', 240_000, 3, [2, 1], '#e7e5e4', null),
+  F('sink', 'bath', 'Sinki na Kioo', 'Vanity Sink', 85_000, 2, [1, 1], '#f8fafc', 'nawa'),
+  F('jacuzzi', 'bath', 'Jacuzzi', 'Jacuzzi', 2_400_000, 5, [2, 2], '#38bdf8', 'jacuzzi'),
+  // ---- fun
+  F('tv-65', 'fun', 'Smart TV ya Inchi 65', '65" Smart TV', 900_000, 4, [2, 1], '#0b0f17', 'burudika'),
+  F('ps5', 'fun', 'PS5 na Kiti cha Gaming', 'PS5 Gaming Setup', 1_200_000, 4, [2, 1], '#111827', 'game'),
+  F('arcade', 'fun', 'Mashine ya Arcade', 'Arcade Machine', 450_000, 3, [1, 1], '#7c3aed', 'game'),
+  F('snooker', 'fun', 'Meza ya Pool', 'Pool Table', 1_600_000, 4, [3, 2], '#15803d', 'pool'),
+  F('foosball', 'fun', 'Foosball (Kibao Mpira)', 'Foosball Table', 280_000, 3, [2, 1], '#a16207', 'pool'),
+  F('dj-decks', 'fun', 'Meza ya DJ', 'DJ Decks', 750_000, 4, [2, 1], '#111827', 'dj'),
+  F('karaoke', 'fun', 'Mashine ya Karaoke', 'Karaoke Machine', 320_000, 3, [1, 1], '#ec4899', 'imba'),
+  // ---- skills
+  F('guitar', 'skills', 'Gitaa', 'Acoustic Guitar', 120_000, 2, [1, 1], '#b45309', 'gitaa'),
+  F('keyboard', 'skills', 'Kinanda', 'Keyboard Piano', 380_000, 3, [2, 1], '#111827', 'kinanda'),
+  F('bookshelf', 'skills', 'Kabati la Vitabu', 'Bookshelf', 150_000, 2, [2, 1], '#78350f', 'soma'),
+  F('bao', 'skills', 'Bao la Kiswahili', 'Bao Board Game', 45_000, 2, [1, 1], '#92400e', 'bao'),
+  F('easel', 'skills', 'Easel ya Kuchora', 'Painting Easel', 90_000, 2, [1, 1], '#d6d3d1', 'chora'),
+  F('weights', 'skills', 'Vyuma vya Mazoezi', 'Dumbbell Rack', 140_000, 2, [1, 1], '#374151', 'mazoezi'),
+  F('treadmill', 'skills', 'Treadmill', 'Treadmill', 900_000, 4, [1, 2], '#1f2937', 'mazoezi'),
+  // ---- light
+  F('kandili', 'light', 'Kandili', 'Kerosene Lantern', 6_000, 1, [1, 1], '#f59e0b', null),
+  F('fairy', 'light', 'Taa za Mapambo', 'Fairy Lights', 45_000, 2, [2, 1], '#fde047', null),
+  F('rgb-lamp', 'light', 'Taa ya LED (RGB)', 'Smart RGB Lamp', 95_000, 3, [1, 1], '#a855f7', null),
+  F('neon', 'light', 'Neon ya "BONGO"', '"BONGO" Neon Sign', 140_000, 3, [2, 1], '#f472b6', null),
+  F('chandelier', 'light', 'Chandelier', 'Crystal Chandelier', 850_000, 4, [1, 1], '#fef3c7', null),
+  // ---- decor
+  F('aquarium', 'decor', 'Tangi la Samaki', 'Aquarium', 420_000, 3, [2, 1], '#0ea5e9', 'tazama'),
+  F('mirror', 'decor', 'Kioo Kikubwa', 'Standing Mirror', 75_000, 2, [1, 1], '#d4d4d8', 'jitazame'),
+  F('vase', 'decor', 'Chombo cha Maua', 'Flower Vase', 30_000, 2, [1, 1], '#e11d48', null),
+  F('clock', 'decor', 'Saa ya Ukutani', 'Wall Clock', 22_000, 1, [1, 1], '#111827', null),
+  F('shield', 'decor', 'Ngao ya Kimasai', 'Maasai Shield', 85_000, 3, [1, 1], '#b91c1c', null),
+  F('zanzibar-door', 'decor', 'Mlango wa Zanzibar', 'Zanzibar Door', 1_100_000, 5, [2, 1], '#78350f', null),
+  // ---- pets
+  F('dog', 'pets', 'Mbwa', 'Dog', 300_000, 3, [1, 1], '#a16207', 'cheza'),
+  F('cat', 'pets', 'Paka', 'Cat', 150_000, 2, [1, 1], '#f97316', 'cheza'),
+  F('parrot', 'pets', 'Kasuku', 'Parrot', 200_000, 3, [1, 1], '#16a34a', 'cheza'),
 ];
 export const furnitureById = Object.fromEntries(FURNITURE.map((f) => [f.id, f]));
 // Starter furniture every new home gets.
@@ -761,6 +881,19 @@ export const HEALTH = {
   neglectDrain: 0.5, // per needs tick while starving or exhausted
 };
 export const HOSPITAL_ID = 'hospitali';
+
+/** Stage of a flight from the trip fraction (0..1). */
+export const FLIGHT_PHASES = [
+  [0, 'boarding', 'Kupanda ndege', 'Boarding'],
+  [0.16, 'takeoff', 'Ndege inapaa', 'Take-off'],
+  [0.32, 'cruise', 'Angani', 'Cruising'],
+  [0.8, 'landing', 'Inatua', 'Landing'],
+];
+export const flightPhase = (f) => {
+  let p = FLIGHT_PHASES[0];
+  for (const ph of FLIGHT_PHASES) if (f >= ph[0]) p = ph;
+  return p;
+};
 
 // ---------------------------------------------------------------- events
 export const EVENT_LIMITS = { titleMax: 40, descMax: 140, maxActivePerHost: 3, minLeadMs: 5 * 60_000, maxAheadMs: 7 * 86400_000, windowBeforeMs: 30 * 60_000, windowAfterMs: 3 * 3600_000 };

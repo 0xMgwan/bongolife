@@ -12,6 +12,11 @@ const ITEM_ICON = {
   mkeka: '🛏️', 'bed-single': '🛏️', 'bed-double': '🛏️', 'bed-king': '👑', 'chair-plastic': '🪑', armchair: '🪑', 'sofa-velvet': '🛋️', 'sofa-3': '🛋️', 'sofa-leather': '🛋️',
   jiko: '🔥', cooker: '🍳', fridge: '🧊', 'table-dining': '🍽️', ndoo: '🪣', shower: '🚿', toilet: '🚽', bathtub: '🛁',
   radio: '📻', speaker: '🔊', tv: '📺', laptop: '💻', plant: '🪴', lamp: '💡', rug: '🟫', art: '🖼️',
+  beanbag: '🫘', 'egg-chair': '🥚', machela: '🏝️', coffee: '☕', blender: '🥤', counter: '🍽️', sink: '🚰', jacuzzi: '🛁',
+  'tv-65': '📺', ps5: '🎮', arcade: '🕹️', snooker: '🎱', foosball: '⚽', 'dj-decks': '🎧', karaoke: '🎤',
+  guitar: '🎸', keyboard: '🎹', bookshelf: '📚', bao: '♟️', easel: '🎨', weights: '🏋️', treadmill: '🏃',
+  kandili: '🏮', fairy: '✨', 'rgb-lamp': '🌈', neon: '🔆', chandelier: '💎', aquarium: '🐠', mirror: '🪞', vase: '💐',
+  clock: '🕰️', shield: '🛡️', 'zanzibar-door': '🚪', dog: '🐶', cat: '🐱', parrot: '🦜',
 };
 export const itemIcon = (id) => ITEM_ICON[id] || '📦';
 

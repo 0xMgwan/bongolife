@@ -74,7 +74,8 @@ export function Overhead({ id, username, height, getBusy }) {
 }
 
 export function Body({ appearance, vehicle, motion }) {
-  const v = vehicle && vehicleById[vehicle.model];
+  // Owned vehicles carry a model id; rides/NPC cars carry { kind, color } directly.
+  const v = vehicle && (vehicleById[vehicle.model] || (vehicle.kind ? vehicle : null));
   if (!v) return <Avatar appearance={appearance} motion={motion} />;
   const seat = riderOffset(v.kind);
   return (
@@ -119,7 +120,6 @@ function knockDown(by) {
   local.target = null;
   local.arrive = null;
   sfx('crash');
-  navigator.vibrate?.(200);
   api('/accident', { method: 'POST', body: { by: by || null } })
     .then((r) => {
       if (!r.hit) return;
@@ -132,7 +132,9 @@ function knockDown(by) {
 export function LocalPlayer({ me, onArrive, frozen = false }) {
   const group = useRef();
   const motion = useRef({ moving: false, mode: 'idle', speed: 1 });
-  const vehicle = useMemo(() => me.vehicles?.find((v) => v.id === me.activeVehicle) || null, [me.vehicles, me.activeVehicle]);
+  const riding = useStore((s) => s.riding);
+  const owned = useMemo(() => me.vehicles?.find((v) => v.id === me.activeVehicle) || null, [me.vehicles, me.activeVehicle]);
+  const vehicle = riding ? { kind: riding.kind, color: riding.color } : owned;
   const speedMult = vehicle ? vehicleById[vehicle.model]?.speed || 1 : 1;
   const busyRef = useRef(me.busy);
   busyRef.current = me.busy && me.busy.endsAt > Date.now() - 2000 ? me.busy : null;
@@ -167,6 +169,47 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
       local.moving = false;
       return;
     }
+    // Riding a cab/daladala: follow the route, no steering.
+    if (local.ride) {
+      const R = local.ride;
+      let step = R.speed * dt;
+      while (step > 0 && R.seg < R.path.length - 1 && !R.skip) {
+        const a = R.path[R.seg];
+        const b = R.path[R.seg + 1];
+        const segLen = Math.hypot(b[0] - a[0], b[1] - a[1]) || 0.001;
+        const left = segLen - R.d;
+        const want = Math.atan2(b[0] - a[0], b[1] - a[1]);
+        let diff = want - local.ry;
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        local.ry += diff * Math.min(1, dt * 6);
+        if (step < left) {
+          R.d += step;
+          local.x = a[0] + ((b[0] - a[0]) * R.d) / segLen;
+          local.z = a[1] + ((b[1] - a[1]) * R.d) / segLen;
+          step = 0;
+        } else {
+          step -= left;
+          R.seg++;
+          R.d = 0;
+        }
+      }
+      if (R.skip || R.seg >= R.path.length - 1) {
+        local.ride = null;
+        local.x = R.dest[0];
+        local.z = R.dest[1];
+        local.teleported++;
+        useStore.setState({ riding: null });
+        sendMove(true);
+        R.onArrive?.();
+      }
+      local.moving = true;
+      local.driving = true;
+      motion.current.mode = 'sit';
+      g.position.set(local.x, 0.1, local.z);
+      g.rotation.y = local.ry;
+      return;
+    }
+    local.driving = !!vehicle;
     const nowMs = Date.now();
     if (local.knockedUntil > nowMs) {
       local.moving = false;

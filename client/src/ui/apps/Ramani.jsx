@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { WATER, LAND_PATCHES, BEACHES, BRIDGES, ROADS, PLACES, PLOTS, DISTRICTS, TRAVEL, placeById, travelCost, fmtTsh, WORLD_SIZE } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { local } from '../../net.js';
-import { goToPlace } from '../../nav.js';
+import { goToPlace, startRide } from '../../nav.js';
 import { AppHead } from '../Phone.jsx';
 import { L, loc, isEn } from '../../i18n.js';
+import { sfx } from '../../audio.js';
 
 const H = WORLD_SIZE / 2;
 const R = (r, fill) => <rect key={r.id} x={r.x1} y={r.z1} width={r.x2 - r.x1} height={r.z2 - r.z1} fill={fill} />;
@@ -20,13 +21,15 @@ export function Ramani({ back, close }) {
   const ride = async (mode) => {
     const r = await run('/travel', { method: 'POST', body: { placeId: sel, mode } });
     if (!r) return;
-    local.x = r.pos[0];
-    local.z = r.pos[1];
-    local.target = null;
-    local.teleported++;
-    useStore.getState().toast(L(`${TRAVEL[mode].emoji} Umefika ${place.name} · ${fmtTsh(r.cost)}`, `${TRAVEL[mode].emoji} Arrived at ${loc(place)} · ${fmtTsh(r.cost)}`));
+    const id = sel;
     close();
-    useStore.setState({ sheet: { type: 'place', id: sel } });
+    useStore.setState({ tab: 'town', cityView: 'follow', inside: null, sheet: null });
+    sfx('horn');
+    startRide(mode, r.pos, id, () => {
+      sfx('pop');
+      useStore.getState().toast(L(`${TRAVEL[mode].emoji} Umefika ${placeById[id].name} · ${fmtTsh(r.cost)}`, `${TRAVEL[mode].emoji} Arrived at ${loc(placeById[id])} · ${fmtTsh(r.cost)}`));
+      useStore.setState({ sheet: { type: 'place', id } });
+    });
   };
 
   return (

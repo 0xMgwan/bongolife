@@ -5,7 +5,7 @@ import { gameClock } from '@shared/world.js';
 import { City } from './City.jsx';
 import { LocalPlayer, RemotePlayers } from './Players.jsx';
 import { AudioDriver } from './AudioDriver.jsx';
-import { ActivityScene, SCENES, SCENE_ORIGIN } from './Scenes.jsx';
+import { ActivityScene, SCENES, SCENE_ORIGIN, sceneCam } from './Scenes.jsx';
 import { HomeScene, HOME_ORIGIN } from './HomeScene.jsx';
 import { MapPins } from './MapPins.jsx';
 import { useStore } from '../store.js';
@@ -72,6 +72,7 @@ function useCameraGestures(modeRef) {
         view.homeYaw -= dx * 0.008;
         view.homePitch = Math.max(0.45, Math.min(1.45, view.homePitch + dy * 0.005));
       } else {
+        view.lastDrag = performance.now();
         view.yaw -= dx * 0.008;
         view.pitch = Math.max(0.35, Math.min(1.4, view.pitch + dy * 0.005));
       }
@@ -106,6 +107,8 @@ function CameraRig({ mode, sceneKey }) {
   }, [camera, size, mode]);
   const focus = useRef(new THREE.Vector3(local.x, 0, local.z));
   const t = useRef(0);
+  const drive = useRef(0);
+  const sceneLerp = useRef({ pos: [0, 5, 10], look: [0, 1, 0] });
   const modeRef = useRef(mode);
   modeRef.current = mode;
   useCameraGestures(modeRef);
@@ -115,8 +118,23 @@ function CameraRig({ mode, sceneKey }) {
     if (sceneKey && SCENES[sceneKey]) {
       // Interior camera with a slow handheld sway.
       t.current += dt;
-      const { pos, look } = SCENES[sceneKey].camera;
       const [ox, oy, oz] = SCENE_ORIGIN;
+      if (SCENES[sceneKey].dynamic) {
+        const a = 1 - Math.exp(-dt * 3);
+        sceneLerp.current.pos.forEach((v, i) => (sceneLerp.current.pos[i] += (sceneCam.pos[i] - v) * a));
+        sceneLerp.current.look.forEach((v, i) => (sceneLerp.current.look[i] += (sceneCam.look[i] - v) * a));
+        // Snap when switching between far-apart views (cabin ⇄ sky).
+        if (Math.hypot(...sceneCam.pos.map((v, i) => v - sceneLerp.current.pos[i])) > 120) {
+          sceneLerp.current.pos = [...sceneCam.pos];
+          sceneLerp.current.look = [...sceneCam.look];
+        }
+        const p = sceneLerp.current.pos;
+        const l = sceneLerp.current.look;
+        camera.position.set(ox + p[0], oy + p[1], oz + p[2]);
+        camera.lookAt(ox + l[0], oy + l[1], oz + l[2]);
+        return;
+      }
+      const { pos, look } = SCENES[sceneKey].camera;
       // Portrait screens are narrow: pull back so the whole room fits.
       const k = size.width / size.height < 1 ? 1.35 : 1;
       const px = look[0] + (pos[0] - look[0]) * k;
@@ -148,11 +166,22 @@ function CameraRig({ mode, sceneKey }) {
     focus.current.x += (fx - focus.current.x) * a;
     focus.current.z += (fz - focus.current.z) * a;
     if (!map && Math.hypot(fx - focus.current.x, fz - focus.current.z) > 40) focus.current.set(fx, 0, fz);
-    const dist = map ? view.mapDist : 31 * zoom.value;
-    const pitch = map ? 1.1 : view.pitch;
+    // Driving (own car or a ride): low chase camera that swings in behind the vehicle.
+    const want = !map && local.driving ? 1 : 0;
+    drive.current += (want - drive.current) * Math.min(1, dt * 2.5);
+    const k = drive.current;
+    if (k > 0.05 && (local.moving || local.ride) && performance.now() - (view.lastDrag || 0) > 2500) {
+      let diff = local.ry + Math.PI - view.yaw;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      view.yaw += diff * Math.min(1, dt * (local.ride ? 3 : 1.6)) * k;
+    }
+    const dist = map ? view.mapDist : 31 * zoom.value * (1 - k * 0.55);
+    const pitch = map ? 1.1 : view.pitch + (0.3 - view.pitch) * k;
     const flat = Math.cos(pitch) * dist;
     camera.position.set(focus.current.x + Math.sin(view.yaw) * flat, 1 + Math.sin(pitch) * dist, focus.current.z + Math.cos(view.yaw) * flat);
-    camera.lookAt(focus.current.x, 1, focus.current.z);
+    // Look a little ahead of the car so you see the road.
+    const ahead = 4 * k;
+    camera.lookAt(focus.current.x + Math.sin(local.ry) * ahead, 1 + k * 0.8, focus.current.z + Math.cos(local.ry) * ahead);
   });
   return null;
 }

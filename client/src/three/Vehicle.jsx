@@ -107,3 +107,51 @@ export function riderOffset(kind) {
   if (kind === 'moto') return [0, 0.3, -0.15];
   return null;
 }
+
+/** Airliner (Air Tanzania colours), nose towards +z, ~30 m long. `gear` shows wheels. */
+export function Plane({ livery = '#0ea5e9', tail = '#facc15', gear = true }) {
+  const white = mat('#f8fafc');
+  const dark = mat('#1e293b');
+  const liv = mat(livery);
+  const tl = mat(tail);
+  const grey = mat('#94a3b8');
+  return (
+    <group>
+      {/* fuselage */}
+      <mesh geometry={geo('cyl', 1.7, 1.7, 24, 18)} material={white} rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]} />
+      <mesh geometry={geo('sphere', 1.7, 18, 12)} material={white} position={[0, 0, 12]} scale={[1, 0.95, 1.6]} />
+      <mesh geometry={geo('box', 1.6, 0.5, 0.9)} material={dark} position={[0, 0.75, 13.6]} rotation={[0.45, 0, 0]} />
+      <mesh geometry={geo('cyl', 0.35, 1.7, 6, 18)} material={white} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.5, -15]} />
+      {/* windows + livery stripe */}
+      {[-1, 1].map((sd) => (
+        <group key={sd}>
+          <mesh geometry={geo('box', 0.05, 0.28, 19)} material={dark} position={[sd * 1.68, 0.45, 0.5]} />
+          <mesh geometry={geo('box', 0.05, 0.22, 22)} material={liv} position={[sd * 1.69, -0.2, 0]} />
+        </group>
+      ))}
+      {/* wings (swept) + engines */}
+      {[-1, 1].map((sd) => (
+        <group key={`w${sd}`}>
+          <mesh geometry={geo('box', 11, 0.32, 3.4)} material={grey} position={[sd * 6.2, -0.8, 0.2]} rotation={[0, sd * 0.32, sd * 0.06]} />
+          <mesh geometry={geo('box', 0.2, 1.1, 1.2)} material={tl} position={[sd * 11.6, -0.2, -1.6]} />
+          <mesh geometry={geo('cyl', 0.75, 0.65, 3, 14)} material={white} rotation={[Math.PI / 2, 0, 0]} position={[sd * 4.6, -1.6, 1.8]} />
+          <mesh geometry={geo('cyl', 0.6, 0.6, 0.1, 14)} material={dark} rotation={[Math.PI / 2, 0, 0]} position={[sd * 4.6, -1.6, 3.32]} />
+          <mesh geometry={geo('box', 4.2, 0.2, 1.6)} material={grey} position={[sd * 2.4, 0.9, -16.4]} rotation={[0, sd * 0.3, 0]} />
+        </group>
+      ))}
+      {/* tail fin with flag-yellow giraffe-ish livery */}
+      <mesh geometry={geo('box', 0.3, 5, 3.6)} material={liv} position={[0, 3.2, -16]} rotation={[-0.38, 0, 0]} />
+      <mesh geometry={geo('box', 0.34, 1.6, 1.4)} material={tl} position={[0, 3.6, -16.2]} rotation={[-0.38, 0, 0]} />
+      {gear && (
+        <group>
+          {[[0, 9], [-1.6, -1], [1.6, -1]].map(([x, z], i) => (
+            <group key={i} position={[x, -1.7, z]}>
+              <mesh geometry={geo('box', 0.15, 0.9, 0.15)} material={grey} position={[0, 0.45, 0]} />
+              <mesh geometry={geo('cyl', 0.4, 0.4, 0.35, 12)} material={mat('#111827')} rotation={[0, 0, Math.PI / 2]} position={[0, 0, 0]} />
+            </group>
+          ))}
+        </group>
+      )}
+    </group>
+  );
+}

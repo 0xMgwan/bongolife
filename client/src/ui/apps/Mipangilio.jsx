@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { token } from '../../api.js';
+import { hapticsEnabled, setHaptics, onHaptics } from '../../haptics.js';
 import { HAIRSTYLES, HAIR_COLORS, OUTFITS, TRAITS, outfitFits } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { AppHead } from '../Phone.jsx';
@@ -26,6 +28,81 @@ function SoundSettings() {
       {row('music', L('Muziki wa mtaani', 'Venue music'), L('Club, bar na studio. Punguza kama unasikiliza muziki wako mwenyewe.', 'Clubs, bars and the studio. Turn down if you are playing your own music.'))}
       {row('sfx', L('Sauti za mchezo', 'Game effects'))}
       {row('ambience', L('Mazingira', 'Ambience'), L('Kelele za mji, mawimbi ya bahari na injini.', 'City hum, ocean waves and engines.'))}
+    </div>
+  );
+}
+
+function Haptics() {
+  const [on, setOn] = useState(hapticsEnabled());
+  useEffect(() => onHaptics(setOn), []);
+  return (
+    <div className="box">
+      <div className="row between">
+        <div>
+          <div className="bold">📳 {L('Mitetemo (haptics)', 'Haptics & vibration')}</div>
+          <div className="hint" style={{ marginTop: 2 }}>{L('Simu itetemeke ukibonyeza, ukilipwa au ukigongwa.', 'Feel taps, pay-outs, crashes and take-offs.')}</div>
+        </div>
+        <button className={`btn btn-xs ${on ? 'btn-green' : 'btn-ghost'}`} onClick={() => setHaptics(!on)}>{on ? L('Inawaka', 'On') : L('Imezimwa', 'Off')}</button>
+      </div>
+    </div>
+  );
+}
+
+/** Change password + recovery email. */
+function Security() {
+  const me = useStore((s) => s.me);
+  const run = useStore((s) => s.run);
+  const toast = useStore((s) => s.toast);
+  const [open, setOpen] = useState(null); // 'pw' | 'email'
+  const [pw, setPw] = useState({ current: '', password: '', confirm: '' });
+  const [email, setEmail] = useState(me.email || '');
+  const [busy, setBusy] = useState(false);
+  const changePw = async (e) => {
+    e.preventDefault();
+    if (pw.password !== pw.confirm) return toast(L('Password mpya hazifanani.', "New passwords don't match."), 'err');
+    setBusy(true);
+    const r = await run('/me/password', { method: 'POST', body: { current: pw.current, password: pw.password } });
+    setBusy(false);
+    if (!r) return;
+    token.set(r.token);
+    setPw({ current: '', password: '', confirm: '' });
+    setOpen(null);
+    toast(L('🔒 Password imebadilishwa. Vifaa vingine vimetolewa.', '🔒 Password changed. Other devices were signed out.'));
+  };
+  const saveEmail = async (e) => {
+    e.preventDefault();
+    const r = await run('/me/email', { method: 'POST', body: { email } });
+    if (r) {
+      setOpen(null);
+      toast(L('📧 Email imehifadhiwa.', '📧 Email saved.'));
+    }
+  };
+  return (
+    <div className="box">
+      <div className="bold" style={{ marginBottom: 6 }}>🔐 {L('Akaunti & usalama', 'Account & security')}</div>
+      <div className="row between" style={{ marginTop: 8 }}>
+        <span className="muted">{L('Email ya kurejesha', 'Recovery email')}</span>
+        <button className="btn btn-ghost btn-xs" onClick={() => setOpen(open === 'email' ? null : 'email')}>{me.email ? me.email : L('Ongeza', 'Add')} ✎</button>
+      </div>
+      {!me.email && open !== 'email' && <div className="hint">{L('Bila email huwezi kurudisha password ukiisahau.', "Without an email you can't reset a forgotten password.")}</div>}
+      {open === 'email' && (
+        <form className="sec-form" onSubmit={saveEmail}>
+          <input className="field" type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+          <button className="btn btn-green btn-sm">{L('Hifadhi', 'Save')}</button>
+        </form>
+      )}
+      <div className="row between" style={{ marginTop: 10 }}>
+        <span className="muted">Password</span>
+        <button className="btn btn-ghost btn-xs" onClick={() => setOpen(open === 'pw' ? null : 'pw')}>{L('Badilisha', 'Change')} ✎</button>
+      </div>
+      {open === 'pw' && (
+        <form className="sec-form" onSubmit={changePw}>
+          <input className="field" type="password" placeholder={L('Password ya sasa', 'Current password')} value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} autoComplete="current-password" />
+          <input className="field" type="password" placeholder={L('Password mpya (herufi 6+)', 'New password (6+ characters)')} value={pw.password} onChange={(e) => setPw({ ...pw, password: e.target.value })} autoComplete="new-password" />
+          <input className="field" type="password" placeholder={L('Rudia password mpya', 'Repeat new password')} value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} autoComplete="new-password" />
+          <button className="btn btn-green btn-sm" disabled={busy || !pw.current || pw.password.length < 6}>{L('Badilisha password', 'Change password')}</button>
+        </form>
+      )}
     </div>
   );
 }
@@ -88,7 +165,9 @@ export function Mipangilio({ back }) {
           {row(L('Umaarufu', 'Fame'), `⭐ ${me.fame}`)}
           {row(L('Mjini tangu', 'In the city since'), new Date(me.createdAt).toLocaleDateString())}
         </div>
+        <Security />
         <SoundSettings />
+        <Haptics />
         <div className="box">
           <div className="bold" style={{ marginBottom: 8 }}>{L('Lugha', 'Language')}</div>
           <LangToggle full />

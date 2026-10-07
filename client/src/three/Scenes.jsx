@@ -1,10 +1,11 @@
 // Activity scenes: interiors and set-pieces shown while you're inside a venue or doing
 // something (dancing, watching the match, eating, sleeping…). Rendered far from the
 // city at SCENE_ORIGIN, with every real player who's in the same place plus some regulars.
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { randomAppearance, findActivity, gameClock } from '@shared/world.js';
+import { randomAppearance, findActivity, gameClock, workStage, flightPhase } from '@shared/world.js';
+import { Plane } from './Vehicle.jsx';
 import { mat, geo, labelTexture, emojiTexture } from './textures.js';
 import { Body, Overhead } from './Players.jsx';
 import { remotes } from '../net.js';
@@ -12,6 +13,8 @@ import { useStore } from '../store.js';
 import { L } from '../i18n.js';
 
 export const SCENE_ORIGIN = [4000, 0, 4000];
+/** Scenes flagged `dynamic` drive the camera themselves through this (scene-local coords). */
+export const sceneCam = { pos: [0, 5, 10], look: [0, 1, 0] };
 
 const unitBox = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
 const basic = (color, opts) => new THREE.MeshBasicMaterial({ color, ...opts });
@@ -830,6 +833,355 @@ function Hospital({ me, myBusy, people }) {
   );
 }
 
+// ------------------------------------------------------------ workplaces
+/** Which part of the shift you're in (commute, locker, brief, job, wrap-up), re-checked each second. */
+function useWorkStage(busy) {
+  const [st, setSt] = useState(0);
+  useEffect(() => {
+    if (busy?.kind !== 'job') return undefined;
+    const tick = () => setSt(workStage((Date.now() - busy.startedAt) / (busy.endsAt - busy.startedAt)));
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [busy?.kind, busy?.startedAt, busy?.endsAt]);
+  return busy?.kind === 'job' ? st : 3;
+}
+function drawCode(ctx, t) {
+  const w = ctx.canvas.width, h = ctx.canvas.height;
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, w, h);
+  const cols = ['#38bdf8', '#a78bfa', '#4ade80', '#f472b6', '#facc15'];
+  const off = Math.floor(t * 3);
+  for (let i = 0; i < 9; i++) {
+    const r = (i + off) % 17;
+    ctx.fillStyle = cols[(i + off) % cols.length];
+    ctx.fillRect(8 + (r % 4) * 10, 8 + i * 13, 30 + ((r * 37) % 80), 6);
+  }
+}
+function Desk({ p, ry = 0 }) {
+  const tex = useCanvasTexture(128, 128, drawCode, 4);
+  return (
+    <group position={p} rotation={[0, ry, 0]}>
+      <Box p={[0, 0, 0]} s={[1.8, 0.78, 0.9]} c="#e7e5e4" />
+      <Box p={[0, 0, -0.32]} s={[1.8, 0.78, 0.05]} c="#d6d3d1" />
+      <Box p={[0, 0.78, -0.22]} s={[0.12, 0.3, 0.12]} c="#374151" />
+      <Box p={[0, 1.02, -0.25]} s={[0.9, 0.55, 0.05]} c="#111827" />
+      <mesh position={[0, 1.3, -0.22]}><planeGeometry args={[0.82, 0.47]} /><meshBasicMaterial map={tex} toneMapped={false} /></mesh>
+      <Box p={[0, 0.79, 0.1]} s={[0.6, 0.03, 0.2]} c="#9ca3af" />
+      <Box p={[0, 0, 0.85]} s={[0.6, 0.45, 0.55]} c="#1f2937" />
+      <Box p={[0, 0.45, 1.08]} s={[0.6, 0.7, 0.08]} c="#1f2937" />
+    </group>
+  );
+}
+function Lockers({ p }) {
+  return (
+    <group position={p}>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <group key={i} position={[0, 0, (i - 2) * 0.75]}>
+          <Box s={[0.6, 2.2, 0.7]} c={i % 2 ? '#64748b' : '#475569'} />
+          <Box p={[0.31, 1.5, 0.2]} s={[0.02, 0.08, 0.15]} c="#e5e7eb" />
+        </group>
+      ))}
+    </group>
+  );
+}
+const COWORKERS = [0, 1, 2, 3, 4, 5].map((i) => ({ ...NPC_LOOKS[i + 6], outfit: ['suti', 'ofisi-sketi', 'polo', 'shati-check', 'kaunda', 'blauzi-jeans'][i] }));
+
+/** Office / bank floor: desks with live screens, lockers, a brief corner, colleagues at work. */
+function Office({ me, myBusy, people, bank }) {
+  const stage = useWorkStage(myBusy);
+  const desks = [[-4.5, 0, -2.2], [0, 0, -2.2], [4.5, 0, -2.2], [-4.5, 0, 1.4], [0, 0, 1.4], [4.5, 0, 1.4]];
+  const seat = (d) => [d[0], 0, d[2] + 0.85, Math.PI];
+  // Where you are depends on the shift stage.
+  const mySlot = stage === 0 ? [0, 0, 5, Math.PI] : stage === 1 ? [-6.3, 0, -0.5, Math.PI / 2] : stage === 2 ? [5.2, 0, 4.6, -Math.PI * 0.8] : seat(desks[1]);
+  const myMode = stage === 0 ? 'walk' : stage === 1 || stage === 2 ? 'idle' : stage === 4 ? 'idle' : 'type';
+  const workers = people.filter((r) => r.busy?.kind === 'job');
+  const others = [desks[0], desks[2], desks[3], desks[4], desks[5]];
+  return (
+    <group>
+      <Room w={16} d={12} h={5} floor={bank ? '#e7e5e4' : '#cbd5e1'} wall="#f8fafc" back={bank ? '#1e3a8a' : '#e0f2fe'} />
+      <Sign text={bank ? 'NMB · BANKING HALL' : 'BONGO HQ · OFISINI'} p={[0, 3.6, -5.8]} h={0.55} fg={bank ? '#fde047' : '#0f172a'} />
+      {bank && (
+        <group position={[0, 0, -4.4]}>
+          <Box s={[12, 1.1, 0.8]} c="#0f172a" />
+          <Box p={[0, 1.1, 0]} s={[12.2, 0.06, 1]} c="#f8fafc" />
+          {[-4, 0, 4].map((x) => <Box key={x} p={[x, 1.16, -0.1]} s={[0.5, 0.35, 0.05]} c="#38bdf8" />)}
+          {[-3, 1, 5].map((x, i) => <Person key={x} slot={[x, 0, 0.9, Math.PI]} appearance={NPC_LOOKS[i + 14]} mode="idle" />)}
+        </group>
+      )}
+      {(bank ? desks.slice(3) : desks).map((d, i) => <Desk key={i} p={d} />)}
+      <Lockers p={[-7.4, 0, -0.5]} />
+      {/* brief corner: whiteboard + standing table */}
+      <Box p={[6.5, 0, 4.2]} s={[1.2, 1.05, 1.2]} c="#a16207" />
+      <Box p={[7.7, 1, 2.8]} s={[0.05, 1.4, 2.2]} c="#ffffff" />
+      <Person slot={[6.5, 0, 5.4, Math.PI]} appearance={COWORKERS[0]} mode="idle" />
+      {/* colleagues: real players working here first, then NPCs */}
+      {others.filter((d) => !bank || d[2] > 0).map((d, i) => {
+        const r = workers[i];
+        return r
+          ? <Person key={r.id} slot={seat(d)} appearance={r.appearance} mode="type" id={r.id} username={r.username} />
+          : <Person key={`c${i}`} slot={seat(d)} appearance={COWORKERS[(i + 1) % COWORKERS.length]} mode="type" />;
+      })}
+      <Person slot={mySlot} appearance={me.appearance} mode={myMode} id={me.id} username={me.username} />
+      {[[-4, 4.2, -1], [4, 4.2, -1], [0, 4.2, 3]].map((p, i) => <pointLight key={i} color="#f8fafc" intensity={4} distance={10} position={p} />)}
+    </group>
+  );
+}
+
+function drawTill(ctx, t) {
+  ctx.fillStyle = '#022c22';
+  ctx.fillRect(0, 0, 128, 64);
+  ctx.fillStyle = '#4ade80';
+  ctx.font = 'bold 22px monospace';
+  ctx.fillText(`${(12000 + Math.floor(t * 937) % 88000).toLocaleString()}`, 8, 40);
+}
+/** Supermarket / Kariakoo shop floor: shelves of goods, a till, customers queueing. */
+function Shop({ me, myBusy, people }) {
+  const stage = useWorkStage(myBusy);
+  const till = useCanvasTexture(128, 64, drawTill, 3);
+  const goods = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#facc15', '#14b8a6'];
+  const mySlot = stage === 0 ? [0, 0, 5, Math.PI] : stage === 1 ? [-6.3, 0, 2.8, Math.PI / 2] : stage === 2 ? [5, 0, 4, -Math.PI * 0.75] : [0, 0, -0.2, Math.PI];
+  const t = useRef();
+  useFrame(({ clock }) => {
+    // the queue shuffles forward
+    if (t.current) t.current.position.z = -((clock.elapsedTime * 0.3) % 1.2);
+  });
+  return (
+    <group>
+      <Room w={16} d={12} h={4.5} floor="#e5e7eb" wall="#fefce8" back="#fde68a" />
+      <Sign text="SUPERMARKET · KARIBU" p={[0, 3.4, -5.8]} h={0.55} fg="#b91c1c" />
+      {[-5.5, -2, 2, 5.5].map((x, k) => (
+        <group key={x} position={[x, 0, -3.8]}>
+          <Box s={[2.6, 2.4, 0.8]} c="#f1f5f9" />
+          {[0.5, 1.2, 1.9].map((y, r) => Array.from({ length: 6 }, (_, i) => (
+            <Box key={`${r}${i}`} p={[-1.05 + i * 0.42, y, 0.3]} s={[0.3, 0.45, 0.3]} c={goods[(i + r + k) % goods.length]} />
+          )))}
+        </group>
+      ))}
+      <group position={[0, 0, 0.6]}>
+        <Box s={[3, 1, 0.9]} c="#334155" />
+        <Box p={[0, 1, 0]} s={[3.1, 0.05, 1]} c="#0f172a" />
+        <Box p={[-0.8, 1.05, 0]} s={[0.5, 0.35, 0.45]} c="#111827" />
+        <mesh position={[-0.8, 1.3, 0.24]}><planeGeometry args={[0.44, 0.22]} /><meshBasicMaterial map={till} toneMapped={false} /></mesh>
+        <Box p={[0.7, 1.05, 0]} s={[1.2, 0.04, 0.6]} c="#475569" />
+      </group>
+      <Lockers p={[-7.4, 0, 2.8]} />
+      <group ref={t}>
+        {[0, 1, 2, 3].map((i) => <Person key={i} slot={[0.2, 0, 2 + i * 1.2, Math.PI]} appearance={NPC_LOOKS[(i * 5 + 3) % NPC_LOOKS.length]} mode="idle" />)}
+      </group>
+      {people.filter((r) => r.busy?.kind === 'job').slice(0, 2).map((r, i) => <Person key={r.id} slot={[-4 + i * 8, 0, -2.4, Math.PI]} appearance={r.appearance} mode="lift" id={r.id} username={r.username} />)}
+      <Person slot={[mySlot[0], 0, mySlot[2] - (stage >= 3 ? 0 : 0), stage >= 3 ? 0 : mySlot[3]]} appearance={me.appearance} mode={stage === 0 ? 'walk' : stage >= 3 && stage < 4 ? 'type' : 'idle'} id={me.id} username={me.username} />
+      <pointLight color="#fffbeb" intensity={6} distance={14} position={[0, 4, 0]} />
+    </group>
+  );
+}
+
+// ---------------------------------------------------------------- flight
+function drawWindowSky(ctx, t) {
+  const w = ctx.canvas.width, h = ctx.canvas.height;
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#38bdf8');
+  g.addColorStop(1, '#e0f2fe');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = 'rgba(255,255,255,.95)';
+  for (let i = 0; i < 6; i++) {
+    const x = ((i * 53 - t * 40) % (w + 60) + w + 60) % (w + 60) - 30;
+    const y = 30 + ((i * 37) % 60);
+    ctx.beginPath();
+    ctx.ellipse(x, y, 26, 9, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + 14, y - 6, 16, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+const PAX = Array.from({ length: 40 }, (_, i) => NPC_LOOKS[(i * 7) % NPC_LOOKS.length]);
+const CREW_LOOK = { body: 'woman', skin: 3, hair: 'kilemba', outfit: 'ofisi-sketi', hairColor: 0 };
+
+/** Inside the cabin: 2+2 seating, windows with drifting clouds, bins, crew trolley. */
+function Cabin({ me, phase, job, crewRef }) {
+  const sky = useCanvasTexture(128, 128, drawWindowSky, 10);
+  const rows = Array.from({ length: 9 }, (_, i) => -7 + i * 1.6);
+  const seatsX = [-1.55, -0.85, 0.85, 1.55];
+  const meSeat = [-1.55, 0.25, rows[3], 0];
+  // Boarding: you walk down the aisle to your seat; crew/pilot jobs stand or fly.
+  const walking = phase === 'boarding';
+  const mine = job === 'rubani' ? [0, 0.25, 9.6, 0] : job ? [0, 0, rows[2] + 0.8, Math.PI] : meSeat;
+  const meRef = useRef();
+  const t0 = useRef(null);
+  useFrame(({ clock }) => {
+    const g = meRef.current;
+    if (!g) return;
+    if (walking && !job) {
+      if (t0.current == null) t0.current = clock.elapsedTime;
+      const k = Math.min(1, (clock.elapsedTime - t0.current) / 6);
+      g.position.set(k < 0.85 ? 0 : -1.55 * ((k - 0.85) / 0.15), 0, 9 - k * (9 - rows[3]));
+      g.rotation.y = k < 0.85 ? Math.PI : -Math.PI / 2;
+    } else {
+      g.position.set(mine[0], 0, mine[2]);
+      g.rotation.y = 0;
+    }
+    if (crewRef.current) crewRef.current.position.z = Math.sin(clock.elapsedTime * 0.25) * 5;
+  });
+  const meMode = walking && !job ? 'walk' : job === 'mhudumu-ndege' ? 'idle' : 'sit';
+  return (
+    <group>
+      <Box p={[0, -0.1, 0]} s={[4.8, 0.1, 22]} c="#475569" />
+      <Box p={[0, -0.05, 0]} s={[0.9, 0.06, 22]} c="#1e3a8a" />
+      {[-1, 1].map((sd) => (
+        <group key={sd}>
+          <Box p={[sd * 2.45, 0, 0]} s={[0.1, 2.8, 22]} c="#f1f5f9" />
+          <Box p={[sd * 1.9, 2.05, 0]} s={[1.1, 0.5, 21]} c="#e2e8f0" />
+          {rows.map((z) => (
+            <mesh key={z} position={[sd * 2.39, 1.25, z + 0.2]} rotation={[0, -sd * Math.PI / 2, 0]}>
+              <planeGeometry args={[0.45, 0.6]} />
+              <meshBasicMaterial map={sky} toneMapped={false} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+      <Box p={[0, 2.75, 0]} s={[4.8, 0.08, 22]} c="#f8fafc" />
+      {rows.map((z) => seatsX.map((x) => (
+        <group key={`${x}${z}`} position={[x, 0, z]}>
+          <Box s={[0.6, 0.45, 0.55]} c="#1e40af" />
+          <Box p={[0, 0.45, -0.3]} s={[0.6, 0.75, 0.12]} c="#1e3a8a" />
+          <Box p={[0, 1.15, -0.3]} s={[0.4, 0.12, 0.13]} c="#e2e8f0" />
+        </group>
+      )))}
+      {/* passengers (sitting facing forward = +z... seats face -z here, so ry=π) */}
+      {rows.map((z, r) => seatsX.map((x, c) => {
+        if (x === meSeat[0] && z === meSeat[2]) return null;
+        if ((r * 4 + c) % 3 === 1) return null; // some empty seats
+        return <Person key={`p${r}${c}`} slot={[x, 0.25, z + 0.05, 0]} appearance={PAX[(r * 4 + c) % PAX.length]} mode={(r + c) % 5 === 0 ? 'sleep' : 'sit'} />;
+      }))}
+      {/* crew + trolley in the aisle */}
+      <group ref={crewRef}>
+        <Box p={[0, 0, -0.9]} s={[0.55, 0.95, 0.8]} c="#cbd5e1" />
+        <Person slot={[0, 0, 0, Math.PI]} appearance={CREW_LOOK} mode="idle" />
+      </group>
+      {/* cockpit door + galley */}
+      <Box p={[0, 0, 10.6]} s={[4.8, 2.8, 0.15]} c="#cbd5e1" />
+      <Box p={[0, 0, 10.5]} s={[0.9, 2.1, 0.05]} c="#64748b" />
+      <group ref={meRef}>
+        <Person slot={[0, walking && !job ? 0 : mine[1], 0, mine[3]]} appearance={me.appearance} mode={meMode} id={me.id} username={me.username} />
+      </group>
+      {rows.map((z) => <pointLight key={z} color="#fef9c3" intensity={1.2} distance={4} position={[0, 2.5, z]} />)}
+    </group>
+  );
+}
+
+const CLOUDS = Array.from({ length: 26 }, (_, i) => {
+  const r = rng(500 + i);
+  return { x: (r() - 0.5) * 220, y: -18 - r() * 40, z: (r() - 0.5) * 420, s: 6 + r() * 10 };
+});
+/** Outside: the plane rolling down the runway, climbing through clouds, or landing at the destination. */
+function Sky({ phase, k, flight }) {
+  const plane = useRef();
+  const world = useRef();
+  const clouds = useRef();
+  const dest = useMemo(() => labelTexture(`KARIBU ${flight?.dest || 'DAR'}`, { bg: 'rgba(0,0,0,0)', fg: '#ffffff', size: 60, bold: 900 }), [flight?.dest]);
+  useFrame(({ clock }, dt) => {
+    const t = clock.elapsedTime;
+    // The plane stays put; the world moves under it.
+    let alt = 0, pitch = 0, speed = 0, roll = Math.sin(t * 0.4) * 0.03;
+    if (phase === 'takeoff') {
+      speed = 20 + k * 140;
+      alt = Math.max(0, (k - 0.45) / 0.55) ** 1.6 * 60;
+      pitch = k > 0.45 ? -0.16 : 0;
+    } else if (phase === 'landing') {
+      speed = 140 - k * 120;
+      alt = Math.max(0, 1 - k / 0.75) ** 1.4 * 60;
+      pitch = k < 0.75 ? 0.05 : 0;
+    } else {
+      speed = 160;
+      alt = 60;
+      roll = Math.sin(t * 0.3) * 0.06;
+    }
+    plane.current.rotation.set(pitch, 0, roll);
+    world.current.position.y = -alt;
+    if (clouds.current) clouds.current.children.forEach((c) => {
+      c.position.z -= speed * dt * 0.5;
+      if (c.position.z < -210) c.position.z += 420;
+    });
+    // runway dashes stream past
+    const ground = world.current.userData.dash;
+    if (ground) ground.position.z = -((t * speed * 0.3) % 12);
+  });
+  const ground = phase === 'cruise' ? flight?.ground || '#0e7490' : phase === 'landing' ? flight?.land || '#a3e635' : '#86efac';
+  return (
+    <group>
+      <group ref={world}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.6, 0]}><planeGeometry args={[1200, 1200]} /><meshBasicMaterial color={ground} /></mesh>
+        {phase !== 'cruise' && (
+          <group>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.55, 0]}><planeGeometry args={[18, 900]} /><meshBasicMaterial color="#334155" /></mesh>
+            <group ref={(g) => { if (world.current && g) world.current.userData.dash = g; }}>
+              {Array.from({ length: 70 }, (_, i) => <Box key={i} p={[0, -2.54, -400 + i * 12]} s={[0.5, 0.02, 5]} c="#f8fafc" />)}
+            </group>
+            {phase === 'landing' && (
+              <mesh position={[16, 6, 60]} rotation={[0, Math.PI + 0.4, 0]}>
+                <planeGeometry args={[26 * dest.aspect * 0.25, 6.5]} />
+                <meshBasicMaterial map={dest.texture} transparent />
+              </mesh>
+            )}
+            {[-30, -40, 30, 42].map((x, i) => (
+              <group key={i} position={[x, -2.6, 40 + i * 25]}>
+                <Box s={[0.5, 6, 0.5]} c="#7c5a3a" />
+                <mesh geometry={geo('sphere', 2.6, 7, 5)} material={mat('#16a34a')} position={[0, 6.5, 0]} />
+              </group>
+            ))}
+          </group>
+        )}
+      </group>
+      <group ref={clouds}>
+        {CLOUDS.map((c, i) => (
+          <mesh key={i} geometry={geo('sphere', 1, 8, 6)} material={basic('#ffffff', { transparent: true, opacity: 0.9 })} position={[c.x, phase === 'cruise' ? c.y : c.y + 40, c.z]} scale={[c.s * 1.8, c.s * 0.6, c.s]} />
+        ))}
+      </group>
+      <group ref={plane}><Plane gear={phase !== 'cruise'} /></group>
+    </group>
+  );
+}
+
+/** A whole trip: boarding inside, take-off outside, cruise (inside ⇄ outside), landing. */
+function Flight({ me, myBusy }) {
+  const view = useStore((s) => s.flightView);
+  const crewRef = useRef();
+  const [st, setSt] = useState({ phase: 'boarding', k: 0, f: 0 });
+  const job = myBusy?.kind === 'job' ? myBusy.id : null;
+  const act = myBusy?.kind === 'activity' ? findActivity(myBusy.placeId, myBusy.id) : null;
+  useFrame(({ clock }) => {
+    if (!myBusy) return;
+    const f = Math.min(1, Math.max(0, (Date.now() - myBusy.startedAt) / (myBusy.endsAt - myBusy.startedAt)));
+    const ph = flightPhase(job ? 0.5 : f); // crew jobs: mostly cruising
+    const phases = [0, 0.16, 0.32, 0.8, 1];
+    const i = ['boarding', 'takeoff', 'cruise', 'landing'].indexOf(ph[1]);
+    const k = (f - phases[i]) / (phases[i + 1] - phases[i]);
+    if (ph[1] !== st.phase || Math.abs(k - st.k) > 0.02) setSt({ phase: ph[1], k, f });
+    // Camera: inside cabin vs. chase cam outside.
+    const outsideAuto = st.phase === 'takeoff' || st.phase === 'landing' || (st.phase === 'cruise' && st.k > 0.5);
+    const outside = view ? view === 'outside' : outsideAuto;
+    const t = clock.elapsedTime;
+    if (outside) {
+      // Slow orbit while cruising; fixed rear-quarter chase for take-off/landing. Far enough
+      // back that the whole airliner fits a portrait phone screen.
+      const a = st.phase === 'cruise' ? 0.5 + Math.sin(t * 0.08) * 1.1 : 0.55;
+      const r = st.phase === 'cruise' ? 78 : 66;
+      sceneCam.pos = [OUT[0] + Math.sin(a) * r, OUT[1] + (st.phase === 'cruise' ? 16 : 9) + Math.sin(t * 0.2) * 2, OUT[2] - Math.cos(a) * r];
+      sceneCam.look = [OUT[0], OUT[1], OUT[2] + 2];
+    } else {
+      sceneCam.pos = [0.5 + Math.sin(t * 0.3) * 0.1, 2.4, 9.8];
+      sceneCam.look = [-0.7, 0.9, -3];
+    }
+  });
+  return (
+    <group>
+      <Cabin me={me} phase={st.phase} job={job} crewRef={crewRef} />
+      <group position={OUT}><Sky phase={st.phase} k={st.k} flight={act?.flight} /></group>
+    </group>
+  );
+}
+const OUT = [0, 300, -600];
+
 // ---------------------------------------------------------------- config
 export const SCENES = {
   club: { C: Club, camera: { pos: [0, 8.5, 13], look: [0, 1.2, -1.5] }, dark: true, bg: '#0b0614', light: 0.25 },
@@ -842,6 +1194,10 @@ export const SCENES = {
   studio: { C: Studio, camera: { pos: [0, 4.5, 7.5], look: [0, 1.4, 0] }, bg: '#0b0614', light: 0.4 },
   cinema: { C: Cinema, camera: { pos: [0, 6.5, 10.5], look: [0, 2.6, -8] }, bg: '#000000', light: 0.25 },
   gym: { C: Gym, camera: { pos: [0, 5, 8], look: [0, 1, -1] }, bg: '#1c1917', light: 0.9 },
+  flight: { C: Flight, dynamic: true, bg: '#7dd3fc', light: 1.1 },
+  office: { C: Office, camera: { pos: [0, 8, 11], look: [0, 0.6, -0.5] }, bg: '#0f172a', light: 1 },
+  bank: { C: (p) => <Office {...p} bank />, camera: { pos: [0, 8, 11], look: [0, 0.6, -0.8] }, bg: '#0f172a', light: 1 },
+  shop: { C: Shop, camera: { pos: [0, 7.5, 10.5], look: [0, 0.6, -0.5] }, bg: '#1c1917', light: 1 },
   hospital: { C: Hospital, camera: { pos: [0, 8.5, 12], look: [0, 0.6, -2.2] }, bg: '#0f172a', light: 1 },
   classroom: { C: Classroom, camera: { pos: [0, 5.5, 9], look: [0, 1.6, -4] }, bg: '#1c1917', light: 0.9 },
 };
