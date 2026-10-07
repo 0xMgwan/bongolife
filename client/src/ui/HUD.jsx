@@ -15,6 +15,45 @@ import { WorkPanel } from './WorkPanel.jsx';
 import { useLiveEvents, joinParty } from './events.js';
 import { haptic } from '../haptics.js';
 
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Balance pill: counts to the new amount, flashes green/red and floats the difference. */
+function MoneyPill({ money, onClick }) {
+  const [shown, setShown] = useState(money);
+  const [delta, setDelta] = useState(null);
+  const prev = useRef(money);
+  useEffect(() => {
+    const from = prev.current;
+    prev.current = money;
+    if (money === from) return;
+    const diff = money - from;
+    setDelta({ diff, key: Date.now() });
+    if (diff > 0) haptic('coin');
+    if (reducedMotion()) return setShown(money);
+    const start = performance.now();
+    let raf;
+    const step = (t) => {
+      const k = Math.min(1, (t - start) / 600);
+      setShown(Math.round(from + diff * (1 - (1 - k) ** 3)));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [money]);
+  useEffect(() => {
+    if (!delta) return;
+    const t = setTimeout(() => setDelta(null), 1400);
+    return () => clearTimeout(t);
+  }, [delta]);
+  const up = delta && delta.diff > 0;
+  return (
+    <button className={`tb-money${delta ? (up ? ' gain' : ' spend') : ''}`} onClick={onClick}>
+      TSh {fmtShort(shown)} <i>＋</i>
+      {delta && <b key={delta.key} className={`tb-delta ${up ? 'up' : 'down'}`}>{up ? '+' : '−'}{fmtShort(Math.abs(delta.diff))}</b>}
+    </button>
+  );
+}
+
 /** Banner shown while inside a venue or doing a scene activity. */
 /** In-flight bar: phase + destination, camera toggle (auto / cabin / outside). */
 function FlightBar({ me }) {
@@ -297,9 +336,7 @@ function TopBar({ me }) {
         <button className="tb-mood" onClick={() => openPhone('mipangilio')}>{mood.emoji} <span>{mood.text}</span></button>
         <span className="tb-sep" />
         <button className="tb-sound" onClick={() => setAudioSettings({ muted: !sound.muted })} aria-label={L('Sauti', 'Sound')}>{sound.muted ? '🔇' : '🔊'}</button>
-        <button className="tb-money" onClick={() => openPhone('pesa', 'topup')}>
-          TSh {fmtShort(me.money)} <i>＋</i>
-        </button>
+        <MoneyPill money={me.money} onClick={() => openPhone('pesa', 'topup')} />
       </div>
       {!clean && (
         <div className="tb-pills">

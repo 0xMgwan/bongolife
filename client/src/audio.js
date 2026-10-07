@@ -151,8 +151,8 @@ const SFX = {
 };
 
 /** Play a one-shot effect by name. Safe to call before audio is unlocked. */
-export function sfx(name) {
-  haptic(SFX_HAPTIC[name]);
+export function sfx(name, { haptic: withHaptic = true } = {}) {
+  if (withHaptic) haptic(SFX_HAPTIC[name]);
   if (!ctx || ctx.state !== 'running' || audioSettings.muted) return;
   SFX[name]?.(ctx.currentTime + 0.01);
 }
