@@ -124,8 +124,11 @@ export function Kabati({ back }) {
     <>
       <AppHead title={L('Kabati', 'Wardrobe')} onBack={back} right={<button className="btn btn-green btn-sm" onClick={save}>{L('Hifadhi', 'Save')}</button>} />
       <div className="app-body">
-        <div style={{ height: 220, background: 'linear-gradient(180deg,#dbe9f7,#fff)', borderRadius: 18 }}>
-          <AvatarPreview appearance={a} />
+        {/* Pinned while the options scroll underneath, so every change stays in view. */}
+        <div className="wardrobe-preview">
+          <div className="wp-stage">
+            <AvatarPreview appearance={a} />
+          </div>
         </div>
         <div className="label">{L('Nguo zako', 'Your outfits')}</div>
         <div className="chips">

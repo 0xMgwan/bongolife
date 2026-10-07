@@ -57,8 +57,12 @@ export function connect() {
     bump();
   });
   socket.on('player:join', (p) => {
+    const known = remotes.has(p.id);
     remotes.set(p.id, { ...p, tx: p.x, tz: p.z, tr: p.ry });
     bump();
+    // Pop a "who's online" alert for someone new arriving (not a re-sync of someone already here).
+    if (!known && p.username && p.username !== st().me?.username)
+      useStore.setState((s) => ({ presence: [...s.presence.slice(-2), { key: `${p.id}-${Date.now()}`, id: p.id, username: p.username, appearance: p.appearance }] }));
   });
   socket.on('player:leave', ({ id }) => {
     remotes.delete(id);

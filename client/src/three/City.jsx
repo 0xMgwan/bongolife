@@ -510,7 +510,8 @@ function towerFacade(color) {
  * `scale` is the old world size; it maps to a fraction of the screen height.
  */
 export function Marker({ emoji, y, scale = 3.2, label, onClick, ring }) {
-  const tex = useMemo(() => emojiTexture(emoji, { ring }), [emoji, ring]);
+  // Place markers float bare (no disc); a coloured ring still means something, so keep the disc then.
+  const tex = useMemo(() => emojiTexture(emoji, ring ? { ring } : { bare: true }), [emoji, ring]);
   const lab = useMemo(() => (label ? labelTexture(label, { size: 34 }) : null), [label]);
   const s = scale * 0.016;
   const lh = 0.022;

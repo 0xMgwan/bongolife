@@ -55,11 +55,34 @@ function roundRect(ctx, x, y, w, h, r) {
 
 // ------------------------------------------------------- sprites
 const emojiCache = new Map();
-/** White circle marker with an emoji, like the map pins in the reference. */
-export function emojiTexture(emoji, { ring = '#ffffff', bg = '#ffffff' } = {}) {
-  const key = emoji + ring + bg;
+/**
+ * White circle marker with an emoji, like the map pins in the reference. `bare` drops the circle:
+ * the emoji floats on its own with a drop shadow and a soft shadow on the "ground" below it.
+ */
+export function emojiTexture(emoji, { ring = '#ffffff', bg = '#ffffff', bare = false } = {}) {
+  const key = emoji + ring + bg + (bare ? ':bare' : '');
   if (emojiCache.has(key)) return emojiCache.get(key);
   const t = canvasTex(128, 128, (ctx) => {
+    if (bare) {
+      const g = ctx.createRadialGradient(64, 116, 2, 64, 116, 30);
+      g.addColorStop(0, 'rgba(0,0,0,.32)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(64, 116, 30, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = `78px ${EMOJI_FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,.45)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 7;
+      ctx.fillText(emoji, 64, 56);
+      // Second pass without the shadow keeps the glyph crisp on top of its own shadow.
+      ctx.shadowColor = 'transparent';
+      ctx.fillText(emoji, 64, 56);
+      return;
+    }
     ctx.shadowColor = 'rgba(0,0,0,.25)';
     ctx.shadowBlur = 10;
     ctx.shadowOffsetY = 3;

@@ -21,7 +21,7 @@ window.addEventListener('pointerdown', (e) => {
 }, { capture: true });
 window.addEventListener('click', (e) => {
   const el = e.target.closest?.(TAPPABLE);
-  if (el && !el.disabled) haptic(el.classList.contains('chip') ? 'select' : 'tap');
+  if (el && !el.disabled && !el.closest('.dragging')) haptic(el.classList.contains('chip') ? 'select' : 'tap');
 }, { capture: true });
 
 createRoot(document.getElementById('root')).render(<App />);

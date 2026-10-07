@@ -8,6 +8,7 @@ import { useStore } from '../store.js';
 import { api, visitorId } from '../api.js';
 import { connect, local, input, setInside, enterHome, leaveHome } from '../net.js';
 import { SocialModals } from './Social.jsx';
+import { PresenceAlerts } from './LiveNow.jsx';
 import { readDeepLink } from './share.js';
 import { loadEvents } from './events.js';
 import { sfx } from '../audio.js';
@@ -162,6 +163,7 @@ export default function Game() {
       <Sheets />
       <Phone />
       <SocialModals />
+      <PresenceAlerts />
     </div>
   );
 }

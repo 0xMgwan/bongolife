@@ -65,32 +65,40 @@ function Catalogue() {
     sfx('pop');
     useStore.setState({ placing: { def, ...spot, rot: 0 } });
   };
+  // Hidden: a floating button brings it back. Shown: a card popping up in the middle of the room.
+  if (hidden) {
+    return (
+      <button className="cat-fab" onClick={() => setHidden(false)}>🛍️ {L('Katalogi', 'Catalogue')}</button>
+    );
+  }
   return (
-    <div className="catalogue card">
-      <div className="row between">
-        <h3 style={{ margin: 0 }}>{L('Katalogi', 'Catalogue')}</h3>
-        <button className="btn btn-ghost btn-xs" onClick={() => setHidden(!hidden)}>{hidden ? L('Onyesha', 'Show') : L('Ficha', 'Hide')}</button>
-      </div>
-      {!hidden && (
-        <>
-          <div className="cat-chips">
-            {FURNITURE_CATS.map((c) => (
-              <button key={c.id} className={`chip ${cat === c.id ? 'on-yellow' : ''}`} onClick={() => setCat(c.id)}>{c.icon} {loc(c)}</button>
-            ))}
-          </div>
-          <div className="cat-grid">
-            {FURNITURE.filter((f) => f.cat === cat).map((f) => (
-              <button key={f.id} className="cat-card" onClick={() => pick(f)} disabled={me.money < f.price}>
-                <div className="row between small muted"><span>{f.size[0]}×{f.size[1]}</span><span className="stars">{stars(f.stars)}</span></div>
-                <div className="cat-ic"><Thumb def={f} /></div>
-                <div className="cat-name">{loc(f)}</div>
+    <>
+      <div className="cat-backdrop" onClick={() => setHidden(true)} />
+      <div className="catalogue card" role="dialog" aria-label={L('Katalogi', 'Catalogue')}>
+        <div className="row between">
+          <h3 style={{ margin: 0 }}>🛍️ {L('Katalogi', 'Catalogue')}</h3>
+          <button className="cat-x" onClick={() => setHidden(true)} aria-label={L('Ficha', 'Hide')}>✕</button>
+        </div>
+        <div className="cat-chips">
+          {FURNITURE_CATS.map((c) => (
+            <button key={c.id} className={`chip ${cat === c.id ? 'on-yellow' : ''}`} onClick={() => setCat(c.id)}>{c.icon} {loc(c)}</button>
+          ))}
+        </div>
+        <div className="cat-grid" key={cat}>
+          {/* Just the item floating, its price and a Select button; the name is for screen readers. */}
+          {FURNITURE.filter((f) => f.cat === cat).map((f, i) => {
+            const broke = me.money < f.price;
+            return (
+              <div key={f.id} className={`cat-item ${broke ? 'broke' : ''}`} style={{ '--i': Math.min(i, 9) }}>
+                <button className="cat-ic" onClick={() => pick(f)} disabled={broke} aria-label={loc(f)} title={loc(f)}><Thumb def={f} size={84} /></button>
                 <div className="cat-price">{f.price ? fmtTsh(f.price) : L('Bure', 'Free')}</div>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+                <button className="cat-pick" onClick={() => pick(f)} disabled={broke}>{broke ? L('Pesa haitoshi', 'Not enough') : L('Chagua', 'Select')}</button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 }
 
