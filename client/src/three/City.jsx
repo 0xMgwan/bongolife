@@ -603,7 +603,7 @@ const Plots = memo(function Plots({ plots, onPlot, myUsername }) {
           y={b ? b.floors * 2.6 + 4.5 : 3}
           scale={2.4}
           label={st ? `@${st.owner}` : `TSh ${fmtShort(p.price)}`}
-          ring={mine ? '#2fb06f' : undefined}
+          ring={mine ? '#f5b800' : undefined}
           onClick={click}
         />
       </group>

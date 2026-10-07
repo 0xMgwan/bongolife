@@ -41,7 +41,7 @@ export function Ramani({ back, close }) {
             ))}
             <g transform={`translate(${local.x} ${local.z})`}>
               <circle r="6" fill="rgba(47,176,111,.25)" />
-              <circle r="3.2" fill="#2fb06f" stroke="#fff" strokeWidth="1.4" />
+              <circle r="3.2" fill="#f5b800" stroke="#fff" strokeWidth="1.4" />
             </g>
           </svg>
         </div>
