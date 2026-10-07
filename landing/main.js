@@ -1,5 +1,5 @@
 // Bongo Life landing page — language switch, live stats and links into the game.
-const GAME_URL = 'https://bongolife-production.up.railway.app';
+const GAME_URL = 'https://play.bongolife.app';
 
 // ---------------------------------------------------------------- language
 const params = new URLSearchParams(location.search);
