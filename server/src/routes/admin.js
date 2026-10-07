@@ -279,7 +279,7 @@ admin.post('/topups/:id/recheck', async (req, res, next) => {
   try {
     const t = db.prepare('SELECT * FROM topups WHERE id = ?').get(int(req.params.id));
     if (!t) throw new GameError('Top-up not found', 404);
-    const status = await settleTopup(t);
+    const status = await settleTopup(t, { recheckExpired: true });
     audit(req.user.id, 'topup.recheck', 'topup', t.id, { status });
     res.json({ status });
   } catch (e) {
@@ -292,9 +292,10 @@ admin.post('/topups/:id/mark', (req, res) => {
   const status = req.body.status === 'paid' ? 'paid' : 'failed';
   const note = str(req.body.note, 200);
   if (!note) throw new GameError('A note is required (e.g. the mobile money receipt)');
-  if (t.status !== 'pending') throw new GameError(`Top-up is already ${t.status}`);
+  // An expired top-up can still be marked paid (money arrived after our 72h timeout), but not failed again.
+  if (!(t.status === 'pending' || (t.status === 'expired' && status === 'paid'))) throw new GameError(`Top-up is already ${t.status}`);
   db.transaction(() => {
-    const r = db.prepare("UPDATE topups SET status = ?, credited_at = ? WHERE id = ? AND status = 'pending'").run(status, status === 'paid' ? now() : null, t.id);
+    const r = db.prepare("UPDATE topups SET status = ?, credited_at = ? WHERE id = ? AND status IN ('pending', 'expired')").run(status, status === 'paid' ? now() : null, t.id);
     if (r.changes && status === 'paid') addMoney(t.user_id, t.coins, 'topup', `Top-up (manual): TZS ${t.amount_tzs.toLocaleString()}`);
   })();
   if (status === 'paid') emitTo(t.user_id, 'toast', { text: [`✅ Salio limeingia: TSh ${t.coins.toLocaleString()}`, `✅ Top-up received: TSh ${t.coins.toLocaleString()}`], refresh: true });

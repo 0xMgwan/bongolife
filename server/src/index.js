@@ -293,10 +293,20 @@ setInterval(() => {
   }
 }, 30_000);
 
-// Settle pending top-ups in the background (webhook-free, idempotent).
+// Settle pending top-ups in the background (webhook-free, idempotent). Walks the pending set in
+// batches with a cursor so 25+ abandoned pushes can't starve newer top-ups, and never overlaps runs.
+let topupCursor = 0;
+let settling = false;
 setInterval(async () => {
-  const rows = db.prepare("SELECT * FROM topups WHERE status = 'pending' ORDER BY id LIMIT 25").all();
-  for (const t of rows) await settleTopup(t);
+  if (settling) return;
+  settling = true;
+  try {
+    const rows = db.prepare("SELECT * FROM topups WHERE status = 'pending' AND id > ? ORDER BY id LIMIT 25").all(topupCursor);
+    topupCursor = rows.length < 25 ? 0 : rows[rows.length - 1].id;
+    for (const t of rows) await settleTopup(t);
+  } finally {
+    settling = false;
+  }
 }, 15_000);
 
 server.listen(PORT, () => console.log(`🇹🇿 Bongo Life server on http://localhost:${PORT}`));
