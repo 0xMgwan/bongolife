@@ -37,7 +37,7 @@ export async function loadHome() {
 
 /** 3D render of the item (falls back to its emoji while rendering or if WebGL is unavailable). */
 export function Thumb({ def, size = 64 }) {
-  const [url, setUrl] = useState(() => cachedThumb(def.id));
+  const [url, setUrl] = useState(() => cachedThumb(`f:${def.id}`));
   useEffect(() => {
     let live = true;
     if (!url) furnitureThumb(def).then((u) => live && setUrl(u)).catch(() => {});

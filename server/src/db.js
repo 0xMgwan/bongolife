@@ -130,6 +130,8 @@ addColumn('messages', 'deleted_at', 'INTEGER');
 addColumn('users', 'home_seeded', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('users', 'car_seeded', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('users', 'referred_by', 'INTEGER');
+// The starter car changed from a Vitz to a Toyota IST.
+db.prepare("UPDATE vehicles SET model = 'ist' WHERE model = 'vitz'").run();
 addColumn('users', 'referral_paid', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('users', 'health', 'INTEGER NOT NULL DEFAULT 100');
 addColumn('users', 'injured_at', 'INTEGER');

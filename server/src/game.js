@@ -259,7 +259,7 @@ export const startAction = db.transaction((userId, { kind, placeId, id }) => {
     if (job.requires?.vehicle) {
       const owned = q.vehicles.all(userId).map((v) => v.model);
       if (!job.requires.vehicle.some((m) => owned.includes(m)))
-        throw new GameError([`Unahitaji ${job.requires.vehicle.map((m) => vehicleById[m].name).join(' / ')} kufanya kazi hii.`, `You need a ${job.requires.vehicle.map((m) => vehicleById[m].nameEn).join(' / ')} for this job.`]);
+        throw new GameError(job.requires.vehicle.length > 3 ? ['Unahitaji gari kufanya kazi hii.', 'You need a car for this job.'] : [`Unahitaji ${job.requires.vehicle.map((m) => vehicleById[m].name).join(' / ')} kufanya kazi hii.`, `You need a ${job.requires.vehicle.map((m) => vehicleById[m].nameEn).join(' / ')} for this job.`]);
     }
     if ((user.health ?? 100) < HEALTH.injuredBelow) throw new GameError(['Uko mgonjwa — nenda hospitali kwanza. 🏥', "You're injured — get treated at the hospital first. 🏥"]);
     if ((user.needs.energy ?? 0) < job.energy) throw new GameError(['Umechoka sana! Nenda kalale kwanza. 😴', 'You\'re exhausted! Go sleep first. 😴']);

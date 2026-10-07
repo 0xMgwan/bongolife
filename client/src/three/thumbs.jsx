@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { createRoot, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { FurnitureModel } from './Furniture.jsx';
+import { Vehicle } from './Vehicle.jsx';
 
 const SIZE = 192;
 const cache = new Map(); // id -> dataURL
@@ -13,7 +14,7 @@ let root = null;
 let canvas = null;
 let busy = false;
 
-function Shot({ def, done }) {
+function Shot({ item, done }) {
   const group = useRef();
   const { gl, scene, camera } = useThree();
   useLayoutEffect(() => {
@@ -28,18 +29,14 @@ function Shot({ def, done }) {
     camera.updateProjectionMatrix();
     gl.render(scene, camera);
     done(gl.domElement.toDataURL('image/png'));
-  }, [def]); // eslint-disable-line react-hooks/exhaustive-deps
-  return (
-    <group ref={group}>
-      <FurnitureModel def={def} />
-    </group>
-  );
+  }, [item]); // eslint-disable-line react-hooks/exhaustive-deps
+  return <group ref={group}>{item.el}</group>;
 }
 
 function pump() {
   if (busy || !queue.length) return;
   busy = true;
-  const def = queue.shift();
+  const item = queue.shift();
   if (!root) {
     canvas = document.createElement('canvas');
     canvas.width = canvas.height = SIZE;
@@ -54,9 +51,9 @@ function pump() {
     });
   }
   const done = (url) => {
-    cache.set(def.id, url);
-    (waiting.get(def.id) || []).forEach((f) => f(url));
-    waiting.delete(def.id);
+    cache.set(item.key, url);
+    (waiting.get(item.key) || []).forEach((f) => f(url));
+    waiting.delete(item.key);
     busy = false;
     // Let the browser breathe between renders.
     setTimeout(pump, 0);
@@ -65,21 +62,25 @@ function pump() {
     <>
       <hemisphereLight args={['#ffffff', '#cbd5e1', 1.8]} />
       <directionalLight position={[3, 5, 4]} intensity={1.5} />
-      <Shot key={def.id} def={def} done={done} />
+      <Shot key={item.key} item={item} done={done} />
     </>,
   );
 }
 
-/** Promise of a PNG data URL of the item's 3D model. */
-export function furnitureThumb(def) {
-  if (cache.has(def.id)) return Promise.resolve(cache.get(def.id));
+function thumb(key, el) {
+  if (cache.has(key)) return Promise.resolve(cache.get(key));
   return new Promise((resolve) => {
-    if (!waiting.has(def.id)) {
-      waiting.set(def.id, []);
-      queue.push(def);
+    if (!waiting.has(key)) {
+      waiting.set(key, []);
+      queue.push({ key, el });
     }
-    waiting.get(def.id).push(resolve);
+    waiting.get(key).push(resolve);
     pump();
   });
 }
-export const cachedThumb = (id) => cache.get(id) || null;
+
+/** PNG data URL of a furniture item's 3D model. */
+export const furnitureThumb = (def) => thumb(`f:${def.id}`, <FurnitureModel def={def} />);
+/** PNG data URL of a vehicle in a given colour. */
+export const vehicleThumb = (v, color) => thumb(`v:${v.id}:${color}`, <Vehicle kind={v.kind} body={v.body} lux={v.lux} color={color} />);
+export const cachedThumb = (key) => cache.get(key) || null;

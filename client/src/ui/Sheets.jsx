@@ -12,6 +12,7 @@ import { setInside } from '../net.js';
 import { inviteHome, goToPlayer } from './social.js';
 import { TravelCard } from './Travel.jsx';
 import { share } from './share.js';
+import { vehicleThumb, cachedThumb } from '../three/thumbs.jsx';
 import { L, loc, isEn } from '../i18n.js';
 
 const jt = (j, n) => (isEn() ? jobTitleEn(j, n) : jobTitle(j, n));
@@ -74,29 +75,61 @@ function OutfitShop({ me }) {
   );
 }
 
+const TIERS = [
+  [0, '🛵 Kuanzia', '🛵 Getting around'],
+  [1, '🚗 Gari la kwanza', '🚗 First car'],
+  [2, '👨‍👩‍👧 Familia & kazi', '👨‍👩‍👧 Family & work'],
+  [3, '💼 Mabosi', '💼 Executive'],
+  [4, '👑 Kifahari', '👑 Luxury'],
+  [5, '🔥 Watu wazito', '🔥 Big boss'],
+  [6, '🏎️ Supercars', '🏎️ Supercars'],
+];
+function CarPic({ v, color }) {
+  const [url, setUrl] = useState(() => cachedThumb(`v:${v.id}:${color}`));
+  useEffect(() => {
+    let live = true;
+    setUrl(cachedThumb(`v:${v.id}:${color}`));
+    vehicleThumb(v, color).then((u) => live && setUrl(u)).catch(() => {});
+    return () => { live = false; };
+  }, [v, color]);
+  return url ? <img src={url} alt="" className="car-pic" /> : <span className="car-pic em">{v.emoji}</span>;
+}
+
+/** Car yard showroom: every vehicle with a 3D preview in the colour you pick, by tier. */
 function VehicleShop({ me }) {
   const run = useStore((s) => s.run);
   const [color, setColor] = useState({});
+  const owned = new Set(me.vehicles.map((v) => v.model));
   return (
     <>
-      <div className="section-t">{L('Magari yanayouzwa', 'Vehicles for sale')}</div>
-      {VEHICLES.map((v) => {
-        const c = color[v.id] || v.color;
+      {TIERS.map(([tier, sw, en]) => {
+        const list = VEHICLES.filter((v) => (v.tier || 0) === tier);
+        if (!list.length) return null;
         return (
-          <div key={v.id} className="item" style={{ flexWrap: 'wrap' }}>
-            <span className="em">{v.emoji}</span>
-            <div className="grow">
-              <div className="t">{loc(v)}</div>
-              <div className="s">{fmtTsh(v.price)} · {L('Spidi', 'Speed')} ×{v.speed}</div>
-            </div>
-            <button className="btn btn-green btn-sm" disabled={me.money < v.price} onClick={() => run('/shop/vehicle', { method: 'POST', body: { model: v.id, color: c } }).then((r) => r && useStore.getState().toast(L(`🎉 Hongera! ${v.name} ni yako. Bonyeza kitufe cha gari kuendesha.`, `🎉 Congrats! The ${loc(v)} is yours. Tap the vehicle button to drive.`)))}>
-              {L('Nunua', 'Buy')}
-            </button>
-            <div className="swatches" style={{ width: '100%', gap: 6, marginTop: 8, paddingLeft: 52 }}>
-              {VEHICLE_COLORS.map((col) => (
-                <button key={col} className={`swatch ${c === col ? 'on' : ''}`} style={{ background: col, width: 26, height: 26, borderWidth: 2 }} onClick={() => setColor({ ...color, [v.id]: col })} aria-label={col} />
-              ))}
-            </div>
+          <div key={tier}>
+            <div className="section-t">{L(sw, en)}</div>
+            {list.map((v) => {
+              const c = color[v.id] || v.color;
+              return (
+                <div key={v.id} className="car-card">
+                  <CarPic v={v} color={c} />
+                  <div className="row between" style={{ alignItems: 'flex-start' }}>
+                    <div>
+                      <div className="t">{loc(v)} {owned.has(v.id) && <span className="tag friend">{L('Unalo', 'Owned')}</span>}</div>
+                      <div className="s">{fmtTsh(v.price)} · {L('Spidi', 'Speed')} ×{v.speed}{v.lux ? ' · ✨' : ''}</div>
+                    </div>
+                    <button className="btn btn-green btn-sm" disabled={me.money < v.price} onClick={() => run('/shop/vehicle', { method: 'POST', body: { model: v.id, color: c } }).then((r) => r && useStore.getState().toast(L(`🎉 Hongera! ${v.name} ni yako — liko nje, gusa kuliendesha.`, `🎉 Congrats! The ${loc(v)} is yours — it's parked outside, tap it to drive.`)))}>
+                      {L('Nunua', 'Buy')}
+                    </button>
+                  </div>
+                  <div className="swatches" style={{ gap: 6, marginTop: 8 }}>
+                    {VEHICLE_COLORS.map((col) => (
+                      <button key={col} className={`swatch ${c === col ? 'on' : ''}`} style={{ background: col, width: 24, height: 24, borderWidth: 2 }} onClick={() => setColor({ ...color, [v.id]: col })} aria-label={col} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         );
       })}
@@ -169,7 +202,7 @@ function PlaceSheet({ id, onClose }) {
               <div className="t">{jt(j, shifts)}</div>
               <div className="s">~{fmtTsh(pay)} / {L('shifti', 'shift')} · {j.secs}s · ⚡ -{j.energy} · Level {jobLevel(shifts) + 1} ({shifts} {L('shifti', 'shifts')})</div>
               {needsElimu && <div className="s red">🎓 {L('Inahitaji Elimu level', 'Needs Education level')} {j.requires.elimu}</div>}
-              {needsVehicle && <div className="s red">🔑 {L('Inahitaji', 'Needs')} {j.requires.vehicle.map((m) => loc(vehicleById[m])).join(' / ')}</div>}
+              {needsVehicle && <div className="s red">🔑 {L('Inahitaji', 'Needs')} {(j.requires.vehicle.length > 3 ? L('gari lolote', 'any car') : j.requires.vehicle.map((m) => loc(vehicleById[m])).join(' / '))}</div>}
             </div>
             <button className="btn btn-dark btn-sm" disabled={busy || needsElimu || needsVehicle} onClick={() => start('job', j.id)}>{L('Anza', 'Start')}</button>
           </div>

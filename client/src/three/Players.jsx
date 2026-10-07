@@ -81,7 +81,7 @@ export function Body({ appearance, vehicle, motion }) {
   const seat = riderOffset(v.kind);
   return (
     <group>
-      <Vehicle kind={v.kind} color={vehicle.color} />
+      <Vehicle kind={v.kind} body={v.body || vehicle.body} lux={v.lux} color={vehicle.color} />
       {seat && (
         <group position={seat}>
           <Avatar appearance={appearance} motion={{ current: { mode: 'sit' } }} />
@@ -135,7 +135,7 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
   const motion = useRef({ moving: false, mode: 'idle', speed: 1 });
   const riding = useStore((s) => s.riding);
   const owned = useMemo(() => me.vehicles?.find((v) => v.id === me.activeVehicle) || null, [me.vehicles, me.activeVehicle]);
-  const vehicle = riding ? { kind: riding.kind, color: riding.color } : owned;
+  const vehicle = riding ? { kind: riding.kind, body: riding.body || (riding.mode === 'taxi' ? 'sedan' : undefined), lux: riding.lux, color: riding.color } : owned;
   const speedMult = vehicle ? vehicleById[vehicle.model]?.speed || 1 : 1;
   const busyRef = useRef(me.busy);
   busyRef.current = me.busy && me.busy.endsAt > Date.now() - 2000 ? me.busy : null;
@@ -342,4 +342,58 @@ export function placeDoor(placeId) {
   const [px, pz] = p.pos;
   const cands = [[px, pz + p.size[1] / 2 + 2.2], [px, pz - p.size[1] / 2 - 2.2], [px - p.size[0] / 2 - 2.2, pz], [px + p.size[0] / 2 + 2.2, pz]];
   return cands.find(([x, z]) => !isWater(x, z)) || cands[0];
+}
+
+// ------------------------------------------------------------- parked car
+const CARLIKE = ['car', 'van', 'suv', 'moto', 'bajaji', 'bike'];
+const loadPark = () => { try { return JSON.parse(localStorage.getItem('bl_park') || 'null'); } catch { return null; } };
+const savePark = (p) => { try { localStorage.setItem('bl_park', JSON.stringify(p)); } catch {} };
+/** The car you own but aren't driving, parked where you left it. Tap it to drive. */
+export function ParkedCar({ me }) {
+  const riding = useStore((s) => s.riding);
+  const run = useStore((s) => s.run);
+  const g = useRef();
+  const cars = (me.vehicles || []).filter((v) => CARLIKE.includes(vehicleById[v.model]?.kind));
+  const pick = cars.find((v) => v.id === local.lastCar) || [...cars].sort((a, b) => (vehicleById[b.model]?.price || 0) - (vehicleById[a.model]?.price || 0))[0];
+  const prevActive = useRef(me.activeVehicle);
+  useEffect(() => {
+    // Getting out: leave the car right here.
+    if (prevActive.current && !me.activeVehicle) {
+      local.lastCar = prevActive.current;
+      local.parked = { x: local.x + Math.cos(local.ry) * 2.4, z: local.z - Math.sin(local.ry) * 2.4, ry: local.ry };
+      savePark(local.parked);
+    }
+    prevActive.current = me.activeVehicle;
+  }, [me.activeVehicle]);
+  useFrame(() => {
+    if (!g.current) return;
+    if (!local.parked) local.parked = loadPark();
+    // First time, or you're far away (took a cab / flew): the car is waiting next to you.
+    const p = local.parked;
+    if (!p || (!local.ride && Math.hypot(p.x - local.x, p.z - local.z) > 90) || isWater(p.x, p.z)) {
+      local.parked = { x: local.x + 2.6, z: local.z + 0.6, ry: local.ry || 0 };
+      savePark(local.parked);
+    }
+    g.current.position.set(local.parked.x, 0.05, local.parked.z);
+    g.current.rotation.y = local.parked.ry;
+  });
+  if (!pick || me.activeVehicle || riding) return null;
+  const v = vehicleById[pick.model];
+  const drive = (e) => {
+    if (e.delta > 10) return;
+    e.stopPropagation();
+    local.lastCar = pick.id;
+    // Hop in where the car is.
+    local.x = local.parked.x;
+    local.z = local.parked.z;
+    local.ry = local.parked.ry;
+    local.teleported++;
+    sfx('horn');
+    run('/vehicle/use', { method: 'POST', body: { vehicleId: pick.id } });
+  };
+  return (
+    <group ref={g} onClick={drive}>
+      <Vehicle kind={v.kind} body={v.body} lux={v.lux} color={pick.color} />
+    </group>
+  );
 }

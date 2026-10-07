@@ -23,7 +23,8 @@ export function TravelOptions({ placeId, onDone }) {
     const r = await run('/travel', { method: 'POST', body: { placeId, mode } });
     if (!r) return;
     sfx('horn');
-    const look = r.car ? { kind: vehicleById[r.car.model]?.kind, color: r.car.color } : null;
+    const cv = r.car && vehicleById[r.car.model];
+    const look = cv ? { kind: cv.kind, body: cv.body, lux: cv.lux, color: r.car.color } : null;
     startRide(mode, r.pos, placeId, () => {
       sfx('pop');
       useStore.getState().toast(r.cost ? L(`${TRAVEL[mode].emoji} Umefika ${place.name} · ${fmtTsh(r.cost)}`, `${TRAVEL[mode].emoji} Arrived at ${loc(place)} · ${fmtTsh(r.cost)}`) : L(`📍 Umefika ${place.name}`, `📍 Arrived at ${loc(place)}`));

@@ -496,3 +496,8 @@ textarea.field { border-radius: 18px; resize: none; }
 .cand .bar { height: 6px; border-radius: 6px; background: var(--chip); overflow: hidden; margin-top: 4px; }
 .cand .bar i { display: block; height: 100%; background: #f59e0b; }
 .invite-card a.btn { text-decoration: none; }
+.car-card { background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 10px 12px 12px; margin-bottom: 10px; }
+.car-card .car-pic { display: block; width: 100%; height: 130px; object-fit: contain; background: linear-gradient(180deg, #f1f5f9, #e2e8f0); border-radius: 14px; margin-bottom: 8px; }
+.car-card .car-pic.em { display: grid; place-items: center; font-size: 56px; }
+.car-card .t { font-weight: 800; }
+.car-card .s { color: var(--mute); font-size: 13px; }

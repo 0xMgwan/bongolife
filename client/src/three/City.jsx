@@ -6,7 +6,7 @@ import {
   isWater, onRoad, buildingById, fmtShort, randomAppearance, AD_ROTATE_SECONDS,
 } from '@shared/world.js';
 import { mat, geo, emojiTexture, labelTexture, windowTexture, adTexture } from './textures.js';
-import { Vehicle, Boat, Plane } from './Vehicle.jsx';
+import { Vehicle, Boat, Plane, Car } from './Vehicle.jsx';
 import { Avatar } from './Avatar.jsx';
 import { L, loc } from '../i18n.js';
 import { trafficCars } from '../net.js';
@@ -291,6 +291,104 @@ function PlaceModel({ place, owner }) {
           {Array.from({ length: Math.floor(d / 6) }, (_, i) => (
             <Umbrella key={i} x={(i % 2 ? -1 : 1) * 1.5} z={-d / 2 + 3 + i * 6} c={['#ef4444', '#f59e0b', '#3b82f6', '#22c55e', '#ec4899'][i % 5]} />
           ))}
+        </group>
+      );
+    case 'salon':
+    case 'grill':
+      return (
+        <group>
+          <Box w={w} h={h} d={d} color={c} />
+          <Box w={w + 0.6} h={0.4} d={d + 0.6} color={place.type === 'grill' ? '#78350f' : '#be185d'} y={h} />
+          <mesh geometry={geo('box', w + 1, 0.15, 3)} material={mat(place.type === 'grill' ? '#16a34a' : '#f472b6')} position={[0, 2.8, d / 2 + 1.3]} rotation={[0.25, 0, 0]} />
+          {place.type === 'salon' ? (
+            <group position={[w / 2 - 0.6, 0, d / 2 + 0.4]}>
+              <mesh geometry={geo('cyl', 0.18, 0.18, 1.6, 10)} material={mat('#f8fafc')} position={[0, 1.6, 0]} />
+              {[0, 1, 2].map((i) => <mesh key={i} geometry={geo('torus', 0.19, 0.04, 6, 12)} material={mat(i % 2 ? '#1d4ed8' : '#dc2626')} position={[0, 1.1 + i * 0.5, 0]} rotation={[Math.PI / 2, 0, 0.4]} />)}
+            </group>
+          ) : (
+            <group position={[-w / 2 + 2, 0, d / 2 + 2.5]}>
+              <Box w={2.2} h={0.9} d={1} color="#374151" />
+              <mesh geometry={geo('sphere', 0.5, 8, 6)} material={mat('#9ca3af')} position={[0, 2, 0]} scale={[1.2, 0.7, 1]} />
+              {[2.5, 5, 7.5].map((x) => <group key={x} position={[x, 0, 0]}><Umbrella x={0} z={0.5} c="#dc2626" /></group>)}
+            </group>
+          )}
+          <Sign text={loc(place)} w={w} y={h - 1.2} z={d / 2 + 0.12} />
+        </group>
+      );
+    case 'waterpark':
+      return (
+        <group>
+          <mesh geometry={geo('box', w, 0.3, d)} material={mat('#e0f2fe')} position={[0, 0.15, 0]} />
+          <mesh geometry={geo('box', w * 0.55, 0.32, d * 0.5)} material={mat('#38bdf8')} position={[-w * 0.15, 0.17, d * 0.1]} />
+          <Box w={3} h={h} d={3} color="#f97316" x={w / 2 - 3} z={-d / 2 + 3} />
+          {[['#ef4444', 0], ['#facc15', 1.2], ['#22c55e', 2.4]].map(([col, o]) => (
+            <mesh key={col} geometry={geo('torus', 4 + o * 0.6, 0.35, 6, 18, Math.PI)} material={mat(col)} position={[w / 2 - 6 - o, h / 2 + 0.5, -d / 2 + 5 + o]} rotation={[0, 0.7, 0]} />
+          ))}
+          <Sign text={loc(place)} w={w * 0.6} y={3} z={d / 2 + 0.2} />
+        </group>
+      );
+    case 'museum':
+      return (
+        <group>
+          {[[-4, -2], [0, 2], [4, -1.5], [-2, 4]].map(([x, z], i) => (
+            <group key={i} position={[x, 0, z]}>
+              <mesh geometry={geo('cyl', 1.6, 1.6, 2, 10)} material={mat(i % 2 ? '#a16207' : '#d6b77a')} position={[0, 1, 0]} />
+              <mesh geometry={geo('cone', 2.2, 2, 10)} material={mat('#713f12')} position={[0, 3, 0]} />
+            </group>
+          ))}
+          <Sign text={loc(place)} w={w} y={4.5} z={d / 2 + 0.2} />
+        </group>
+      );
+    case 'golf':
+      return (
+        <group>
+          <mesh geometry={geo('box', w, 0.12, d)} material={mat('#86efac')} position={[0, 0.06, 0]} />
+          <mesh geometry={geo('circle', 3, 18)} material={mat('#4ade80')} rotation={[-Math.PI / 2, 0, 0]} position={[w / 4, 0.14, -d / 4]} />
+          <mesh geometry={geo('cyl', 0.05, 0.05, 2.4, 6)} material={mat('#f8fafc')} position={[w / 4, 1.2, -d / 4]} />
+          <mesh geometry={geo('box', 0.9, 0.5, 0.04)} material={mat('#dc2626')} position={[w / 4 + 0.45, 2.1, -d / 4]} />
+          <mesh geometry={geo('circle', 2, 14)} material={mat('#fde68a')} rotation={[-Math.PI / 2, 0, 0]} position={[-w / 4, 0.14, d / 6]} />
+          <Box w={6} h={h} d={4} color="#f8fafc" x={-w / 2 + 4} z={d / 2 - 3} />
+          <group position={[-w / 2 + 4, 0, 0]}><Sign text={loc(place)} w={8} y={h + 0.8} z={d / 2 - 0.9} /></group>
+        </group>
+      );
+    case 'slipway':
+      return (
+        <group>
+          <Box w={w} h={h} d={d * 0.6} color={c} z={-d * 0.2} />
+          <mesh geometry={geo('box', w + 6, 0.2, 4)} material={mat('#a16207')} position={[4, 0.2, d / 2 + 1]} />
+          <group position={[w / 2 + 6, 0, d / 2 + 1]} rotation={[0, Math.PI / 2, 0]}><Boat color="#f5f5f4" /></group>
+          <Sign text={loc(place)} w={w} y={h - 1} z={d * 0.1 + 0.12} />
+        </group>
+      );
+    case 'stage':
+      return (
+        <group>
+          <mesh geometry={geo('box', w, 0.1, d)} material={mat('#d6b77a')} position={[0, 0.05, 0]} />
+          <Box w={w * 0.6} h={1.4} d={4} color="#111827" z={-d / 2 + 2} />
+          {[-1, 1].map((sx) => <Box key={sx} w={1.6} h={4.5} d={1.6} color="#1f2937" x={sx * (w * 0.3 + 1)} z={-d / 2 + 2} />)}
+          <Box w={w * 0.62} h={0.4} d={0.4} color="#a855f7" y={5.5} z={-d / 2 + 2} />
+          <mesh geometry={geo('box', w * 0.62, 0.25, 0.05)} material={NEON_PINK} position={[0, 5.1, -d / 2 + 2.2]} />
+          <Sign text={loc(place)} w={w * 0.6} y={6.4} z={-d / 2 + 2.25} bg="#111827" fg="#e9d5ff" />
+        </group>
+      );
+    case 'karting':
+      return (
+        <group>
+          <mesh geometry={geo('box', w, 0.1, d)} material={mat('#374151')} position={[0, 0.05, 0]} />
+          <mesh geometry={geo('box', w - 6, 0.12, d - 6)} material={mat('#4ade80')} position={[0, 0.06, 0]} />
+          {Array.from({ length: 14 }, (_, i) => <mesh key={i} geometry={geo('box', 1, 0.4, 0.4)} material={mat(i % 2 ? '#dc2626' : '#f8fafc')} position={[-w / 2 + 1 + i * ((w - 2) / 13), 0.2, d / 2 - 0.3]} />)}
+          <KartLoop w={w} d={d} />
+          <Sign text={loc(place)} w={w * 0.5} y={2.6} z={d / 2 + 0.3} />
+        </group>
+      );
+    case 'hotel':
+      return (
+        <group>
+          <mesh geometry={unitBox} material={towerFacade(c)} scale={[w, h, d]} />
+          <Box w={w + 0.4} h={0.6} d={d + 0.4} color="#0f766e" y={h} />
+          <mesh geometry={geo('box', w * 0.6, 0.15, d * 0.5)} material={mat('#38bdf8')} position={[0, h + 0.7, 0]} />
+          <Box w={4} h={2.8} d={2} color="#a16207" z={d / 2 + 0.6} />
+          <Sign text={loc(place)} w={w} y={4} z={d / 2 + 1.7} bg="#0f766e" fg="#fef3c7" />
         </group>
       );
     case 'stadium':
@@ -609,7 +707,28 @@ function Traffic() {
   useEffect(() => () => { trafficCars.length = 0; }, []);
   return state.map((s, i) => (
     <group key={i} ref={(el) => (refs.current[i] = el)}>
-      <Vehicle kind={s.kind} color={s.color} />
+      <Vehicle kind={s.kind} color={s.color} body={s.kind === 'car' ? (i % 3 === 0 ? 'sedan' : 'hatch') : s.kind === 'suv' && i % 2 ? 'suv-big' : undefined} />
+    </group>
+  ));
+}
+
+// --------------------------------------------------------------- karts
+/** Little karts lapping the go-kart track. */
+function KartLoop({ w, d }) {
+  const refs = useRef([]);
+  useFrame(({ clock }) => {
+    refs.current.forEach((g, i) => {
+      if (!g) return;
+      const t = clock.elapsedTime * 0.35 + i * 0.8;
+      const a = (w - 3) / 2;
+      const b = (d - 3) / 2;
+      g.position.set(Math.cos(t) * a, 0.1, Math.sin(t) * b);
+      g.rotation.y = Math.atan2(-Math.sin(t) * a, Math.cos(t) * b);
+    });
+  });
+  return ['#ef4444', '#3b82f6', '#facc15'].map((col, i) => (
+    <group key={col} ref={(el) => (refs.current[i] = el)} scale={0.5}>
+      <Car body="sports" color={col} />
     </group>
   ));
 }

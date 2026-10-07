@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { gameClock } from '@shared/world.js';
 import { City } from './City.jsx';
-import { LocalPlayer, RemotePlayers } from './Players.jsx';
+import { LocalPlayer, RemotePlayers, ParkedCar } from './Players.jsx';
 import { AudioDriver } from './AudioDriver.jsx';
 import { ActivityScene, SCENES, SCENE_ORIGIN, sceneCam } from './Scenes.jsx';
 import { HomeScene, HOME_ORIGIN } from './HomeScene.jsx';
@@ -277,6 +277,7 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
         {(mode === 'play' || mode === 'map' || home) && me && (
           <>
             <LocalPlayer me={me} frozen={!!sceneCfg || home} />
+            {!sceneCfg && !home && <ParkedCar me={me} />}
             <AudioDriver me={me} scene={home ? 'home' : sceneCfg ? scene.key : null} />
             {sceneCfg && <ActivityScene scene={scene.key} placeId={scene.placeId} me={me} myBusy={scene.busy} />}
             <RemotePlayers onPlayer={onPlayer} />

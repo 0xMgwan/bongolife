@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { randomAppearance, findActivity, gameClock, workStage, flightPhase } from '@shared/world.js';
-import { Plane } from './Vehicle.jsx';
+import { Plane, Car } from './Vehicle.jsx';
 import { mat, geo, labelTexture, emojiTexture } from './textures.js';
 import { Body, Overhead } from './Players.jsx';
 import { remotes } from '../net.js';
@@ -1182,6 +1182,430 @@ function Flight({ me, myBusy }) {
 }
 const OUT = [0, 300, -600];
 
+// ------------------------------------------------------------ new places
+/** Players/NPCs gently bobbing or moving along a loop — handy for pools and tracks. */
+function Mover({ fn, children }) {
+  const ref = useRef();
+  useFrame(({ clock }) => ref.current && fn(ref.current, clock.elapsedTime));
+  return <group ref={ref}>{children}</group>;
+}
+const look = (i) => NPC_LOOKS[i % NPC_LOOKS.length];
+
+/** Kinyozi & saluni: barber chairs, mirrors, a hood dryer, waiting bench with gossip. */
+function Salon({ me, myBusy, people }) {
+  const act = myBusy?.id;
+  const meSlot = myBusy?.kind === 'job' ? [-1.8, 0, -1.6, Math.PI] : act === 'umbea' ? [3.2, 0.1, 1.8, -Math.PI / 2] : [-1.8, 0.35, -2.6, Math.PI];
+  const seatSlots = [[1.8, 0.35, -2.6, Math.PI], [3.2, 0.1, 0.6, -Math.PI / 2], [3.2, 0.1, 3, -Math.PI / 2], [-4.6, 0.35, -2.6, Math.PI]];
+  return (
+    <group>
+      <Room w={12} d={9} h={4.5} floor="#f5f5f4" wall="#fbcfe8" back="#f9a8d4" />
+      <Sign text="💈 KINYOZI · SALUNI 💇🏾‍♀️" p={[0, 3.4, -4.35]} h={0.5} fg="#831843" />
+      {[-4.6, -1.8, 1.8].map((x) => (
+        <group key={x} position={[x, 0, -3.3]}>
+          <Box p={[0, 1.1, -0.8]} s={[1.4, 1.5, 0.05]} m={basic('#e0f2fe')} />
+          <Box p={[0, 0, 0.7]} s={[0.8, 0.35, 0.8]} c="#111827" />
+          <Box p={[0, 0.35, 1.05]} s={[0.8, 0.8, 0.12]} c="#be185d" />
+          <Box p={[0, 0.8, -0.5]} s={[1.6, 0.06, 0.4]} c="#e7e5e4" />
+        </group>
+      ))}
+      <group position={[4.6, 0, -2.6]}>
+        <Box s={[0.7, 0.4, 0.7]} c="#be185d" />
+        <mesh geometry={geo('sphere', 0.45, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2)} material={mat('#e5e7eb')} position={[0, 1.45, 0]} />
+      </group>
+      <Box p={[4.2, 0, 1.8]} s={[0.7, 0.4, 3.6]} c="#9d174d" />
+      <Person slot={[-4.6, 0, -1.6, Math.PI]} appearance={{ ...look(3), outfit: 'scrubs' }} mode="lift" />
+      <Person slot={[1.8, 0, -1.6, Math.PI]} appearance={{ ...look(9), outfit: 'blauzi-jeans' }} mode="lift" />
+      {myBusy?.kind !== 'job' && act !== 'umbea' && <Person slot={[-1.8, 0, -1.5, Math.PI]} appearance={{ ...look(14), outfit: 'polo' }} mode="lift" />}
+      <Crowd me={me} myBusy={myBusy} people={people} slots={seatSlots} localSlot={meSlot} crowd={4}
+        modeFor={(who) => (who === 'me' ? (myBusy?.kind === 'job' ? 'lift' : act === 'umbea' ? 'sit' : 'sit') : 'sit')} />
+      <pointLight color="#fff1f2" intensity={7} distance={12} position={[0, 4, 0]} />
+    </group>
+  );
+}
+
+/** Nyama choma joint: grill with smoke, plastic tables under umbrellas, football on a big TV. */
+function Grill({ me, myBusy, people }) {
+  const act = myBusy?.id;
+  const smoke = useRef();
+  useFrame(({ clock }) => smoke.current?.children.forEach((c, i) => {
+    const t = (clock.elapsedTime * 0.5 + i * 0.33) % 1;
+    c.position.y = 1.4 + t * 2.4;
+    c.scale.setScalar(0.3 + t * 0.6);
+    c.material.opacity = 0.5 * (1 - t);
+  }));
+  const tables = [[-3, 1], [0.5, 1], [4, 1], [-3, 4], [0.5, 4], [4, 4]];
+  const slots = tables.flatMap(([x, z]) => [[x - 0.8, 0, z, Math.PI / 2], [x + 0.8, 0, z, -Math.PI / 2]]);
+  const meSlot = myBusy?.kind === 'job' ? [-5.2, 0, -2.4, 0] : slots[2];
+  return (
+    <group>
+      <Box p={[0, -0.1, 0]} s={[18, 0.1, 14]} c="#d6b77a" />
+      <Box p={[0, 0, -5]} s={[14, 3.2, 0.3]} c="#78350f" />
+      <Tv p={[2, 1.4, -4.8]} w={4} />
+      <group position={[-5.2, 0, -3.2]}>
+        <Box s={[2.4, 0.9, 1]} c="#374151" />
+        <Box p={[0, 0.9, 0]} s={[2.2, 0.05, 0.8]} m={basic('#f97316')} />
+        {[-0.6, 0, 0.6].map((x) => <Box key={x} p={[x, 0.95, 0]} s={[0.4, 0.12, 0.25]} c="#7c2d12" />)}
+        <group ref={smoke}>
+          {[0, 1, 2].map((i) => <mesh key={i} geometry={geo('sphere', 0.5, 8, 6)} position={[(i - 1) * 0.3, 1.6, 0]}><meshBasicMaterial color="#e5e7eb" transparent opacity={0.4} depthWrite={false} /></mesh>)}
+        </group>
+        <pointLight color="#f97316" intensity={4} distance={4} position={[0, 1.2, 0.6]} />
+      </group>
+      {tables.map(([x, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <Box s={[1, 0.75, 1]} c={i % 2 ? '#dc2626' : '#16a34a'} />
+          <Plate emoji="🍖" />
+          <mesh geometry={geo('cyl', 0.04, 0.04, 3, 6)} material={mat('#e5e7eb')} position={[0, 1.5, 0]} />
+          <mesh geometry={geo('cone', 0.95, 0.35, 8)} material={mat(i % 2 ? '#facc15' : '#dc2626')} position={[0, 3.1, 0]} />
+        </group>
+      ))}
+      <Crowd me={me} myBusy={myBusy} people={people} slots={slots} localSlot={meSlot} crowd={9}
+        modeFor={(who, busy, n) => (who === 'me' ? (myBusy?.kind === 'job' ? 'lift' : act === 'mpira-tv' ? 'cheer' : 'eat') : n % 3 === 0 ? 'cheer' : 'eat')} />
+    </group>
+  );
+}
+
+/** Water park: slides with riders whooshing down, a wave pool and a lazy river. */
+// A helix slide around the tower at (cx, cz): point k∈[0,1] → [x, y, z, heading].
+const SLIDE = (k, cx, cz, r, top, turns = 1.6) => {
+  const a = k * Math.PI * 2 * turns;
+  return [cx + Math.cos(a) * r, top - k * (top - 0.4), cz + Math.sin(a) * r, -a];
+};
+function Slide({ cx, cz, r, top, color, turns }) {
+  const segs = 30;
+  return Array.from({ length: segs }, (_, i) => {
+    const [x, y, z, h] = SLIDE(i / segs, cx, cz, r, top, turns);
+    return <Box key={i} p={[x, y - 0.15, z]} s={[1.1, 0.25, 1.3]} r={[0, h, 0]} c={color} />;
+  });
+}
+/** Water park: helix slides with riders whooshing down, a wave pool and a lazy river. */
+function Waterpark({ me, myBusy, people }) {
+  const act = myBusy?.id;
+  const job = myBusy?.kind === 'job';
+  const water = useRef();
+  useFrame(({ clock }) => {
+    if (water.current) water.current.position.y = 0.12 + Math.sin(clock.elapsedTime * 2) * 0.04;
+  });
+  const T = [7, -5];
+  return (
+    <group>
+      <Box p={[0, -0.1, 0]} s={[32, 0.1, 24]} c="#e0f2fe" />
+      <Box p={[-3, -0.06, 2]} s={[14.6, 0.1, 9.6]} c="#f8fafc" />
+      <mesh ref={water} rotation={[-Math.PI / 2, 0, 0]} position={[-3, 0.12, 2]}><planeGeometry args={[14, 9]} /><meshLambertMaterial color="#0ea5e9" transparent opacity={0.85} /></mesh>
+      {/* slide tower + two helix slides */}
+      <Box p={[T[0], 0, T[1]]} s={[1.6, 7.2, 1.6]} c="#f97316" />
+      <Box p={[T[0], 7.2, T[1]]} s={[2.4, 0.2, 2.4]} c="#fb923c" />
+      <Slide cx={T[0]} cz={T[1]} r={2.6} top={7} color="#ef4444" turns={1.5} />
+      <Slide cx={T[0]} cz={T[1]} r={4.2} top={5.5} color="#facc15" turns={1.1} />
+      <Mover fn={(o, t) => { const k = (t * 0.25) % 1; const [x, y, z, h] = SLIDE(k, T[0], T[1], 2.6, 7, 1.5); o.position.set(x, y, z); o.rotation.y = h + Math.PI / 2; }}>
+        <Person slot={[0, 0, 0, 0]} appearance={act === 'slides' ? me.appearance : look(5)} mode="sit" id={act === 'slides' ? me.id : undefined} username={act === 'slides' ? me.username : undefined} />
+      </Mover>
+      <Mover fn={(o, t) => { const k = (t * 0.3 + 0.5) % 1; const [x, y, z, h] = SLIDE(k, T[0], T[1], 4.2, 5.5, 1.1); o.position.set(x, y, z); o.rotation.y = h + Math.PI / 2; }}>
+        <Person slot={[0, 0, 0, 0]} appearance={look(8)} mode="sit" />
+      </Mover>
+      {[[-7, 0], [-4, 4], [0, 1], [1, 4.5]].map(([x, z], i) => (
+        <Mover key={i} fn={(o, t) => { o.position.y = 0.15 + Math.sin(t * 2 + i) * 0.06; }}>
+          <Person slot={[x, 0, z, i]} appearance={look(i + 11)} mode="swim" />
+        </Mover>
+      ))}
+      {act !== 'slides' && (
+        <Mover fn={(o, t) => { if (act === 'lazy') o.position.set(-3 + Math.cos(t * 0.3) * 4.5, 0.15, 2 + Math.sin(t * 0.3) * 2.8); else o.position.y = job ? 0 : 0.15 + Math.sin(t * 2) * 0.06; }}>
+          <Person slot={job ? [-11, 0, 7, Math.PI * 0.8] : [-2, 0, 2, Math.PI]} appearance={me.appearance} mode={job ? 'idle' : act === 'lazy' ? 'sit' : 'swim'} id={me.id} username={me.username} />
+        </Mover>
+      )}
+      {act === 'lazy' && people.slice(0, 2).map((r, i) => <Person key={r.id} slot={[-5 + i * 3, 0.15, -0.5, 0]} appearance={r.appearance} mode="sit" id={r.id} username={r.username} />)}
+      <Box p={[-11, 0, 7.6]} s={[1, 2.6, 1]} c="#dc2626" />
+      {[[-13, 9], [13, 8], [-13, -8]].map(([x, z]) => (
+        <group key={x} position={[x, 0, z]}>
+          <mesh geometry={geo('cyl', 0.2, 0.28, 5, 6)} material={mat('#9a7b4f')} position={[0, 2.5, 0]} />
+          <mesh geometry={geo('cone', 2, 1, 7)} material={mat('#2f9e57')} position={[0, 5, 0]} />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** Village Museum: tribal huts around a fire circle, ngoma drummers and dancers. */
+function Ngoma({ me, myBusy, people }) {
+  const act = myBusy?.id;
+  const ring = Array.from({ length: 10 }, (_, i) => {
+    const a = (i / 10) * Math.PI * 2;
+    return [Math.cos(a) * 3.4, 0, Math.sin(a) * 3.4 + 1, -a - Math.PI / 2];
+  });
+  const meSlot = act === 'tinga' ? [-6, 0, -2.6, Math.PI * 0.85] : act === 'makabila' ? [5.6, 0, -3.5, Math.PI] : myBusy?.kind === 'job' ? [-1.6, 0, -2.4, 0] : ring[2];
+  return (
+    <group>
+      <Box p={[0, -0.1, 0]} s={[22, 0.1, 16]} c="#c2a26b" />
+      {[[-7, -5], [-2, -6], [3, -6.4], [7.5, -4.6]].map(([x, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <mesh geometry={geo('cyl', 1.6, 1.6, 2.1, 10)} material={mat(i % 2 ? '#a16207' : '#d6b77a')} position={[0, 1.05, 0]} />
+          <mesh geometry={geo('cone', 2.3, 2.1, 10)} material={mat('#713f12')} position={[0, 3.1, 0]} />
+          <Box p={[0, 0, 1.55]} s={[0.7, 1.4, 0.1]} c="#3f2a1a" />
+        </group>
+      ))}
+      {/* fire */}
+      <group position={[0, 0, 1]}>
+        {[0, 1, 2, 3].map((i) => <Box key={i} p={[0, 0.05, 0]} s={[1.2, 0.12, 0.15]} r={[0, (i * Math.PI) / 4, 0]} c="#57534e" />)}
+        <Mover fn={(o, t) => o.scale.set(1, 0.85 + Math.sin(t * 9) * 0.15, 1)}>
+          <mesh geometry={geo('cone', 0.45, 1.1, 8)} material={basic('#f97316')} position={[0, 0.6, 0]} />
+          <mesh geometry={geo('cone', 0.25, 0.7, 8)} material={basic('#facc15')} position={[0, 0.5, 0]} />
+        </Mover>
+        <pointLight color="#f97316" intensity={6} distance={9} position={[0, 1.2, 0]} />
+      </group>
+      {/* drummers */}
+      {[-1.6, 0, 1.6].map((x, i) => (
+        <group key={x} position={[x, 0, -2.6]}>
+          <mesh geometry={geo('cyl', 0.28, 0.22, 0.75, 10)} material={mat('#78350f')} position={[0, 0.38, 0.45]} />
+          {!(myBusy?.kind === 'job' && i === 0) && <Person slot={[0, 0, 0, 0]} appearance={{ ...look(i + 2), outfit: 'shuka' }} mode="dj" />}
+        </group>
+      ))}
+      {act === 'tinga' && (
+        <group position={[-6, 0, -3.6]}>
+          <Box p={[0, 0.7, 0]} s={[1.1, 1.1, 0.05]} m={basic('#0ea5e9')} />
+          {[['#facc15', -0.2, 1.4], ['#ef4444', 0.2, 1.1], ['#22c55e', 0, 0.9]].map(([c, x, y]) => <mesh key={c} geometry={geo('circle', 0.14, 10)} material={basic(c)} position={[x, y, 0.03]} />)}
+        </group>
+      )}
+      <Crowd me={me} myBusy={myBusy} people={people} slots={ring} localSlot={meSlot} crowd={9}
+        modeFor={(who) => (who === 'me' ? (act === 'tinga' ? 'lift' : act === 'makabila' ? 'idle' : myBusy?.kind === 'job' ? 'dj' : 'dance') : 'dance')} />
+    </group>
+  );
+}
+
+/** Golf: a sunny fairway, the green with its flag, a buggy and a ball arcing away. */
+function Golf({ me, myBusy, people }) {
+  const act = myBusy?.id;
+  const ball = useRef();
+  useFrame(({ clock }) => {
+    if (!ball.current) return;
+    const k = (clock.elapsedTime * 0.4) % 1;
+    ball.current.position.set(0.6 + k * 2, 0.3 + Math.sin(k * Math.PI) * 4, -k * 22);
+  });
+  const meSlot = act === 'dili' ? [3.6, 0, 3.4, -Math.PI / 2] : myBusy?.kind === 'job' ? [-1.8, 0, 1.6, Math.PI * 0.8] : [0, 0, 0.8, Math.PI];
+  return (
+    <group>
+      <Box p={[0, -0.1, -10]} s={[60, 0.1, 50]} c="#86efac" />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -14]}><planeGeometry args={[10, 40]} /><meshLambertMaterial color="#4ade80" /></mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2, 0.02, -28]}><circleGeometry args={[4, 24]} /><meshLambertMaterial color="#22c55e" /></mesh>
+      <mesh geometry={geo('cyl', 0.05, 0.05, 2.4, 6)} material={mat('#f8fafc')} position={[2, 1.2, -28]} />
+      <Box p={[2.45, 2.1, -28]} s={[0.9, 0.5, 0.04]} c="#dc2626" />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-6, 0.02, -16]}><circleGeometry args={[3, 18]} /><meshLambertMaterial color="#fde68a" /></mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[8, 0.02, -20]}><circleGeometry args={[3.5, 18]} /><meshLambertMaterial color="#38bdf8" /></mesh>
+      <mesh ref={ball} geometry={geo('sphere', 0.12, 8, 6)} material={basic('#ffffff')} />
+      {/* buggy */}
+      <group position={[4.5, 0, 2.2]} rotation={[0, -0.3, 0]}>
+        <Box p={[0, 0.3, 0]} s={[1.3, 0.5, 2.2]} c="#f8fafc" />
+        <Box p={[0, 1.8, 0]} s={[1.4, 0.08, 2.2]} c="#16a34a" />
+        {[-0.6, 0.6].map((x) => <Box key={x} p={[x, 0.8, -0.9]} s={[0.06, 1, 0.06]} c="#e5e7eb" />)}
+      </group>
+      <Box p={[3.6, 0, 4.2]} s={[1.2, 0.75, 1.2]} c="#f8fafc" />
+      {act !== 'dili' && <Mover fn={(o, t) => (o.rotation.z = Math.sin(t * 3) * 1.1)}><group position={[0.25, 1.05, 0.9]}><Box p={[0, -1, 0]} s={[0.04, 1, 0.04]} c="#d4d4d8" /><Box p={[0.08, -1.02, 0]} s={[0.16, 0.06, 0.06]} c="#52525b" /></group></Mover>}
+      <Person slot={[4.6, 0, 3.4, Math.PI / 2]} appearance={{ ...look(4), outfit: 'suti' }} mode="idle" />
+      {[[-12, -6], [12, -10], [-14, -24], [14, -30], [-8, -36]].map(([x, z]) => (
+        <group key={x} position={[x, 0, z]}>
+          <mesh geometry={geo('cyl', 0.25, 0.35, 4, 6)} material={mat('#9a7b4f')} position={[0, 2, 0]} />
+          <mesh geometry={geo('sphere', 2.4, 8, 6)} material={mat('#15803d')} position={[0, 5, 0]} />
+        </group>
+      ))}
+      <Crowd me={me} myBusy={myBusy} people={people} slots={[[-2.4, 0, 1.6, Math.PI * 0.9], [2.4, 0, 2, -Math.PI * 0.9]]} localSlot={meSlot} crowd={2}
+        modeFor={(who) => (who === 'me' ? (act === 'dili' ? 'idle' : myBusy?.kind === 'job' ? 'idle' : 'lift') : 'idle')} />
+    </group>
+  );
+}
+
+/** Dhow cruise at sunset (or the boat to Bongoyo for snorkelling). */
+function Dhow({ me, myBusy, people }) {
+  const act = myBusy?.id;
+  const boat = useRef();
+  useFrame(({ clock }) => {
+    if (!boat.current) return;
+    const t = clock.elapsedTime;
+    boat.current.rotation.z = Math.sin(t * 0.9) * 0.04;
+    boat.current.rotation.x = Math.sin(t * 0.6) * 0.03;
+    boat.current.position.y = Math.sin(t * 1.1) * 0.08;
+  });
+  const snorkel = act === 'bongoyo';
+  const deck = [[-0.6, 0.55, 0.2, 0], [0.6, 0.55, -0.6, Math.PI], [-0.5, 0.55, -1.8, 0.4], [0.5, 0.55, 1.4, -2.4]];
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.2, 0]}><planeGeometry args={[300, 300]} /><meshLambertMaterial color={snorkel ? '#06b6d4' : '#0e7490'} /></mesh>
+      {/* sunset sun & island */}
+      <mesh position={[0, 9, -90]}><circleGeometry args={[9, 32]} /><meshBasicMaterial color={snorkel ? '#fef9c3' : '#fb923c'} /></mesh>
+      <group position={[18, -0.2, -40]}>
+        <mesh geometry={geo('sphere', 12, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2)} material={mat('#fde68a')} scale={[1, 0.18, 0.6]} />
+        {[-4, 0, 4].map((x) => (
+          <group key={x} position={[x, 1.5, 0]}>
+            <mesh geometry={geo('cyl', 0.2, 0.3, 5, 6)} material={mat('#9a7b4f')} position={[0, 2.5, 0]} rotation={[0, 0, 0.15]} />
+            <mesh geometry={geo('cone', 2, 1, 7)} material={mat('#2f9e57')} position={[0.4, 5, 0]} />
+          </group>
+        ))}
+      </group>
+      <group ref={boat}>
+        <mesh geometry={geo('sphere', 1, 16, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)} material={mat('#7c4a1e')} scale={[1.6, 0.9, 5]} position={[0, 0.55, 0]} />
+        <Box p={[0, 0.45, 0]} s={[2.8, 0.1, 8]} c="#a16207" />
+        <Box p={[0, 0.5, 1]} s={[0.15, 6, 0.15]} c="#78350f" />
+        <mesh position={[0.1, 3.5, 0.8]} rotation={[0, Math.PI / 2, 0.12]}>
+          <shapeGeometry args={[new THREE.Shape([new THREE.Vector2(-2, -0.6), new THREE.Vector2(2.6, -0.6), new THREE.Vector2(-2, 3.4)])]} />
+          <meshLambertMaterial color="#fef3c7" side={THREE.DoubleSide} />
+        </mesh>
+        {!snorkel && (
+          <Crowd me={me} myBusy={myBusy} people={people} slots={deck} localSlot={myBusy?.kind === 'job' ? [0, 0.5, -3.2, 0] : [0.6, 0.55, 1.6, Math.PI]} crowd={4}
+            modeFor={(who) => (who === 'me' && myBusy?.kind === 'job' ? 'idle' : 'sit')} />
+        )}
+      </group>
+      {snorkel && (
+        <>
+          {[[-2, 3], [2.5, 1.5], [0, 5]].map(([x, z], i) => (
+            <Mover key={i} fn={(o, t) => { o.position.set(x + Math.sin(t * 0.4 + i) * 1.5, -0.45, z + Math.cos(t * 0.3 + i)); o.rotation.y = t * 0.2 + i; }}>
+              <Person slot={[0, 0, 0, 0]} appearance={i === 0 ? me.appearance : look(i + 7)} mode="swim" id={i === 0 ? me.id : undefined} username={i === 0 ? me.username : undefined} />
+            </Mover>
+          ))}
+          {Array.from({ length: 8 }, (_, i) => (
+            <Mover key={`f${i}`} fn={(o, t) => o.position.set(Math.sin(t * 0.8 + i) * 4, -0.6, 3 + Math.cos(t * 0.6 + i * 2) * 3)}>
+              <mesh geometry={geo('sphere', 0.12, 6, 4)} material={basic(['#f97316', '#facc15', '#22d3ee', '#ec4899'][i % 4])} scale={[1.6, 1, 0.6]} />
+            </Mover>
+          ))}
+        </>
+      )}
+    </group>
+  );
+}
+
+/** Singeli night: big outdoor stage, speaker stacks, lights and a jumping crowd. */
+function Concert({ me, myBusy, people }) {
+  const act = myBusy?.id;
+  const onStage = act === 'jukwaani' || myBusy?.kind === 'job';
+  const crowdSlots = useMemo(() => {
+    const r = rng(77);
+    return Array.from({ length: 22 }, (_, i) => [((i % 6) - 2.5) * 1.6 + (r() - 0.5) * 0.6, 0, 1 + Math.floor(i / 6) * 1.5 + (r() - 0.5) * 0.4, Math.PI + (r() - 0.5) * 0.6]);
+  }, []);
+  return (
+    <group>
+      <Box p={[0, -0.1, 2]} s={[30, 0.1, 22]} c="#a8a29e" />
+      <Box p={[0, 0, -5]} s={[14, 1.4, 6]} c="#111827" />
+      <Box p={[0, 0, -8]} s={[16, 7, 0.3]} c="#1f2937" />
+      <mesh position={[0, 4.2, -7.8]}><planeGeometry args={[12, 4]} /><meshBasicMaterial color="#7e22ce" /></mesh>
+      <Sign text="🔊 SINGELI NIGHT · MBAGALA" p={[0, 4.4, -7.7]} h={0.9} fg="#fdf4ff" />
+      {[-1, 1].map((sx) => (
+        <group key={sx} position={[sx * 8.5, 0, -5]}>
+          {[0, 1.3, 2.6].map((y) => <Box key={y} p={[0, y, 0]} s={[1.8, 1.2, 1.4]} c="#0b0b0b" />)}
+          {[0.6, 1.9, 3.2].map((y) => <mesh key={y} geometry={geo('circle', 0.4, 14)} material={mat('#374151')} position={[0, y, 0.72]} />)}
+        </group>
+      ))}
+      <Spotlights colors={['#a855f7', '#f472b6', '#22d3ee', '#facc15']} />
+      <Person slot={[-2.5, 1.4, -6, 0]} appearance={{ ...look(12), outfit: 'hoodie' }} mode="dj" />
+      <Box p={[-2.5, 1.4, -5.2]} s={[2, 0.9, 0.7]} c="#0f172a" />
+      {!onStage && <Person slot={[2.5, 1.4, -4.4, 0]} appearance={{ ...look(1), outfit: 'jaketi-ngozi' }} mode="sing" />}
+      <Crowd me={me} myBusy={myBusy} people={people} slots={crowdSlots} localSlot={onStage ? [2.5, 1.4, -4.4, 0] : [0.2, 0, 1.2, Math.PI]} crowd={20}
+        modeFor={(who, busy, n) => (who === 'me' ? (onStage ? 'sing' : act === 'chipsi-mayai' ? 'eat' : 'dance') : n % 4 === 1 ? 'cheer' : 'dance')} />
+    </group>
+  );
+}
+
+/** Go-kart race: karts chasing round a looping track, you in one of them. */
+function Karting({ me, myBusy, people }) {
+  const racing = myBusy?.kind === 'activity';
+  const karts = useRef([]);
+  useFrame(({ clock }) => {
+    karts.current.forEach((g, i) => {
+      if (!g) return;
+      const t = clock.elapsedTime * (0.42 + i * 0.015) + i * 0.55;
+      const x = Math.sin(t) * 11;
+      const z = Math.sin(t * 2) * 4.5;
+      g.position.set(x, 0.05, z);
+      g.rotation.y = Math.atan2(Math.cos(t) * 11, Math.cos(t * 2) * 9);
+    });
+  });
+  const colors = ['#ef4444', '#3b82f6', '#facc15', '#22c55e', '#a855f7'];
+  return (
+    <group>
+      <Box p={[0, -0.1, 0]} s={[34, 0.1, 22]} c="#4ade80" />
+      {Array.from({ length: 64 }, (_, i) => {
+        const t = (i / 64) * Math.PI * 2;
+        return <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[Math.sin(t) * 11, 0.02 + (i % 2) * 0.002, Math.sin(t * 2) * 4.5]}><circleGeometry args={[1.7, 12]} /><meshLambertMaterial color="#374151" /></mesh>;
+      })}
+      {Array.from({ length: 20 }, (_, i) => <Box key={i} p={[-13 + i * 1.4, 0, 8]} s={[0.7, 0.5, 0.5]} c={i % 2 ? '#dc2626' : '#f8fafc'} />)}
+      <Box p={[0, 0, -8.5]} s={[12, 2.5, 2]} c="#f97316" />
+      <Sign text="🏁 BONGO GO-KARTS" p={[0, 2, -7.45]} h={0.7} fg="#111827" />
+      {colors.map((c, i) => (
+        <group key={c} ref={(el) => (karts.current[i] = el)}>
+          <group scale={0.45}><Car body="sports" color={c} /></group>
+          <group position={[0, 0.05, -0.2]} scale={0.8}>
+            <Person slot={[0, 0, 0, 0]} appearance={i === 0 && racing ? me.appearance : people[i - (racing ? 1 : 0)]?.appearance || look(i + 3)} mode="sit"
+              id={i === 0 && racing ? me.id : undefined} username={i === 0 && racing ? me.username : undefined} />
+          </group>
+        </group>
+      ))}
+      {!racing && <Person slot={[-4, 0, 9.4, Math.PI]} appearance={me.appearance} mode={myBusy?.id === 'pitstop' ? 'eat' : 'lift'} id={me.id} username={me.username} />}
+    </group>
+  );
+}
+
+/** Serena spa: massage tables, candles, a calm pool — also the suite you sleep in. */
+function Spa({ me, myBusy }) {
+  const act = myBusy?.id;
+  const job = myBusy?.kind === 'job';
+  return (
+    <group>
+      <Room w={12} d={9} h={4.5} floor="#e7e5e4" wall="#f5f5f4" back="#d6d3d1" />
+      {act === 'suite' ? (
+        <group position={[0, 0, -2]}>
+          <Box s={[3.2, 0.55, 3.6]} c="#78350f" />
+          <Box p={[0, 0.55, 0]} s={[3, 0.25, 3.4]} c="#ffffff" />
+          <Box p={[0, 0.8, 0.7]} s={[3.02, 0.06, 2]} c="#0f766e" />
+          <Box p={[0, 0, -1.85]} s={[3.4, 1.8, 0.15]} c="#a16207" />
+          <Person slot={[0.6, 0.8, -0.2, 0]} appearance={me.appearance} mode="sleep" id={me.id} username={me.username} />
+        </group>
+      ) : (
+        <>
+          {[-2.4, 2.4].map((x, i) => (
+            <group key={x} position={[x, 0, -1.6]}>
+              <Box s={[1.2, 0.75, 2.6]} c="#f5f5f4" />
+              <Box p={[0, 0.75, 0]} s={[1.1, 0.12, 2.5]} c="#14b8a6" />
+              {i === 0 && act === 'massage' && <Person slot={[0, 0.85, 0.9, 0]} appearance={me.appearance} mode="sleep" id={me.id} username={me.username} />}
+              {i === 1 && <Person slot={[0, 0.85, 0.9, 0]} appearance={look(15)} mode="sleep" />}
+              <Person slot={[1.1, 0, 0, -Math.PI / 2]} appearance={{ ...look(i + 18), outfit: 'scrubs' }} mode="lift" />
+            </group>
+          ))}
+          {job && <Person slot={[0, 0, 2.6, Math.PI]} appearance={me.appearance} mode="idle" id={me.id} username={me.username} />}
+        </>
+      )}
+      {[[-5, -3.8], [5, -3.8], [-5, 3], [5, 3]].map(([x, z]) => (
+        <group key={x + ':' + z} position={[x, 0, z]}>
+          <mesh geometry={geo('cyl', 0.08, 0.08, 0.3, 8)} material={mat('#fef3c7')} position={[0, 0.15, 0]} />
+          <mesh geometry={geo('sphere', 0.05, 6, 4)} material={basic('#facc15')} position={[0, 0.35, 0]} />
+          <pointLight color="#fbbf24" intensity={1.2} distance={3} position={[0, 0.5, 0]} />
+        </group>
+      ))}
+      <mesh position={[0, 2.4, -4.4]}><planeGeometry args={[3, 1.6]} /><meshBasicMaterial color="#0f766e" /></mesh>
+      <pointLight color="#fff7ed" intensity={4} distance={10} position={[0, 4, 0]} />
+    </group>
+  );
+}
+
+/** Serena rooftop pool party: skyline at dusk, pool, DJ and dancing. */
+function Rooftop({ me, myBusy, people }) {
+  const slots = useMemo(() => [[-3, 0, 2, Math.PI], [-1.5, 0, 3, Math.PI], [1, 0, 2.5, Math.PI], [3, 0, 3.4, Math.PI], [-4, 0, 4.4, Math.PI], [0, 0, 4.6, Math.PI], [4.2, 0, 1.4, -2]], []);
+  return (
+    <group>
+      <Box p={[0, -0.1, 0]} s={[16, 0.1, 14]} c="#e7e5e4" />
+      {[-8, 8].map((x) => <Box key={x} p={[x, 0, 0]} s={[0.1, 1, 14]} m={basic('#bae6fd', { transparent: true, opacity: 0.6 })} />)}
+      <Box p={[0, 0, -7]} s={[16, 1, 0.1]} m={basic('#bae6fd', { transparent: true, opacity: 0.6 })} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, -3]}><planeGeometry args={[9, 4]} /><meshBasicMaterial color="#22d3ee" /></mesh>
+      {/* skyline */}
+      {Array.from({ length: 18 }, (_, i) => <Box key={i} p={[-60 + i * 7, -44, -45 - (i % 3) * 9]} s={[5, 36 + ((i * 37) % 16), 5]} c={i % 2 ? '#334155' : '#475569'} />)}
+      <mesh position={[0, 6, -70]}><circleGeometry args={[6, 24]} /><meshBasicMaterial color="#fb923c" /></mesh>
+      <Box p={[5.5, 0, -5.5]} s={[2, 1, 0.8]} c="#0f172a" />
+      <Person slot={[5.5, 0, -6.2, 0]} appearance={{ ...look(6), outfit: 'hoodie' }} mode="dj" />
+      <Spotlights colors={['#f472b6', '#22d3ee', '#facc15']} />
+      <Crowd me={me} myBusy={myBusy} people={people} slots={slots} localSlot={[0.3, 0, 1.6, Math.PI]} crowd={7} modeFor={(who, b, n) => (n % 3 === 2 ? 'cheer' : 'dance')} />
+      {[[-2, -3], [1.5, -2.6]].map(([x, z], i) => (
+        <Mover key={i} fn={(o, t) => (o.position.y = -0.35 + Math.sin(t * 2 + i) * 0.06)}>
+          <Person slot={[x, 0, z, i * 2]} appearance={look(i + 20)} mode="swim" />
+        </Mover>
+      ))}
+    </group>
+  );
+}
+
 // ---------------------------------------------------------------- config
 export const SCENES = {
   club: { C: Club, camera: { pos: [0, 8.5, 13], look: [0, 1.2, -1.5] }, dark: true, bg: '#0b0614', light: 0.25 },
@@ -1194,6 +1618,16 @@ export const SCENES = {
   studio: { C: Studio, camera: { pos: [0, 4.5, 7.5], look: [0, 1.4, 0] }, bg: '#0b0614', light: 0.4 },
   cinema: { C: Cinema, camera: { pos: [0, 6.5, 10.5], look: [0, 2.6, -8] }, bg: '#000000', light: 0.25 },
   gym: { C: Gym, camera: { pos: [0, 5, 8], look: [0, 1, -1] }, bg: '#1c1917', light: 0.9 },
+  salon: { C: Salon, camera: { pos: [0.5, 7, 10], look: [0, 0.8, -1.2] }, bg: '#1c1917', light: 0.95 },
+  grill: { C: Grill, camera: { pos: [0, 11, 11], look: [0, 0.4, 0.8] }, light: 1 },
+  waterpark: { C: Waterpark, camera: { pos: [2, 13, 18], look: [2.5, 1.5, -1.5] }, light: 1.05 },
+  ngoma: { C: Ngoma, camera: { pos: [0, 8, 13], look: [0, 0.8, -1] }, bg: '#7c2d12', light: 0.8 },
+  golf: { C: Golf, camera: { pos: [-2, 4.5, 8.5], look: [0.5, 1, -8] }, light: 1.05 },
+  dhow: { C: Dhow, camera: { pos: [11, 6.5, 12], look: [0, 1.2, -3] }, bg: '#fdba74', light: 0.95 },
+  concert: { C: Concert, camera: { pos: [0, 7, 14], look: [0, 1.6, -2] }, dark: true, bg: '#0b0614', light: 0.35 },
+  karting: { C: Karting, camera: { pos: [0, 20, 15], look: [0, 0, 0] }, light: 1.05 },
+  spa: { C: Spa, camera: { pos: [0, 8.5, 10.5], look: [0, 0.4, -1.4] }, bg: '#1c1917', light: 0.8 },
+  rooftop: { C: Rooftop, camera: { pos: [0, 6, 11], look: [0, 1, -2] }, bg: '#f59e0b', light: 0.8 },
   flight: { C: Flight, dynamic: true, bg: '#7dd3fc', light: 1.1 },
   office: { C: Office, camera: { pos: [0, 8, 11], look: [0, 0.6, -0.5] }, bg: '#0f172a', light: 1 },
   bank: { C: (p) => <Office {...p} bank />, camera: { pos: [0, 8, 11], look: [0, 0.6, -0.8] }, bg: '#0f172a', light: 1 },

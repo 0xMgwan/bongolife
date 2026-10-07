@@ -482,10 +482,14 @@ export function HUD() {
   const scene = town ? activeScene({ me, inside }) : null;
   const shop = tab === 'shop';
   const vehicle = me.vehicles?.find((v) => v.id === me.activeVehicle);
-  const anyVehicle = me.vehicles?.[0];
+  // Your go-to ride: the one you drove last, else the most expensive.
+  const anyVehicle = me.vehicles?.find((v) => v.id === local.lastCar) || [...(me.vehicles || [])].sort((a, b) => (vehicleById[b.model]?.price || 0) - (vehicleById[a.model]?.price || 0))[0];
   const toggleVehicle = () => {
     if (vehicle) run('/vehicle/use', { method: 'POST', body: { vehicleId: null } });
-    else if (anyVehicle) run('/vehicle/use', { method: 'POST', body: { vehicleId: anyVehicle.id } });
+    else if (anyVehicle) {
+      local.lastCar = anyVehicle.id;
+      run('/vehicle/use', { method: 'POST', body: { vehicleId: anyVehicle.id } });
+    }
     else openPhone('mali');
   };
   const walking = town && !scene && cityView === 'follow' && !riding;

@@ -131,7 +131,7 @@ export function startRide(mode, dest, placeId, onArrive, look = null) {
   const speed = Math.max(t.speed, len / 25);
   local.target = null;
   local.ride = { path, seg: 0, d: 0, speed, dest, onArrive };
-  useStore.setState({ riding: { mode, placeId, kind: look?.kind || t.kind, color: look?.color || t.color } });
+  useStore.setState({ riding: { mode, placeId, kind: look?.kind || t.kind, body: look?.body, lux: look?.lux, color: look?.color || t.color } });
 }
 export function skipRide() {
   if (local.ride) local.ride.skip = true;

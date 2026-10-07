@@ -27,7 +27,7 @@ export function Kazi({ back, close }) {
                 <div className="t">{isEn() ? jobTitleEn(j, shifts) : jobTitle(j, shifts)}</div>
                 <div className="s">{loc(p)} · ~{fmtTsh(pay)}/{L('shifti', 'shift')} · Lv {jobLevel(shifts) + 1}</div>
                 {lockE && <div className="s red">🎓 {L(`Elimu ${j.requires.elimu} inahitajika`, `Education ${j.requires.elimu} required`)}</div>}
-                {lockV && <div className="s red">🔑 {j.requires.vehicle.map((m) => loc(vehicleById[m])).join(' / ')}</div>}
+                {lockV && <div className="s red">🔑 {(j.requires.vehicle.length > 3 ? L('gari lolote', 'any car') : j.requires.vehicle.map((m) => loc(vehicleById[m])).join(' / '))}</div>}
               </div>
               <button className="btn btn-ghost btn-sm" onClick={() => { close(); goToPlace(p.id); }}>{L('Nenda', 'Go')}</button>
             </div>

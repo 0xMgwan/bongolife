@@ -193,14 +193,25 @@ export const VEHICLES = [
   { id: 'baiskeli', name: 'Baiskeli', kind: 'bike', price: 180_000, speed: 1.5, emoji: '🚲', color: '#0ea5e9' },
   { id: 'bodaboda', name: 'Bodaboda (Boxer)', kind: 'moto', price: 1_800_000, speed: 2.1, emoji: '🏍️', color: '#dc2626' },
   { id: 'bajaji', name: 'Bajaji', kind: 'bajaji', price: 6_500_000, speed: 1.9, emoji: '🛺', color: '#facc15' },
-  { id: 'vitz', name: 'Toyota Vitz (used)', kind: 'car', price: 9_500_000, speed: 2.2, emoji: '🚗', color: '#2563eb' },
-  { id: 'ist', name: 'Toyota IST', kind: 'car', price: 16_000_000, speed: 2.4, emoji: '🚗', color: '#e5e7eb' },
-  { id: 'noah', name: 'Toyota Noah', kind: 'van', price: 28_000_000, speed: 2.4, emoji: '🚐', color: '#1f2937' },
-  { id: 'harrier', name: 'Toyota Harrier', kind: 'suv', price: 60_000_000, speed: 2.7, emoji: '🚙', color: '#7f1d1d' },
-  { id: 'v8', name: 'Land Cruiser V8', kind: 'suv', price: 170_000_000, speed: 2.9, emoji: '🛻', color: '#111827' },
+  // `body` picks the 3D shape; `tier` groups the showroom (1 = starter … 6 = supercars).
+  { id: 'ist', name: 'Toyota IST', kind: 'car', body: 'hatch', tier: 1, price: 16_000_000, speed: 2.3, emoji: '🚗', color: '#e5e7eb' },
+  { id: 'noah', name: 'Toyota Noah', kind: 'van', body: 'van', tier: 2, price: 28_000_000, speed: 2.4, emoji: '🚐', color: '#1f2937' },
+  { id: 'crown', name: 'Toyota Crown Athlete', kind: 'car', body: 'sedan', tier: 2, price: 38_000_000, speed: 2.5, emoji: '🚘', color: '#f8fafc' },
+  { id: 'harrier', name: 'Toyota Harrier', kind: 'suv', body: 'suv', tier: 3, price: 60_000_000, speed: 2.7, emoji: '🚙', color: '#7f1d1d' },
+  { id: 'benz-c', name: 'Mercedes-Benz C200', kind: 'car', body: 'sedan', tier: 3, price: 78_000_000, speed: 2.8, emoji: '🚘', color: '#94a3b8', lux: true },
+  { id: 'prado', name: 'Toyota Land Cruiser Prado', kind: 'suv', body: 'suv', tier: 3, price: 95_000_000, speed: 2.8, emoji: '🚙', color: '#f8fafc' },
+  { id: 'bmw-x5', name: 'BMW X5', kind: 'suv', body: 'suv', tier: 4, price: 140_000_000, speed: 2.9, emoji: '🚙', color: '#1e3a8a', lux: true },
+  { id: 'v8', name: 'Land Cruiser V8', kind: 'suv', body: 'suv-big', tier: 4, price: 170_000_000, speed: 2.9, emoji: '🛻', color: '#111827' },
+  { id: 'range', name: 'Range Rover Vogue', kind: 'suv', body: 'suv-big', tier: 4, price: 280_000_000, speed: 3.0, emoji: '🚙', color: '#14532d', lux: true },
+  { id: 'benz-s', name: 'Mercedes-Benz S-Class', kind: 'car', body: 'luxury', tier: 5, price: 320_000_000, speed: 3.0, emoji: '🚘', color: '#0f172a', lux: true },
+  { id: 'porsche', name: 'Porsche 911 Carrera', kind: 'car', body: 'sports', tier: 5, price: 380_000_000, speed: 3.4, emoji: '🏎️', color: '#facc15', lux: true },
+  { id: 'gwagon', name: 'Mercedes-AMG G63 (G-Wagon)', kind: 'suv', body: 'boxy', tier: 5, price: 450_000_000, speed: 3.1, emoji: '🚙', color: '#111827', lux: true },
+  { id: 'urus', name: 'Lamborghini Urus', kind: 'suv', body: 'suv-sport', tier: 6, price: 650_000_000, speed: 3.4, emoji: '🏎️', color: '#f97316', lux: true },
+  { id: 'aventador', name: 'Lamborghini Aventador', kind: 'car', body: 'sports', tier: 6, price: 950_000_000, speed: 3.7, emoji: '🏎️', color: '#84cc16', lux: true },
+  { id: 'cullinan', name: 'Rolls-Royce Cullinan', kind: 'suv', body: 'suv-big', tier: 6, price: 1_400_000_000, speed: 3.1, emoji: '👑', color: '#f5f5f4', lux: true },
 ];
 export const vehicleById = Object.fromEntries(VEHICLES.map((v) => [v.id, v]));
-export const VEHICLE_COLORS = ['#e5e7eb', '#111827', '#dc2626', '#1d4ed8', '#16a34a', '#facc15', '#f97316', '#7c3aed'];
+export const VEHICLE_COLORS = ['#e5e7eb', '#f5f5f4', '#94a3b8', '#111827', '#0f172a', '#dc2626', '#1d4ed8', '#1e3a8a', '#16a34a', '#14532d', '#84cc16', '#facc15', '#f97316', '#7c3aed'];
 
 // ------------------------------------------------------------ buildings
 export const BUILDINGS = [
@@ -384,12 +395,12 @@ export const PLACES = [
     jobs: [
       { id: 'konda', title: 'Konda wa Daladala', titles: ['Konda', 'Dereva wa daladala', 'Mmiliki wa daladala'], secs: 40, pay: 14_000, energy: 9 },
       { id: 'bodaboda', title: 'Dereva wa Bodaboda', titles: ['Boda', 'Boda mzoefu', 'Bosi wa kijiwe'], secs: 40, pay: 24_000, energy: 9, requires: { vehicle: ['bodaboda'] } },
-      { id: 'taxi', title: 'Dereva wa Taxi Mtandao', titles: ['Dereva', 'Dereva nyota 5', 'Mmiliki wa fleet'], secs: 55, pay: 45_000, energy: 10, requires: { vehicle: ['ist', 'noah', 'harrier', 'v8'] } },
+      { id: 'taxi', title: 'Dereva wa Taxi Mtandao', titles: ['Dereva', 'Dereva nyota 5', 'Mmiliki wa fleet'], secs: 55, pay: 45_000, energy: 10, requires: { vehicle: VEHICLES.filter((v) => ['car', 'van', 'suv'].includes(v.kind)).map((v) => v.id) } },
     ],
   },
   {
     id: 'yadi', name: 'Yadi ya Magari', district: 'Ubungo', type: 'yard', icon: '🚗', pos: [-130, -22], size: [16, 13], h: 3, color: '#e2e8f0',
-    blurb: 'IST, Noah, Harrier, V8 — na bodaboda za kuanzia.',
+    blurb: 'Kuanzia IST, Crown na Prado hadi G-Wagon, Lamborghini na Rolls-Royce. Panda ngazi taratibu!',
     shop: 'vehicles', activities: [],
   },
   {
@@ -455,6 +466,106 @@ export const PLACES = [
       { id: 'mhudumu-ndege', title: 'Mhudumu wa ndege', titles: ['Mhudumu wa ndege', 'Mhudumu mkuu', 'Purser'], secs: 70, pay: 48_000, energy: 12, requires: { elimu: 1 } },
       { id: 'rubani', title: 'Rubani', titles: ['Rubani msaidizi', 'Rubani', 'Kapteni', 'Kapteni mkuu'], secs: 90, pay: 160_000, energy: 15, requires: { elimu: 3 } },
     ],
+  },
+  {
+    id: 'kinyozi', name: 'Kinyozi & Saluni Sinza', district: 'Sinza', type: 'salon', icon: '💈', pos: [-85, -30], size: [10, 8], h: 5, color: '#f9a8d4',
+    blurb: 'Kiduku safi, misuko mipya na umbea wa mtaa mzima.',
+    business: { price: 12_000_000, incomePerHour: 80_000 },
+    activities: [
+      { id: 'nyoa', name: 'Nyoa kiduku safi', cost: 3_000, secs: 12, effects: { hygiene: 20, fun: 6 }, emoji: '💈' },
+      { id: 'suka', name: 'Suka nywele (misuko/rasta)', cost: 15_000, secs: 25, effects: { hygiene: 15, fun: 12, social: 8 }, emoji: '💇🏾‍♀️' },
+      { id: 'kucha', name: 'Manicure & pedicure', cost: 8_000, secs: 14, effects: { hygiene: 18, fun: 8 }, emoji: '💅🏾' },
+      { id: 'umbea', name: 'Piga umbea saluni', cost: 0, secs: 10, effects: { social: 24, fun: 8 }, emoji: '🗣️' },
+    ],
+    jobs: [{ id: 'kinyozi', title: 'Kinyozi', titles: ['Kinyozi chipukizi', 'Kinyozi mzoefu', 'Mmiliki wa saluni'], secs: 45, pay: 15_000, energy: 8 }],
+  },
+  {
+    id: 'nyamachoma', name: 'Nyama Choma Kwa Mrombo', district: 'Ubungo', type: 'grill', icon: '🍖', pos: [-130, 62], size: [12, 10], h: 4, color: '#b45309',
+    blurb: 'Mbuzi wa kuchoma, ndizi, kachumbari na mpira kwenye TV kubwa.',
+    business: { price: 18_000_000, incomePerHour: 110_000 },
+    activities: [
+      { id: 'kilo', name: 'Kilo ya nyama choma na ndizi', cost: 12_000, secs: 15, effects: { hunger: 55, social: 10, fun: 8 }, emoji: '🍖' },
+      { id: 'supu', name: 'Supu ya utumbo', cost: 3_000, secs: 8, effects: { hunger: 25, energy: 10 }, emoji: '🍲' },
+      { id: 'mbuzi', name: 'Mbuzi mzima na washkaji', cost: 60_000, secs: 30, effects: { hunger: 60, social: 40, fun: 25 }, emoji: '🐐', fame: 1 },
+      { id: 'mpira-tv', name: 'Cheki mpira kwenye TV kubwa', cost: 2_000, secs: 20, effects: { fun: 25, social: 15 }, emoji: '📺' },
+    ],
+    jobs: [{ id: 'mchoma', title: 'Mchoma nyama', titles: ['Msaidizi wa jiko', 'Mchoma nyama', 'Bingwa wa grill'], secs: 45, pay: 16_000, energy: 10 }],
+  },
+  {
+    id: 'waterpark', name: "Wet 'n' Wild Kunduchi", district: 'Kunduchi', type: 'waterpark', icon: '🌊', pos: [-130, 120], size: [26, 20], h: 7, color: '#38bdf8',
+    blurb: 'Slides ndefu, wave pool na lazy river — burudani ya familia nzima.',
+    activities: [
+      { id: 'slides', name: 'Teleza kwenye slides', cost: 15_000, secs: 20, effects: { fun: 40, hygiene: 10, energy: -12 }, emoji: '🎢' },
+      { id: 'wave', name: 'Ogelea kwenye wave pool', cost: 10_000, secs: 18, effects: { fun: 30, hygiene: 10, energy: -10 }, emoji: '🌊' },
+      { id: 'lazy', name: 'Lazy river na marafiki', cost: 8_000, secs: 18, effects: { fun: 20, social: 22 }, emoji: '🛟' },
+      { id: 'aiskrimu-wp', name: 'Aiskrimu ya Azam', cost: 2_000, secs: 5, effects: { hunger: 10, fun: 8 }, emoji: '🍦' },
+    ],
+    jobs: [{ id: 'lifeguard', title: 'Mlinzi wa bwawa', titles: ['Lifeguard', 'Lifeguard mkuu'], secs: 50, pay: 20_000, energy: 12 }],
+  },
+  {
+    id: 'makumbusho', name: 'Kijiji cha Makumbusho', district: 'Kijitonyama', type: 'museum', icon: '🥁', pos: [-35, 105], size: [16, 12], h: 5, color: '#d6b77a',
+    blurb: 'Nyumba za makabila, ngoma za asili na sanaa ya Tingatinga.',
+    activities: [
+      { id: 'ngoma', name: 'Cheza ngoma za asili', cost: 4_000, secs: 20, effects: { fun: 30, social: 15, energy: -8 }, emoji: '🥁' },
+      { id: 'makabila', name: 'Tembelea nyumba za makabila', cost: 3_000, secs: 15, effects: { fun: 15, social: 5 }, emoji: '🛖' },
+      { id: 'tinga', name: 'Darasa la Tingatinga', cost: 20_000, secs: 25, effects: { fun: 20 }, emoji: '🎨', fame: 2 },
+      { id: 'mtori', name: 'Kula mtori na ndizi', cost: 4_000, secs: 8, effects: { hunger: 35 }, emoji: '🍌' },
+    ],
+    jobs: [{ id: 'mpiga-ngoma', title: 'Mpiga ngoma', titles: ['Mpiga ngoma', 'Kiongozi wa kikundi'], secs: 50, pay: 18_000, energy: 12 }],
+  },
+  {
+    id: 'golf', name: 'Gymkhana Golf Club', district: 'Mbezi', type: 'golf', icon: '⛳', pos: [-130, -125], size: [22, 18], h: 4, color: '#4ade80',
+    blurb: 'Golf, mabosi na dili kubwa — hapa ndipo pesa inaongea.',
+    business: { price: 300_000_000, incomePerHour: 2_000_000 },
+    activities: [
+      { id: 'golf9', name: 'Cheza mashimo 9', cost: 45_000, secs: 30, effects: { fun: 30, social: 20, energy: -12 }, emoji: '⛳', fame: 1 },
+      { id: 'range', name: 'Driving range', cost: 15_000, secs: 15, effects: { fun: 18, energy: -6 }, emoji: '🏌🏾' },
+      { id: 'dili', name: 'Piga dili na mabosi', cost: 25_000, secs: 20, effects: { social: 30 }, emoji: '🤝', fame: 2 },
+    ],
+    jobs: [{ id: 'caddie', title: 'Caddie', titles: ['Caddie', 'Caddie mkuu'], secs: 50, pay: 22_000, energy: 12 }],
+  },
+  {
+    id: 'slipway', name: 'Msasani Slipway', district: 'Msasani', type: 'slipway', icon: '⛵', pos: [88, -70], size: [12, 8], h: 4, color: '#fef3c7',
+    blurb: 'Jahazi wakati wa machweo, boti hadi Bongoyo, aiskrimu na soko la sanaa.',
+    activities: [
+      { id: 'jahazi', name: 'Safari ya jahazi machweo', cost: 35_000, secs: 30, effects: { fun: 40, social: 15 }, emoji: '⛵', fame: 1 },
+      { id: 'bongoyo', name: 'Boti hadi Bongoyo + snorkel', cost: 50_000, secs: 35, effects: { fun: 50, hygiene: 10, energy: -15 }, emoji: '🤿', fame: 1 },
+      { id: 'aiskrimu', name: 'Aiskrimu ya Slipway', cost: 4_000, secs: 5, effects: { hunger: 10, fun: 10 }, emoji: '🍨' },
+      { id: 'sanaa', name: 'Zunguka soko la sanaa', cost: 0, secs: 12, effects: { fun: 10, social: 8 }, emoji: '🛍️' },
+    ],
+    jobs: [{ id: 'nahodha', title: 'Nahodha wa jahazi', titles: ['Baharia', 'Nahodha', 'Mmiliki wa jahazi'], secs: 60, pay: 30_000, energy: 12 }],
+  },
+  {
+    id: 'singeli', name: 'Uwanja wa Singeli Mbagala', district: 'Mbagala', type: 'stage', icon: '🔊', pos: [10, 125], size: [24, 16], h: 3, color: '#a855f7',
+    blurb: 'Singeli kali, MC wanapiga kelele, chipsi mayai na vumbi la Mbagala!',
+    activities: [
+      { id: 'singeli', name: 'Cheza Singeli', cost: 5_000, secs: 20, effects: { fun: 40, social: 20, energy: -15 }, emoji: '🕺🏾' },
+      { id: 'jukwaani', name: 'Panda jukwaani (freestyle)', cost: 0, secs: 20, effects: { fun: 20, energy: -10 }, emoji: '🎤', fame: 3 },
+      { id: 'chipsi-mayai', name: 'Chipsi mayai za tamasha', cost: 3_000, secs: 6, effects: { hunger: 35 }, emoji: '🍟' },
+    ],
+    jobs: [{ id: 'mc', title: 'MC wa Singeli', titles: ['Hype man', 'MC', 'MC bingwa'], secs: 55, pay: 28_000, energy: 12, fameBonus: true }],
+  },
+  {
+    id: 'karting', name: 'Bongo Go-Karts', district: 'Temeke', type: 'karting', icon: '🏎️', pos: [-80, 133], size: [28, 16], h: 2, color: '#f97316',
+    blurb: 'Shindana na washkaji kwenye track — mshindi anakula sifa!',
+    activities: [
+      { id: 'race', name: 'Shindana mizunguko 5', cost: 25_000, secs: 25, effects: { fun: 45, energy: -10 }, emoji: '🏎️', fame: 1 },
+      { id: 'grandprix', name: 'Bongo Grand Prix na washkaji', cost: 60_000, secs: 35, effects: { fun: 60, social: 25, energy: -15 }, emoji: '🏁', fame: 2 },
+      { id: 'pitstop', name: 'Soda baridi pitstop', cost: 1_500, secs: 4, effects: { hunger: 6, energy: 8 }, emoji: '🥤' },
+    ],
+    jobs: [{ id: 'fundi', title: 'Fundi wa magari', titles: ['Fundi msaidizi', 'Fundi', 'Mkuu wa pit'], secs: 50, pay: 24_000, energy: 12 }],
+  },
+  {
+    id: 'serena', name: 'Serena Hotel & Spa', district: 'Posta', type: 'hotel', icon: '🏨', pos: [56, -62], size: [14, 10], h: 22, color: '#e2e8f0',
+    blurb: 'Massage, pool party ya rooftop, dinner ya kifahari na suite za kulala.',
+    business: { price: 500_000_000, incomePerHour: 3_200_000 },
+    activities: [
+      { id: 'massage', name: 'Massage ya mwili mzima', cost: 40_000, secs: 25, effects: { energy: 40, hygiene: 20, fun: 15 }, emoji: '💆🏾' },
+      { id: 'rooftop', name: 'Pool party ya rooftop', cost: 30_000, secs: 25, effects: { fun: 40, social: 30 }, emoji: '🍹', fame: 1 },
+      { id: 'dinner', name: 'Dinner ya kifahari', cost: 55_000, secs: 18, effects: { hunger: 70, social: 15, fun: 15 }, emoji: '🍽️' },
+      { id: 'suite', name: 'Lala kwenye suite', cost: 120_000, secs: 30, effects: { energy: 90, hygiene: 30, fun: 10 }, emoji: '🛏️' },
+    ],
+    jobs: [{ id: 'receptionist', title: 'Mpokeaji wageni', titles: ['Receptionist', 'Meneja wa mapokezi', 'Meneja wa hoteli'], secs: 60, pay: 34_000, energy: 10, requires: { elimu: 1 } }],
   },
 ];
 export const placeById = Object.fromEntries(PLACES.map((p) => [p.id, p]));
@@ -554,7 +665,8 @@ export const electionEnds = (p) => (p + 1) * WEEK_MS - WEEK_OFF;
 // Invite friends: both sides earn once the new player finishes their first shift.
 export const REFERRAL = { newPlayer: 20_000, referrer: 30_000, maxPaid: 50 };
 // Every new player gets a used car to drive around in.
-export const STARTER_CAR = 'vitz';
+export const STARTER_CAR = 'ist';
+export const CAR_KINDS = ['car', 'van', 'suv'];
 export function travelCost(mode, from, to) {
   const t = TRAVEL[mode];
   const d = Math.hypot(to[0] - from[0], to[1] - from[1]);
@@ -649,13 +761,22 @@ const EN = {
       nyamachoma: 'Nyama choma (grilled meat)', soda: 'Drinks with friends', mpira: 'Watch football' }],
     studio: ['Bongo Flava Studio', 'Record your track — tomorrow you could be a star.', { rekodi: 'Record a song', video: 'Shoot a music video' }],
     stendi: ['Magufuli Bus Terminal', 'Daladalas and upcountry buses. The conductor is calling!', { kijiweni: 'Hang at the base' }],
-    yadi: ['Car Yard', 'IST, Noah, Harrier, V8 — and starter bodabodas.', {}],
+    yadi: ['Car Yard', 'From an IST, Crown and Prado all the way to a G-Wagon, Lamborghini and Rolls-Royce. Climb the ladder!', {}],
     uwanja: ['National Stadium', 'The Kariakoo Derby — Simba vs Yanga!', { dabi: 'Derby ticket: Simba vs Yanga', kimbia: 'Run on the track' }],
     masakigrill: ['Masaki Seafood Grill', 'Prawns, octopus and the Msasani sunset.', { seafood: 'Seafood platter', date: 'Fancy dinner date' }],
     lounge: ['Msasani Rooftop Lounge', 'The celebs’ rooftop — enjoy life in style.', { sundowner: 'Rooftop sundowner' }],
     kigbeach: ['Kigamboni Beach Resort', 'Clean beaches far from the city noise.', { pumzika: 'Relax on the beach', ogelea2: 'Swim' }],
     hospitali: ['Muhimbili Hospital', 'Emergency care and health check-ups — open 24 hours.', {
       matibabu: 'Get treatment', pima: 'Health check-up', 'pumzika-wodini': 'Rest on the ward' }],
+    kinyozi: ['Sinza Barber & Salon', 'Fresh fades, new braids and all the neighbourhood gossip.', { nyoa: 'Get a fresh fade', suka: 'Get braids / locs done', kucha: 'Manicure & pedicure', umbea: 'Gossip at the salon' }],
+    nyamachoma: ['Kwa Mrombo Nyama Choma', 'Roast goat, plantains, kachumbari and football on the big screen.', { kilo: 'A kilo of nyama choma & plantains', supu: 'Tripe soup', mbuzi: 'A whole goat with the crew', 'mpira-tv': 'Watch the match on the big TV' }],
+    waterpark: ["Wet 'n' Wild Kunduchi", 'Long slides, a wave pool and a lazy river — fun for the whole family.', { slides: 'Ride the water slides', wave: 'Swim in the wave pool', lazy: 'Lazy river with friends', 'aiskrimu-wp': 'Azam ice cream' }],
+    makumbusho: ['Village Museum', 'Traditional houses of the tribes, ngoma dancing and Tingatinga art.', { ngoma: 'Dance traditional ngoma', makabila: 'Tour the tribal houses', tinga: 'Tingatinga painting class', mtori: 'Eat mtori & plantain stew' }],
+    golf: ['Gymkhana Golf Club', 'Golf, big bosses and big deals — money talks here.', { golf9: 'Play 9 holes', range: 'Driving range', dili: 'Close deals with the bosses' }],
+    slipway: ['Msasani Slipway', 'Sunset dhow cruises, boats to Bongoyo, ice cream and a craft market.', { jahazi: 'Sunset dhow cruise', bongoyo: 'Boat to Bongoyo + snorkelling', aiskrimu: 'Slipway ice cream', sanaa: 'Browse the craft market' }],
+    singeli: ['Mbagala Singeli Ground', 'Hard-hitting Singeli, screaming MCs, chipsi mayai and Mbagala dust!', { singeli: 'Dance to Singeli', jukwaani: 'Jump on stage (freestyle)', 'chipsi-mayai': 'Festival chipsi mayai' }],
+    karting: ['Bongo Go-Karts', 'Race your friends on the track — the winner gets the bragging rights!', { race: 'Race 5 laps', grandprix: 'Bongo Grand Prix with friends', pitstop: 'Cold soda at the pit stop' }],
+    serena: ['Serena Hotel & Spa', 'Massages, a rooftop pool party, fine dining and suites to sleep in.', { massage: 'Full-body massage', rooftop: 'Rooftop pool party', dinner: 'Fine dining dinner', suite: 'Sleep in a suite' }],
     airport: ['JNIA Airport', 'Catch a flight — Zanzibar, Arusha, Mwanza, Nairobi, even Dubai. Safe travels!', {
       zanzibar: 'Fly to Zanzibar', arusha: 'Fly to Arusha (Safari)', mwanza: 'Fly to Mwanza', nairobi: 'Fly to Nairobi', dubai: 'Fly to Dubai (Business class)' }],
   },
@@ -681,6 +802,15 @@ const EN = {
     mbebaji: ['Baggage handler', ['Baggage handler', 'Baggage supervisor']],
     'mhudumu-ndege': ['Cabin crew', ['Cabin crew', 'Senior cabin crew', 'Purser']],
     rubani: ['Pilot', ['First officer', 'Pilot', 'Captain', 'Chief captain']],
+    kinyozi: ['Barber', ['Junior barber', 'Senior barber', 'Salon owner']],
+    mchoma: ['Grill master', ['Kitchen helper', 'Grill master', 'Grill champion']],
+    lifeguard: ['Lifeguard', ['Lifeguard', 'Head lifeguard']],
+    'mpiga-ngoma': ['Ngoma drummer', ['Drummer', 'Troupe leader']],
+    caddie: ['Caddie', ['Caddie', 'Head caddie']],
+    nahodha: ['Dhow captain', ['Sailor', 'Captain', 'Dhow owner']],
+    mc: ['Singeli MC', ['Hype man', 'MC', 'Champion MC']],
+    fundi: ['Mechanic', ['Pit helper', 'Mechanic', 'Pit chief']],
+    receptionist: ['Receptionist', ['Receptionist', 'Front desk manager', 'Hotel manager']],
   },
 };
 
@@ -723,7 +853,7 @@ export function moodLabelEn(m) {
 
 // ------------------------------------------------------------ interiors
 // Venues you can walk into (others see you there), and which scene an activity shows.
-export const ENTERABLE = { club: 'club', lounge: 'lounge', bar: 'bar', uwanja: 'stadium', studio: 'studio' };
+export const ENTERABLE = { club: 'club', lounge: 'lounge', bar: 'bar', uwanja: 'stadium', studio: 'studio', singeli: 'concert', kinyozi: 'salon', nyamachoma: 'grill' };
 const ACTIVITY_SCENES = {
   gesti: { lala: 'room', oga: 'room', pika: 'room' },
   mamantilie: { chipsi: 'dining', walimaharage: 'dining', ugalisamaki: 'dining', chai: 'dining' },
@@ -737,8 +867,14 @@ const ACTIVITY_SCENES = {
   chuo: { kozi: 'classroom', maktaba: 'classroom' },
   hospitali: { matibabu: 'hospital', pima: 'hospital', 'pumzika-wodini': 'hospital' },
   airport: { zanzibar: 'flight', arusha: 'flight', mwanza: 'flight', nairobi: 'flight', dubai: 'flight' },
+  waterpark: { slides: 'waterpark', wave: 'waterpark', lazy: 'waterpark' },
+  makumbusho: { ngoma: 'ngoma', makabila: 'ngoma', tinga: 'ngoma' },
+  golf: { golf9: 'golf', range: 'golf', dili: 'golf' },
+  slipway: { jahazi: 'dhow', bongoyo: 'dhow' },
+  karting: { race: 'karting', grandprix: 'karting' },
+  serena: { massage: 'spa', suite: 'spa', rooftop: 'rooftop', dinner: 'dining' },
 };
-const JOB_SCENES = { dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', msaidizi: 'dining', cashier: 'shop', machinga: 'shop', nesi: 'hospital', daktari: 'hospital', teller: 'bank', karani: 'office', developer: 'office', mlinzi: 'stadium', mvuvi: 'beach', 'mhudumu-ndege': 'flight', rubani: 'flight' };
+const JOB_SCENES = { dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', msaidizi: 'dining', cashier: 'shop', machinga: 'shop', nesi: 'hospital', daktari: 'hospital', teller: 'bank', karani: 'office', developer: 'office', mlinzi: 'stadium', mvuvi: 'beach', 'mhudumu-ndege': 'flight', rubani: 'flight' , lifeguard: 'waterpark', 'mpiga-ngoma': 'ngoma', caddie: 'golf', nahodha: 'dhow', fundi: 'karting', receptionist: 'spa' };
 
 /** Scene for a busy state ({ kind, id, placeId }), or null to stay outdoors. */
 export function sceneFor(busy) {

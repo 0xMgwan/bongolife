@@ -7,6 +7,9 @@ import { HOME, furnitureById, footprint, homeFits } from '@shared/world.js';
 import { mat, geo } from './textures.js';
 import { FurnitureModel } from './Furniture.jsx';
 import { Body, Overhead } from './Players.jsx';
+import { Vehicle } from './Vehicle.jsx';
+import { vehicleById } from '@shared/world.js';
+import { local } from '../net.js';
 import { useStore } from '../store.js';
 import { homeGuests, sendHomePos } from '../net.js';
 
@@ -184,6 +187,32 @@ function Guests() {
   return list.map((g) => <Guest key={`${g.id}-${g.appearance?.outfit}`} g={g} />);
 }
 
+/** Your cars on the driveway (up to 3, best first). Tap one to drive it out into town. */
+function Driveway({ vehicles, mine }) {
+  const run = useStore((s) => s.run);
+  const cars = [...(vehicles || [])].filter((v) => vehicleById[v.model]).sort((a, b) => vehicleById[b.model].price - vehicleById[a.model].price).slice(0, 3);
+  const driveOut = (v) => (e) => {
+    if (!mine || e.delta > 10) return;
+    e.stopPropagation();
+    local.lastCar = v.id;
+    useStore.setState({ tab: 'town', cityView: 'follow' });
+    run('/vehicle/use', { method: 'POST', body: { vehicleId: v.id } });
+  };
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-4.8, -0.02, 8.2]} material={mat('#9ca3af')}><planeGeometry args={[9, 5.6]} /></mesh>
+      {cars.map((v, i) => {
+        const d = vehicleById[v.model];
+        return (
+          <group key={v.id} position={[-1.8 - i * 3, 0, 8.2]} rotation={[0, Math.PI, 0]} scale={0.9} onClick={driveOut(v)}>
+            <Vehicle kind={d.kind} body={d.body} lux={d.lux} color={v.color} />
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 function Ghost({ items }) {
   const placing = useStore((s) => s.placing);
   if (!placing) return null;
@@ -276,6 +305,7 @@ export function HomeScene({ me }) {
       <Ghost items={items} />
       <Sim me={me} items={items} />
       <Guests />
+      <Driveway vehicles={visiting ? visiting.host.vehicles : me.vehicles} mine={!visiting} />
       <pointLight color="#fff7ed" intensity={14} distance={20} position={[0, 4, 0]} />
     </group>
   );

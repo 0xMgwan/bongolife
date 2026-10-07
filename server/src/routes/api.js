@@ -226,7 +226,8 @@ api.get('/visit/:username', (req, res) => {
   const host = getUserByUsername(req.params.username);
   if (!host) throw new GameError(['Mtumiaji hayupo', 'User not found'], 404);
   if (!canVisit(req.user.id, host.id)) throw new GameError(['Hujaalikwa nyumbani kwa mtu huyu.', "You haven't been invited to this home."], 403, 'not_invited');
-  res.json({ host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance }, items: game.homeItems(host.id) });
+  const vehicles = db.prepare('SELECT id, model, color FROM vehicles WHERE user_id = ?').all(host.id);
+  res.json({ host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance, vehicles }, items: game.homeItems(host.id) });
 });
 api.post('/home/items', (req, res) => {
   game.buyFurniture(req.user.id, { item: str(req.body.item, 30), x: req.body.x, z: req.body.z, rot: req.body.rot });
