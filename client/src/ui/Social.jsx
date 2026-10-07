@@ -3,6 +3,9 @@ import { useStore } from '../store.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
 import { L } from '../i18n.js';
 import { answerInvite, callAmbulance, goHospital, leaveVisit } from './social.js';
+import { placeById } from '@shared/world.js';
+import { replyHangout } from '../net.js';
+import { loc } from '../i18n.js';
 
 /** Incoming "come to my place" invite. */
 function InviteModal() {
@@ -17,6 +20,30 @@ function InviteModal() {
         <div className="row" style={{ gap: 8 }}>
           <button className="btn btn-ghost grow" onClick={() => answerInvite(false)}>{L('Sasa hivi siwezi', 'Not now')}</button>
           <button className="btn btn-green grow" onClick={() => answerInvite(true)}>✓ {L('Nakuja!', "I'm coming!")}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** "Let's go out" invite from someone you met in town. */
+function HangoutModal() {
+  const h = useStore((s) => s.hangout);
+  if (!h) return null;
+  const p = placeById[h.placeId];
+  const answer = (yes) => {
+    replyHangout(h.fromId, h.placeId, yes);
+    useStore.setState({ hangout: null, ...(yes ? { meetup: { with: h.from, placeId: h.placeId, until: Date.now() + 30 * 60_000 }, sheet: { type: 'travel', id: h.placeId }, tab: 'town', phone: null } : {}) });
+  };
+  return (
+    <div className="modal-wrap">
+      <div className="modal card pop">
+        <div className="big">{avatarEmoji(h.appearance)} {p?.icon}</div>
+        <h3>{L('Twende tukale bata! 🎉', "Let's go out! 🎉")}</h3>
+        <p className="muted">{L(`@${h.from} anakuita mkutane ${p?.name}.`, `@${h.from} wants to meet you at ${loc(p)}.`)}</p>
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn btn-ghost grow" onClick={() => answer(false)}>{L('Sasa hivi siwezi', 'Not now')}</button>
+          <button className="btn btn-green grow" onClick={() => answer(true)}>✓ {L('Twende!', "I'm in!")}</button>
         </div>
       </div>
     </div>
@@ -67,6 +94,7 @@ export function SocialModals() {
   return (
     <>
       <InviteModal />
+      <HangoutModal />
       <AccidentModal />
     </>
   );

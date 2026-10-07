@@ -12,6 +12,7 @@ import { goToPlace, skipRide, skipTrip } from '../nav.js';
 import { goHomeTo } from './homeNav.js';
 import { goHospital, leaveVisit } from './social.js';
 import { WorkPanel } from './WorkPanel.jsx';
+import { useLiveEvents, joinParty } from './events.js';
 import { haptic } from '../haptics.js';
 
 /** Banner shown while inside a venue or doing a scene activity. */
@@ -91,6 +92,40 @@ function Joystick() {
       <i ref={knob} />
     </div>
   );
+}
+
+/** Live party anywhere in the city + your agreed meet-up: one tap to join / go. */
+function SocialChips({ me }) {
+  const live = useLiveEvents();
+  const meetup = useStore((s) => s.meetup);
+  const inside = useStore((s) => s.inside);
+  const tab = useStore((s) => s.tab);
+  const visiting = useStore((s) => s.visiting);
+  const chips = [];
+  for (const e of live.slice(0, 2)) {
+    const here = e.place_id === 'home' ? tab === 'home' && (visiting ? visiting.host.id : me.id) === e.host_id : inside === e.place_id;
+    if (here) continue;
+    const p = placeById[e.place_id];
+    chips.push(
+      <button key={`e${e.id}`} className="live-chip" onClick={() => { sfx('click'); joinParty(e); }}>
+        <span className="live-dot">LIVE</span>
+        <span className="lc-t"><b>{e.title}</b><small>{e.place_id === 'home' ? L(`Kwa @${e.host}`, `At @${e.host}'s`) : loc(p)} · 🙋 {e.going}</small></span>
+        <span className="lc-go">{L('Ingia', 'Join')} →</span>
+      </button>,
+    );
+  }
+  if (meetup && meetup.until > Date.now() && inside !== meetup.placeId) {
+    const p = placeById[meetup.placeId];
+    chips.push(
+      <button key="meet" className="live-chip meet" onClick={() => { sfx('click'); useStore.setState({ sheet: { type: 'travel', id: meetup.placeId }, tab: 'town', phone: null }); }}>
+        <span className="lc-ic">🤝</span>
+        <span className="lc-t"><b>{L(`Kutana na @${meetup.with}`, `Meet @${meetup.with}`)}</b><small>{p?.icon} {loc(p)}</small></span>
+        <span className="lc-go">{L('Nenda', 'Go')} →</span>
+        <span className="lc-x" onClick={(ev) => { ev.stopPropagation(); useStore.setState({ meetup: null }); }}>✕</span>
+      </button>,
+    );
+  }
+  return chips.length ? <div className="social-chips">{chips}</div> : null;
 }
 
 /** "Heading to X… · Skip" while walking/driving to a place (needs a vehicle to skip). */
@@ -500,6 +535,7 @@ export function HUD() {
         <div className="hud-left">
           {!clean && world?.event && town && !scene && <div className="event">{loc(world.event, 'text')}</div>}
           {!clean && announcement && <div className="announce">📣 {loc(announcement, 'text')}</div>}
+          <SocialChips me={me} />
           {town && !scene && me.busy?.kind !== 'job' && <TownChips />}
           <Tips me={me} />
         </div>

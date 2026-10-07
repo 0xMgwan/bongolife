@@ -4,7 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
 import { Server } from 'socket.io';
-import { NEED_TICK_SECONDS, isWater, moodOf, ENTERABLE, placeById } from '../../shared/world.js';
+import { NEED_TICK_SECONDS, isWater, moodOf, ENTERABLE, placeById, EVENT_SCENES, EVENT_LIMITS, HANGOUT_PLACES } from '../../shared/world.js';
 import { db, getUser, saveFields, now, UPLOAD_DIR, getSettings } from './db.js';
 import { verifyToken } from './auth.js';
 import { api, settleTopup, applyTopupStatus } from './routes/api.js';
@@ -154,7 +154,7 @@ io.on('connection', (socket) => {
   socket.on('inside', (placeId) => {
     let inside = null;
     if (placeId === 'home') inside = 'home';
-    else if (placeId && ENTERABLE[placeId]) {
+    else if (placeId && (ENTERABLE[placeId] || (EVENT_SCENES[placeId] && partyLiveAt(placeId)))) {
       const pl = placeById[placeId];
       const dx = Math.max(Math.abs(p.x - pl.pos[0]) - pl.size[0] / 2, 0);
       const dz = Math.max(Math.abs(p.z - pl.pos[1]) - pl.size[1] / 2, 0);
@@ -175,6 +175,23 @@ io.on('connection', (socket) => {
     addInvite(uid, target.id);
     emitTo(target.id, 'invite', { fromId: uid, from: p.username, fromName: p.name, appearance: p.appearance });
     ack?.({ ok: true });
+  });
+  // "Let's go out": invite someone to meet at a place (club, beach, nyama choma…).
+  const lastHangout = new Map();
+  socket.on('hangout', ({ to, placeId } = {}, ack) => {
+    const target = typeof to === 'string' && db.prepare('SELECT id FROM users WHERE username = ?').get(to.replace(/^@/, ''));
+    if (!target || target.id === uid || !HANGOUT_PLACES.includes(placeId)) return ack?.({ error: 'bad' });
+    if (!online.has(target.id)) return ack?.({ error: 'offline' });
+    if (now() - (lastHangout.get(target.id) || 0) < 8000) return ack?.({ error: 'slow' });
+    lastHangout.set(target.id, now());
+    emitTo(target.id, 'hangout', { fromId: uid, from: p.username, appearance: p.appearance, placeId });
+    ack?.({ ok: true });
+  });
+  socket.on('hangout:reply', ({ fromId, placeId, accept } = {}) => {
+    if (!online.has(fromId) || !HANGOUT_PLACES.includes(placeId)) return;
+    const name = placeById[placeId];
+    if (accept) emitTo(fromId, 'hangout:accepted', { by: p.username, placeId });
+    else emitTo(fromId, 'toast', { text: [`@${p.username} hawezi kuja ${name.name} sasa hivi.`, `@${p.username} can't make it to ${name.name} right now.`] });
   });
   socket.on('invite:reply', ({ fromId, accept } = {}) => {
     if (online.has(fromId)) emitTo(fromId, 'toast', { text: accept ? [`🏠 @${p.username} amekubali — anakuja!`, `🏠 @${p.username} accepted — on the way!`] : [`@${p.username} hawezi kuja sasa.`, `@${p.username} can't come right now.`] });
@@ -259,6 +276,11 @@ const checkElection = () => {
 checkElection();
 setInterval(checkElection, 60_000);
 
+/** Is a public party running at this venue right now? */
+function partyLiveAt(placeId) {
+  return !!db.prepare('SELECT 1 FROM events WHERE cancelled = 0 AND place_id = ? AND starts_at <= ? AND starts_at + ? >= ?').get(placeId, now(), EVENT_LIMITS.windowAfterMs, now());
+}
+
 // Event reminders: ping everyone who RSVP'd when an event starts.
 setInterval(() => {
   const due = db.prepare('SELECT e.*, u.username host FROM events e JOIN users u ON u.id = e.host_id WHERE e.cancelled = 0 AND e.notified = 0 AND e.starts_at <= ?').all(now());
@@ -266,6 +288,8 @@ setInterval(() => {
     db.prepare('UPDATE events SET notified = 1 WHERE id = ?').run(e.id);
     for (const r of db.prepare('SELECT user_id FROM event_rsvps WHERE event_id = ?').all(e.id))
       emitTo(r.user_id, 'event:start', { id: e.id, title: e.title, placeId: e.place_id, host: e.host, hostId: e.host_id });
+    // Everyone sees the LIVE chip; the whole city can join.
+    broadcast('events:changed', {});
   }
 }, 30_000);
 

@@ -6,6 +6,11 @@ import { AppHead } from '../Phone.jsx';
 import { L, loc } from '../../i18n.js';
 import { visitHome } from '../social.js';
 import { goToPlace } from '../../nav.js';
+import { avatarEmoji } from '../../three/Avatar.jsx';
+import { share } from '../share.js';
+import { joinParty, loadEvents } from '../events.js';
+
+const COVERS = [['#7c3aed', '#db2777'], ['#f59e0b', '#ef4444'], ['#0ea5e9', '#6366f1'], ['#10b981', '#0d9488'], ['#ec4899', '#f97316']];
 
 const placeLabel = (id) => (id === 'home' ? L('🏠 Nyumbani kwa mwenyeji', "🏠 Host's home") : `${placeById[id]?.icon || '📍'} ${loc(placeById[id])}`);
 
@@ -40,7 +45,7 @@ export function Matukio({ back }) {
   }, [version]);
   const rsvp = async (e) => {
     const r = await run(`/events/${e.id}/rsvp`, { method: 'POST' });
-    if (r) setList(r);
+    if (r) { setList(r); loadEvents(); }
   };
   const cancel = async (e) => {
     if (!confirm(L('Ghairi tukio hili?', 'Cancel this event?'))) return;
@@ -90,27 +95,44 @@ export function Matukio({ back }) {
             {L('Hakuna matukio yanayokuja. Kuwa wa kwanza kuandaa pati!', 'No upcoming events. Be the first to throw a party!')}
           </div>
         )}
-        {list?.map((e) => (
-          <div key={e.id} className="ev">
-            <div className="row between">
-              <span className="when">{when(e.starts_at)}</span>
-              {e.starts_at <= Date.now() && <span className="tag live">● LIVE</span>}
+        {list?.map((e) => {
+          const live = e.starts_at <= Date.now();
+          const p = e.place_id === 'home' ? null : placeById[e.place_id];
+          const [c1, c2] = COVERS[e.id % COVERS.length];
+          return (
+            <div key={e.id} className="ev">
+              <div className="ev-cover" style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
+                {live && <span className="tag live">● LIVE</span>}
+                <span className="ev-ic">{p ? p.icon : '🏠'}</span>
+                <div>
+                  <span className="when">{when(e.starts_at)}</span>
+                  <h4>{e.title}</h4>
+                </div>
+              </div>
+              <div className="ev-body">
+                {e.description && <div className="small" style={{ marginBottom: 6 }}>{e.description}</div>}
+                <div className="small muted">{placeLabel(e.place_id)} · {L('na', 'by')} @{e.host}</div>
+                <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                  <div className="faces">{(e.faces || []).map((f) => <span key={f.username} title={`@${f.username}`}>{avatarEmoji(f.appearance)}</span>)}</div>
+                  <span className="small muted">🙋 {e.going} {L('wanakuja', 'going')}</span>
+                </div>
+                <div className="row" style={{ gap: 8, marginTop: 10 }}>
+                  {e.host_id === me.id ? (
+                    <button className="btn btn-ghost btn-xs grow" onClick={() => cancel(e)}>✕ {L('Ghairi tukio', 'Cancel event')}</button>
+                  ) : (
+                    <button className={`btn btn-xs grow ${e.mine ? 'btn-ghost' : 'btn-dark'}`} onClick={() => rsvp(e)}>{e.mine ? `✓ ${L('Nakuja', 'Going')}` : `🙋 ${L('Nitakuja', "I'm going")}`}</button>
+                  )}
+                  {live ? (
+                    <button className="btn btn-xs grow party-btn" style={{ marginTop: 0 }} onClick={() => joinParty(e)}>🎉 {L('Ingia sasa', 'Join now')}</button>
+                  ) : (soon(e) || e.place_id !== 'home') && (e.mine || e.host_id === me.id || e.place_id !== 'home') && (
+                    <button className="btn btn-green btn-xs grow" onClick={() => go(e)}>{L('Nenda', 'Go')} →</button>
+                  )}
+                  <button className="btn btn-ghost btn-xs" onClick={() => share({ title: e.title, text: L(`Njoo kwenye "${e.title}" Bongo Life! 🎉`, `Come to "${e.title}" on Bongo Life! 🎉`), params: { event: e.id } })} aria-label="Share">🔗</button>
+                </div>
+              </div>
             </div>
-            <h4>{e.title}</h4>
-            {e.description && <div className="small" style={{ marginBottom: 6 }}>{e.description}</div>}
-            <div className="small muted">{placeLabel(e.place_id)} · {L('na', 'by')} @{e.host} · 🙋 {e.going} {L('wanakuja', 'going')}</div>
-            <div className="row" style={{ gap: 8, marginTop: 10 }}>
-              {e.host_id === me.id ? (
-                <button className="btn btn-ghost btn-xs grow" onClick={() => cancel(e)}>✕ {L('Ghairi tukio', 'Cancel event')}</button>
-              ) : (
-                <button className={`btn btn-xs grow ${e.mine ? 'btn-ghost' : 'btn-dark'}`} onClick={() => rsvp(e)}>{e.mine ? `✓ ${L('Nakuja', 'Going')}` : `🙋 ${L('Nitakuja', "I'm going")}`}</button>
-              )}
-              {(soon(e) || e.place_id !== 'home') && (e.mine || e.host_id === me.id || e.place_id !== 'home') && (
-                <button className="btn btn-green btn-xs grow" onClick={() => go(e)}>{L('Nenda', 'Go')} →</button>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );

@@ -500,7 +500,13 @@ const eventRows = (userId, where = 'e.starts_at + @after >= @t', params = {}) =>
     FROM events e JOIN users u ON u.id = e.host_id
     WHERE e.cancelled = 0 AND ${where} ORDER BY e.starts_at LIMIT 60`)
     .all({ me: userId, t: now(), after: EVENT_LIMITS.windowAfterMs, ...params })
-    .map((e) => ({ ...e, mine: !!e.mine, host_appearance: JSON.parse(e.host_appearance || 'null') }));
+    .map((e) => ({
+      ...e,
+      mine: !!e.mine,
+      host_appearance: JSON.parse(e.host_appearance || 'null'),
+      faces: db.prepare('SELECT u.username, u.appearance FROM event_rsvps r JOIN users u ON u.id = r.user_id WHERE r.event_id = ? ORDER BY r.created_at LIMIT 6').all(e.id)
+        .map((u) => ({ username: u.username, appearance: JSON.parse(u.appearance || 'null') })),
+    }));
 api.get('/events', (req, res) => res.json(eventRows(req.user.id)));
 api.post('/events', (req, res) => {
   const title = str(req.body.title, EVENT_LIMITS.titleMax);
@@ -517,6 +523,7 @@ api.post('/events', (req, res) => {
     .run(req.user.id, title, description || null, placeId, startsAt, now());
   db.prepare('INSERT INTO event_rsvps (event_id, user_id, created_at) VALUES (?, ?, ?)').run(info.lastInsertRowid, req.user.id, now());
   broadcast('toast', { text: [`🎉 Tukio jipya: "${title}" na @${req.user.username}`, `🎉 New event: "${title}" by @${req.user.username}`] });
+  broadcast('events:changed', {});
   res.status(201).json(eventRows(req.user.id));
 });
 api.post('/events/:id/rsvp', (req, res) => {
@@ -532,6 +539,7 @@ api.post('/events/:id/rsvp', (req, res) => {
 });
 api.delete('/events/:id', (req, res) => {
   db.prepare('UPDATE events SET cancelled = 1 WHERE id = ? AND host_id = ?').run(Number(req.params.id), req.user.id);
+  broadcast('events:changed', {});
   res.json(eventRows(req.user.id));
 });
 

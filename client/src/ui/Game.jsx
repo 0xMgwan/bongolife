@@ -9,6 +9,7 @@ import { api, visitorId } from '../api.js';
 import { connect, local, input, setInside, enterHome, leaveHome } from '../net.js';
 import { SocialModals } from './Social.jsx';
 import { readDeepLink } from './share.js';
+import { loadEvents } from './events.js';
 import { sfx } from '../audio.js';
 import { HUD } from './HUD.jsx';
 import { Sheets } from './Sheets.jsx';
@@ -31,7 +32,8 @@ export default function Game() {
     api('/world').then((w) => set({ world: { plots: w.plots, businesses: w.businesses, event: w.event, mayor: w.mayor }, ads: w.ads, announcement: w.announcement })).catch(() => {});
     const stats = () => api(`/public/stats?v=${visitorId()}`).then((s) => set({ visits: s.visits, online: s.online })).catch(() => {});
     stats();
-    const statsTimer = setInterval(stats, 60_000);
+    loadEvents();
+    const statsTimer = setInterval(() => { stats(); loadEvents(); }, 60_000);
     api('/messages/public').then((rows) => set({ publicFeed: rows.map((r) => ({ ...r, mid: r.id, text: r.body, at: r.created_at })) })).catch(() => {});
     return () => clearInterval(statsTimer);
   }, [set]);

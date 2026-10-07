@@ -1047,4 +1047,9 @@ export const flightPhase = (f) => {
 
 // ---------------------------------------------------------------- events
 export const EVENT_LIMITS = { titleMax: 40, descMax: 140, maxActivePerHost: 3, minLeadMs: 5 * 60_000, maxAheadMs: 7 * 86400_000, windowBeforeMs: 30 * 60_000, windowAfterMs: 3 * 3600_000 };
-export const EVENT_PLACES = ['home', 'club', 'bar', 'lounge', 'coco', 'kigbeach', 'uwanja', 'mall', 'masakigrill', 'studio'];
+export const EVENT_PLACES = ['home', 'club', 'bar', 'lounge', 'singeli', 'nyamachoma', 'serena', 'coco', 'kigbeach', 'slipway', 'waterpark', 'karting', 'golf', 'makumbusho', 'uwanja', 'mall', 'masakigrill', 'studio'];
+// Venues without their own walk-in interior use this scene while a party is live there.
+export const EVENT_SCENES = { coco: 'beach', kigbeach: 'beach', mall: 'cinema', masakigrill: 'dining', waterpark: 'waterpark', serena: 'rooftop', karting: 'karting', slipway: 'dhow', golf: 'golf', makumbusho: 'ngoma' };
+// Places you can invite someone to hang out at.
+export const HANGOUT_PLACES = ['club', 'lounge', 'bar', 'singeli', 'nyamachoma', 'coco', 'waterpark', 'karting', 'serena', 'slipway', 'mall', 'masakigrill', 'kinyozi', 'golf', 'makumbusho', 'uwanja', 'gym', 'mamantilie'];
+export const isEventLive = (e, t = Date.now()) => !e.cancelled && e.starts_at <= t && t <= e.starts_at + EVENT_LIMITS.windowAfterMs;

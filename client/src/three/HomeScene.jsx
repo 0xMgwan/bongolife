@@ -8,6 +8,8 @@ import { mat, geo } from './textures.js';
 import { FurnitureModel } from './Furniture.jsx';
 import { Body, Overhead } from './Players.jsx';
 import { Vehicle } from './Vehicle.jsx';
+import { PartyDecor } from './Party.jsx';
+import { livePartyAt } from '../ui/events.js';
 import { vehicleById } from '@shared/world.js';
 import { local } from '../net.js';
 import { useStore } from '../store.js';
@@ -242,6 +244,8 @@ export function HomeScene({ me }) {
   const own = useStore((s) => s.homeItems);
   const visiting = useStore((s) => s.visiting);
   const items = visiting ? visiting.items : own;
+  const events = useStore((s) => s.events);
+  const party = livePartyAt(events, 'home', visiting ? visiting.host.id : me.id);
   const placing = useStore((s) => s.placing);
   const dragging = useRef(false);
 
@@ -305,6 +309,7 @@ export function HomeScene({ me }) {
       <Ghost items={items} />
       <Sim me={me} items={items} />
       <Guests />
+      {party && <PartyDecor event={party} home />}
       <Driveway vehicles={visiting ? visiting.host.vehicles : me.vehicles} mine={!visiting} />
       <pointLight color="#fff7ed" intensity={14} distance={20} position={[0, 4, 0]} />
     </group>

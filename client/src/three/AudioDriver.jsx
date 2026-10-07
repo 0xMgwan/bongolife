@@ -25,9 +25,13 @@ function placeDist(p, x, z) {
 }
 
 /** Maps the player's surroundings to music + ambience, a few times per second. */
-const SCENE_MUSIC = { club: ['amapiano', 1], lounge: ['chill', 1], bar: ['bongo', 0.45], studio: ['bongo', 1], cinema: ['chill', 0.25] };
+const SCENE_MUSIC = {
+  club: ['amapiano', 1], lounge: ['chill', 1], bar: ['bongo', 0.45], studio: ['bongo', 1], cinema: ['chill', 0.25],
+  concert: ['amapiano', 1], grill: ['bongo', 0.55], rooftop: ['amapiano', 0.9], ngoma: ['bongo', 0.7], waterpark: ['bongo', 0.4],
+  dhow: ['chill', 0.5], salon: ['bongo', 0.4], spa: ['chill', 0.35],
+};
 
-export function AudioDriver({ me, scene }) {
+export function AudioDriver({ me, scene, party }) {
   const acc = useRef(0);
   const vehicle = me.vehicles?.find((v) => v.id === me.activeVehicle);
   const speed = vehicle ? vehicleById[vehicle.model]?.speed || 1 : 0;
@@ -39,7 +43,7 @@ export function AudioDriver({ me, scene }) {
     const { x, z } = local;
     if (scene) {
       const radio = scene === 'home' && busy?.id === 'burudika';
-      const [style, level] = radio ? ['bongo', 0.8] : SCENE_MUSIC[scene] || [null, 0];
+      const [style, level] = party ? ['amapiano', 1] : radio ? ['bongo', 0.8] : SCENE_MUSIC[scene] || [null, 0];
       setVenueMusic(style, level);
       setAmbience({ city: 0, waves: scene === 'beach' ? 1 : 0, engine: 0 });
       return;

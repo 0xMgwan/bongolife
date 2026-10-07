@@ -43,6 +43,9 @@ export const useStore = create((set, get) => ({
   invite: null, // incoming home invite { fromId, from, fromName }
   accident: null, // { health } — knocked down by a car
   eventsVersion: 0,
+  events: [], // upcoming + live events (Matukio)
+  hangout: null, // incoming "let's go out" invite { fromId, from, placeId }
+  meetup: null, // agreed meet-up { with, placeId, until }
   flightView: null, // null = auto | 'inside' | 'outside'
   riding: null, // { mode, placeId, kind, color } while a cab drives you somewhere
   phoneApps: null, // partner apps on the phone home screen

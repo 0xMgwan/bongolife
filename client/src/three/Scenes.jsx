@@ -6,6 +6,11 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { randomAppearance, findActivity, gameClock, workStage, flightPhase } from '@shared/world.js';
 import { Plane, Car } from './Vehicle.jsx';
+import { PartyDecor } from './Party.jsx';
+import { livePartyAt } from '../ui/events.js';
+
+// Where the party banner hangs per scene (defaults to the back wall).
+const PARTY_BANNER = { stadium: [0, 7, -2], beach: [0, 4.5, -3], dhow: [0, 6.5, -3], golf: [0, 4.5, -6], karting: [0, 4, -7.3], concert: [0, 6.6, -7.6], cinema: [0, 6, -8], grill: [0, 3.4, -4.8], waterpark: [-3, 4.5, -4] };
 import { mat, geo, labelTexture, emojiTexture } from './textures.js';
 import { Body, Overhead } from './Players.jsx';
 import { remotes } from '../net.js';
@@ -1639,10 +1644,13 @@ export const SCENES = {
 export function ActivityScene({ scene, placeId, me, myBusy }) {
   const cfg = SCENES[scene];
   const people = useScenePeople(placeId, scene);
+  const events = useStore((s) => s.events);
+  const party = livePartyAt(events, placeId);
   if (!cfg) return null;
   return (
     <group position={SCENE_ORIGIN}>
       <cfg.C me={me} myBusy={myBusy} people={people} />
+      {party && scene !== 'flight' && <PartyDecor event={party} banner={PARTY_BANNER[scene]} />}
     </group>
   );
 }

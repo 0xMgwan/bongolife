@@ -7,6 +7,7 @@ import { LocalPlayer, RemotePlayers, ParkedCar } from './Players.jsx';
 import { AudioDriver } from './AudioDriver.jsx';
 import { ActivityScene, SCENES, SCENE_ORIGIN, sceneCam } from './Scenes.jsx';
 import { HomeScene, HOME_ORIGIN } from './HomeScene.jsx';
+import { livePartyAt } from '../ui/events.js';
 import { MapPins } from './MapPins.jsx';
 import { useStore } from '../store.js';
 import { local, view } from '../net.js';
@@ -238,6 +239,9 @@ function DayNight({ interior }) {
 export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPlot, onBillboard, onGround, onPlayer, quality = 'auto', scene = null }) {
   const sceneCfg = scene && SCENES[scene.key];
   const home = mode === 'home';
+  const events = useStore((s) => s.events);
+  const visitingHost = useStore((s) => s.visiting?.host.id);
+  const party = home ? livePartyAt(events, 'home', visitingHost || me?.id) : scene ? livePartyAt(events, scene.placeId) : null;
   const lowEnd = useMemo(() => {
     if (quality === 'low') return true;
     if (quality === 'high') return false;
@@ -278,7 +282,7 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
           <>
             <LocalPlayer me={me} frozen={!!sceneCfg || home} />
             {!sceneCfg && !home && <ParkedCar me={me} />}
-            <AudioDriver me={me} scene={home ? 'home' : sceneCfg ? scene.key : null} />
+            <AudioDriver me={me} scene={home ? 'home' : sceneCfg ? scene.key : null} party={!!party} />
             {sceneCfg && <ActivityScene scene={scene.key} placeId={scene.placeId} me={me} myBusy={scene.busy} />}
             <RemotePlayers onPlayer={onPlayer} />
           </>

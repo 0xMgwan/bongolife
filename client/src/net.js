@@ -125,7 +125,18 @@ export function connect() {
     sfx('notify');
     useStore.setState({ invite: { ...inv, at: Date.now() } });
   });
+  socket.on('events:changed', () => import('./ui/events.js').then((m) => m.loadEvents()));
+  socket.on('hangout', (h) => {
+    sfx('notify');
+    useStore.setState({ hangout: { ...h, at: Date.now() } });
+  });
+  socket.on('hangout:accepted', ({ by, placeId }) => {
+    sfx('cash');
+    st().toast(L(`🤝 @${by} amekubali! Kutaneni huko.`, `🤝 @${by} is in! Meet them there.`));
+    useStore.setState({ meetup: { with: by, placeId, until: Date.now() + 30 * 60_000 } });
+  });
   socket.on('event:start', (e) => {
+    import('./ui/events.js').then((m) => m.loadEvents());
     sfx('notify');
     st().toast(L(`🎉 "${e.title}" imeanza sasa! Fungua Matukio.`, `🎉 "${e.title}" is starting now! Open Events.`));
     useStore.setState((s) => ({ eventsVersion: s.eventsVersion + 1 }));
@@ -193,6 +204,15 @@ export function sendInvite(username) {
     if (!socket?.connected) return resolve({ error: 'offline' });
     socket.emit('invite', { to: username }, (r) => resolve(r || {}));
   });
+}
+export function sendHangout(username, placeId) {
+  return new Promise((resolve) => {
+    if (!socket?.connected) return resolve({ error: 'offline' });
+    socket.emit('hangout', { to: username, placeId }, (r) => resolve(r || {}));
+  });
+}
+export function replyHangout(fromId, placeId, accept) {
+  socket?.emit('hangout:reply', { fromId, placeId, accept });
 }
 export function replyInvite(fromId, accept) {
   socket?.emit('invite:reply', { fromId, accept });

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  ENTERABLE, NEEDS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
+  ENTERABLE, NEEDS, HANGOUT_PLACES, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
   outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
 } from '@shared/world.js';
 import { useStore } from '../store.js';
@@ -10,6 +10,8 @@ import { AvatarPreview } from './Creator.jsx';
 import { sfx } from '../audio.js';
 import { setInside } from '../net.js';
 import { inviteHome, goToPlayer } from './social.js';
+import { sendHangout } from '../net.js';
+import { livePartyAt, joinParty } from './events.js';
 import { TravelCard } from './Travel.jsx';
 import { share } from './share.js';
 import { vehicleThumb, cachedThumb } from '../three/thumbs.jsx';
@@ -145,6 +147,7 @@ function PlaceSheet({ id, onClose }) {
   const openPhone = useStore((s) => s.openPhone);
   const owner = world.businesses?.[id];
   const busy = !!me.busy;
+  const party = livePartyAt(useStore((s) => s.events), id);
   const start = async (kind, actId) => {
     const r = await run('/act/start', { method: 'POST', body: { kind, placeId: id, id: actId } });
     if (r) {
@@ -155,11 +158,16 @@ function PlaceSheet({ id, onClose }) {
   return (
     <Sheet title={loc(p)} icon={p.icon} sub={`${p.district} · ${loc(p, 'blurb')}`} onClose={onClose}>
       <button className="link-share" onClick={() => share({ title: loc(p), text: L(`Tukutane ${p.name} kwenye Bongo Life! 🇹🇿`, `Meet me at ${loc(p)} in Bongo Life! 🇹🇿`), params: { place: id } })}>🔗 {L(`Shiriki link ya ${p.name}`, `Share a link to ${loc(p)}`)}</button>
-      {ENTERABLE[p.id] && (
+      {party && useStore.getState().inside !== p.id && (
+        <button className="btn btn-block party-btn" onClick={() => { onClose(); joinParty(party); }}>
+          🎉 {L(`Ingia kwenye pati: ${party.title}`, `Join the party: ${party.title}`)} · 🙋 {party.going}
+        </button>
+      )}
+      {(ENTERABLE[p.id] || party) && (
         useStore.getState().inside === p.id ? (
           <button className="btn btn-ghost btn-block" style={{ marginTop: 6 }} onClick={() => { setInside(null); onClose(); }}>🚪 {L('Toka nje', 'Leave')}</button>
         ) : (
-          <button className="btn btn-dark btn-block" style={{ marginTop: 6 }} onClick={() => { setInside(p.id); sfx('open'); onClose(); }}>🚪 {L('Ingia ndani', 'Go inside')} · {L('ona nani yupo', "see who's here")}</button>
+          !party && <button className="btn btn-dark btn-block" style={{ marginTop: 6 }} onClick={() => { setInside(p.id); sfx('open'); onClose(); }}>🚪 {L('Ingia ndani', 'Go inside')} · {L('ona nani yupo', "see who's here")}</button>
         )
       )}
       {p.comingSoon && <div className="box center" style={{ background: '#fef9c3' }}>🚧 {L('Inakuja hivi karibuni! Safari za ndege zitafunguliwa update ijayo.', 'Coming soon! Flights open in the next update.')}</div>}
@@ -282,6 +290,34 @@ function PlotSheet({ id, onClose }) {
   );
 }
 
+/** Invite someone you met to hang out somewhere: club, beach, nyama choma… */
+function GoOut({ username }) {
+  const [open, setOpen] = useState(false);
+  const [sent, setSent] = useState(null);
+  const send = async (placeId) => {
+    const r = await sendHangout(username, placeId);
+    if (r.ok) {
+      setSent(placeId);
+      sfx('pop');
+      useStore.getState().toast(L(`📨 Umemwalika @${username} ${placeById[placeId].name}`, `📨 Invited @${username} to ${loc(placeById[placeId])}`));
+    } else useStore.getState().toast(r.error === 'offline' ? L('Hayuko online.', "They're offline.") : r.error === 'slow' ? L('Subiri kidogo kabla ya kualika tena.', 'Wait a moment before inviting again.') : L('Imeshindikana.', "Couldn't send."), 'err');
+  };
+  if (!open) return <button className="btn btn-block go-out-btn" onClick={() => setOpen(true)}>🎉 {L('Mwalike mtoke pamoja', "Invite them out")}</button>;
+  return (
+    <div className="go-out">
+      <div className="small bold" style={{ marginBottom: 8 }}>🎉 {L(`Mkatoke wapi na @${username}?`, `Where should you go with @${username}?`)}</div>
+      <div className="go-grid">
+        {HANGOUT_PLACES.map((id) => (
+          <button key={id} className={sent === id ? 'on' : ''} onClick={() => send(id)}>
+            <span>{placeById[id].icon}</span>
+            <small>{loc(placeById[id]).replace(/ (Sinza|Mbagala|Kunduchi|Kwa Mrombo)$/, '')}</small>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PlayerSheet({ username, onClose }) {
   const [p, setP] = useState(null);
   const run = useStore((s) => s.run);
@@ -317,6 +353,7 @@ function PlayerSheet({ username, onClose }) {
           <button className="btn btn-ghost grow" onClick={() => goToPlayer(p.username)}>📍 {L('Nenda kwake', 'Go to them')}</button>
         </div>
       )}
+      {p.online && <GoOut username={p.username} />}
       <button className="link-share" style={{ marginTop: 10 }} onClick={() => share({ title: `@${p.username}`, text: L(`Mcheki @${p.username} kwenye Bongo Life 🇹🇿`, `Check out @${p.username} on Bongo Life 🇹🇿`), params: { u: p.username } })}>🔗 {L('Shiriki profaili hii', 'Share this profile')}</button>
     </Sheet>
   );
