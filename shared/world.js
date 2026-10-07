@@ -537,8 +537,22 @@ export const AD_ROTATE_SECONDS = 10;
 export const TRAVEL = {
   daladala: { name: 'Daladala', emoji: '🚌', perUnit: 6, min: 500, kind: 'bus', color: '#fde047', speed: 16 },
   bajaji: { name: 'Bajaji', emoji: '🛺', perUnit: 25, min: 1_000, kind: 'bajaji', color: '#facc15', speed: 20 },
+  boda: { name: 'Bodaboda', emoji: '🏍️', perUnit: 15, min: 700, kind: 'moto', color: '#dc2626', speed: 24 },
   taxi: { name: 'Taxi Mtandao', emoji: '🚕', perUnit: 45, min: 2_500, kind: 'car', color: '#f8fafc', speed: 26 },
+  // Your own vehicle: free, drives you there along the roads (skippable).
+  gari: { name: 'Gari langu', emoji: '🚗', perUnit: 0, min: 0, kind: 'car', color: '#2563eb', speed: 26, own: true },
 };
+
+// ---------------------------------------------------------------- mayor
+// Weekly elections (Monday 00:00 Dar time). Last week's winner is Mkuu wa Mkoa.
+export const ELECTION = { fee: 50_000, salary: 500_000, minShifts: 1, candidateShifts: 3, sloganMax: 60, messageMax: 140 };
+const WEEK_MS = 7 * 86_400_000;
+const WEEK_OFF = 3 * 3_600_000 + 3 * 86_400_000; // EAT offset + Thursday→Monday
+export const electionPeriod = (t = Date.now()) => Math.floor((t + WEEK_OFF) / WEEK_MS);
+export const electionEnds = (p) => (p + 1) * WEEK_MS - WEEK_OFF;
+
+// Invite friends: both sides earn once the new player finishes their first shift.
+export const REFERRAL = { newPlayer: 20_000, referrer: 30_000, maxPaid: 50 };
 // Every new player gets a used car to drive around in.
 export const STARTER_CAR = 'vitz';
 export function travelCost(mode, from, to) {
@@ -601,7 +615,7 @@ const EN = {
   vehicles: { baiskeli: 'Bicycle' },
   buildings: { banda: 'Simple House', kisasa: 'Modern House', ghorofa: 'Apartment Block', villa: 'Luxury Villa', hoteli: 'Beach Hotel' },
   billboards: { 'bb-ferry': 'Kivukoni Ferry', 'bb-stadium': 'National Stadium', 'bb-kigamboni': 'Nyerere Bridge' },
-  travel: { bajaji: 'Bajaji (tuk-tuk)', daladala: 'Daladala (minibus)', taxi: 'Ride-hail taxi' },
+  travel: { bajaji: 'Bajaji (tuk-tuk)', daladala: 'Daladala (minibus)', taxi: 'Ride-hail taxi', boda: 'Bodaboda (moto taxi)', gari: 'My car' },
   events: [
     '💃 Send-off season — party all week!',
     '⚽ Derby week: Simba vs Yanga at the National Stadium!',

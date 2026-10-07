@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { plotById } from '@shared/world.js';
+import { plotById, placeById } from '@shared/world.js';
 import { activeScene } from '../scene.js';
 import GameScene from '../three/GameScene.jsx';
 import { walkTo, goToPlace } from '../nav.js';
@@ -7,7 +7,8 @@ import { L, loc } from '../i18n.js';
 import { useStore } from '../store.js';
 import { api, visitorId } from '../api.js';
 import { connect, local, input, setInside, enterHome, leaveHome } from '../net.js';
-import { SocialModals, VisitBar } from './Social.jsx';
+import { SocialModals } from './Social.jsx';
+import { readDeepLink } from './share.js';
 import { sfx } from '../audio.js';
 import { HUD } from './HUD.jsx';
 import { Sheets } from './Sheets.jsx';
@@ -27,7 +28,7 @@ export default function Game() {
 
   useEffect(() => {
     connect();
-    api('/world').then((w) => set({ world: { plots: w.plots, businesses: w.businesses, event: w.event }, ads: w.ads, announcement: w.announcement })).catch(() => {});
+    api('/world').then((w) => set({ world: { plots: w.plots, businesses: w.businesses, event: w.event, mayor: w.mayor }, ads: w.ads, announcement: w.announcement })).catch(() => {});
     const stats = () => api(`/public/stats?v=${visitorId()}`).then((s) => set({ visits: s.visits, online: s.online })).catch(() => {});
     stats();
     const statsTimer = setInterval(stats, 60_000);
@@ -118,10 +119,22 @@ export default function Game() {
 
   const inScene = () => !!useStore.getState().inside || !!activeScene(useStore.getState());
   const onPlace = useCallback((id) => {
+    // On the map: pop up the place card with ways to get there.
+    if (useStore.getState().cityView === 'map') return useStore.setState({ sheet: { type: 'travel', id } });
     if (inScene()) return;
-    if (useStore.getState().cityView === 'map') useStore.setState({ cityView: 'follow', mapFilter: null });
     goToPlace(id);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Shared links: ?place=… opens that place's card, ?u=… a profile, ?event=… the Events app.
+  useEffect(() => {
+    const link = readDeepLink();
+    const t = setTimeout(() => {
+      if (link.place && placeById[link.place]) set({ sheet: { type: 'travel', id: link.place } });
+      else if (link.user) set({ sheet: { type: 'player', id: link.user } });
+      else if (link.event) useStore.getState().openPhone('matukio');
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [set]);
   const onPlot = useCallback((id) => {
     if (inScene()) return;
     const p = plotById[id];
@@ -146,7 +159,6 @@ export default function Game() {
       <HomeUI />
       <Sheets />
       <Phone />
-      <VisitBar />
       <SocialModals />
     </div>
   );

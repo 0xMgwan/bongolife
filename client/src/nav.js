@@ -5,7 +5,7 @@ import { local } from './net.js';
 import { L, loc } from './i18n.js';
 
 /** Walk to a spot and run `then` on arrival (or now, if already there). */
-export function walkTo(pos, then, label) {
+export function walkTo(pos, then, label, placeId = null) {
   const d = Math.hypot(pos[0] - local.x, pos[1] - local.z);
   if (d < 3) {
     local.target = null;
@@ -14,12 +14,15 @@ export function walkTo(pos, then, label) {
   }
   local.target = pos;
   local.arrive = then || null;
+  // Lets the HUD offer "Skip" for long walks/drives to a place.
+  local.heading = placeId ? { placeId, target: pos } : null;
   if (label) useStore.getState().toast(L(`🚶 Unaelekea ${label}…`, `🚶 Heading to ${label}…`));
 }
 
 export function goToPlace(placeId, open = true) {
   const p = placeById[placeId];
-  walkTo(placeDoor(placeId), open ? () => useStore.setState({ sheet: { type: 'place', id: placeId } }) : null, loc(p));
+  walkTo(placeDoor(placeId), open ? () => useStore.setState({ sheet: { type: 'place', id: placeId } }) : null, null, placeId);
+  void p;
 }
 
 
@@ -120,7 +123,7 @@ export function roadRoute(from, to) {
 }
 
 /** Ride a daladala / bajaji / taxi to a place: the vehicle actually drives there. */
-export function startRide(mode, dest, placeId, onArrive) {
+export function startRide(mode, dest, placeId, onArrive, look = null) {
   const t = TRAVEL[mode];
   const path = roadRoute([local.x, local.z], dest) || routeBetween([local.x, local.z], dest);
   const len = path.reduce((s, p, i) => (i ? s + Math.hypot(p[0] - path[i - 1][0], p[1] - path[i - 1][1]) : 0), 0);
@@ -128,8 +131,24 @@ export function startRide(mode, dest, placeId, onArrive) {
   const speed = Math.max(t.speed, len / 25);
   local.target = null;
   local.ride = { path, seg: 0, d: 0, speed, dest, onArrive };
-  useStore.setState({ riding: { mode, placeId, kind: t.kind, color: t.color } });
+  useStore.setState({ riding: { mode, placeId, kind: look?.kind || t.kind, color: look?.color || t.color } });
 }
 export function skipRide() {
   if (local.ride) local.ride.skip = true;
+}
+
+/** Skip the rest of a walk/drive: your car takes you straight there (free). */
+export async function skipTrip() {
+  const h = local.heading;
+  if (!h) return;
+  const r = await useStore.getState().run('/travel', { method: 'POST', body: { placeId: h.placeId, mode: 'gari' } });
+  if (!r) return;
+  const cb = local.arrive;
+  local.x = r.pos[0];
+  local.z = r.pos[1];
+  local.target = null;
+  local.arrive = null;
+  local.heading = null;
+  local.teleported++;
+  cb?.();
 }

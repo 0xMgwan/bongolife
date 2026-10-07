@@ -9,6 +9,7 @@ import { LangToggle } from '../LangToggle.jsx';
 import { L, loc } from '../../i18n.js';
 import { setAudioSettings, sfx } from '../../audio.js';
 import { useAudioSettings } from '../useAudioSettings.js';
+import { InviteCard } from '../Invite.jsx';
 
 function SoundSettings() {
   const s = useAudioSettings();
@@ -165,6 +166,7 @@ export function Mipangilio({ back }) {
           {row(L('Umaarufu', 'Fame'), `⭐ ${me.fame}`)}
           {row(L('Mjini tangu', 'In the city since'), new Date(me.createdAt).toLocaleDateString())}
         </div>
+        <InviteCard />
         <Security />
         <SoundSettings />
         <Haptics />

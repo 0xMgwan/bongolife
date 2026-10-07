@@ -2,7 +2,7 @@ import {
   GAME, NEEDS, PLACES, PLOTS, VEHICLES, BUILDINGS, ALLOWED_BUILDINGS, VEHICLE_COLORS,
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, ENTERABLE,
-  furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult,
+  furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL,
 } from '../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
 
@@ -101,11 +101,18 @@ export function playerState(userId) {
   };
 }
 
+// Set by index.js (avoids a circular import with election.js).
+export const mayorRef = { current: null };
+
 export function worldState() {
   return {
     plots: Object.fromEntries(q.allPlots.all().map((p) => [p.id, { building: p.building, owner: p.username, ownerName: p.name }])),
     businesses: Object.fromEntries(q.allBiz.all().map((b) => [b.id, { owner: b.username, ownerName: b.name }])),
     event: liveEvent(),
+    mayor: (() => {
+      const m = mayorRef.current?.();
+      return m ? { username: m.username, name: m.name, message: m.message || null } : null;
+    })(),
   };
 }
 
@@ -351,6 +358,16 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
     pay = Math.round((pay * eventMult(place, 'job') * perfMult(busy.perf, busy.done) * frac) / 100) * 100;
     addMoney(userId, pay, 'salary', `${jobTitle(job, shifts)} — ${place.name}`);
     fields.jobXp = { ...user.jobXp, [busy.id]: shifts + (frac >= 1 ? 1 : 0) };
+    // Invite reward: the friend who brought you in gets paid on your first full shift.
+    const ref = frac >= 1 && db.prepare('SELECT referred_by, referral_paid FROM users WHERE id = ?').get(userId);
+    if (ref?.referred_by && !ref.referral_paid) {
+      const paid = db.prepare('SELECT COUNT(*) n FROM users WHERE referred_by = ? AND referral_paid = 1').get(ref.referred_by).n;
+      db.prepare('UPDATE users SET referral_paid = 1 WHERE id = ?').run(userId);
+      if (paid < REFERRAL.maxPaid) {
+        addMoney(ref.referred_by, REFERRAL.referrer, 'bonus', `Zawadi ya kualika @${user.username}`);
+        result.referrer = ref.referred_by;
+      }
+    }
     fields.needs = applyNeeds(user.needs, { energy: -job.energy, hunger: -6, hygiene: -6, social: 4 });
     if (job.fameBonus) fields.fame = user.fame + 1;
     result.title = frac < 1 ? ['💼 Umetoka mapema', '💼 Clocked out early'] : ['💼 Shifti imeisha!', '💼 Shift complete!'];
@@ -473,6 +490,11 @@ export const travel = db.transaction((userId, placeId, mode) => {
   const user = getUser(userId);
   const place = placeById[placeId];
   if (!place || !TRAVEL[mode]) throw new GameError(['Safari si sahihi', 'Invalid trip']);
+  let car = null;
+  if (TRAVEL[mode].own) {
+    car = q.vehicles.all(userId).find((v) => v.id === user.activeVehicle) || q.vehicles.all(userId).find((v) => ['car', 'van', 'suv', 'moto', 'bajaji'].includes(vehicleById[v.model]?.kind));
+    if (!car) throw new GameError(['Huna gari bado.', "You don't have a car yet."]);
+  }
   const from = positionOf(user);
   // drop the passenger on the nearest dry spot just outside the building
   const [px, pz] = place.pos;
@@ -480,7 +502,7 @@ export const travel = db.transaction((userId, placeId, mode) => {
   for (const cand of [dest, [px, pz - place.size[1] / 2 - 3], [px - place.size[0] / 2 - 3, pz], [px + place.size[0] / 2 + 3, pz]])
     if (!isWater(cand[0], cand[1])) { dest = cand; break; }
   const cost = travelCost(mode, from, dest);
-  addMoney(userId, -cost, 'travel', `${TRAVEL[mode].name} kwenda ${place.name}`);
+  if (cost) addMoney(userId, -cost, 'travel', `${TRAVEL[mode].name} kwenda ${place.name}`);
   saveFields(userId, { x: dest[0], z: dest[1] });
   const p = online.get(userId);
   if (p) {
@@ -490,7 +512,8 @@ export const travel = db.transaction((userId, placeId, mode) => {
       broadcast('player:inside', { id: userId, inside: null });
     }
   }
-  return { pos: dest, cost };
+  if (car && user.activeVehicle !== car.id) useVehicle(userId, car.id);
+  return { pos: dest, cost, car: car ? { model: car.model, color: car.color } : null };
 });
 
 export const sendMoney = db.transaction((fromId, toUsername, amount, note) => {

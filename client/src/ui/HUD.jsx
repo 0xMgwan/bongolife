@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH, TRAVEL, flightPhase, findActivity } from '@shared/world.js';
+import { NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH, TRAVEL, flightPhase, findActivity, PLACES, DISTRICTS } from '@shared/world.js';
 import { L, loc, pick, isEn } from '../i18n.js';
 import { useStore } from '../store.js';
 import { input, sendChat, sendEmote, setInside, remotes, local, view } from '../net.js';
@@ -8,9 +8,9 @@ import { setZoom, getZoom } from '../three/GameScene.jsx';
 import { setAudioSettings, sfx } from '../audio.js';
 import { useAudioSettings } from './useAudioSettings.js';
 import { activeScene } from '../scene.js';
-import { goToPlace, skipRide } from '../nav.js';
+import { goToPlace, skipRide, skipTrip } from '../nav.js';
 import { goHomeTo } from './homeNav.js';
-import { goHospital } from './social.js';
+import { goHospital, leaveVisit } from './social.js';
 import { WorkPanel } from './WorkPanel.jsx';
 import { haptic } from '../haptics.js';
 
@@ -46,26 +46,6 @@ function FlightBar({ me }) {
         {opt('inside', L('👀 Ndani', '👀 Inside'))}
         {opt('outside', L('🎥 Nje', '🎥 Outside'))}
       </div>
-    </div>
-  );
-}
-
-function InsideBar({ scene, me }) {
-  const set = useStore((s) => s.set);
-  const roster = useStore((s) => s.roster);
-  const place = placeById[scene.placeId];
-  const count = 1 + [...remotes.values()].filter((r) => r.inside === scene.placeId || r.busy?.placeId === scene.placeId).length;
-  const inside = useStore((s) => s.inside);
-  void roster;
-  return (
-    <div className="inside-bar card">
-      <span className="em">{place?.icon}</span>
-      <div className="grow">
-        <div className="bold">{loc(place)}</div>
-        <div className="small muted">👥 {count} {L('hapa sasa', 'here now')}{me.busy ? '' : ` · ${L('chagua shughuli', 'pick an activity')}`}</div>
-      </div>
-      {!me.busy && <button className="btn btn-green btn-xs" onClick={() => set({ sheet: { type: 'place', id: scene.placeId } })}>{L('Shughuli', 'Activities')}</button>}
-      {inside && !me.busy && <button className="btn btn-ghost btn-xs" onClick={() => setInside(null)}>{L('Toka nje', 'Leave')}</button>}
     </div>
   );
 }
@@ -109,6 +89,86 @@ function Joystick() {
       onPointerCancel={end}
     >
       <i ref={knob} />
+    </div>
+  );
+}
+
+/** "Heading to X… · Skip" while walking/driving to a place (needs a vehicle to skip). */
+function HeadingBanner({ me }) {
+  const [h, setH] = useState(null);
+  useEffect(() => {
+    const t = setInterval(() => {
+      const cur = local.heading && local.target ? local.heading : null;
+      if (!cur) local.heading = null;
+      setH((prev) => (prev?.placeId === cur?.placeId ? prev : cur));
+    }, 400);
+    return () => clearInterval(t);
+  }, []);
+  if (!h) return null;
+  const p = placeById[h.placeId];
+  const hasCar = me.vehicles?.some((v) => ['car', 'van', 'suv', 'moto', 'bajaji'].includes(vehicleById[v.model]?.kind));
+  const driving = !!me.activeVehicle;
+  return (
+    <div className="heading-banner">
+      <div className="pill">{driving ? '🚗' : '🚶'} {L(`Unaelekea ${p?.name}…`, `Heading to ${loc(p)}…`)}</div>
+      {hasCar && <button className="pill" onClick={() => { sfx('horn'); skipTrip(); }}>⏭ {L('Ruka', 'Skip')}</button>}
+    </div>
+  );
+}
+
+/** Where you are now + quick buttons: map, and home (or out of the house). */
+function LocationPill({ me, scene }) {
+  const tab = useStore((s) => s.tab);
+  const visiting = useStore((s) => s.visiting);
+  const inside = useStore((s) => s.inside);
+  const roster = useStore((s) => s.roster);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 1500);
+    return () => clearInterval(t);
+  }, []);
+  void roster;
+  const atHome = tab === 'home';
+  let icon = '📍';
+  let name = '';
+  let placeId = [scene?.placeId, inside, me.busy?.placeId].find((id) => id && placeById[id]) || null;
+  if (atHome) {
+    icon = '🏠';
+    name = visiting ? L(`Kwa @${visiting.host.username}`, `@${visiting.host.username}'s place`) : L('Kwangu', 'My place');
+    placeId = null;
+  } else {
+    if (!placeId) {
+      let best = null;
+      let bd = 28;
+      for (const p of PLACES) {
+        const d = Math.hypot(p.pos[0] - local.x, p.pos[1] - local.z) - Math.max(...p.size) / 2;
+        if (d < bd) { bd = d; best = p; }
+      }
+      placeId = best?.id || null;
+    }
+    if (placeId) {
+      icon = placeById[placeId].icon;
+      name = loc(placeById[placeId]);
+    } else {
+      const d = [...DISTRICTS].sort((a, b) => Math.hypot(a.pos[0] - local.x, a.pos[1] - local.z) - Math.hypot(b.pos[0] - local.x, b.pos[1] - local.z))[0];
+      name = d?.name || 'Dar es Salaam';
+    }
+  }
+  const here = placeId ? 1 + [...remotes.values()].filter((r) => r.inside === placeId || r.busy?.placeId === placeId).length : 0;
+  const openName = () => {
+    sfx('click');
+    if (placeId) useStore.setState({ sheet: { type: 'place', id: placeId } });
+  };
+  return (
+    <div className="loc-pill">
+      <button className="lp-name" onClick={openName}>{icon} {name}{here > 1 && <small>· 👥{here}</small>} {placeId && <span style={{ fontSize: 12 }}>˄</span>}</button>
+      <span className="lp-sep" />
+      <button className="lp-btn" aria-label={L('Ramani', 'Map')} onClick={() => { sfx('click'); useStore.setState({ tab: 'town', cityView: 'map', visiting: null, sheet: null, mapFilter: null }); }}>🗺️</button>
+      {atHome ? (
+        <button className="lp-btn" aria-label={L('Toka nje', 'Go out')} onClick={() => { sfx('close'); if (visiting) leaveVisit(); else useStore.setState({ tab: 'town', cityView: 'follow' }); }}>🚪</button>
+      ) : (
+        <button className="lp-btn" aria-label={L('Nenda nyumbani', 'Go home')} onClick={() => { sfx('open'); useStore.setState({ tab: 'home', visiting: null, sheet: null, cityView: 'follow' }); }}>🏠</button>
+      )}
     </div>
   );
 }
@@ -289,24 +349,36 @@ function BottomNav({ me }) {
   const tab = useStore((s) => s.tab);
   const phone = useStore((s) => s.phone);
   const openPhone = useStore((s) => s.openPhone);
+  const cityView = useStore((s) => s.cityView);
+  // Home = wherever you are right now (your flat if you're in it, else the street).
   const go = (t) => {
     sfx('click');
     if (t === 'phone') return openPhone('home');
-    useStore.setState({ tab: t, placing: null, homeSel: null, sheet: null, phone: null, ...(t === 'shop' ? { visiting: null } : {}) });
+    const base = { placing: null, homeSel: null, sheet: null, phone: null };
+    if (t === 'here') return useStore.setState({ ...base, tab: tab === 'shop' ? 'home' : tab, cityView: 'follow', mapFilter: null });
+    if (t === 'shop') return useStore.setState({ ...base, tab: 'shop', visiting: null });
+    if (t === 'map') return useStore.setState({ ...base, tab: 'town', cityView: 'map', visiting: null });
   };
   const items = [
-    ['home', L('Kwangu', 'Home')],
-    ['shop', L('Duka', 'Shop')],
-    ['town', L('Mjini', 'Town')],
-    ['phone', L('Simu', 'Phone')],
+    ['here', 'home', L('Mwanzo', 'Home')],
+    ['shop', 'shop', L('Nunua', 'Buy')],
+    ['map', 'town', L('Ramani', 'Map')],
+    ['phone', 'phone', L('Simu', 'Phone')],
   ];
+  const isOn = (id) => {
+    if (phone) return id === 'phone';
+    if (id === 'shop') return tab === 'shop';
+    if (id === 'map') return tab === 'town' && cityView === 'map';
+    if (id === 'here') return tab === 'home' || (tab === 'town' && cityView !== 'map');
+    return false;
+  };
   return (
     <nav className="bottom-nav">
-      {items.map(([id, label]) => {
-        const on = id === 'phone' ? !!phone : !phone && tab === id;
+      {items.map(([id, icon, label]) => {
+        const on = isOn(id);
         return (
           <button key={id} className={on ? 'on' : ''} onClick={() => go(id)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{NAV_ICONS[id]}</svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{NAV_ICONS[icon]}</svg>
             <span>{label}</span>
             {id === 'phone' && me.unread > 0 && <b className="badge">{me.unread}</b>}
           </button>
@@ -429,7 +501,9 @@ export function HUD() {
         </div>
       )}
       <Busy me={me} />
-      {scene && scene.key === 'flight' ? <FlightBar me={me} /> : scene && <InsideBar scene={scene} me={me} />}
+      {scene && scene.key === 'flight' && <FlightBar me={me} />}
+      {!shop && !riding && <LocationPill me={me} scene={scene} />}
+      {town && !riding && <HeadingBanner me={me} />}
       {!shop && (
         <div className="side">
           <button onClick={() => { Object.assign(view, { yaw: 0, pitch: 1.0, homeYaw: 0.75, homePitch: 0.95, homeDist: 30 }); sfx('click'); }} aria-label={L('Rudisha kamera', 'Reset camera')}>🧭</button>

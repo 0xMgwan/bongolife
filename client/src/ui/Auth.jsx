@@ -3,6 +3,7 @@ import { useStore } from '../store.js';
 import { api, token } from '../api.js';
 import { L } from '../i18n.js';
 import { Crown } from './Logo.jsx';
+import { pendingRef } from './share.js';
 import { LangToggle } from './LangToggle.jsx';
 
 /** Forgot password: request an emailed code, then set a new password with it. */
@@ -78,7 +79,7 @@ export default function Auth() {
     setErr('');
     setBusy(true);
     try {
-      const body = signup ? { ...f, username: f.username.replace(/^@/, '') } : { username: f.username.replace(/^@/, ''), password: f.password };
+      const body = signup ? { ...f, username: f.username.replace(/^@/, ''), ref: pendingRef() || undefined } : { username: f.username.replace(/^@/, ''), password: f.password };
       const r = await api(signup ? '/auth/signup' : '/auth/login', { method: 'POST', body });
       token.set(r.token);
       set({ me: r.me, screen: r.me.onboarded ? 'game' : 'creator' });
@@ -118,6 +119,7 @@ export default function Auth() {
             <input className="field" placeholder="neema_dar" value={f.username} onChange={up('username')} autoCapitalize="none" autoCorrect="off" autoComplete="username" maxLength={20} />
           </div>
           {signup && <div className="hint">{L('Hili ndilo jina la Sim wako ndani ya Bongo Life.', "This is your Sim's name in Bongo Life.")}</div>}
+          {signup && pendingRef() && <div className="ref-note">🎁 {L(`Umealikwa na @${pendingRef()} — utapata TSh 20,000 za ziada!`, `Invited by @${pendingRef()} — you get an extra TSh 20,000!`)}</div>}
           <div className="label">Password</div>
           <div className="at">
             <input className="field" style={{ paddingLeft: 20, paddingRight: 48 }} type={show ? 'text' : 'password'} value={f.password} onChange={up('password')} autoComplete={signup ? 'new-password' : 'current-password'} />

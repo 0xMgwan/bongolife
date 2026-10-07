@@ -5,13 +5,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   GAME, HAIRSTYLES, SKIN_TONES, HAIR_COLORS, OUTFITS, TRAITS, SPAWNS, BILLBOARDS, AD_MAX_DAYS,
-  billboardById, outfitById, ADS_PER_BOARD, EVENT_LIMITS, EVENT_PLACES, placeById,
+  billboardById, outfitById, ADS_PER_BOARD, REFERRAL, ELECTION, EVENT_LIMITS, EVENT_PLACES, placeById,
 } from '../../../shared/world.js';
 import { db, getUser, getUserByUsername, createUser, saveFields, addMoney, GameError, now, UPLOAD_DIR, getSettings } from '../db.js';
 import { hashPassword, checkPassword, signToken, requireAuth, requireAdmin, rateLimit, USERNAME_RE, normalizePhone } from '../auth.js';
 import { admin } from './admin.js';
 import { canVisit } from '../social.js';
 import { sendMail } from '../mail.js';
+import * as election from '../election.js';
 import * as game from '../game.js';
 import { online, onlineCount, broadcast, emitTo } from '../presence.js';
 import { provider, providers, TOPUP_RATE } from '../payments/index.js';
@@ -35,7 +36,7 @@ api.get('/public/stats', (req, res) => {
     players: db.prepare('SELECT COUNT(*) n FROM users').get().n,
     plotsSold: db.prepare('SELECT COUNT(*) n FROM plots').get().n,
     homes: db.prepare('SELECT COUNT(*) n FROM plots WHERE building IS NOT NULL').get().n,
-    mayor: lb.rich[0] ? { username: lb.rich[0].username, name: lb.rich[0].name } : null,
+    mayor: (() => { const m = election.currentMayor() || lb.rich[0]; return m ? { username: m.username, name: m.name } : null; })(),
     event: game.liveEvent(),
     maintenance: getSettings().maintenance,
     announcement: publicAnnouncement(),
@@ -65,7 +66,17 @@ api.post('/auth/signup', rateLimit('signup', 8, 15 * 60_000), wrap(async (req, r
   if (req.body.agree !== true) throw new GameError(['Lazima uthibitishe una miaka 18+ na ukubali Masharti.', 'You must confirm you are 18+ and accept the Terms.']);
   if (getUserByUsername(username)) throw new GameError(['Username hiyo imeshachukuliwa. Jaribu nyingine.', 'That username is taken. Try another.'], 409);
   const passwordHash = await hashPassword(password);
-  const user = db.transaction(() => createUser({ username, name, passwordHash, email, isAdmin: adminNames.has(username.toLowerCase()) }))();
+  const refName = str(req.body.ref, 30).replace(/^@/, '');
+  const referrer = refName && refName.toLowerCase() !== username.toLowerCase() ? getUserByUsername(refName) : null;
+  const user = db.transaction(() => {
+    const u = createUser({ username, name, passwordHash, email, isAdmin: adminNames.has(username.toLowerCase()) });
+    if (referrer && !referrer.bannedAt) {
+      db.prepare('UPDATE users SET referred_by = ? WHERE id = ?').run(referrer.id, u.id);
+      addMoney(u.id, REFERRAL.newPlayer, 'bonus', `Zawadi ya kukaribishwa na @${referrer.username}`);
+    }
+    return u;
+  })();
+  if (referrer) emitTo(referrer.id, 'toast', { text: [`🎉 @${username} amejiunga kupitia link yako! Utapata ${REFERRAL.referrer.toLocaleString()} akimaliza shifti ya kwanza.`, `🎉 @${username} joined with your link! You get TSh ${REFERRAL.referrer.toLocaleString()} when they finish their first shift.`] });
   game.ensureStarterCar(user.id);
   res.status(201).json({ token: signToken(user), me: game.playerState(user.id) });
 }));
@@ -193,6 +204,10 @@ api.post('/act/start', (req, res) => {
 });
 api.post('/act/finish', (req, res) => {
   const result = game.finishAction(req.user.id, { early: req.body?.early === true });
+  if (result.referrer) {
+    emitTo(result.referrer, 'toast', { text: [`💰 @${req.user.username} amemaliza shifti yake ya kwanza — umepata TSh ${REFERRAL.referrer.toLocaleString()}!`, `💰 @${req.user.username} finished their first shift — you earned TSh ${REFERRAL.referrer.toLocaleString()}!`], refresh: true });
+    delete result.referrer;
+  }
   if (result.teleport) emitTo(req.user.id, 'teleport', { pos: result.teleport });
   res.json({ result, me: game.playerState(req.user.id) });
 });
@@ -428,6 +443,38 @@ api.delete('/contacts/:username', (req, res) => {
   const other = getUserByUsername(req.params.username);
   if (other) db.prepare('DELETE FROM contacts WHERE user_id = ? AND contact_id = ?').run(req.user.id, other.id);
   res.json(contactList(req.user.id));
+});
+
+// ---------------------------------------------------------- invites
+api.get('/me/referrals', (req, res) => {
+  const rows = db.prepare('SELECT username, name, appearance, referral_paid paid, created_at FROM users WHERE referred_by = ? ORDER BY created_at DESC LIMIT 100').all(req.user.id);
+  res.json({
+    code: req.user.username,
+    rules: REFERRAL,
+    joined: rows.length,
+    paid: rows.filter((r) => r.paid).length,
+    earned: Math.min(rows.filter((r) => r.paid).length, REFERRAL.maxPaid) * REFERRAL.referrer,
+    friends: rows.map((r) => ({ ...r, paid: !!r.paid, appearance: JSON.parse(r.appearance || 'null') })),
+  });
+});
+
+// ---------------------------------------------------------- mayor
+api.get('/election', (req, res) => res.json(election.electionState(req.user.id)));
+api.post('/election/run', (req, res) => {
+  election.runForMayor(req.user.id, str(req.body.slogan, ELECTION.sloganMax));
+  broadcast('toast', { text: [`🗳️ @${req.user.username} anagombea Ukuu wa Mkoa!`, `🗳️ @${req.user.username} is running for Mayor!`] });
+  res.json({ ...election.electionState(req.user.id), me: game.playerState(req.user.id) });
+});
+api.post('/election/vote', (req, res) => {
+  const c = getUserByUsername(str(req.body.username, 30));
+  if (!c) throw new GameError(['Mgombea hayupo', 'Candidate not found'], 404);
+  election.vote(req.user.id, c.id);
+  res.json(election.electionState(req.user.id));
+});
+api.post('/election/message', (req, res) => {
+  election.setMayorMessage(req.user.id, str(req.body.text, ELECTION.messageMax));
+  broadcast('world', game.worldState());
+  res.json(election.electionState(req.user.id));
 });
 
 // ---------------------------------------------------------- health

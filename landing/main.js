@@ -48,9 +48,9 @@ document.getElementById('lang').addEventListener('click', () => {
 
 // ------------------------------------------------------------------ links
 function updateLinks() {
-  // Carry the chosen language and campaign tags (utm_*) into the game.
+  // Carry the chosen language, campaign tags (utm_*) and invite code (ref) into the game.
   const out = new URLSearchParams({ lang });
-  for (const [k, v] of params) if (k.startsWith('utm_')) out.set(k, v);
+  for (const [k, v] of params) if (k.startsWith('utm_') || k === 'ref' || k === 'place') out.set(k, v);
   if (!out.has('utm_source')) out.set('utm_source', 'landing');
   document.querySelectorAll('.play').forEach((a) => (a.href = `${GAME_URL}/?${out}`));
   document.querySelectorAll('.legal').forEach((a) => (a.href = `${GAME_URL}${a.dataset.path}`));

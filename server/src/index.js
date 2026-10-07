@@ -10,7 +10,8 @@ import { verifyToken } from './auth.js';
 import { api, settleTopup, applyTopupStatus } from './routes/api.js';
 import { verifyNtzsWebhook } from './payments/index.js';
 import { online, setIO, publicPlayer, broadcast, emitTo } from './presence.js';
-import { decayNeeds, vehicleSummary, neglectHealth } from './game.js';
+import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef } from './game.js';
+import { settleElection, currentMayor } from './election.js';
 import { addInvite, canVisit } from './social.js';
 
 const PORT = Number(process.env.PORT) || 8787;
@@ -243,6 +244,20 @@ setInterval(() => {
   });
   tx();
 }, NEED_TICK_SECONDS * 1000);
+
+// Mayor elections: decide last week's winner once the week rolls over.
+mayorRef.current = currentMayor;
+const checkElection = () => {
+  try {
+    const won = settleElection();
+    if (won) {
+      broadcast('toast', { text: [`🏛️ @${won.username} ndiye Mkuu wa Mkoa mpya wa Dar! (kura ${won.votes})`, `🏛️ @${won.username} is Dar's new Mayor! (${won.votes} votes)`] });
+      broadcast('world', worldState());
+    }
+  } catch (e) { console.error('[election]', e); }
+};
+checkElection();
+setInterval(checkElection, 60_000);
 
 // Event reminders: ping everyone who RSVP'd when an event starts.
 setInterval(() => {

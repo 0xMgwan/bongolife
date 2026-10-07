@@ -6,6 +6,7 @@ import { avatarEmoji } from '../../three/Avatar.jsx';
 import { AppHead } from '../Phone.jsx';
 import { L } from '../../i18n.js';
 import { inviteHome, whereIs, goToPlayer } from '../social.js';
+import { InviteCard } from '../Invite.jsx';
 
 /** People: who's online, your friends, and friend requests. */
 export function Watu({ back, open }) {
@@ -63,6 +64,7 @@ export function Watu({ back, open }) {
     <>
       <AppHead title={L('Watu', 'People')} onBack={back} />
       <div className="app-body">
+        <InviteCard compact />
         <div className="seg">
           <button className={tab === 'online' ? 'on' : ''} onClick={() => setTab('online')}>{L('Online', 'Online')} · {live.length}</button>
           <button className={tab === 'friends' ? 'on' : ''} onClick={() => setTab('friends')}>{L('Marafiki', 'Friends')} · {friends.length}</button>

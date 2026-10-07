@@ -10,6 +10,8 @@ import { AvatarPreview } from './Creator.jsx';
 import { sfx } from '../audio.js';
 import { setInside } from '../net.js';
 import { inviteHome, goToPlayer } from './social.js';
+import { TravelCard } from './Travel.jsx';
+import { share } from './share.js';
 import { L, loc, isEn } from '../i18n.js';
 
 const jt = (j, n) => (isEn() ? jobTitleEn(j, n) : jobTitle(j, n));
@@ -119,6 +121,7 @@ function PlaceSheet({ id, onClose }) {
   };
   return (
     <Sheet title={loc(p)} icon={p.icon} sub={`${p.district} · ${loc(p, 'blurb')}`} onClose={onClose}>
+      <button className="link-share" onClick={() => share({ title: loc(p), text: L(`Tukutane ${p.name} kwenye Bongo Life! 🇹🇿`, `Meet me at ${loc(p)} in Bongo Life! 🇹🇿`), params: { place: id } })}>🔗 {L(`Shiriki link ya ${p.name}`, `Share a link to ${loc(p)}`)}</button>
       {ENTERABLE[p.id] && (
         useStore.getState().inside === p.id ? (
           <button className="btn btn-ghost btn-block" style={{ marginTop: 6 }} onClick={() => { setInside(null); onClose(); }}>🚪 {L('Toka nje', 'Leave')}</button>
@@ -281,6 +284,7 @@ function PlayerSheet({ username, onClose }) {
           <button className="btn btn-ghost grow" onClick={() => goToPlayer(p.username)}>📍 {L('Nenda kwake', 'Go to them')}</button>
         </div>
       )}
+      <button className="link-share" style={{ marginTop: 10 }} onClick={() => share({ title: `@${p.username}`, text: L(`Mcheki @${p.username} kwenye Bongo Life 🇹🇿`, `Check out @${p.username} on Bongo Life 🇹🇿`), params: { u: p.username } })}>🔗 {L('Shiriki profaili hii', 'Share this profile')}</button>
     </Sheet>
   );
 }
@@ -339,6 +343,7 @@ export function Sheets() {
   const close = () => set({ sheet: null });
   if (!sheet) return null;
   if (sheet.type === 'place') return <PlaceSheet id={sheet.id} onClose={close} />;
+  if (sheet.type === 'travel') return <TravelCard id={sheet.id} onClose={close} />;
   if (sheet.type === 'plot') return <PlotSheet id={sheet.id} onClose={close} />;
   if (sheet.type === 'player') return <PlayerSheet username={sheet.id} onClose={close} />;
   if (sheet.type === 'ad') return <AdSheet id={sheet.id} onClose={close} />;

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { furnitureThumb, cachedThumb } from '../three/thumbs.jsx';
 import { FURNITURE, FURNITURE_CATS, HOME, furnitureById, footprint, homeFits, fmtTsh, fmtShort, NEEDS } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
@@ -32,6 +33,17 @@ export async function loadHome() {
   } catch (e) {
     useStore.getState().toast(e.message, 'err');
   }
+}
+
+/** 3D render of the item (falls back to its emoji while rendering or if WebGL is unavailable). */
+export function Thumb({ def, size = 64 }) {
+  const [url, setUrl] = useState(() => cachedThumb(def.id));
+  useEffect(() => {
+    let live = true;
+    if (!url) furnitureThumb(def).then((u) => live && setUrl(u)).catch(() => {});
+    return () => { live = false; };
+  }, [def, url]);
+  return url ? <img src={url} alt="" width={size} height={size} style={{ objectFit: 'contain' }} /> : <span>{itemIcon(def.id)}</span>;
 }
 
 /** Buy mode: category chips + item cards. Picking one starts placement. */
@@ -70,7 +82,7 @@ function Catalogue() {
             {FURNITURE.filter((f) => f.cat === cat).map((f) => (
               <button key={f.id} className="cat-card" onClick={() => pick(f)} disabled={me.money < f.price}>
                 <div className="row between small muted"><span>{f.size[0]}×{f.size[1]}</span><span className="stars">{stars(f.stars)}</span></div>
-                <div className="cat-ic" style={{ background: `${f.color}22` }}>{itemIcon(f.id)}</div>
+                <div className="cat-ic"><Thumb def={f} /></div>
                 <div className="cat-name">{loc(f)}</div>
                 <div className="cat-price">{f.price ? fmtTsh(f.price) : L('Bure', 'Free')}</div>
               </button>

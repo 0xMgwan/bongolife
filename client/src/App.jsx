@@ -7,6 +7,9 @@ import { Toasts } from './ui/Toasts.jsx';
 import Auth from './ui/Auth.jsx';
 import Legal from './ui/Legal.jsx';
 import { ErrorBoundary } from './ui/ErrorBoundary.jsx';
+import { rememberRef } from './ui/share.js';
+
+rememberRef();
 
 const Landing = lazy(() => import('./ui/Landing.jsx'));
 const Creator = lazy(() => import('./ui/Creator.jsx'));

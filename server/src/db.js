@@ -129,6 +129,8 @@ addColumn('users', 'token_version', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('messages', 'deleted_at', 'INTEGER');
 addColumn('users', 'home_seeded', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('users', 'car_seeded', 'INTEGER NOT NULL DEFAULT 0');
+addColumn('users', 'referred_by', 'INTEGER');
+addColumn('users', 'referral_paid', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('users', 'health', 'INTEGER NOT NULL DEFAULT 100');
 addColumn('users', 'injured_at', 'INTEGER');
 db.exec(`
@@ -148,6 +150,27 @@ CREATE TABLE IF NOT EXISTS contacts (
   contact_id INTEGER NOT NULL REFERENCES users(id),
   created_at INTEGER NOT NULL,
   PRIMARY KEY (user_id, contact_id)
+);
+CREATE TABLE IF NOT EXISTS candidates (
+  period INTEGER NOT NULL,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  slogan TEXT,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (period, user_id)
+);
+CREATE TABLE IF NOT EXISTS votes (
+  period INTEGER NOT NULL,
+  voter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  candidate_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (period, voter_id)
+);
+CREATE TABLE IF NOT EXISTS mayors (
+  period INTEGER PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  votes INTEGER NOT NULL DEFAULT 0,
+  message TEXT,
+  decided_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS password_resets (
   user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,

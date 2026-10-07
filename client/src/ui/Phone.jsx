@@ -31,7 +31,7 @@ export const APPS = [
   { id: 'mali', name: 'Mali Yangu', nameEn: 'My Assets', icon: '🏡', g: ['#38bdf8', '#0284c7'], C: Mali },
   { id: 'matangazo', name: 'Matangazo', nameEn: 'Ads', icon: '📢', g: ['#fb7185', '#e11d48'], C: Matangazo },
   { id: 'kabati', name: 'Boutique', nameEn: 'Boutique', icon: '👠', g: ['#e879f9', '#a21caf'], C: Kabati },
-  { id: 'viongozi', name: 'Matajiri', nameEn: 'Rich List', icon: '👑', g: ['#fcd34d', '#d97706'], C: Viongozi },
+  { id: 'viongozi', name: 'Uchaguzi', nameEn: 'Mayor & Votes', icon: '🗳️', g: ['#fcd34d', '#d97706'], C: Viongozi },
   { id: 'msaada', name: 'Msaada', nameEn: 'Help & guide', icon: '💡', g: ['#fde68a', '#f59e0b'], C: Msaada },
   { id: 'mipangilio', name: 'Mipangilio', nameEn: 'Settings', icon: '⚙️', g: ['#9ca3af', '#4b5563'], C: Mipangilio },
 ];
@@ -107,7 +107,7 @@ export function Phone() {
   const d = new Date();
   const days = L(['Jumapili', 'Jumatatu', 'Jumanne', 'Jumatano', 'Alhamisi', 'Ijumaa', 'Jumamosi'], ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']);
   const months = L(['Januari', 'Februari', 'Machi', 'Aprili', 'Mei', 'Juni', 'Julai', 'Agosti', 'Septemba', 'Oktoba', 'Novemba', 'Desemba'], ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']);
-  const banner = announcement ? loc(announcement, 'text') : world?.event ? loc(world.event, 'text') : null;
+  const banner = announcement ? loc(announcement, 'text') : world?.mayor?.message ? `🏛️ @${world.mayor.username}: “${world.mayor.message}”` : world?.event ? loc(world.event, 'text') : null;
   const badges = { ujumbe: me?.unread || null, mali: me?.pendingIncome > 0 ? '$' : null };
 
   return (

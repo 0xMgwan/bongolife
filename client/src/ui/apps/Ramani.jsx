@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { WATER, LAND_PATCHES, BEACHES, BRIDGES, ROADS, PLACES, PLOTS, DISTRICTS, TRAVEL, placeById, travelCost, fmtTsh, WORLD_SIZE } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { local } from '../../net.js';
-import { goToPlace, startRide } from '../../nav.js';
+import { TravelOptions } from '../Travel.jsx';
 import { AppHead } from '../Phone.jsx';
 import { L, loc, isEn } from '../../i18n.js';
 import { sfx } from '../../audio.js';
@@ -13,24 +13,8 @@ const R = (r, fill) => <rect key={r.id} x={r.x1} y={r.z1} width={r.x2 - r.x1} he
 export function Ramani({ back, close }) {
   const me = useStore((s) => s.me);
   const world = useStore((s) => s.world);
-  const run = useStore((s) => s.run);
   const [sel, setSel] = useState(null);
   const place = sel && placeById[sel];
-  const from = [local.x, local.z];
-
-  const ride = async (mode) => {
-    const r = await run('/travel', { method: 'POST', body: { placeId: sel, mode } });
-    if (!r) return;
-    const id = sel;
-    close();
-    useStore.setState({ tab: 'town', cityView: 'follow', inside: null, sheet: null });
-    sfx('horn');
-    startRide(mode, r.pos, id, () => {
-      sfx('pop');
-      useStore.getState().toast(L(`${TRAVEL[mode].emoji} Umefika ${placeById[id].name} · ${fmtTsh(r.cost)}`, `${TRAVEL[mode].emoji} Arrived at ${loc(placeById[id])} · ${fmtTsh(r.cost)}`));
-      useStore.setState({ sheet: { type: 'place', id } });
-    });
-  };
 
   return (
     <>
@@ -71,19 +55,7 @@ export function Ramani({ back, close }) {
             {place.comingSoon ? (
               <div className="small muted" style={{ marginTop: 8 }}>🚧 {L('Inakuja hivi karibuni!', 'Coming soon!')}</div>
             ) : (
-              <div className="opt-list" style={{ marginTop: 10 }}>
-                <button className="item" style={{ margin: 0 }} onClick={() => { close(); goToPlace(sel); }}>
-                  <span className="em">🚶</span><div className="grow t">{L('Tembea / Endesha', 'Walk / Drive')}</div><b>{L('Bure', 'Free')}</b>
-                </button>
-                {Object.entries(TRAVEL).map(([mode, t]) => {
-                  const cost = travelCost(mode, from, place.pos);
-                  return (
-                    <button key={mode} className="item" style={{ margin: 0 }} disabled={me.money < cost} onClick={() => ride(mode)}>
-                      <span className="em">{t.emoji}</span><div className="grow t">{L(`Panda ${t.name}`, `Take a ${loc(t)}`)}</div><b>{fmtTsh(cost)}</b>
-                    </button>
-                  );
-                })}
-              </div>
+              <TravelOptions placeId={sel} onDone={close} />
             )}
           </div>
         )}
