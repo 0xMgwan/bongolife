@@ -36,8 +36,14 @@ function iosTick() {
 }
 const canVibrate = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
 
+// One gesture often asks twice (the global tap plus a handler's own sfx); keep the first.
+let lastAt = 0;
+
 export function haptic(kind = 'tap') {
   if (!enabled) return;
+  const t = performance.now();
+  if (t - lastAt < 40) return;
+  lastAt = t;
   const p = PATTERNS[kind] ?? PATTERNS.tap;
   try {
     if (canVibrate) navigator.vibrate(p);
