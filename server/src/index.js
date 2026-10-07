@@ -114,7 +114,7 @@ io.on('connection', (socket) => {
     p.x = d.x;
     p.z = d.z;
     p.ry = Number.isFinite(d.ry) ? d.ry : p.ry;
-    p.m = d.m ? 1 : 0;
+    p.m = d.m === 2 ? 2 : d.m ? 1 : 0; // 2 = running
     pendingMoves.set(uid, [uid, +p.x.toFixed(2), +p.z.toFixed(2), +p.ry.toFixed(2), p.m]);
   });
 
@@ -223,6 +223,13 @@ io.on('connection', (socket) => {
     socket.to(`home:${p.home}`).emit('home:pos', { id: uid, ...p.homePos });
   });
   socket.on('home:leave', leaveHome);
+
+  socket.on('jump', () => {
+    const t = now();
+    if (t - (p.lastJump || 0) < 400) return;
+    p.lastJump = t;
+    socket.broadcast.emit('jump', { id: uid });
+  });
 
   socket.on('emote', (e) => {
     if (typeof e === 'string' && e.length <= 8) broadcast('emote', { id: uid, e });

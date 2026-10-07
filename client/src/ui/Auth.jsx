@@ -63,10 +63,16 @@ function Forgot({ onDone, onBack, initial }) {
   );
 }
 
-export default function Auth() {
-  const tab = useStore((s) => s.authTab);
+/**
+ * Sign-up / log-in form on its own, so the creator can host it: sign-up as the creator's last step
+ * (username carried over), log-in as a pop-up. `onAuthed` takes over from the default "go to the
+ * game or the creator" once a token is stored.
+ */
+export function AuthCard({ username = '', onAuthed, lockTab }) {
+  const storeTab = useStore((s) => s.authTab);
+  const tab = lockTab || storeTab;
   const set = useStore((s) => s.set);
-  const [f, setF] = useState({ name: '', username: '', password: '', email: '', agree: false });
+  const [f, setF] = useState({ name: '', username, password: '', email: '', agree: false });
   const [forgot, setForgot] = useState(false);
   const [show, setShow] = useState(false);
   const [err, setErr] = useState('');
@@ -82,7 +88,8 @@ export default function Auth() {
       const body = signup ? { ...f, username: f.username.replace(/^@/, ''), ref: pendingRef() || undefined } : { username: f.username.replace(/^@/, ''), password: f.password };
       const r = await api(signup ? '/auth/signup' : '/auth/login', { method: 'POST', body });
       token.set(r.token);
-      set({ me: r.me, screen: r.me.onboarded ? 'game' : 'creator' });
+      if (onAuthed) await onAuthed(r);
+      else set({ me: r.me, screen: r.me.onboarded ? 'game' : 'creator' });
     } catch (e2) {
       setErr(e2.message);
     } finally {
@@ -91,22 +98,15 @@ export default function Auth() {
   };
   const ready = signup ? f.name && f.username && f.password.length >= 6 && f.agree : f.username && f.password;
 
+  if (forgot) return <Forgot initial={f.username} onBack={() => setForgot(false)} />;
   return (
-    <div className="auth">
-      <div className="auth-inner">
-        <div className="row between" style={{ marginBottom: 6 }}>
-          <button className="round" onClick={() => set({ screen: 'landing' })} aria-label={L('Rudi', 'Back')}>‹</button>
-          <LangToggle />
-        </div>
-        <div className="center"><Crown size={64} /></div>
-        <h1>Bongo Life <span className="badge18">18+</span></h1>
-        <p className="center muted" style={{ margin: '0 0 22px', fontSize: 16 }}>{L('Ishi maisha yako ya Dar na watu halisi.', 'Live your Dar story with real people.')}</p>
-        {forgot ? <Forgot initial={f.username} onBack={() => setForgot(false)} /> : (
         <form className="card" style={{ padding: 18 }} onSubmit={submit}>
+          {!lockTab && (
           <div className="tabs">
             <button type="button" className={signup ? 'on' : ''} onClick={() => set({ authTab: 'signup' })}>{L('Fungua akaunti', 'Create account')}</button>
             <button type="button" className={!signup ? 'on' : ''} onClick={() => set({ authTab: 'login' })}>{L('Ingia', 'Log in')}</button>
           </div>
+          )}
           {signup && (
             <>
               <div className="label">{L('Jina lako', 'Your name')}</div>
@@ -151,7 +151,22 @@ export default function Auth() {
             {busy ? L('Subiri…', 'Please wait…') : signup ? L('Jisajili · ni bure', "Sign up · it's free") : L('Ingia Bongo', 'Log in')}
           </button>
         </form>
-        )}
+  );
+}
+
+export default function Auth() {
+  const set = useStore((s) => s.set);
+  return (
+    <div className="auth">
+      <div className="auth-inner">
+        <div className="row between" style={{ marginBottom: 6 }}>
+          <button className="round" onClick={() => set({ screen: 'landing' })} aria-label={L('Rudi', 'Back')}>‹</button>
+          <LangToggle />
+        </div>
+        <div className="center"><Crown size={64} /></div>
+        <h1>Bongo Life <span className="badge18">18+</span></h1>
+        <p className="center muted" style={{ margin: '0 0 22px', fontSize: 16 }}>{L('Ishi maisha yako ya Dar na watu halisi.', 'Live your Dar story with real people.')}</p>
+        <AuthCard />
       </div>
     </div>
   );

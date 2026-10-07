@@ -22,7 +22,8 @@ export default function Landing() {
     return () => clearInterval(t);
   }, []);
   const ads = useStore((s) => s.ads);
-  const go = (tab) => set({ screen: 'auth', authTab: tab });
+  // Both start in the creator: sign-up designs the Mbongo first, log-in pops up over it.
+  const go = (tab) => set({ screen: 'creator', me: null, loginOpen: tab === 'login' });
   const faces = stats?.faces?.length ? stats.faces : [{ body: 'woman', skin: 1 }, { body: 'man', skin: 0 }, { body: 'woman', skin: 3 }, { body: 'man', skin: 2 }];
 
   return (
