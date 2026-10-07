@@ -13,7 +13,6 @@ function Forgot({ onDone, onBack, initial }) {
   const [f, setF] = useState({ username: initial || '', code: '', password: '' });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const [forgot, setForgot] = useState(false);
   const up = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const go = async (e) => {
     e.preventDefault();
@@ -68,6 +67,7 @@ export default function Auth() {
   const tab = useStore((s) => s.authTab);
   const set = useStore((s) => s.set);
   const [f, setF] = useState({ name: '', username: '', password: '', email: '', agree: false });
+  const [forgot, setForgot] = useState(false);
   const [show, setShow] = useState(false);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
