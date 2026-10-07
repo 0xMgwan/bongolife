@@ -89,12 +89,12 @@ export const TOPUP_RATE = Number(process.env.TOPUP_RATE) || 100;
 /** Verify an nTZS webhook: HMAC-SHA256 over `${timestamp}.${rawBody}`, hex. */
 export function verifyNtzsWebhook(rawBody, signature, timestamp) {
   if (!NTZS_WEBHOOK_SECRET || !signature || !timestamp) return false;
-  // Reject stale deliveries (replay protection). Accept seconds or ms timestamps.
+  // Reject stale deliveries (replay protection). Accept seconds or ms timestamps; anything
+  // non-numeric is rejected rather than skipping the check.
   const ts = Number(timestamp);
-  if (Number.isFinite(ts)) {
-    const ms = ts < 1e12 ? ts * 1000 : ts;
-    if (Math.abs(Date.now() - ms) > 10 * 60_000) return false;
-  }
+  if (!Number.isFinite(ts)) return false;
+  const ms = ts < 1e12 ? ts * 1000 : ts;
+  if (Math.abs(Date.now() - ms) > 10 * 60_000) return false;
   const expected = crypto.createHmac('sha256', NTZS_WEBHOOK_SECRET).update(`${timestamp}.${rawBody}`).digest('hex');
   const a = Buffer.from(expected);
   const b = Buffer.from(String(signature).replace(/^sha256=/, ''));
