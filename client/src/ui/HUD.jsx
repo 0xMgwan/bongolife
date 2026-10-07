@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH, TRAVEL, flightPhase, findActivity, PLACES, DISTRICTS } from '@shared/world.js';
 import { L, loc, pick, isEn } from '../i18n.js';
 import { useStore } from '../store.js';
-import { input, sendChat, sendEmote, setInside, remotes, local, view } from '../net.js';
+import { input, sendChat, sendEmote, setInside, remotes, local, view, jump } from '../net.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
 import { setZoom, getZoom } from '../three/GameScene.jsx';
 import { setAudioSettings, sfx } from '../audio.js';
@@ -502,6 +502,12 @@ function NeedsPanel({ me }) {
   const ex = avatarExpression(me);
   const act = (fn) => () => { setOpen(false); fn(); };
   const emote = (e) => { sendEmote(e); setPoke((n) => n + 1); };
+  // One thing at a time: a section (needs / emotes / me), and within needs one need, most urgent first.
+  const [section, setSection] = useState('needs');
+  const [ni, setNi] = useState(0);
+  const order = [...bars].sort((x, y) => x.v - y.v);
+  const need = order[((ni % order.length) + order.length) % order.length];
+  useEffect(() => { if (open) { setSection('needs'); setNi(0); } }, [open]);
   return (
     <div className={`needs-panel ${open ? 'open' : ''}`}>
       <button className={`big-avatar ${ex.anim ? `ex-${ex.anim}` : ''} ${urgent ? 'urgent' : ''}`} onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={`${L('Hali yako', 'Your needs')} · ${ex.label}`}>
@@ -518,28 +524,54 @@ function NeedsPanel({ me }) {
             </div>
             <button className="me-x" onClick={() => setOpen(false)} aria-label={L('Funga', 'Close')}>✕</button>
           </div>
-          <div className="me-needs">
-            {bars.map((b, i) => {
-              const fix = NEED_FIX[b.id];
-              const col = b.v < 20 ? '#ef4444' : b.v < 40 ? '#f59e0b' : b.c;
-              return (
-                <button key={b.id} style={{ '--i': i, '--c': col }} className={`me-need ${b.id === worst.id && b.v < 40 ? 'worst' : ''}`} onClick={act(fix.go)} title={`${b.name}: ${Math.round(b.v)}%`}>
-                  <span className="mn-top"><span>{b.icon}</span><b>{Math.round(b.v)}%</b></span>
-                  <i><em style={{ width: `${b.v}%`, background: col }} /></i>
-                  <small>{fix.verb()} →</small>
-                </button>
-              );
-            })}
+          <div className="me-tabs" role="tablist">
+            {[['needs', '❤️', L('Mahitaji', 'Needs')], ['emotes', '👋', L('Hisia', 'Emotes')], ['me', '👗', L('Mimi', 'Me')]].map(([id, icon, label]) => (
+              <button key={id} role="tab" aria-selected={section === id} className={section === id ? 'on' : ''} onClick={() => setSection(id)}>{icon}<span>{label}</span></button>
+            ))}
           </div>
-          <div className="me-emotes">
-            {EMOTES.map((e, i) => <button key={e} style={{ '--i': i }} onClick={() => emote(e)} aria-label={`Emote ${e}`}>{e}</button>)}
-          </div>
-          <div className="me-acts">
-            <button onClick={act(() => openPhone('kabati'))}>👗<span>{L('Kabati', 'Wardrobe')}</span></button>
-            <button onClick={act(() => openPhone('kazi'))}>💼<span>{L('Kazi', 'Jobs')}</span></button>
-            <button onClick={act(() => openPhone('pesa'))}>🏦<span>{L('Benki', 'Bank')}</span></button>
-            <button onClick={act(() => openPhone('mali'))}>🏡<span>{L('Mali', 'Assets')}</span></button>
-          </div>
+          {section === 'needs' && (() => {
+            const fix = NEED_FIX[need.id];
+            const col = (b) => (b.v < 20 ? '#ef4444' : b.v < 40 ? '#f59e0b' : '#22c55e');
+            return (
+              <div className="me-all">
+                {/* Every need at a glance: emoji inside a progress ring; tap one to act on it. */}
+                <div className="me-orbs" role="tablist">
+                  {order.map((b, i) => (
+                    <button
+                      key={b.id}
+                      role="tab"
+                      aria-selected={b.id === need.id}
+                      aria-label={`${b.name} ${Math.round(b.v)}%`}
+                      className={`me-orb ${b.id === need.id ? 'on' : ''} ${b.v < 20 ? 'low' : ''}`}
+                      style={{ '--c': col(b), '--p': Math.max(2, b.v), '--i': i }}
+                      onClick={() => { setNi(i); haptic('select'); setPoke((n) => n + 1); }}
+                    >
+                      <svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" className="track" /><circle cx="18" cy="18" r="16" className="fill" /></svg>
+                      <span>{b.icon}</span>
+                    </button>
+                  ))}
+                </div>
+                <div key={need.id} className="me-pick" style={{ '--c': col(need) }}>
+                  <b>{need.name}</b>
+                  <em>{Math.round(need.v)}%</em>
+                  <button className="mo-go" onClick={act(fix.go)}>{fix.verb()} →</button>
+                </div>
+              </div>
+            );
+          })()}
+          {section === 'emotes' && (
+            <div className="me-emotes">
+              {EMOTES.map((e, i) => <button key={e} style={{ '--i': i }} onClick={() => emote(e)} aria-label={`Emote ${e}`}>{e}</button>)}
+            </div>
+          )}
+          {section === 'me' && (
+            <div className="me-acts">
+              <button onClick={act(() => openPhone('kabati'))}>👗<span>{L('Kabati', 'Wardrobe')}</span></button>
+              <button onClick={act(() => openPhone('kazi'))}>💼<span>{L('Kazi', 'Jobs')}</span></button>
+              <button onClick={act(() => openPhone('pesa'))}>🏦<span>{L('Benki', 'Bank')}</span></button>
+              <button onClick={act(() => openPhone('mali'))}>🏡<span>{L('Mali', 'Assets')}</span></button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -784,6 +816,9 @@ export function HUD() {
         <button className={`drive-btn ${vehicle ? 'on' : ''}`} onClick={() => { sfx(vehicle ? 'click' : 'horn'); toggleVehicle(); }}>
           {vehicle ? <>🚶 {L('Shuka', 'Get out')}</> : anyVehicle ? <>{vehicleById[anyVehicle.model]?.emoji} {L('Endesha', 'Drive')}</> : <>🚗 {L('Nunua gari', 'Get a ride')}</>}
         </button>
+      )}
+      {walking && !vehicle && (
+        <button className="jump-btn" onClick={() => jump()} aria-label={L('Ruka', 'Jump')}>⬆️<span>{L('Ruka', 'Jump')}</span></button>
       )}
       <RideBanner />
       {touch && walking && <Joystick />}

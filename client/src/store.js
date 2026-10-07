@@ -12,7 +12,8 @@ export const useStore = create((set, get) => ({
   world: { plots: {}, businesses: {}, event: null },
   ads: [],
   online: 0,
-  presence: [], // "@x is online" alerts, newest last
+  presence: [],
+  loginOpen: false, // log-in pop-up over the creator // "@x is online" alerts, newest last
   roster: 0, // bumps when remote players join/leave
   sheet: null, // { type: 'place'|'plot'|'player'|'ad', id }
   phone: null, // null | 'home' | app id

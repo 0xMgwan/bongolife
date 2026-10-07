@@ -3,9 +3,20 @@
   "short_name": "Bongo Life",
   "description": "Ishi maisha yako ya Dar es Salaam na watu halisi.",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
   "orientation": "portrait",
-  "background_color": "#dcebf8",
-  "theme_color": "#2fb06f",
-  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "background_color": "#1e2a47",
+  "theme_color": "#1e2a47",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

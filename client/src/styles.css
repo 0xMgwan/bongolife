@@ -235,6 +235,12 @@ textarea.field { border-radius: 18px; resize: none; }
 .app-head h3 { margin: 0; font-size: 20px; flex: 1; letter-spacing: -.02em; }
 .app-body { flex: 1; overflow-y: auto; padding: 0 14px 18px; -webkit-overflow-scrolling: touch; }
 .app-body::-webkit-scrollbar { display: none; }
+.namebox-edit { cursor: text; }
+.namebox-edit input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; color: inherit; padding: 0; }
+.creator-login { display: block; margin: 6px auto 0; }
+.login-pop { width: min(420px, 100%); animation: center-pop .38s cubic-bezier(.2,1.3,.4,1) both; }
+.login-pop h3 { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6), 0 2px 10px rgba(0,0,0,.4); }
+.login-pop .me-x { color: #fff; }
 .wardrobe-preview { position: sticky; top: 0; z-index: 2; margin: 0 -14px; padding: 0 14px 10px; background: linear-gradient(180deg, #f6f7f9 85%, rgba(246,247,249,0)); }
 .wp-stage { height: 220px; background: linear-gradient(180deg, #dbe9f7, #fff); border-radius: 18px; box-shadow: 0 6px 16px rgba(17,24,39,.08); overflow: hidden; }
 .home-ind { height: 22px; display: grid; place-items: center; background: #0b0f17; }
@@ -818,3 +824,100 @@ button:not(:disabled):active, .chip:active { filter: brightness(.93); }
 /* While the Me panel is open, the side controls would sit on top of it; clear them out. */
 .side { transition: opacity .2s; }
 .layer:has(.me-panel) .side { opacity: 0; pointer-events: none; }
+
+/* Sheets (places, players, travel, home items): no card — content floats over a darker backdrop. */
+.sheet-wrap { background: rgba(10,14,24,.55); }
+.sheet { background: none; box-shadow: none; overflow: visible; color: #fff; text-shadow: var(--float-text); }
+.sheet .sheet-body { overflow-y: auto; }
+.sheet .muted, .sheet .small, .sheet .item .s, .sheet .section-t { color: rgba(255,255,255,.82); }
+.sheet .sheet-head .x { background: none; color: #fff; font-size: 20px; }
+.sheet .sheet-head h2 > span { filter: var(--float-emoji); }
+.sheet .item { background: none; padding: 10px 4px; border-radius: 0; }
+.sheet .item + .item { border-top: 1px solid rgba(255,255,255,.14); }
+.sheet .item .em { font-size: 34px; }
+.sheet .fx span { background: none; padding: 2px 4px 2px 0; }
+.sheet .fx .up { color: #86efac; }
+.sheet .fx .dn { color: #fca5a5; }
+.sheet .link-share { color: #93c5fd; }
+.sheet .btn { text-shadow: none; }
+/* Slide-select highlight without a card: the row glows instead. */
+.sheet .sheet-body .item.picked { background: none; box-shadow: none; transform: scale(1.03); }
+.sheet .sheet-body .item.picked .em { filter: var(--float-emoji) drop-shadow(0 0 10px rgba(134,239,172,.9)); }
+.sheet .sheet-body .item.picked .t { color: #bbf7d0; }
+/* With no card to cover it, the HUD would show through a sheet's text — clear it while one is open. */
+.app > .layer { transition: opacity .2s; }
+.app:has(> .sheet-wrap) > .layer { opacity: 0; pointer-events: none; }
+/* Dim + blur the game behind sheets and the catalogue so floating text stays readable. */
+.sheet-wrap, .cat-backdrop { background: rgba(8,12,22,.66); backdrop-filter: blur(10px) saturate(.9); -webkit-backdrop-filter: blur(10px) saturate(.9); }
+.sheet .btn-dark { background: #fff; color: var(--ink); }
+.sheet .s.red { color: #fca5a5; }
+/* Tip notifications: no pill — emoji, title and hint float, readable by shadow. */
+.tip-alert { border-radius: 0; overflow: visible; }
+.tip { background: none; box-shadow: none; padding: 4px 34px 6px 0; color: #fff; text-shadow: var(--float-text); }
+.tip small { color: rgba(255,255,255,.88); }
+.tip-alert .tip-ic { font-size: 30px; width: 40px; height: 40px; }
+.tip-x { color: #fff; text-shadow: var(--float-text); }
+.tip-count { color: rgba(255,255,255,.8); text-shadow: var(--float-text); }
+.tip-timer { left: 50px; color: #fff; opacity: .5; }
+
+/* Me panel, one thing at a time: three floating tabs, then a single need / the emotes / shortcuts. */
+.me-panel { width: min(300px, calc(100vw - 20px)); gap: 12px; }
+.me-tabs { display: flex; gap: 18px; padding: 0 2px; }
+.me-tabs button { display: flex; align-items: center; gap: 5px; font-size: 20px; color: rgba(255,255,255,.65); opacity: .7; transition: opacity .15s, transform .15s; }
+.me-tabs button span { font-size: 12px; font-weight: 800; }
+.me-tabs button.on { opacity: 1; color: #fff; transform: scale(1.08); }
+.me-tabs button { filter: var(--float-emoji); }
+.me-one { position: relative; display: flex; align-items: center; gap: 4px; touch-action: pan-y; padding-bottom: 14px; }
+.me-arrow { width: 26px; height: 40px; font-size: 26px; color: #fff; text-shadow: var(--float-text); flex: none; }
+.me-need-one { flex: 1; min-width: 0; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 10px; row-gap: 8px; align-items: center; animation: item-pop .35s cubic-bezier(.2,1.35,.4,1) both; }
+.mo-em { grid-row: span 2; font-size: 44px; filter: var(--float-emoji) drop-shadow(0 0 10px var(--c)); }
+.mo-txt b { display: flex; justify-content: space-between; font-size: 15px; }
+.mo-txt b em { font-style: normal; font-size: 13px; }
+.mo-txt i { display: block; height: 6px; margin-top: 6px; border-radius: 6px; background: rgba(255,255,255,.28); overflow: hidden; }
+.mo-txt i em { display: block; height: 100%; border-radius: 6px; transition: width .6s; }
+.mo-go { justify-self: start; padding: 7px 16px; border-radius: 999px; background: var(--green); color: #fff; font-weight: 800; font-size: 13px; text-shadow: none; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+.me-dots { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; gap: 5px; }
+.me-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.35); transition: background .2s, transform .2s; }
+.me-dots i.on { background: #fff; transform: scale(1.3); }
+.me-emotes, .me-acts { animation: item-pop .3s cubic-bezier(.2,1.35,.4,1) both; }
+.drive-btn, .joy { transition: opacity .2s; }
+.layer:has(.me-panel) .drive-btn, .layer:has(.me-panel) .joy { opacity: 0; pointer-events: none; }
+
+/* Jump: a bare floating arrow left of the joystick (on foot only). */
+.jump-btn { position: absolute; right: 132px; bottom: calc(168px + var(--safe-bottom)); z-index: 12; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 34px; color: #fff; filter: var(--float-emoji); transition: transform .12s cubic-bezier(.2,1.6,.4,1), opacity .2s; }
+.jump-btn span { font-size: 11px; font-weight: 800; text-shadow: var(--float-text); }
+.jump-btn:active { transform: translateY(-6px) scale(1.15); }
+.layer:has(.me-panel) .jump-btn { opacity: 0; pointer-events: none; }
+
+/* Travel card + any other sheet text: always light on the dimmed backdrop. */
+.sheet p, .sheet .tc-blurb, .sheet .hint { color: rgba(255,255,255,.88); }
+.sheet .travel-card .x, .travel-card .x { background: none; color: #fff; font-size: 20px; }
+.sheet .tc-ic { background: none; font-size: 40px; filter: var(--float-emoji); }
+.sheet .tc-chips span { background: none; padding: 3px 6px 3px 0; color: #fff; font-weight: 600; }
+.sheet .travel-opt { background: rgba(255,255,255,.12); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); }
+.sheet .travel-opt .em { filter: var(--float-emoji); }
+.sheet .travel-opt small { color: rgba(255,255,255,.75); }
+.sheet .travel-opt.own { background: rgba(59,130,246,.3); box-shadow: inset 0 0 0 2px #60a5fa; }
+.sheet .tc-note { text-shadow: none; }
+
+/* Needs: all six as emojis in progress rings, the chosen one's action below. */
+.me-orbs { display: flex; justify-content: space-between; gap: 4px; }
+.me-orb { position: relative; width: 44px; height: 44px; display: grid; place-items: center; transition: transform .2s cubic-bezier(.2,1.5,.4,1); animation: item-pop .35s cubic-bezier(.2,1.5,.4,1) both; animation-delay: calc(var(--i, 0) * 35ms); }
+.me-orb svg { position: absolute; inset: 0; transform: rotate(-90deg); filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+.me-orb circle { fill: none; stroke-width: 3; }
+.me-orb .track { stroke: rgba(255,255,255,.25); }
+.me-orb .fill { stroke: var(--c); stroke-linecap: round; stroke-dasharray: calc(var(--p) * 1.005) 100.5; transition: stroke-dasharray .6s; }
+.me-orb span { font-size: 21px; filter: var(--float-emoji); }
+.me-orb.on { transform: scale(1.22); }
+.me-orb.on span { filter: var(--float-emoji) drop-shadow(0 0 8px var(--c)); }
+.me-orb.low:not(.on) { animation: item-pop .35s both, worst-pulse 1.6s .5s ease-in-out infinite; }
+.me-pick { display: flex; align-items: center; gap: 10px; margin-top: 12px; animation: item-pop .3s cubic-bezier(.2,1.35,.4,1) both; }
+.me-pick b { font-size: 16px; }
+.me-pick em { font-style: normal; font-weight: 800; font-size: 14px; color: var(--c); flex: 1; }
+@media (prefers-reduced-motion: reduce) { .me-orb, .me-orb.low:not(.on), .me-pick { animation: none !important; } }
+
+/* Game fills the whole phone (status bar drawn over it). On light screens, a soft dark fade behind the
+   clock/battery keeps the white status-bar text readable. Zero height where there's no inset. */
+.creator::before, .auth::before, .loading::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: calc(var(--safe-top) + 14px); background: linear-gradient(180deg, rgba(15,23,42,.5), rgba(15,23,42,0)); pointer-events: none; z-index: 50; }
+.auth, .loading { position: absolute; }
+html, body { background: #1e2a47; }
