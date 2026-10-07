@@ -14,6 +14,10 @@ import { goHospital, leaveVisit } from './social.js';
 import { WorkPanel } from './WorkPanel.jsx';
 import { useLiveEvents, joinParty } from './events.js';
 import { haptic } from '../haptics.js';
+import { useSwipeRow } from './useSwipeRow.js';
+import { Crown } from './Logo.jsx';
+import { LiveNow } from './LiveNow.jsx';
+import { SidePop } from './SidePop.jsx';
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -328,20 +332,52 @@ function TopBar({ me }) {
   const night = clock.hour < 6 || clock.hour >= 19;
   const mood = (isEn() ? moodLabelEn : moodLabel)(me.mood ?? 60);
   const k = (n) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '')}k` : String(n || 0));
+  // Collapsed by default to a glowing crown + balance; a tap reveals the full bar, which folds
+  // back after a few seconds without a tap.
+  const [open, setOpen] = useState(false);
+  const [poke, setPoke] = useState(0);
+  const [liveOpen, setLiveOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => setOpen(false), 6000);
+    return () => clearTimeout(t);
+  }, [open, poke]);
+  const reveal = (e) => {
+    if (open) return setPoke((n) => n + 1);
+    // While collapsed, the first tap anywhere on the bar only reveals it.
+    e.stopPropagation();
+    e.preventDefault();
+    setOpen(true);
+  };
   return (
     <div className="topbar-wrap">
-      <div className="topbar">
-        <span className="tb-time">{night ? '🌙' : '☀️'} {fmtTime(clock)}</span>
-        <span className="tb-sep" />
-        <button className="tb-mood" onClick={() => openPhone('mipangilio')}>{mood.emoji} <span>{mood.text}</span></button>
-        <span className="tb-sep" />
-        <button className="tb-sound" onClick={() => setAudioSettings({ muted: !sound.muted })} aria-label={L('Sauti', 'Sound')}>{sound.muted ? '🔇' : '🔊'}</button>
+      <div className={`topbar ${open ? 'open' : 'collapsed'}`} onClickCapture={reveal}>
+        <button className="tb-crown" onClick={() => setOpen(false)} aria-label={open ? L('Funga', 'Collapse') : L('Fungua', 'Expand')} aria-expanded={open}>
+          <Crown size={26} />
+        </button>
+        <div className="tb-extra" aria-hidden={!open}>
+          <span className="tb-time">{night ? '🌙' : '☀️'} {fmtTime(clock)}</span>
+          <span className="tb-sep" />
+          <button className="tb-mood" tabIndex={open ? 0 : -1} onClick={() => openPhone('mipangilio')}>{mood.emoji} <span>{mood.text}</span></button>
+          <span className="tb-sep" />
+          <button className="tb-sound" tabIndex={open ? 0 : -1} onClick={() => setAudioSettings({ muted: !sound.muted })} aria-label={L('Sauti', 'Sound')}>{sound.muted ? '🔇' : '🔊'}</button>
+        </div>
         <MoneyPill money={me.money} onClick={() => openPhone('pesa', 'topup')} />
       </div>
+      {liveOpen && <LiveNow onClose={() => setLiveOpen(false)} />}
       {!clean && (
         <div className="tb-pills">
-          <span className="mini-pill">👀 {k(visits)} {L('wageni', 'visits')}</span>
-          <span className="mini-pill"><i className="dot" /> {k(online)} online</span>
+          <button className={`live-stats ${liveOpen ? 'on' : ''}`} onClick={() => setLiveOpen((v) => !v)} aria-expanded={liveOpen} aria-label={L('Ona walio online', 'See who is online')}>
+            <span className="ls-item ls-online">
+              <i className="ls-dot" />
+              <b key={online}>{k(online)}</b> {L('mtandaoni', 'online')}
+            </span>
+            <span className="ls-sep" />
+            <span className="ls-item">
+              👀 <b key={visits}>{k(visits)}</b> {L('wageni', visits === 1 ? 'visit' : 'visits')}
+            </span>
+            <span className="ls-caret">›</span>
+          </button>
         </div>
       )}
     </div>
@@ -369,44 +405,143 @@ function useTips(me) {
   return tips.slice(0, 2);
 }
 
+// Tip alerts loop one at a time: pop in, hold, slide out, pause, next. With a clean screen they
+// still come back now and then as a reminder, just far less often.
+const TIP_LOOP = { show: 6000, gap: 1200, cleanShow: 5000, cleanGap: 40_000, exit: 350 };
+
 function Tips({ me }) {
   const clean = useStore((s) => s.cleanScreen);
   const tips = useTips(me);
+  const [idx, setIdx] = useState(0);
+  const [phase, setPhase] = useState('in'); // in → out → gap → in (next tip)
+  const has = tips.length > 0;
+  useEffect(() => {
+    if (!has) return;
+    const ms = phase === 'in' ? (clean ? TIP_LOOP.cleanShow : TIP_LOOP.show)
+      : phase === 'out' ? TIP_LOOP.exit
+        : clean ? TIP_LOOP.cleanGap : TIP_LOOP.gap;
+    const t = setTimeout(() => {
+      if (phase === 'in') setPhase('out');
+      else if (phase === 'out') setPhase('gap');
+      else { setIdx((i) => i + 1); setPhase('in'); }
+    }, ms);
+    return () => clearTimeout(t);
+  }, [phase, clean, has, idx]);
   const toggle = () => {
     const v = !clean;
     try { localStorage.setItem('bl_clean', v ? '1' : '0'); } catch {}
     useStore.setState({ cleanScreen: v });
+    // Clean screen: let the current tip leave and wait out the long gap.
+    setPhase(v ? 'out' : 'in');
   };
+  const tip = has ? tips[idx % tips.length] : null;
+  const showMs = clean ? TIP_LOOP.cleanShow : TIP_LOOP.show;
   return (
     <div className="tips">
-      {!clean && tips.map((t, i) => (
-        <button key={i} className="tip" onClick={() => { sfx('click'); t.go?.(); }}>
-          <span className="tip-ic" style={{ background: t.c }}>{t.icon}</span>
-          <span><b>{t.t}</b><small>{t.s}</small></span>
-        </button>
-      ))}
+      {tip && phase !== 'gap' && (
+        <div key={`${idx}-${tip.t}`} className={`tip-alert ${phase === 'out' ? 'leaving' : ''}`}>
+          <button className="tip" onClick={() => { sfx('click'); tip.go?.(); }}>
+            <span className="tip-ic" style={{ background: tip.c }}>{tip.icon}</span>
+            <span><b>{tip.t}</b><small>{tip.s}</small></span>
+          </button>
+          <button className="tip-x" onClick={() => setPhase('out')} aria-label={L('Funga', 'Dismiss')}>×</button>
+          {tips.length > 1 && <span className="tip-count">{(idx % tips.length) + 1}/{tips.length}</span>}
+          <i className="tip-timer" style={{ animationDuration: `${showMs}ms` }} />
+        </div>
+      )}
       <button className="clean-btn" onClick={toggle}>{clean ? L('˅ Onyesha vidokezo', '˅ Show tips') : L('˄ Safisha skrini', '˄ Clean screen')}</button>
     </div>
   );
 }
 
-/** Avatar + compact need bars (bottom-left). */
+/**
+ * The avatar's face follows whatever needs attention most; when nothing does, it follows mood.
+ * `anim` picks how the avatar moves (sway when sleepy, shake when hurt, bounce when happy).
+ */
+function avatarExpression(me) {
+  const n = me.needs || {};
+  const low = (v) => (v ?? 100) < 20;
+  if ((me.health ?? 100) < HEALTH.injuredBelow) return { face: '🤕', anim: 'shake', label: L('Ameumia', 'Hurt') };
+  if (low(n.energy)) return { face: '😴', anim: 'sway', label: L('Amechoka', 'Exhausted') };
+  if (low(n.hunger)) return { face: '😫', anim: 'shake', label: L('Ana njaa', 'Starving') };
+  if (low(n.hygiene)) return { face: '🤢', anim: 'sway', label: L('Ananuka', 'Needs a wash') };
+  if (low(n.fun)) return { face: '😒', anim: '', label: L('Amechoka na maisha', 'Bored') };
+  if (low(n.social)) return { face: '😔', anim: 'sway', label: L('Mpweke', 'Lonely') };
+  const m = me.mood ?? 60;
+  if (m >= 80) return { face: '😄', anim: 'bounce', label: L('Mzuka kibao', 'Buzzing') };
+  if (m >= 50) return { face: '🙂', anim: '', label: L('Poa', 'Good') };
+  return { face: '😐', anim: '', label: L('Kawaida', 'Meh') };
+}
+
+/** What fixes each need: a short verb and where it takes you. */
+const NEED_FIX = {
+  hunger: { verb: () => L('Kula', 'Eat'), go: () => goHomeTo('kitchen') },
+  energy: { verb: () => L('Lala', 'Sleep'), go: () => goHomeTo('sleep') },
+  fun: { verb: () => L('Bata', 'Party'), go: () => { useStore.setState({ tab: 'town' }); goToPlace('club'); } },
+  hygiene: { verb: () => L('Oga', 'Shower'), go: () => goHomeTo('bath') },
+  social: { verb: () => L('Piga stori', 'Chat'), go: () => useStore.getState().openPhone('mtaa') },
+  health: { verb: () => L('Tibiwa', 'Heal'), go: () => goHospital() },
+};
+
+/** Avatar (bottom-left): tap for the "Me" panel — needs you can fix in a tap, emotes, shortcuts. */
 function NeedsPanel({ me }) {
   const openPhone = useStore((s) => s.openPhone);
-  const mood = me.mood ?? 60;
-  const bars = [...NEEDS.map((n) => ({ icon: n.icon, v: me.needs?.[n.id] ?? 50, c: n.color, name: loc(n) })), { icon: '❤️', v: me.health ?? 100, c: '#f43f5e', name: L('Afya', 'Health') }];
-  void mood;
+  const [open, setOpen] = useState(false);
+  const [poke, setPoke] = useState(0);
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => setOpen(false), 9000);
+    return () => clearTimeout(t);
+  }, [open, poke]);
+  const bars = [
+    ...NEEDS.map((n) => ({ id: n.id, icon: n.icon, v: me.needs?.[n.id] ?? 50, c: n.color, name: loc(n) })),
+    { id: 'health', icon: '❤️', v: me.health ?? 100, c: '#f43f5e', name: L('Afya', 'Health') },
+  ];
+  const urgent = bars.some((b) => b.v < 20);
+  const worst = bars.reduce((a, b) => (b.v < a.v ? b : a));
+  const ex = avatarExpression(me);
+  const act = (fn) => () => { setOpen(false); fn(); };
+  const emote = (e) => { sendEmote(e); setPoke((n) => n + 1); };
   return (
-    <div className="needs-panel">
-      <button className="big-avatar" onClick={() => openPhone('kabati')} aria-label={L('Kabati', 'Wardrobe')}>{avatarEmoji(me.appearance)}</button>
-      <div className="need-bars">
-        {bars.map((b, i) => (
-          <div key={i} className="nb" title={`${b.name}: ${Math.round(b.v)}%`}>
-            <span>{b.icon}</span>
-            <i><em style={{ width: `${b.v}%`, background: b.v < 20 ? '#ef4444' : b.v < 40 ? '#f59e0b' : b.c }} /></i>
+    <div className={`needs-panel ${open ? 'open' : ''}`}>
+      <button className={`big-avatar ${ex.anim ? `ex-${ex.anim}` : ''} ${urgent ? 'urgent' : ''}`} onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={`${L('Hali yako', 'Your needs')} · ${ex.label}`}>
+        <span className="ba-body">{avatarEmoji(me.appearance)}</span>
+        <span key={ex.face} className="ba-face" title={ex.label}>{ex.face}</span>
+        {urgent && !open && <i className="ba-alert" />}
+      </button>
+      {open && (
+        <div className="me-panel" onPointerDown={() => setPoke((n) => n + 1)}>
+          <div className="me-head">
+            <div>
+              <b>{me.name || `@${me.username}`}</b>
+              <small>{ex.face} {ex.label}{worst.v < 40 ? ` · ${NEED_FIX[worst.id]?.verb()} ${L('kwanza', 'first')}` : ''}</small>
+            </div>
+            <button className="me-x" onClick={() => setOpen(false)} aria-label={L('Funga', 'Close')}>✕</button>
           </div>
-        ))}
-      </div>
+          <div className="me-needs">
+            {bars.map((b, i) => {
+              const fix = NEED_FIX[b.id];
+              const col = b.v < 20 ? '#ef4444' : b.v < 40 ? '#f59e0b' : b.c;
+              return (
+                <button key={b.id} style={{ '--i': i, '--c': col }} className={`me-need ${b.id === worst.id && b.v < 40 ? 'worst' : ''}`} onClick={act(fix.go)} title={`${b.name}: ${Math.round(b.v)}%`}>
+                  <span className="mn-top"><span>{b.icon}</span><b>{Math.round(b.v)}%</b></span>
+                  <i><em style={{ width: `${b.v}%`, background: col }} /></i>
+                  <small>{fix.verb()} →</small>
+                </button>
+              );
+            })}
+          </div>
+          <div className="me-emotes">
+            {EMOTES.map((e, i) => <button key={e} style={{ '--i': i }} onClick={() => emote(e)} aria-label={`Emote ${e}`}>{e}</button>)}
+          </div>
+          <div className="me-acts">
+            <button onClick={act(() => openPhone('kabati'))}>👗<span>{L('Kabati', 'Wardrobe')}</span></button>
+            <button onClick={act(() => openPhone('kazi'))}>💼<span>{L('Kazi', 'Jobs')}</span></button>
+            <button onClick={act(() => openPhone('pesa'))}>🏦<span>{L('Benki', 'Bank')}</span></button>
+            <button onClick={act(() => openPhone('mali'))}>🏡<span>{L('Mali', 'Assets')}</span></button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -444,13 +579,34 @@ function BottomNav({ me }) {
     if (id === 'here') return tab === 'home' || (tab === 'town' && cityView !== 'map');
     return false;
   };
+  // Folded into one round "home button" showing where you are; pressing it opens the tabs,
+  // which fold back after a pick or a few idle seconds.
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => setOpen(false), 5000);
+    return () => clearTimeout(t);
+  }, [open]);
+  const icon = (name) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{NAV_ICONS[name]}</svg>;
+  const current = items.find(([id]) => isOn(id)) || items[0];
+  if (!open) {
+    return (
+      <nav className="bottom-nav collapsed">
+        <button className="nav-home" onClick={() => setOpen(true)} aria-expanded="false" aria-label={`${L('Menyu', 'Menu')} · ${current[2]}`}>
+          <span className="nh-crown"><Crown size={34} /></span>
+          <span className="nh-tab">{icon(current[1])}</span>
+          {me.unread > 0 && <b className="badge">{me.unread}</b>}
+        </button>
+      </nav>
+    );
+  }
   return (
-    <nav className="bottom-nav">
-      {items.map(([id, icon, label]) => {
+    <nav className="bottom-nav open">
+      {items.map(([id, name, label], i) => {
         const on = isOn(id);
         return (
-          <button key={id} className={on ? 'on' : ''} onClick={() => go(id)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{NAV_ICONS[icon]}</svg>
+          <button key={id} style={{ '--i': i }} className={on ? 'on' : ''} onClick={() => { go(id); setTimeout(() => setOpen(false), 280); }}>
+            {icon(name)}
             <span>{label}</span>
             {id === 'phone' && me.unread > 0 && <b className="badge">{me.unread}</b>}
           </button>
@@ -487,13 +643,44 @@ function TownChips() {
     ['sea', '🌊', L('Bahari', 'Sea')],
     ['people', '👥', L('Watu', 'People')],
   ];
+  // Folded into one Explore button so the map stays clear; it pops the chips out on tap and
+  // they fold away again after a pick or a few idle seconds.
+  const [open, setOpen] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [poke, setPoke] = useState(0);
+  const closing = useRef(false);
+  const close = () => {
+    if (closing.current) return;
+    closing.current = true;
+    setLeaving(true);
+    setTimeout(() => { setOpen(false); setLeaving(false); closing.current = false; }, 520);
+  };
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(close, 6000);
+    return () => clearTimeout(t);
+  }, [open, poke]);
+  const pick = (fn) => () => { fn(); setTimeout(close, 900); };
+  const row = useRef(null);
+  useSwipeRow(row, { peekKey: 'bl_chips_peek', active: open });
+  const current = cityView === 'map' && chips.find(([id]) => id === filter);
+  if (!open) {
+    return (
+      <button className="chips-toggle" onClick={() => setOpen(true)} aria-expanded="false">
+        {current ? <>{current[1]} {current[2]}</> : <>🧭 {L('Gundua', 'Explore')}</>}
+        <i>›</i>
+      </button>
+    );
+  }
+  // --i staggers the chips in left to right (and back out right to left).
   return (
-    <div className="town-chips">
-      {chips.map(([id, icon, label]) => (
-        <button key={id} className={cityView === 'map' && filter === id ? 'on' : ''} onClick={() => fly(id)}>{icon} {label}</button>
+    <div className={`town-chips ${leaving ? 'leaving' : ''}`} ref={row} onPointerDown={() => setPoke((n) => n + 1)} onScroll={() => setPoke((n) => n + 1)}>
+      {chips.map(([id, icon, label], i) => (
+        <button key={id} style={{ '--i': i }} className={cityView === 'map' && filter === id ? 'on' : ''} onClick={pick(() => fly(id))}>{icon} {label}</button>
       ))}
-      <button onClick={() => openPhone('viongozi')}>🏛️ {L('Mkuu', 'Mayor')}</button>
-      <button className={cityView === 'follow' ? 'on' : ''} onClick={() => { sfx('click'); useStore.setState({ cityView: 'follow', mapFilter: null }); }}>🚶 {L('Tembea', 'Walk')}</button>
+      <button style={{ '--i': 4 }} onClick={pick(() => openPhone('viongozi'))}>🏛️ {L('Mkuu', 'Mayor')}</button>
+      <button style={{ '--i': 5 }} className={cityView === 'follow' ? 'on' : ''} onClick={pick(() => { sfx('click'); useStore.setState({ cityView: 'follow', mapFilter: null }); })}>🚶 {L('Tembea', 'Walk')}</button>
+      <button style={{ '--i': 6 }} className="chips-close" onClick={close} aria-label={L('Funga', 'Close')}>×</button>
     </div>
   );
 }
@@ -568,10 +755,14 @@ export function HUD() {
   return (
     <div className="layer">
       {!shop && <TopBar me={me} />}
+      {!shop && !riding && !clean && (
+        <SidePop items={[
+          ...(world?.event && town && !scene ? [{ key: 'event', tone: 'green', text: loc(world.event, 'text') }] : []),
+          ...(announcement ? [{ key: 'announce', tone: 'amber', text: `📣 ${loc(announcement, 'text')}` }] : []),
+        ]} />
+      )}
       {!shop && !riding && (
         <div className="hud-left">
-          {!clean && world?.event && town && !scene && <div className="event">{loc(world.event, 'text')}</div>}
-          {!clean && announcement && <div className="announce">📣 {loc(announcement, 'text')}</div>}
           <SocialChips me={me} />
           {town && !scene && me.busy?.kind !== 'job' && <TownChips />}
           <Tips me={me} />
