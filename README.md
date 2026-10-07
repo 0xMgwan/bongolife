@@ -1,6 +1,6 @@
 # 👑 Bongo Life
 
-A multiplayer life-sim set in **Dar es Salaam**, built for phones. It's inspired by Lagos Life, with Bongo slang, places and culture.
+A multiplayer life-sim set in **Dar es Salaam**, built for phones. It's inspired by the Sims game, with Bongo slang, places and culture.
 
 You sign up, design your Mbongo, then live in the city with real people. You work shifts (machinga, bodaboda, DJ, developer and more), eat chipsi mayai, go clubbing in Sinza, swim at Coco Beach, and watch the Simba vs Yanga derby. You can buy a bodaboda or a V8, buy plots in Kigamboni or Masaki and build a villa, own businesses that earn income, put up billboard ads, chat with people, and top up your wallet with M-Pesa.
 
