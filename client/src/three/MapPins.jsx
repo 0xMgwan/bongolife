@@ -8,8 +8,8 @@ import { useStore } from '../store.js';
 
 function Pin({ getPos, appearance, username, me, onClick }) {
   const g = useRef();
-  const face = useMemo(() => emojiTexture(avatarEmoji(appearance), { ring: me ? '#2fb06f' : '#ffffff' }), [appearance, me]);
-  const tag = useMemo(() => labelTexture(`@${username}`, { size: 30, bg: me ? '#2fb06f' : 'rgba(17,24,39,.8)', fg: '#fff' }), [username, me]);
+  const face = useMemo(() => emojiTexture(avatarEmoji(appearance), { ring: me ? '#f5b800' : '#ffffff' }), [appearance, me]);
+  const tag = useMemo(() => labelTexture(`@${username}`, { size: 30, bg: me ? '#f5b800' : 'rgba(17,24,39,.8)', fg: me ? '#111111' : '#fff' }), [username, me]);
   useFrame(() => {
     const [x, z] = getPos();
     g.current.position.set(x, 9, z);
