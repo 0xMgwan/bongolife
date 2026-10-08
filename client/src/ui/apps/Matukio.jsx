@@ -10,6 +10,7 @@ import { avatarEmoji } from '../../three/Avatar.jsx';
 import { share } from '../share.js';
 import { joinParty, loadEvents } from '../events.js';
 import { ask } from '../Confirm.jsx';
+import { Picker } from '../Picker.jsx';
 
 const COVERS = [['#7c3aed', '#db2777'], ['#f59e0b', '#ef4444'], ['#0ea5e9', '#6366f1'], ['#10b981', '#0d9488'], ['#ec4899', '#f97316']];
 
@@ -78,9 +79,12 @@ export function Matukio({ back }) {
             <b>{L('Andaa tukio 🎉', 'Host an event 🎉')}</b>
             <input className="field" maxLength={EVENT_LIMITS.titleMax} placeholder={L('Jina — mf. Pati ya Ijumaa', 'Name — e.g. Friday house party')} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
             <input className="field" maxLength={EVENT_LIMITS.descMax} placeholder={L('Maelezo (si lazima)', 'Details (optional)')} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            <select className="field" value={form.placeId} onChange={(e) => setForm({ ...form, placeId: e.target.value })}>
-              {EVENT_PLACES.map((id) => <option key={id} value={id}>{id === 'home' ? L('🏠 Kwangu (pati ya nyumbani)', '🏠 My place (house party)') : placeLabel(id)}</option>)}
-            </select>
+            <Picker
+              title={L('Wapi?', 'Where?')}
+              value={form.placeId}
+              onChange={(v) => setForm({ ...form, placeId: v })}
+              options={EVENT_PLACES.map((id) => ({ value: id, label: id === 'home' ? L('🏠 Kwangu (pati ya nyumbani)', '🏠 My place (house party)') : placeLabel(id) }))}
+            />
             <input className="field" type="datetime-local" value={form.at} min={localInput(Date.now() + EVENT_LIMITS.minLeadMs)} onChange={(e) => setForm({ ...form, at: e.target.value })} required />
             <div className="small muted">{L('Waliojiandikisha wataweza kuja nyumbani kwako na watapata taarifa tukio likianza.', "Everyone who RSVPs can come to your place and gets a ping when it starts.")}</div>
             <div className="row" style={{ gap: 8 }}>

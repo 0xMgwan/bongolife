@@ -4,6 +4,7 @@ import { useStore } from '../../store.js';
 import { api } from '../../api.js';
 import { AppHead } from '../Phone.jsx';
 import { L, loc, isEn } from '../../i18n.js';
+import { Picker } from '../Picker.jsx';
 
 const COLORS = ['#16a34a', '#0f766e', '#1d4ed8', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#111827'];
 
@@ -111,11 +112,19 @@ export function Matangazo({ arg, back }) {
               <span>{f.body || L('Maelezo mafupi ya biashara yako', 'A short description of your business')}</span>
             </div>
             <div className="label">{L('Bango', 'Billboard')}</div>
-            <select className="field" value={f.slotId} onChange={up('slotId')}>
-              {slots.map((s) => (
-                <option key={s.id} value={s.id}>{loc(s)} — TZS {(s.tzsPerDay || 0).toLocaleString()}/{L('siku', 'day')} · {s.live}/{s.capacity}{s.bookedUntil ? L(' (imejaa)', ' (full)') : ''}</option>
-              ))}
-            </select>
+            <Picker
+              title={L('Chagua bango', 'Choose a billboard')}
+              value={f.slotId}
+              onChange={(v) => setF({ ...f, slotId: v })}
+              options={slots.map((s) => ({
+                value: s.id,
+                icon: '🪧',
+                label: loc(s),
+                sub: s.bookedUntil ? L('Imejaa: lako litaanza baadaye', 'Full: yours starts later') : `TZS ${(s.tzsPerDay || 0).toLocaleString()}/${L('siku', 'day')}`,
+                badge: `${s.live}/${s.capacity}`,
+                warn: !!s.bookedUntil,
+              }))}
+            />
             {slot?.bookedUntil && <div className="hint">{L(`Skrini hii imejaa (${slot.live}/${slot.capacity}). Lako litaanza ${new Date(slot.bookedUntil).toLocaleString()}.`, `This screen is full (${slot.live}/${slot.capacity}). Yours starts ${new Date(slot.bookedUntil).toLocaleString()}.`)}</div>}
             <div className="label">{L('Kichwa', 'Headline')}</div>
             <input className="field" maxLength={40} value={f.title} onChange={up('title')} placeholder={L('mf. Mama Neema Catering', 'e.g. Mama Neema Catering')} />

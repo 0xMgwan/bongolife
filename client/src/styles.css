@@ -1382,3 +1382,30 @@ html, body { background: #1e2a47; }
 .build-bar::before { content: ''; position: absolute; left: -8px; right: -8px; bottom: calc(-10px - var(--safe-bottom)); top: -28px; z-index: -1; background: linear-gradient(180deg, rgba(15,23,42,0) 0%, rgba(15,23,42,.62) 38%, rgba(15,23,42,.78) 100%); pointer-events: none; }
 /* Sheets, the phone and pop-ups sit above build mode: tuck the build bar away while one is open. */
 .app:has(> .sheet-wrap) .build-bar, .app:has(.phone-wrap) .build-bar, .app:has(.interact-ask) .build-bar { opacity: 0; pointer-events: none; }
+
+/* Picker: our own dropdown. A pill showing the choice; the list pops from the centre. */
+.picker { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 16px 11px 14px; border-radius: 22px; background: var(--chip); border: 2px solid transparent; text-align: left; transition: border-color .15s, transform .12s; }
+.picker:active { transform: scale(.98); }
+.picker:focus-visible { border-color: var(--gold); outline: none; }
+.pk-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pk-ic { font-size: 22px; flex: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,.2)); }
+.pk-txt { min-width: 0; display: flex; flex-direction: column; }
+.pk-txt b { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk-txt small { font-size: 12px; color: var(--gold-d); font-weight: 700; }
+.pk-caret { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--gold); color: var(--on-gold); display: grid; place-items: center; font-size: 13px; }
+.picker-wrap { position: absolute; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 20px 14px; background: rgba(8,12,22,.66); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); animation: fadein .15s; }
+.picker-pop { width: min(420px, 100%); max-height: 80%; display: flex; flex-direction: column; gap: 10px; color: #fff; text-shadow: var(--float-text); animation: center-pop .36s cubic-bezier(.2,1.3,.4,1) both; }
+.pk-head { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+.pk-head b { font-size: 19px; }
+.pk-head button { color: #fff; font-size: 18px; }
+.pk-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px; }
+.pk-opt { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 18px; background: rgba(255,255,255,.1); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); color: #fff; text-align: left; animation: item-pop .35s cubic-bezier(.2,1.35,.4,1) both; animation-delay: calc(.05s + var(--i, 0) * 28ms); }
+.pk-opt .pk-txt small { color: #ffd23f; }
+.pk-opt.warn .pk-txt small { color: #fca5a5; }
+.pk-opt.on { background: rgba(245,184,0,.22); box-shadow: inset 0 0 0 2px var(--gold); }
+.pk-opt:active { transform: scale(.98); }
+.pk-badge { flex: none; margin-left: auto; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.16); font-size: 12px; font-weight: 800; text-shadow: none; }
+.pk-right { flex: none; margin-left: auto; font-weight: 800; color: #ffd23f; }
+.pk-check { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--gold); color: var(--on-gold); display: grid; place-items: center; font-size: 13px; font-weight: 900; text-shadow: none; }
+.pk-opt .pk-badge + .pk-check { margin-left: 0; }
+@media (prefers-reduced-motion: reduce) { .picker-pop, .pk-opt { animation: none; } }
