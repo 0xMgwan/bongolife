@@ -98,6 +98,7 @@ export function connect() {
     }
   });
   socket.on('chat', (msg) => {
+    if (st().me?.blocked?.includes(msg.username)) return;
     bubbles.set(msg.id, { text: msg.text, until: Date.now() + 6000 });
     useStore.setState((s) => ({ publicFeed: [...s.publicFeed.slice(-40), msg] }));
   });
@@ -126,6 +127,21 @@ export function connect() {
     useStore.setState({ invite: { ...inv, at: Date.now() } });
   });
   socket.on('events:changed', () => import('./ui/events.js').then((m) => m.loadEvents()));
+  socket.on('nudge', ({ from, kind, ok }) => {
+    sfx('notify');
+    const t = { hello: ['👋 amekusalimia', '👋 said hello'], gist: ['💬 anataka stori', '💬 wants to gist'], joke: ok ? ['😂 amekupigia utani', '😂 cracked a joke'] : ['😬 alijaribu utani', '😬 tried a joke'], shade: ['😒 amekupiga kijembe', '😒 threw shade at you'] }[kind] || ['👋', '👋'];
+    st().toast(L(`@${from} ${t[0]}`, `@${from} ${t[1]}`));
+    useStore.setState((x) => ({ dmVersion: x.dmVersion + 1 }));
+  });
+  socket.on('robbed', (r) => {
+    sfx('error');
+    useStore.setState({ robbed: r });
+    st().refreshMe().catch(() => {});
+  });
+  socket.on('arrested', () => {
+    sfx('error');
+    st().refreshMe().catch(() => {});
+  });
   socket.on('hangout', (h) => {
     sfx('notify');
     useStore.setState({ hangout: { ...h, at: Date.now() } });

@@ -4,9 +4,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { randomAppearance, findActivity, gameClock, workStage, flightPhase } from '@shared/world.js';
+import { randomAppearance, findActivity, gameClock, workStage, flightPhase, placeById } from '@shared/world.js';
 import { Plane, Car } from './Vehicle.jsx';
 import { PartyDecor } from './Party.jsx';
+import { Shadows } from './Shadows.jsx';
 import { livePartyAt } from '../ui/events.js';
 
 // Where the party banner hangs per scene (defaults to the back wall).
@@ -15,7 +16,7 @@ import { mat, geo, labelTexture, emojiTexture } from './textures.js';
 import { Body, Overhead } from './Players.jsx';
 import { remotes } from '../net.js';
 import { useStore } from '../store.js';
-import { L } from '../i18n.js';
+import { L, loc } from '../i18n.js';
 
 export const SCENE_ORIGIN = [4000, 0, 4000];
 /** Scenes flagged `dynamic` drive the camera themselves through this (scene-local coords). */
@@ -197,8 +198,8 @@ function Crowd({ me, myBusy, people, slots, localSlot, crowd, modeFor, extra }) 
 // ------------------------------------------------------------------ club
 function DanceFloor() {
   const ref = useRef();
-  const cols = 8, rows = 6, size = 1.4;
-  const palette = useMemo(() => ['#ec4899', '#22d3ee', '#a855f7', '#facc15', '#22c55e', '#f97316'].map((c) => new THREE.Color(c)), []);
+  const cols = 7, rows = 5, size = 1.15;
+  const palette = useMemo(() => ['#f472b6', '#60a5fa', '#a78bfa', '#fde047', '#4ade80', '#fb923c', '#22d3ee'].map((c) => new THREE.Color(c)), []);
   useEffect(() => {
     const m = new THREE.Matrix4();
     let i = 0;
@@ -217,8 +218,11 @@ function DanceFloor() {
     acc.current = 0;
     beat.current++;
     for (let i = 0; i < cols * rows; i++) {
-      const on = (i + beat.current * 3) % 5 < 2;
-      ref.current.setColorAt(i, on ? palette[(i + beat.current) % palette.length] : new THREE.Color('#1f1530'));
+      const c = i % cols;
+      const r = Math.floor(i / cols);
+      const col = palette[(c + r + beat.current) % palette.length].clone();
+      col.multiplyScalar((i * 7 + beat.current) % 4 === 0 ? 1 : 0.62);
+      ref.current.setColorAt(i, col);
     }
     ref.current.instanceColor.needsUpdate = true;
   });
@@ -261,7 +265,26 @@ function DiscoBall() {
   );
 }
 
-function Club({ me, myBusy, people, lounge }) {
+function drawVideo(ctx, t) {
+  const w = ctx.canvas.width, h = ctx.canvas.height;
+  const g = ctx.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, `hsl(${(t * 30) % 360}, 80%, 60%)`);
+  g.addColorStop(1, `hsl(${(t * 30 + 120) % 360}, 80%, 45%)`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  // a dancer silhouette grooving on the big screen
+  const sway = Math.sin(t * 4) * 10;
+  ctx.fillStyle = 'rgba(17,24,39,.85)';
+  ctx.beginPath(); ctx.arc(w / 2 + sway, h * 0.3, 16, 0, Math.PI * 2); ctx.fill();
+  ctx.fillRect(w / 2 - 14 + sway, h * 0.38, 28, 50);
+  ctx.fillRect(w / 2 - 12 + sway * 1.4, h * 0.6, 10, 40);
+  ctx.fillRect(w / 2 + 2 + sway * 0.6, h * 0.6, 10, 40);
+  ctx.save(); ctx.translate(w / 2 + sway, h * 0.42); ctx.rotate(-1 + Math.sin(t * 4)); ctx.fillRect(0, 0, 8, 36); ctx.restore();
+}
+
+function Club({ me, myBusy, people, lounge, placeId }) {
+  const venueName = (loc(placeById[placeId]) || 'CLUB').toUpperCase();
+  const screenTex = useCanvasTexture(256, 144, drawVideo, 10);
   const slots = useMemo(() => {
     const s = [];
     for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) s.push([(c - 2) * 1.7 + (r % 2) * 0.5, 0, (r - 1.5) * 1.6 + 0.8, Math.PI * 0.1 * (c - 2) + (r % 2 ? 0.3 : -0.2)]);
@@ -301,32 +324,73 @@ function Club({ me, myBusy, people, lounge }) {
         </group>
       ) : (
         <group>
-          <Room w={26} d={20} h={7.5} floor="#120d1f" wall="#1e1b4b" back="#160f2e" />
-          <DanceFloor />
+          <Room w={22} d={17} h={6} floor="#141418" wall="#1f1f26" back="#18181f" />
+          {/* glowing LED strips along the wall tops and the skirting */}
+          <Box p={[0, 5.9, -8.35]} s={[22, 0.07, 0.07]} m={basic('#fbbf24')} />
+          <Box p={[-10.85, 5.9, 0]} s={[0.07, 0.07, 17]} m={basic('#fbbf24')} />
+          <Box p={[10.85, 5.9, 0]} s={[0.07, 0.07, 17]} m={basic('#fbbf24')} />
+          <Box p={[0, 0.04, -8.3]} s={[22, 0.04, 0.05]} m={basic('#f59e0b')} />
+          <Box p={[-10.8, 0.04, 0]} s={[0.05, 0.04, 17]} m={basic('#f59e0b')} />
+          <group position={[0, 0, 1.2]}><DanceFloor /></group>
           <Spotlights />
           <DiscoBall />
-          <Sign text="CLUB MZUKA" p={[0, 5.2, -9.8]} h={1.2} fg="#f472b6" />
-          {[-10.5, 10.5].map((x) => (
-            <group key={x} position={[x, 0, -7.5]}>
-              <Box s={[1.4, 3.2, 1.2]} c="#0b0f17" />
-              <mesh geometry={geo('circle', 0.45, 18)} material={mat('#374151')} position={[0, 1, 0.61]} />
-              <mesh geometry={geo('circle', 0.3, 18)} material={mat('#374151')} position={[0, 2.4, 0.61]} />
+          <Sign text={venueName} p={[0, 4.6, -8.3]} h={1.1} fg="#f472b6" />
+          {/* back-lit bar with bottles, neon sign, stools and a bartender */}
+          <group position={[-8.2, 0, -1]}>
+            <Box s={[1.3, 1.15, 8]} c="#0f0f13" />
+            <Box p={[0, 1.15, 0]} s={[1.5, 0.08, 8.2]} c="#27272a" />
+            <Box p={[0.68, 0.08, 0]} s={[0.04, 0.05, 8]} m={basic('#fbbf24')} />
+            {[-3, -1.5, 0, 1.5, 3].map((z) => (
+              <group key={z} position={[1.3, 0, z]}>
+                <mesh geometry={geo('cyl', 0.05, 0.05, 0.85, 8)} material={mat('#3f3f46')} position={[0, 0.42, 0]} />
+                <mesh geometry={geo('cyl', 0.3, 0.3, 0.1, 16)} material={mat('#e11d48')} position={[0, 0.9, 0]} />
+              </group>
+            ))}
+            <group position={[-2.35, 0, 0]}>
+              <Box p={[0, 0.4, 0]} s={[0.4, 3.2, 7.6]} c="#18181b" />
+              {[1.6, 2.4, 3.2].map((y) => (
+                <group key={y}>
+                  <Box p={[0.25, y - 0.05, 0]} s={[0.4, 0.04, 7.4]} m={basic('#f59e0b')} />
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <mesh key={i} geometry={geo('cyl', 0.07, 0.08, 0.42, 8)} material={basic(['#22d3ee', '#f97316', '#a3e635', '#f472b6', '#facc15'][(i + y * 3) % 5])} position={[0.28, y + 0.2, -3.3 + i * 0.6]} />
+                  ))}
+                </group>
+              ))}
+              <Sign text="BAR" p={[0.45, 4.4, 0]} h={0.9} fg="#ff2bd6" />
+            </group>
+            <Person slot={[-1.2, 0, 0.5, Math.PI / 2]} appearance={NPC_LOOKS[5]} mode="lift" />
+          </group>
+          {/* big screen + LED stage panel */}
+          <group position={[10.6, 0, -2]} rotation={[0, -Math.PI / 2, 0]}>
+            <Box p={[0, 1.4, 0]} s={[6.4, 3.8, 0.2]} c="#0b0b0f" />
+            <mesh position={[0, 3.3, 0.12]}><planeGeometry args={[6, 3.4]} /><meshBasicMaterial map={screenTex} toneMapped={false} /></mesh>
+            <Box p={[0, 0, 0.6]} s={[5.6, 1, 1]} c="#1e1b4b" />
+            <Box p={[0, 0.15, 1.11]} s={[5.4, 0.7, 0.02]} m={basic('#a855f7')} />
+          </group>
+          {/* speakers */}
+          {[[6.2, -7.4], [7.6, -7.4], [-6.4, 6.8], [6.4, 6.8]].map(([x, z]) => (
+            <group key={`${x}${z}`} position={[x, 0, z]}>
+              <Box s={[1.1, 2.8, 1]} c="#f9a8d4" />
+              {[0.6, 1.4, 2.2].map((y) => <mesh key={y} geometry={geo('circle', 0.32, 16)} material={mat('#3f3f46')} position={[0, y, 0.51]} />)}
             </group>
           ))}
-          {/* bar counter */}
-          <group position={[10.5, 0, 3]}>
-            <Box s={[1.4, 1.2, 7]} c="#3b0764" />
-            {Array.from({ length: 6 }, (_, i) => <mesh key={i} geometry={geo('cyl', 0.08, 0.1, 0.45, 8)} material={basic(['#22c55e', '#f59e0b', '#ef4444'][i % 3])} position={[0, 1.42, -2.5 + i]} />)}
-          </group>
+          {/* plants */}
+          {[[-9.8, -7.4], [9.8, 6.8], [-9.8, 7]].map(([x, z]) => (
+            <group key={`p${x}${z}`} position={[x, 0, z]}>
+              <mesh geometry={geo('cyl', 0.35, 0.28, 0.6, 12)} material={mat('#e7e5e4')} position={[0, 0.3, 0]} />
+              {Array.from({ length: 7 }, (_, i) => <mesh key={i} geometry={geo('cone', 0.12, 1.4, 5)} material={mat('#15803d')} position={[Math.sin(i) * 0.15, 1.2, Math.cos(i) * 0.15]} rotation={[Math.sin(i * 2) * 0.5, 0, Math.cos(i * 2) * 0.5]} />)}
+            </group>
+          ))}
           {/* VIP couch */}
-          <group position={[-9.5, 0, 4]}>
-            <Box s={[2.4, 0.55, 5]} c="#7e22ce" />
-            <Box p={[-1, 0.55, 0]} s={[0.4, 0.9, 5]} c="#7e22ce" />
-            <Box p={[1.8, 0, 0]} s={[0.9, 0.7, 2]} c="#111827" />
-            <mesh geometry={geo('cyl', 0.09, 0.12, 0.5, 8)} material={basic('#facc15')} position={[1.8, 0.95, 0.3]} />
+          <group position={[8.5, 0, 5]}>
+            <Box s={[2.4, 0.5, 3.6]} c="#4c1d95" />
+            <Box p={[1, 0.5, 0]} s={[0.4, 0.8, 3.6]} c="#4c1d95" />
+            <Box p={[-1.6, 0, 0]} s={[0.8, 0.6, 1.6]} c="#18181b" />
+            <mesh geometry={geo('cyl', 0.09, 0.12, 0.5, 8)} material={basic('#facc15')} position={[-1.6, 0.85, 0.3]} />
           </group>
-          <pointLight ref={pointA} color="#ec4899" intensity={30} distance={14} />
-          <pointLight ref={pointB} color="#22d3ee" intensity={30} distance={14} />
+          <pointLight ref={pointA} color="#ec4899" intensity={22} distance={14} />
+          <pointLight ref={pointB} color="#22d3ee" intensity={22} distance={14} />
+          <pointLight color="#fbbf24" intensity={6} distance={10} position={[-8, 3.5, -1]} />
         </group>
       )}
       {/* DJ booth */}
@@ -1611,9 +1675,116 @@ function Rooftop({ me, myBusy, people }) {
   );
 }
 
+// ------------------------------------------------------- police & court
+const COP = { body: 'man', skin: 1, hair: 'kiduku', hairColor: 0, outfit: 'kaunda' };
+const COP2 = { body: 'woman', skin: 3, hair: 'kibanio', hairColor: 0, outfit: 'ofisi-sketi' };
+function Bars({ p, w = 6, h = 3 }) {
+  return (
+    <group position={p}>
+      {Array.from({ length: Math.round(w / 0.35) }, (_, i) => <Box key={i} p={[-w / 2 + i * 0.35, 0, 0]} s={[0.06, h, 0.06]} c="#9ca3af" />)}
+      <Box p={[0, h, 0]} s={[w, 0.12, 0.12]} c="#6b7280" />
+      <Box p={[0, h * 0.5, 0]} s={[w, 0.08, 0.08]} c="#6b7280" />
+    </group>
+  );
+}
+/** Oysterbay Police Station: front desk, officers, and the cells — you're behind bars if held. */
+function Police({ me, myBusy, people }) {
+  const held = !!me.jail;
+  const officer = myBusy?.kind === 'job';
+  const flash = useRef();
+  useFrame(({ clock }) => { if (flash.current) flash.current.color.set(Math.sin(clock.elapsedTime * 6) > 0 ? '#3b82f6' : '#ef4444'); });
+  return (
+    <group>
+      <Room w={16} d={11} h={4.5} floor="#d6d3d1" wall="#dbeafe" back="#bfdbfe" />
+      <Box p={[0, 3.2, -5.4]} s={[16, 0.5, 0.05]} c="#1e3a8a" />
+      <Sign text="🚓 POLISI · KITUO CHA OYSTERBAY" p={[0, 3.45, -5.35]} h={0.42} fg="#ffffff" />
+      {/* front desk */}
+      <group position={[3.5, 0, -1.5]}>
+        <Box s={[5, 1.1, 1]} c="#1e3a8a" />
+        <Box p={[0, 1.1, 0]} s={[5.2, 0.06, 1.2]} c="#f8fafc" />
+        <Box p={[-1.2, 1.16, 0]} s={[0.5, 0.35, 0.35]} c="#111827" />
+        <Box p={[1.4, 1.16, 0.1]} s={[0.8, 0.04, 0.5]} c="#fef3c7" />
+      </group>
+      {!officer && <Person slot={[3.5, 0, -2.6, 0]} appearance={COP} mode="type" />}
+      <Person slot={[6.2, 0, -2.2, -0.6]} appearance={COP2} mode="idle" />
+      {officer && <Person slot={[3.5, 0, -2.6, 0]} appearance={me.appearance} mode="type" id={me.id} username={me.username} />}
+      {/* cells */}
+      <group position={[-4.9, 0, -2.3]} rotation={[0, Math.PI / 2, 0]}><Bars p={[0, 0, 0]} w={6.2} h={3} /></group>
+      <Bars p={[-6.4, 0, 0.8]} w={3} h={3} />
+      <Box p={[-6.4, 0, -2.3]} s={[3, 0.04, 6.2]} c="#a8a29e" />
+      <Box p={[-7.2, 0, -3.6]} s={[1.4, 0.45, 3]} c="#78716c" />
+      <Box p={[-6.4, 4.3, -2]} s={[0.5, 0.1, 0.5]} m={basic('#fef9c3')} />
+      {held ? (
+        <Person slot={[-7.2, 0.45, -3, Math.PI / 2]} appearance={me.appearance} mode="sit" id={me.id} username={me.username} />
+      ) : !officer && (
+        <Person slot={[1.5, 0, 1, Math.PI * 0.9]} appearance={me.appearance} mode="idle" id={me.id} username={me.username} />
+      )}
+      {people.slice(0, 3).map((r, i) => <Person key={r.id} slot={[-1 + i * 1.6, 0, 2.6, Math.PI]} appearance={r.appearance} mode="idle" id={r.id} username={r.username} />)}
+      <Person slot={[-3.6, 0, 1.6, -Math.PI / 2]} appearance={COP} mode="idle" />
+      {/* benches & poster */}
+      <Box p={[4, 0, 3.6]} s={[3.6, 0.45, 0.6]} c="#475569" />
+      <Box p={[7.8, 1.3, -1]} s={[0.05, 1.2, 0.9]} m={basic('#fde68a')} />
+      <pointLight ref={flash} intensity={2.5} distance={8} position={[0, 3.6, 2]} />
+      <pointLight color="#f8fafc" intensity={5} distance={14} position={[0, 4, 0]} />
+    </group>
+  );
+}
+
+/** Kisutu courtroom: magistrate on the bench, flag, lawyers, the dock and the gallery. */
+function Court({ me, myBusy, people }) {
+  const onTrial = me.jail?.phase === 'court';
+  const lawyerJob = myBusy?.kind === 'job';
+  const gallery = useMemo(() => {
+    const s = [];
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 5; c++) s.push([(c - 2) * 1.5, 0.1, 3.2 + r * 1.5, Math.PI]);
+    return s;
+  }, []);
+  return (
+    <group>
+      <Room w={14} d={12} h={5} floor="#a16207" wall="#fef3c7" back="#f5e6c8" />
+      <Sign text="⚖️ MAHAKAMA YA HAKIMU MKAZI KISUTU" p={[0, 4.2, -5.85]} h={0.42} fg="#713f12" />
+      {/* Tanzania flag */}
+      <group position={[-4.5, 0, -5]}>
+        <Box s={[0.06, 3.4, 0.06]} c="#a3a3a3" />
+        <mesh position={[0.75, 2.8, 0]}>
+          <planeGeometry args={[1.4, 0.95]} />
+          <meshBasicMaterial map={useMemo(() => {
+            const c = document.createElement('canvas');
+            c.width = 140; c.height = 95;
+            const x = c.getContext('2d');
+            x.fillStyle = '#1eb53a'; x.beginPath(); x.moveTo(0, 0); x.lineTo(140, 0); x.lineTo(0, 95); x.fill();
+            x.fillStyle = '#00a3dd'; x.beginPath(); x.moveTo(140, 0); x.lineTo(140, 95); x.lineTo(0, 95); x.fill();
+            x.strokeStyle = '#fcd116'; x.lineWidth = 30; x.beginPath(); x.moveTo(0, 95); x.lineTo(140, 0); x.stroke();
+            x.strokeStyle = '#000'; x.lineWidth = 18; x.beginPath(); x.moveTo(0, 95); x.lineTo(140, 0); x.stroke();
+            const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+          }, [])} side={THREE.DoubleSide} />
+        </mesh>
+      </group>
+      {/* bench */}
+      <Box p={[0, 0, -4.4]} s={[6, 1.6, 1.4]} c="#713f12" />
+      <Box p={[0, 1.6, -4.4]} s={[6.2, 0.1, 1.6]} c="#a16207" />
+      <Person slot={[0, 0.9, -5.2, 0]} appearance={{ body: 'woman', skin: 2, hair: 'kibanio', hairColor: 0, outfit: 'suti' }} mode="sit" />
+      <mesh geometry={geo('cyl', 0.08, 0.1, 0.3, 8)} material={mat('#78350f')} position={[1, 1.8, -4.1]} rotation={[0, 0, Math.PI / 2]} />
+      {/* lawyers' tables */}
+      {[-2.6, 2.6].map((x) => <Box key={x} p={[x, 0, -1.4]} s={[2.4, 0.8, 1]} c="#78350f" />)}
+      <Person slot={[-2.6, 0, -0.6, Math.PI]} appearance={lawyerJob ? me.appearance : { body: 'man', skin: 0, hair: 'kiduku', hairColor: 0, outfit: 'suti' }} mode="idle" id={lawyerJob ? me.id : undefined} username={lawyerJob ? me.username : undefined} />
+      <Person slot={[2.6, 0, -0.6, Math.PI]} appearance={{ body: 'woman', skin: 4, hair: 'mkia', hairColor: 0, outfit: 'ofisi-sketi' }} mode="idle" />
+      {/* the dock */}
+      <group position={[4.1, 0, 1.2]}>
+        <Box s={[1.6, 1.1, 1.6]} c="#92400e" />
+        {onTrial && <Person slot={[0, 0.15, 0, -Math.PI / 2]} appearance={me.appearance} mode="idle" id={me.id} username={me.username} />}
+      </group>
+      <Person slot={[5.4, 0, 0.4, -Math.PI / 2]} appearance={COP} mode="idle" />
+      {gallery.map(([x, , z], i) => <Box key={i} p={[x, 0, z + 0.4]} s={[1.3, 0.45, 0.5]} c="#78350f" />)}
+      <Crowd me={me} myBusy={myBusy} people={people} slots={gallery} localSlot={onTrial || lawyerJob ? [9, 0, 9, 0] : gallery[2]} crowd={6} modeFor={() => 'sit'} />
+      <pointLight color="#fff7ed" intensity={6} distance={14} position={[0, 4.5, 0]} />
+    </group>
+  );
+}
+
 // ---------------------------------------------------------------- config
 export const SCENES = {
-  club: { C: Club, camera: { pos: [0, 8.5, 13], look: [0, 1.2, -1.5] }, dark: true, bg: '#0b0614', light: 0.25 },
+  club: { C: Club, camera: { pos: [3, 14, 13], look: [-1, 0.2, -2.2] }, dark: true, bg: '#0b0614', light: 0.25 },
   lounge: { C: (p) => <Club {...p} lounge />, camera: { pos: [0, 7, 13], look: [0, 1.2, -2] }, bg: '#f59e0b', light: 0.7 },
   bar: { C: Bar, camera: { pos: [0, 6.2, 9.5], look: [0, 2, -5] }, bg: '#1c1917', light: 0.65 },
   stadium: { C: Stadium, camera: { pos: [0, 8, 27], look: [0, 1.5, 6] }, light: 1 },
@@ -1623,6 +1794,8 @@ export const SCENES = {
   studio: { C: Studio, camera: { pos: [0, 4.5, 7.5], look: [0, 1.4, 0] }, bg: '#0b0614', light: 0.4 },
   cinema: { C: Cinema, camera: { pos: [0, 6.5, 10.5], look: [0, 2.6, -8] }, bg: '#000000', light: 0.25 },
   gym: { C: Gym, camera: { pos: [0, 5, 8], look: [0, 1, -1] }, bg: '#1c1917', light: 0.9 },
+  police: { C: Police, camera: { pos: [-1.5, 8, 9.5], look: [-3.6, 0.6, -1.6] }, bg: '#1c1917', light: 0.95 },
+  court: { C: Court, camera: { pos: [0, 7, 11], look: [0, 1, -1.5] }, bg: '#1c1917', light: 0.95 },
   salon: { C: Salon, camera: { pos: [0.5, 7, 10], look: [0, 0.8, -1.2] }, bg: '#1c1917', light: 0.95 },
   grill: { C: Grill, camera: { pos: [0, 11, 11], look: [0, 0.4, 0.8] }, light: 1 },
   waterpark: { C: Waterpark, camera: { pos: [2, 13, 18], look: [2.5, 1.5, -1.5] }, light: 1.05 },
@@ -1649,8 +1822,10 @@ export function ActivityScene({ scene, placeId, me, myBusy }) {
   if (!cfg) return null;
   return (
     <group position={SCENE_ORIGIN}>
-      <cfg.C me={me} myBusy={myBusy} people={people} />
+      <Shadows light={[4, 12, 8]} size={16} intensity={cfg.dark ? 0.25 : 0.6}>
+      <cfg.C me={me} myBusy={myBusy} people={people} placeId={placeId} />
       {party && scene !== 'flight' && <PartyDecor event={party} banner={PARTY_BANNER[scene]} />}
+      </Shadows>
     </group>
   );
 }

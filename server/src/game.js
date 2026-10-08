@@ -98,6 +98,7 @@ export function playerState(userId) {
     pendingIncome: pendingIncome(userId),
     unread: q.unread.get(userId).n,
     netWorth: netWorth(userId),
+    blocked: db.prepare('SELECT u.username FROM blocks b JOIN users u ON u.id = b.blocked_id WHERE b.user_id = ?').all(userId).map((r) => r.username),
   };
 }
 
@@ -132,7 +133,13 @@ function requireNearPos(user, pos, size = 10) {
 }
 
 // ----------------------------------------------------------- needs
-function applyNeeds(needs, effects, mult = 1) {
+/** Held by police (arrested, in a cell or waiting for court). */
+function assertNotJailed(user) {
+  if (user?.jail && user.jail.phase !== 'free')
+    throw new GameError(['Uko mikononi mwa polisi — maliza kwanza (faini, dhamana au mahakama).', "You're in police custody — sort it out first (fine, bail or court)."], 403, 'jailed');
+}
+
+export function applyNeeds(needs, effects, mult = 1) {
   const out = { ...needs };
   for (const n of NEEDS) {
     const d = effects?.[n.id];
@@ -223,6 +230,7 @@ export const sellFurniture = db.transaction((userId, id) => {
 });
 
 export const startAction = db.transaction((userId, { kind, placeId, id }) => {
+  assertNotJailed(getUser(userId));
   const user = getUser(userId);
   if (user.busy && user.busy.endsAt > now()) throw new GameError(['Bado uko bize na kitu kingine.', 'You\'re still busy with something else.']);
   if (kind === 'home') {
@@ -487,6 +495,7 @@ export function homeActivity(userId, plotId, act) {
 
 // ------------------------------------------------------------ travel
 export const travel = db.transaction((userId, placeId, mode) => {
+  assertNotJailed(getUser(userId));
   const user = getUser(userId);
   const place = placeById[placeId];
   if (!place || !TRAVEL[mode]) throw new GameError(['Safari si sahihi', 'Invalid trip']);

@@ -222,6 +222,7 @@ function Instanced({ items, geometry, material, transform }) {
 }
 
 const NEON_PINK = new THREE.MeshBasicMaterial({ color: '#ec4899' });
+const NEON_BLUE = new THREE.MeshBasicMaterial({ color: '#3b82f6' });
 const NEON_CYAN = new THREE.MeshBasicMaterial({ color: '#22d3ee' });
 const unitBox = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
 const whiteMat = new THREE.MeshLambertMaterial({ color: '#ffffff' });
@@ -291,6 +292,29 @@ function PlaceModel({ place, owner }) {
           {Array.from({ length: Math.floor(d / 6) }, (_, i) => (
             <Umbrella key={i} x={(i % 2 ? -1 : 1) * 1.5} z={-d / 2 + 3 + i * 6} c={['#ef4444', '#f59e0b', '#3b82f6', '#22c55e', '#ec4899'][i % 5]} />
           ))}
+        </group>
+      );
+    case 'police':
+      return (
+        <group>
+          <Box w={w} h={h} d={d} color="#f8fafc" />
+          <Box w={w + 0.4} h={1.2} d={d + 0.4} color="#1e3a8a" y={h - 1.2} />
+          <Box w={3} h={2.6} d={0.2} color="#1e3a8a" z={d / 2} />
+          <mesh geometry={geo('box', 1.2, 0.3, 0.4)} material={NEON_BLUE} position={[0, h + 0.3, d / 2 - 0.5]} />
+          <group position={[w / 2 + 3, 0.1, d / 2 + 2]} rotation={[0, Math.PI / 2, 0]}><Car body="sedan" color="#f8fafc" /></group>
+          <mesh geometry={geo('box', 0.9, 0.18, 0.35)} material={NEON_BLUE} position={[w / 2 + 3, 1.75, d / 2 + 2]} />
+          <Sign text={loc(place)} w={w} y={h - 0.6} z={d / 2 + 0.25} bg="#1e3a8a" fg="#ffffff" />
+        </group>
+      );
+    case 'court':
+      return (
+        <group>
+          <Box w={w} h={h} d={d} color="#f5f5f4" />
+          <Box w={w + 1} h={0.8} d={d + 1} color="#d6d3d1" y={h} />
+          <mesh geometry={geo('cone', w * 0.55, 2, 4)} material={mat('#e7e5e4')} position={[0, h + 1.8, 0]} rotation={[0, Math.PI / 4, 0]} scale={[1, 1, d / w]} />
+          {[-1, 1].map((k) => <Box key={k} w={w} h={0.3} d={1.2} color="#e7e5e4" y={k > 0 ? 0 : 0.3} z={d / 2 + (k > 0 ? 1.2 : 0.6)} />)}
+          {Array.from({ length: 5 }, (_, i) => <mesh key={i} geometry={geo('cyl', 0.35, 0.4, h - 0.5, 10)} material={mat('#ffffff')} position={[-w / 2 + 1.5 + i * ((w - 3) / 4), (h - 0.5) / 2, d / 2 + 0.5]} />)}
+          <Sign text={loc(place)} w={w} y={h - 0.9} z={d / 2 + 1} />
         </group>
       );
     case 'salon':

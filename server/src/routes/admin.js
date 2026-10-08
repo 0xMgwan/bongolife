@@ -334,6 +334,17 @@ admin.post('/ads/:id/restore', (req, res) => {
 });
 
 // -------------------------------------------------------------- chat
+admin.get('/reports', (req, res) => {
+  const status = ['open', 'closed'].includes(req.query.status) ? req.query.status : 'open';
+  res.json(db.prepare(`SELECT r.*, a.username reporter, t.username target, t.banned_at target_banned
+    FROM player_reports r JOIN users a ON a.id = r.reporter_id JOIN users t ON t.id = r.target_id
+    WHERE r.status = ? ORDER BY r.id DESC LIMIT 200`).all(status).map((r) => ({ ...r, context: JSON.parse(r.context || '[]') })));
+});
+admin.post('/reports/:id/close', (req, res) => {
+  db.prepare("UPDATE player_reports SET status = 'closed' WHERE id = ?").run(Number(req.params.id));
+  res.json({ ok: true });
+});
+
 admin.get('/messages', (req, res) => {
   const { limit, offset, page: p } = page(req, 80);
   const where = ['m.to_id IS NULL'];

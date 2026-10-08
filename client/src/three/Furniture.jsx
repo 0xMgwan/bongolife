@@ -10,25 +10,52 @@ const ghostOk = new THREE.MeshBasicMaterial({ color: '#22c55e', transparent: tru
 const ghostBad = new THREE.MeshBasicMaterial({ color: '#ef4444', transparent: true, opacity: 0.45, depthWrite: false });
 const glow = (c) => new THREE.MeshBasicMaterial({ color: c });
 
+// Soft, slightly glossy materials read as real fabric/wood/plastic instead of flat colour.
+const softCache = new Map();
+export function soft(color, shininess = 14) {
+  const k = color + shininess;
+  if (!softCache.has(k)) softCache.set(k, new THREE.MeshPhongMaterial({ color, shininess, specular: new THREE.Color('#1f1f1f') }));
+  return softCache.get(k);
+}
 /** Box sitting on y. ghost overrides every material with a translucent tint. */
-function B({ p = [0, 0, 0], s, c, m, ghost }) {
-  return <mesh geometry={unitBox} material={ghost || m || mat(c)} position={p} scale={s} />;
+function B({ p = [0, 0, 0], s, c, m, ghost, r }) {
+  return <mesh geometry={unitBox} material={ghost || m || soft(c)} position={p} scale={s} rotation={r} />;
 }
 function Cyl({ p, r, h, c, m, ghost, seg = 14 }) {
-  return <mesh geometry={geo('cyl', r, r, h, seg)} material={ghost || m || mat(c)} position={p} />;
+  return <mesh geometry={geo('cyl', r, r, h, seg)} material={ghost || m || soft(c)} position={p} />;
+}
+/** Rounded bar (capsule) lying along x or z — sofa arms, pillows, rolls. */
+function Roll({ p, r, len, c, axis = 'z', ghost }) {
+  return <mesh geometry={geo('capsule', r, len, 6, 14)} material={ghost || soft(c)} position={p} rotation={axis === 'z' ? [Math.PI / 2, 0, 0] : [0, 0, Math.PI / 2]} />;
 }
 
 function Bed({ def, g }) {
   const [w, d] = def.size;
   const W = w * 0.92, D = d * 0.95;
   const low = def.id === 'mkeka';
+  const top = low ? 0.26 : 0.62;
+  const wood = def.id === 'bed-king' ? '#a16207' : '#8b5a2b';
+  const pillows = w > 1 ? [-W * 0.24, W * 0.24] : [0];
   return (
     <group>
-      {low ? <B s={[W + 0.1, 0.04, D + 0.1]} c="#d6b36a" ghost={g} /> : <B s={[W, 0.35, D]} c="#78350f" ghost={g} />}
-      <B p={[0, low ? 0.04 : 0.35, 0]} s={[W * 0.94, 0.18, D * 0.94]} c="#f8fafc" ghost={g} />
-      <B p={[0, low ? 0.22 : 0.53, D * 0.12]} s={[W * 0.95, 0.06, D * 0.65]} c={def.color} ghost={g} />
-      <B p={[0, low ? 0.22 : 0.53, -D * 0.36]} s={[W * 0.6, 0.12, D * 0.16]} c="#ffffff" ghost={g} />
-      {!low && <B p={[0, 0, -D / 2 + 0.05]} s={[W, 1.1, 0.12]} c={def.id === 'bed-king' ? '#facc15' : '#78350f'} ghost={g} />}
+      {low ? <B s={[W + 0.15, 0.04, D + 0.15]} c="#d6b36a" ghost={g} /> : (
+        <>
+          <B p={[0, 0.08, 0]} s={[W, 0.3, D]} c={wood} ghost={g} />
+          {[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([x, z], i) => <B key={i} p={[(x * W) / 2.15, 0, (z * D) / 2.15]} s={[0.08, 0.1, 0.08]} c="#3f2a1a" ghost={g} />)}
+        </>
+      )}
+      {/* mattress */}
+      <B p={[0, low ? 0.04 : 0.38, 0]} s={[W * 0.96, low ? 0.2 : 0.24, D * 0.96]} c="#f8fafc" ghost={g} />
+      {/* duvet with the sheet folded over at the top */}
+      <B p={[0, top - 0.02, D * 0.1]} s={[W * 0.99, 0.08, D * 0.72]} c={def.color} ghost={g} />
+      <B p={[0, top - 0.01, -D * 0.24]} s={[W * 0.99, 0.085, D * 0.07]} c="#f1f5f9" ghost={g} />
+      {pillows.map((x) => <mesh key={x} geometry={geo('capsule', 0.09, W > 1 ? W * 0.3 : W * 0.55, 6, 12)} material={g || soft('#ffffff')} position={[x, top + 0.05, -D * 0.37]} rotation={[0, 0, Math.PI / 2]} scale={[1, 1, 1.9]} />)}
+      {!low && (
+        <group position={[0, 0, -D / 2 + 0.04]}>
+          <B s={[W + 0.08, 1.15, 0.1]} c={wood} ghost={g} />
+          <B p={[0, 0.55, 0.06]} s={[W * 0.8, 0.45, 0.04]} c={def.id === 'bed-king' ? '#fde68a' : '#a16207'} ghost={g} />
+        </group>
+      )}
     </group>
   );
 }
@@ -45,12 +72,22 @@ function Seat({ def, g }) {
       </group>
     );
   }
+  // Upholstered sofa / armchair: legs, base, seat & back cushions, rolled arms.
+  const n = Math.max(1, Math.round(W / 0.85));
+  const cw = (W - 0.34) / n;
   return (
     <group>
-      <B s={[W, 0.42, 0.8]} c={def.color} ghost={g} />
-      <B p={[0, 0.42, -0.3]} s={[W, 0.55, 0.2]} c={def.color} ghost={g} />
-      <B p={[-W / 2 + 0.08, 0.42, 0]} s={[0.16, 0.25, 0.8]} c={def.color} ghost={g} />
-      <B p={[W / 2 - 0.08, 0.42, 0]} s={[0.16, 0.25, 0.8]} c={def.color} ghost={g} />
+      {[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([x, z], i) => <B key={i} p={[(x * W) / 2.3, 0, (z * 0.8) / 2.3]} s={[0.07, 0.12, 0.07]} c="#3f2a1a" ghost={g} />)}
+      <B p={[0, 0.12, 0]} s={[W, 0.2, 0.82]} c={def.color} ghost={g} />
+      {Array.from({ length: n }, (_, i) => (
+        <group key={i} position={[-W / 2 + 0.17 + cw * (i + 0.5), 0, 0]}>
+          <B p={[0, 0.32, 0.06]} s={[cw - 0.04, 0.14, 0.62]} c={def.color} ghost={g} />
+          <B p={[0, 0.42, -0.28]} s={[cw - 0.05, 0.5, 0.18]} r={[-0.12, 0, 0]} c={def.color} ghost={g} />
+        </group>
+      ))}
+      <B p={[0, 0.3, -0.36]} s={[W, 0.62, 0.1]} c={def.color} ghost={g} />
+      {[-1, 1].map((sd) => <Roll key={sd} p={[sd * (W / 2 - 0.09), 0.48, 0.02]} r={0.1} len={0.62} c={def.color} ghost={g} />)}
+      {[-1, 1].map((sd) => <B key={`a${sd}`} p={[sd * (W / 2 - 0.09), 0.12, 0.02]} s={[0.18, 0.36, 0.8]} c={def.color} ghost={g} />)}
     </group>
   );
 }
@@ -181,12 +218,16 @@ function Decor({ def, g }) {
   const rugMat = useMemo(() => new THREE.MeshLambertMaterial({ map: fabricTexture('kitenge', def.color) }), [def.color]);
   switch (def.id) {
     case 'plant':
+      // Snake plant in a ceramic pot: tall blade leaves fanning out.
       return (
         <group>
-          <mesh geometry={geo('cyl', 0.2, 0.15, 0.35, 10)} material={g || mat('#b45309')} position={[0, 0.17, 0]} />
-          {[[0, 0.75, 0, 0.32], [0.15, 0.55, 0.1, 0.22], [-0.15, 0.6, -0.05, 0.24]].map(([x, y, z, r], i) => (
-            <mesh key={i} geometry={geo('sphere', r, 7, 5)} material={g || mat(def.color)} position={[x, y, z]} />
-          ))}
+          <mesh geometry={geo('cyl', 0.2, 0.15, 0.42, 14)} material={g || soft('#e7d3b8', 30)} position={[0, 0.21, 0]} />
+          <mesh geometry={geo('cyl', 0.18, 0.18, 0.02, 14)} material={g || soft('#3f2a1a')} position={[0, 0.41, 0]} />
+          {Array.from({ length: 9 }, (_, i) => {
+            const a = (i / 9) * Math.PI * 2;
+            const lean = 0.18 + (i % 3) * 0.08;
+            return <mesh key={i} geometry={geo('cone', 0.06, 0.75 + (i % 3) * 0.18, 4)} material={g || soft(i % 2 ? '#3f9b5a' : '#5fb37a')} position={[Math.cos(a) * 0.06, 0.78 + (i % 3) * 0.08, Math.sin(a) * 0.06]} rotation={[Math.sin(a) * lean, 0, -Math.cos(a) * lean]} scale={[1, 1, 0.35]} />;
+          })}
         </group>
       );
     case 'lamp':

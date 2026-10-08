@@ -288,7 +288,7 @@ export const PLACES = [
     shop: 'outfits', activities: [],
   },
   {
-    id: 'bank', name: 'Benki ya Bongo', district: 'Posta', type: 'bank', icon: '🏦', pos: [44, 14], size: [12, 12], h: 20, color: '#94a3b8',
+    id: 'bank', name: 'NMB Bank', district: 'Posta', type: 'bank', icon: '🏦', pos: [44, 14], size: [12, 12], h: 20, color: '#94a3b8',
     blurb: 'Weka pesa kwenye wallet yako kwa M-Pesa, Tigo Pesa au Airtel Money.',
     shop: 'topup',
     activities: [],
@@ -344,7 +344,7 @@ export const PLACES = [
     jobs: [{ id: 'cashier', title: 'Cashier wa Supermarket', titles: ['Cashier', 'Supervisor', 'Store Manager'], secs: 40, pay: 15_000, energy: 8 }],
   },
   {
-    id: 'gym', name: 'Bongo Fitness Gym', district: 'Mlimani', type: 'gym', icon: '🏋️', pos: [5, -62], size: [10, 8], h: 6, color: '#a3e635',
+    id: 'gym', name: 'Gym ya Mlimani', district: 'Mlimani', type: 'gym', icon: '🏋️', pos: [5, -62], size: [10, 8], h: 6, color: '#a3e635',
     blurb: 'Tunisha misuli, kata kitambi.',
     activities: [{ id: 'mazoezi', name: 'Fanya mazoezi', cost: 5_000, secs: 20, effects: { fun: 15, energy: -18, hygiene: -15, social: 8 }, emoji: '💪' }],
     jobs: [{ id: 'trainer', title: 'Personal Trainer', titles: ['Trainer', 'Senior Trainer', 'Coach'], secs: 45, pay: 22_000, energy: 14 }],
@@ -358,15 +358,15 @@ export const PLACES = [
     ],
   },
   {
-    id: 'club', name: 'Club Mzuka', district: 'Sinza', type: 'club', icon: '🪩', pos: [-92, -64], size: [13, 12], h: 9, color: '#312e81',
-    blurb: 'Bongo Flava, Amapiano na Singeli mpaka asubuhi.',
+    id: 'club', name: '1245 Club', district: 'Sinza', type: 'club', icon: '🪩', pos: [-92, -64], size: [13, 12], h: 9, color: '#312e81',
+    blurb: 'Klabu ya usiku — Bongo Flava, Amapiano na Singeli mpaka asubuhi.',
     business: { price: 220_000_000, incomePerHour: 1_600_000 },
     activities: [
       { id: 'cheza', name: 'Ingia ucheze', cost: 10_000, secs: 20, effects: { fun: 40, social: 20, energy: -15, hygiene: -8 }, emoji: '💃' },
       { id: 'mzunguko', name: 'Nunua mzunguko kwa washkaji', cost: 30_000, secs: 8, effects: { social: 40, fun: 15 }, emoji: '🥂', fame: 1 },
       { id: 'vip', name: 'Meza ya VIP', cost: 180_000, secs: 25, effects: { fun: 70, social: 50, energy: -12 }, emoji: '🍾', fame: 3 },
     ],
-    jobs: [{ id: 'dj', title: 'DJ', titles: ['DJ chipukizi', 'Resident DJ', 'DJ wa Mzuka', 'DJ Bingwa'], secs: 55, pay: 32_000, energy: 12 }],
+    jobs: [{ id: 'dj', title: 'DJ', titles: ['DJ chipukizi', 'Resident DJ', 'DJ wa Elements', 'DJ Bingwa'], secs: 55, pay: 32_000, energy: 12 }],
   },
   {
     id: 'bar', name: 'Bar ya Kona', district: 'Sinza', type: 'bar', icon: '🍻', pos: [-70, -60], size: [9, 8], h: 5, color: '#b45309',
@@ -404,7 +404,7 @@ export const PLACES = [
     shop: 'vehicles', activities: [],
   },
   {
-    id: 'uwanja', name: 'Uwanja wa Taifa', district: 'Temeke', type: 'stadium', icon: '🏟️', pos: [6, 76], size: [30, 22], h: 9, color: '#e5e7eb',
+    id: 'uwanja', name: 'Uwanja wa Benjamin Mkapa', district: 'Temeke', type: 'stadium', icon: '🏟️', pos: [6, 76], size: [30, 22], h: 9, color: '#e5e7eb',
     blurb: 'Dabi ya Kariakoo — Simba vs Yanga!',
     activities: [
       { id: 'dabi', name: 'Tiketi ya Dabi: Simba vs Yanga', cost: 15_000, secs: 30, effects: { fun: 55, social: 35, energy: -10 }, emoji: '⚽' },
@@ -413,8 +413,8 @@ export const PLACES = [
     jobs: [{ id: 'mlinzi', title: 'Mlinzi wa Uwanja', titles: ['Mlinzi', 'Mkuu wa ulinzi'], secs: 45, pay: 16_000, energy: 10 }],
   },
   {
-    id: 'masakigrill', name: 'Masaki Seafood Grill', district: 'Masaki', type: 'restaurant', icon: '🦞', pos: [106, -104], size: [12, 10], h: 7, color: '#fef3c7',
-    blurb: 'Kamba, pweza na sunset ya Msasani.',
+    id: 'masakigrill', name: 'Karambezi Café', district: 'Masaki', type: 'restaurant', icon: '🦞', pos: [106, -104], size: [12, 10], h: 7, color: '#fef3c7',
+    blurb: 'Kamba, pweza na machweo ya Sea Cliff, Masaki.',
     activities: [
       { id: 'seafood', name: 'Seafood platter', cost: 45_000, secs: 12, effects: { hunger: 85, fun: 25, social: 10 }, emoji: '🦐' },
       { id: 'date', name: 'Dinner date ya kishua', cost: 120_000, secs: 20, effects: { hunger: 70, fun: 45, social: 45 }, emoji: '🕯️', fame: 2 },
@@ -422,15 +422,15 @@ export const PLACES = [
     jobs: [{ id: 'chef', title: 'Chef', titles: ['Commis chef', 'Sous chef', 'Head chef'], secs: 55, pay: 35_000, energy: 11 }],
   },
   {
-    id: 'lounge', name: 'Msasani Rooftop Lounge', district: 'Masaki', type: 'lounge', icon: '🍸', pos: [122, -104], size: [10, 10], h: 14, color: '#1e293b',
-    blurb: 'Rooftop ya mastaa — kula bata kwa staili.',
+    id: 'lounge', name: 'Elements', district: 'Masaki', type: 'lounge', icon: '🍸', pos: [122, -104], size: [10, 10], h: 14, color: '#1e293b',
+    blurb: 'Klabu ya mastaa Masaki — DJ kali, VIP na kula bata kwa staili.',
     business: { price: 380_000_000, incomePerHour: 2_400_000 },
     activities: [
       { id: 'sundowner', name: 'Sundowner rooftop', cost: 60_000, secs: 20, effects: { fun: 55, social: 35 }, emoji: '🌅', fame: 2 },
     ],
   },
   {
-    id: 'kigbeach', name: 'Kigamboni Beach Resort', district: 'Kigamboni', type: 'beach', icon: '🌴', pos: [90, 100], size: [8, 30], h: 0, color: '#fde68a',
+    id: 'kigbeach', name: 'Kipepeo Beach', district: 'Kigamboni', type: 'beach', icon: '🌴', pos: [90, 100], size: [8, 30], h: 0, color: '#fde68a',
     blurb: 'Fukwe safi za Kigamboni, mbali na kelele za mjini.',
     activities: [
       { id: 'pumzika', name: 'Pumzika ufukweni', cost: 5_000, secs: 20, effects: { energy: 30, fun: 25, hygiene: 5 }, emoji: '🏝️' },
@@ -468,6 +468,25 @@ export const PLACES = [
     ],
   },
   {
+    id: 'polisi', name: 'Kituo cha Polisi Oysterbay', district: 'Oysterbay', type: 'police', icon: '🚓', pos: [44, -112], size: [14, 10], h: 8, color: '#1e3a8a',
+    blurb: 'Ripoti uhalifu, lipa faini au dhamana — au kaa rumande.',
+    activities: [
+      { id: 'tembelea', name: 'Tembelea mahabusu', cost: 0, secs: 12, effects: { social: 12 }, emoji: '🫂' },
+    ],
+    jobs: [{ id: 'askari', title: 'Askari Polisi', titles: ['Konstebo', 'Koplo', 'Sajenti', 'Inspekta', 'Mrakibu'], secs: 60, pay: 26_000, energy: 12 }],
+  },
+  {
+    id: 'mahakama', name: 'Mahakama ya Kisutu', district: 'Kisutu', type: 'court', icon: '⚖️', pos: [14, 50], size: [12, 10], h: 10, color: '#e7e5e4',
+    blurb: 'Mahakama ya Hakimu Mkazi Kisutu — kesi zinasikilizwa hapa.',
+    activities: [
+      { id: 'sikiliza', name: 'Sikiliza kesi', cost: 0, secs: 15, effects: { fun: 10, social: 6 }, emoji: '👀' },
+    ],
+    jobs: [
+      { id: 'karani-mahakama', title: 'Karani wa mahakama', titles: ['Karani', 'Karani mkuu'], secs: 60, pay: 24_000, energy: 8, requires: { elimu: 1 } },
+      { id: 'wakili', title: 'Wakili', titles: ['Wakili msaidizi', 'Wakili', 'Wakili mwandamizi', 'Wakili wa Serikali'], secs: 80, pay: 140_000, energy: 14, requires: { elimu: 3 } },
+    ],
+  },
+  {
     id: 'kinyozi', name: 'Kinyozi & Saluni Sinza', district: 'Sinza', type: 'salon', icon: '💈', pos: [-85, -30], size: [10, 8], h: 5, color: '#f9a8d4',
     blurb: 'Kiduku safi, misuko mipya na umbea wa mtaa mzima.',
     business: { price: 12_000_000, incomePerHour: 80_000 },
@@ -480,7 +499,7 @@ export const PLACES = [
     jobs: [{ id: 'kinyozi', title: 'Kinyozi', titles: ['Kinyozi chipukizi', 'Kinyozi mzoefu', 'Mmiliki wa saluni'], secs: 45, pay: 15_000, energy: 8 }],
   },
   {
-    id: 'nyamachoma', name: 'Nyama Choma Kwa Mrombo', district: 'Ubungo', type: 'grill', icon: '🍖', pos: [-130, 62], size: [12, 10], h: 4, color: '#b45309',
+    id: 'nyamachoma', name: 'Nyama Choma Ubungo', district: 'Ubungo', type: 'grill', icon: '🍖', pos: [-130, 62], size: [12, 10], h: 4, color: '#b45309',
     blurb: 'Mbuzi wa kuchoma, ndizi, kachumbari na mpira kwenye TV kubwa.',
     business: { price: 18_000_000, incomePerHour: 110_000 },
     activities: [
@@ -546,7 +565,7 @@ export const PLACES = [
     jobs: [{ id: 'mc', title: 'MC wa Singeli', titles: ['Hype man', 'MC', 'MC bingwa'], secs: 55, pay: 28_000, energy: 12, fameBonus: true }],
   },
   {
-    id: 'karting', name: 'Bongo Go-Karts', district: 'Temeke', type: 'karting', icon: '🏎️', pos: [-80, 133], size: [28, 16], h: 2, color: '#f97316',
+    id: 'karting', name: 'Go-Kart Temeke', district: 'Temeke', type: 'karting', icon: '🏎️', pos: [-80, 133], size: [28, 16], h: 2, color: '#f97316',
     blurb: 'Shindana na washkaji kwenye track — mshindi anakula sifa!',
     activities: [
       { id: 'race', name: 'Shindana mizunguko 5', cost: 25_000, secs: 25, effects: { fun: 45, energy: -10 }, emoji: '🏎️', fame: 1 },
@@ -743,7 +762,7 @@ const EN = {
     kariakoo: ['Kariakoo Market', "East Africa's biggest market. Hawkers, traders and every hustle.", {
       zunguka: 'Wander the market', mishkaki: 'Kariakoo Mishkaki (skewers)' }],
     fashion: ['Kariakoo Fashion', 'Jerseys, suits, send-off gowns — look sharp on the streets.', {}],
-    bank: ['Bongo Bank', 'Top up your wallet with M-Pesa, Mixx by Yas or Airtel Money.', {}],
+    bank: ['NMB Bank', 'Top up your wallet with M-Pesa, Mixx by Yas or Airtel Money.', {}],
     fishmarket: ['Feri Fish Market', 'Fresh fish from the ocean every morning.', { samakichoma: 'Grilled fish' }],
     techhub: ['Dar Tech Hub', "Startups, coders and Bongo's big ideas.", { hackathon: 'Join a hackathon' }],
     posta: ['Posta Towers', 'Offices of the big companies. AC and a tie.', {}],
@@ -752,30 +771,32 @@ const EN = {
     coco: ['Coco Beach', 'Roast cassava, coconuts and the ocean breeze.', {
       ogelea: 'Swim in the ocean', mihogo: 'Roast cassava', madafu: 'Fresh coconut', 'piga-stori': 'Hang out with friends' }],
     mall: ['Mlimani City', 'Mall, cinema, food court — a classy day out.', { sinema: 'Watch a movie', burger: 'Burger & juice', window: 'Window shopping' }],
-    gym: ['Bongo Fitness Gym', 'Build muscle, lose the belly.', { mazoezi: 'Work out' }],
+    gym: ['Mlimani Gym', 'Build muscle, lose the belly.', { mazoezi: 'Work out' }],
     chuo: ['University of Dar', 'Take courses to gain education — unlocks banking and tech jobs.', {
       kozi: 'Take a course (Education +1)', maktaba: 'Study in the library' }],
-    club: ['Club Mzuka', 'Bongo Flava, Amapiano and Singeli till sunrise.', {
+    club: ['1245 Club', 'Nightclub — Bongo Flava, Amapiano and Singeli till sunrise.', {
       cheza: 'Go in and dance', mzunguko: 'Buy a round for friends', vip: 'VIP table' }],
     bar: ['Corner Bar', 'Nyama choma, football on TV and street stories.', {
       nyamachoma: 'Nyama choma (grilled meat)', soda: 'Drinks with friends', mpira: 'Watch football' }],
     studio: ['Bongo Flava Studio', 'Record your track — tomorrow you could be a star.', { rekodi: 'Record a song', video: 'Shoot a music video' }],
     stendi: ['Magufuli Bus Terminal', 'Daladalas and upcountry buses. The conductor is calling!', { kijiweni: 'Hang at the base' }],
     yadi: ['Car Yard', 'From an IST, Crown and Prado all the way to a G-Wagon, Lamborghini and Rolls-Royce. Climb the ladder!', {}],
-    uwanja: ['National Stadium', 'The Kariakoo Derby — Simba vs Yanga!', { dabi: 'Derby ticket: Simba vs Yanga', kimbia: 'Run on the track' }],
-    masakigrill: ['Masaki Seafood Grill', 'Prawns, octopus and the Msasani sunset.', { seafood: 'Seafood platter', date: 'Fancy dinner date' }],
-    lounge: ['Msasani Rooftop Lounge', 'The celebs’ rooftop — enjoy life in style.', { sundowner: 'Rooftop sundowner' }],
-    kigbeach: ['Kigamboni Beach Resort', 'Clean beaches far from the city noise.', { pumzika: 'Relax on the beach', ogelea2: 'Swim' }],
+    uwanja: ['Benjamin Mkapa Stadium', 'The Kariakoo Derby — Simba vs Yanga!', { dabi: 'Derby ticket: Simba vs Yanga', kimbia: 'Run on the track' }],
+    masakigrill: ['Karambezi Café', 'Prawns, octopus and the Sea Cliff sunset in Masaki.', { seafood: 'Seafood platter', date: 'Fancy dinner date' }],
+    lounge: ['Elements', 'The Masaki club where the stars go — big DJs, VIP and style.', { sundowner: 'Rooftop sundowner' }],
+    kigbeach: ['Kipepeo Beach', 'Clean beaches far from the city noise.', { pumzika: 'Relax on the beach', ogelea2: 'Swim' }],
     hospitali: ['Muhimbili Hospital', 'Emergency care and health check-ups — open 24 hours.', {
       matibabu: 'Get treatment', pima: 'Health check-up', 'pumzika-wodini': 'Rest on the ward' }],
+    polisi: ['Oysterbay Police Station', 'Report crime, pay a fine or bail — or sit in the cell.', { tembelea: 'Visit someone in the cells' }],
+    mahakama: ["Kisutu Resident Magistrate's Court", 'Cases are heard here.', { sikiliza: 'Watch a trial' }],
     kinyozi: ['Sinza Barber & Salon', 'Fresh fades, new braids and all the neighbourhood gossip.', { nyoa: 'Get a fresh fade', suka: 'Get braids / locs done', kucha: 'Manicure & pedicure', umbea: 'Gossip at the salon' }],
-    nyamachoma: ['Kwa Mrombo Nyama Choma', 'Roast goat, plantains, kachumbari and football on the big screen.', { kilo: 'A kilo of nyama choma & plantains', supu: 'Tripe soup', mbuzi: 'A whole goat with the crew', 'mpira-tv': 'Watch the match on the big TV' }],
+    nyamachoma: ['Ubungo Nyama Choma', 'Roast goat, plantains, kachumbari and football on the big screen.', { kilo: 'A kilo of nyama choma & plantains', supu: 'Tripe soup', mbuzi: 'A whole goat with the crew', 'mpira-tv': 'Watch the match on the big TV' }],
     waterpark: ["Wet 'n' Wild Kunduchi", 'Long slides, a wave pool and a lazy river — fun for the whole family.', { slides: 'Ride the water slides', wave: 'Swim in the wave pool', lazy: 'Lazy river with friends', 'aiskrimu-wp': 'Azam ice cream' }],
     makumbusho: ['Village Museum', 'Traditional houses of the tribes, ngoma dancing and Tingatinga art.', { ngoma: 'Dance traditional ngoma', makabila: 'Tour the tribal houses', tinga: 'Tingatinga painting class', mtori: 'Eat mtori & plantain stew' }],
     golf: ['Gymkhana Golf Club', 'Golf, big bosses and big deals — money talks here.', { golf9: 'Play 9 holes', range: 'Driving range', dili: 'Close deals with the bosses' }],
     slipway: ['Msasani Slipway', 'Sunset dhow cruises, boats to Bongoyo, ice cream and a craft market.', { jahazi: 'Sunset dhow cruise', bongoyo: 'Boat to Bongoyo + snorkelling', aiskrimu: 'Slipway ice cream', sanaa: 'Browse the craft market' }],
     singeli: ['Mbagala Singeli Ground', 'Hard-hitting Singeli, screaming MCs, chipsi mayai and Mbagala dust!', { singeli: 'Dance to Singeli', jukwaani: 'Jump on stage (freestyle)', 'chipsi-mayai': 'Festival chipsi mayai' }],
-    karting: ['Bongo Go-Karts', 'Race your friends on the track — the winner gets the bragging rights!', { race: 'Race 5 laps', grandprix: 'Bongo Grand Prix with friends', pitstop: 'Cold soda at the pit stop' }],
+    karting: ['Temeke Go-Karts', 'Race your friends on the track — the winner gets the bragging rights!', { race: 'Race 5 laps', grandprix: 'Bongo Grand Prix with friends', pitstop: 'Cold soda at the pit stop' }],
     serena: ['Serena Hotel & Spa', 'Massages, a rooftop pool party, fine dining and suites to sleep in.', { massage: 'Full-body massage', rooftop: 'Rooftop pool party', dinner: 'Fine dining dinner', suite: 'Sleep in a suite' }],
     airport: ['JNIA Airport', 'Catch a flight — Zanzibar, Arusha, Mwanza, Nairobi, even Dubai. Safe travels!', {
       zanzibar: 'Fly to Zanzibar', arusha: 'Fly to Arusha (Safari)', mwanza: 'Fly to Mwanza', nairobi: 'Fly to Nairobi', dubai: 'Fly to Dubai (Business class)' }],
@@ -789,7 +810,7 @@ const EN = {
     karani: ['Office Clerk', ['Clerk', 'Officer', 'Manager', 'CEO']],
     cashier: ['Supermarket Cashier', ['Cashier', 'Supervisor', 'Store Manager']],
     trainer: ['Personal Trainer', ['Trainer', 'Senior Trainer', 'Coach']],
-    dj: ['DJ', ['Rookie DJ', 'Resident DJ', 'Mzuka DJ', 'Champion DJ']],
+    dj: ['DJ', ['Rookie DJ', 'Resident DJ', 'Elements DJ', 'Champion DJ']],
     mhudumu: ['Bar Attendant', ['Waiter', 'Bartender', 'Bar Manager']],
     msanii: ['Artist', ['Upcoming artist', 'Street artist', 'Bongo Flava star', 'Legend']],
     konda: ['Daladala Conductor', ['Conductor', 'Daladala driver', 'Daladala owner']],
@@ -802,6 +823,9 @@ const EN = {
     mbebaji: ['Baggage handler', ['Baggage handler', 'Baggage supervisor']],
     'mhudumu-ndege': ['Cabin crew', ['Cabin crew', 'Senior cabin crew', 'Purser']],
     rubani: ['Pilot', ['First officer', 'Pilot', 'Captain', 'Chief captain']],
+    askari: ['Police officer', ['Constable', 'Corporal', 'Sergeant', 'Inspector', 'Superintendent']],
+    'karani-mahakama': ['Court clerk', ['Clerk', 'Senior clerk']],
+    wakili: ['Lawyer', ['Junior advocate', 'Advocate', 'Senior advocate', 'State attorney']],
     kinyozi: ['Barber', ['Junior barber', 'Senior barber', 'Salon owner']],
     mchoma: ['Grill master', ['Kitchen helper', 'Grill master', 'Grill champion']],
     lifeguard: ['Lifeguard', ['Lifeguard', 'Head lifeguard']],
@@ -853,7 +877,7 @@ export function moodLabelEn(m) {
 
 // ------------------------------------------------------------ interiors
 // Venues you can walk into (others see you there), and which scene an activity shows.
-export const ENTERABLE = { club: 'club', lounge: 'lounge', bar: 'bar', uwanja: 'stadium', studio: 'studio', singeli: 'concert', kinyozi: 'salon', nyamachoma: 'grill' };
+export const ENTERABLE = { polisi: 'police', mahakama: 'court', club: 'club', lounge: 'club', bar: 'bar', uwanja: 'stadium', studio: 'studio', singeli: 'concert', kinyozi: 'salon', nyamachoma: 'grill' };
 const ACTIVITY_SCENES = {
   gesti: { lala: 'room', oga: 'room', pika: 'room' },
   mamantilie: { chipsi: 'dining', walimaharage: 'dining', ugalisamaki: 'dining', chai: 'dining' },
@@ -1031,6 +1055,42 @@ export const HEALTH = {
   neglectDrain: 0.5, // per needs tick while starving or exhausted
 };
 export const HOSPITAL_ID = 'hospitali';
+export const POLICE_ID = 'polisi';
+export const COURT_ID = 'mahakama';
+
+// ---------------------------------------------------------------- crime
+export const CRIME = {
+  robRange: 10, // must be this close to rob someone
+  robCooldownMs: 10 * 60_000,
+  robSuccess: 0.55, // otherwise the police catch you on the spot
+  robPct: 0.1, // share of the victim's cash taken…
+  robMin: 2_000,
+  robMax: 250_000, // …capped
+  reportWindowMs: 30 * 60_000, // victims can report within this time
+  catchChance: 0.7, // police catch a reported robber
+  fine: 100_000,
+  cellMs: 3 * 60_000,
+  bailPct: 0.6, // bail = 60% of the fine
+  lawyerFee: 35_000,
+  courtDelayMs: 2 * 60_000,
+  winChance: 0.55,
+};
+// Quick ways to interact with someone you're standing next to.
+export const INTERACTIONS = [
+  { id: 'hello', emoji: '👋', name: 'Salimia', nameEn: 'Say hello', effects: { social: 6 }, them: { social: 4 } },
+  { id: 'gist', emoji: '💬', name: 'Piga stori', nameEn: 'Gist', effects: { social: 10, fun: 6 }, them: { social: 8, fun: 4 } },
+  { id: 'joke', emoji: '😂', name: 'Piga utani', nameEn: 'Crack a joke', chance: 0.84, effects: { fun: 12, social: 8 }, them: { fun: 10, social: 6 }, fail: { fun: -4, social: -2 } },
+  { id: 'shade', emoji: '😒', name: 'Mpige kijembe', nameEn: 'Throw shade', effects: { fun: 8, social: 3 }, them: { fun: -3 } },
+];
+export const INTERACT_RANGE = 14;
+export const REPORT_REASONS = [
+  ['harass', 'Ananinyanyasa au kunionea', 'Harassing or bullying me'],
+  ['sexual', 'Jumbe za ngono au za kutisha', 'Sexual or creepy messages'],
+  ['hate', 'Chuki au matusi', 'Hate or insults'],
+  ['scam', 'Utapeli au kuomba pesa', 'Scam or asking for money'],
+  ['spam', 'Spam', 'Spam'],
+  ['other', 'Kitu kingine', 'Something else'],
+];
 
 /** Stage of a flight from the trip fraction (0..1). */
 export const FLIGHT_PHASES = [

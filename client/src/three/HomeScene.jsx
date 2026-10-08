@@ -9,6 +9,7 @@ import { FurnitureModel } from './Furniture.jsx';
 import { Body, Overhead } from './Players.jsx';
 import { Vehicle } from './Vehicle.jsx';
 import { PartyDecor } from './Party.jsx';
+import { Shadows } from './Shadows.jsx';
 import { livePartyAt } from '../ui/events.js';
 import { vehicleById } from '@shared/world.js';
 import { local } from '../net.js';
@@ -18,29 +19,55 @@ import { homeGuests, sendHomePos } from '../net.js';
 export const HOME_ORIGIN = [-4000, 0, 4000];
 const WALL = '#15806b';
 const unitBox = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+const WALL_MAT = new THREE.MeshPhongMaterial({ color: WALL, shininess: 8, specular: new THREE.Color('#111111') });
+const CAP_MAT = new THREE.MeshPhongMaterial({ color: '#e7e5e4', shininess: 20 });
+const SKIRT_MAT = new THREE.MeshPhongMaterial({ color: '#0f5e4f', shininess: 10 });
 
 /** Player position inside the home (local units), kept outside React. */
 export const homeAvatar = { x: 0, z: 2, ry: Math.PI, target: null };
 
-function checker(a, b, repeat) {
+/** Floor textures: big ceramic tiles with grout, wooden planks, small bathroom tiles. */
+function checker(a, b, repeat, kind = 'tile') {
   const c = document.createElement('canvas');
-  c.width = c.height = 64;
+  c.width = c.height = 256;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = a;
-  ctx.fillRect(0, 0, 64, 64);
-  ctx.fillStyle = b;
-  ctx.fillRect(0, 0, 32, 32);
-  ctx.fillRect(32, 32, 32, 32);
+  const rnd = (i) => ((Math.sin(i * 12.9898) * 43758.5453) % 1 + 1) % 1;
+  if (kind === 'wood') {
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = i % 2 ? a : b;
+      ctx.fillRect(0, i * 32, 256, 32);
+      ctx.globalAlpha = 0.18;
+      for (let k = 0; k < 6; k++) { ctx.fillStyle = '#5b3a1e'; ctx.fillRect(rnd(i * 9 + k) * 256, i * 32 + 4 + k * 4, 40 + rnd(k + i) * 80, 1); }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(60,35,15,.45)';
+      ctx.fillRect(0, i * 32, 256, 1.5);
+      ctx.fillRect(((i * 97) % 256), i * 32, 1.5, 32);
+    }
+  } else {
+    const n = kind === 'small' ? 4 : 2;
+    const s = 256 / n;
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      ctx.fillStyle = (x + y) % 2 ? a : b;
+      ctx.fillRect(x * s, y * s, s, s);
+      const g = ctx.createLinearGradient(x * s, y * s, x * s + s, y * s + s);
+      g.addColorStop(0, 'rgba(255,255,255,.10)');
+      g.addColorStop(1, 'rgba(0,0,0,.05)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x * s, y * s, s, s);
+    }
+    ctx.fillStyle = 'rgba(120,110,95,.55)';
+    for (let i = 0; i <= n; i++) { ctx.fillRect(i * s - 1.5, 0, 3, 256); ctx.fillRect(0, i * s - 1.5, 256, 3); }
+  }
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.repeat.set(...repeat);
   t.colorSpace = THREE.SRGBColorSpace;
-  t.magFilter = THREE.NearestFilter;
+  t.anisotropy = 4;
   return t;
 }
 
-function Floor({ x1, x2, z1, z2, a, b, y = 0.005 }) {
-  const m = useMemo(() => new THREE.MeshLambertMaterial({ map: checker(a, b, [(x2 - x1) / 2, (z2 - z1) / 2]) }), [a, b, x1, x2, z1, z2]);
+function Floor({ x1, x2, z1, z2, a, b, y = 0.005, kind = 'tile' }) {
+  const m = useMemo(() => new THREE.MeshPhongMaterial({ map: checker(a, b, kind === 'wood' ? [(x2 - x1) / 4, (z2 - z1) / 4] : [(x2 - x1) / 2, (z2 - z1) / 2], kind), shininess: kind === 'wood' ? 18 : 40, specular: new THREE.Color('#2a2a2a') }), [a, b, x1, x2, z1, z2, kind]);
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[(x1 + x2) / 2, y, (z1 + z2) / 2]} material={m}>
       <planeGeometry args={[x2 - x1, z2 - z1]} />
@@ -58,7 +85,17 @@ function Walls() {
   return WALLS.map(([x1, z1, x2, z2], i) => {
     const len = Math.hypot(x2 - x1, z2 - z1);
     const back = z1 === -5 && z2 === -5 || x1 === -6 && x2 === -6;
-    return <mesh key={i} geometry={unitBox} material={mat(WALL)} position={[(x1 + x2) / 2, 0, (z1 + z2) / 2]} scale={[x1 === x2 ? 0.16 : len + 0.16, back ? 2.2 : 1.3, z1 === z2 ? 0.16 : len + 0.16]} />;
+    const h = back ? 2.2 : 1.3;
+    const sx = x1 === x2 ? 0.16 : len + 0.16;
+    const sz = z1 === z2 ? 0.16 : len + 0.16;
+    return (
+      <group key={i} position={[(x1 + x2) / 2, 0, (z1 + z2) / 2]}>
+        <mesh geometry={unitBox} material={WALL_MAT} scale={[sx, h, sz]} />
+        {/* light cap on top of the wall, like a real cut-away doll house */}
+        <mesh geometry={unitBox} material={CAP_MAT} position={[0, h, 0]} scale={[sx + 0.04, 0.07, sz + 0.04]} />
+        <mesh geometry={unitBox} material={SKIRT_MAT} position={[0, 0, 0]} scale={[sx + 0.03, 0.12, sz + 0.03]} />
+      </group>
+    );
   });
 }
 
@@ -267,10 +304,11 @@ export function HomeScene({ me }) {
 
   return (
     <group position={HOME_ORIGIN}>
+      <Shadows light={[6, 12, 7]} size={14} intensity={0.7}>
       <Garden />
-      <Floor x1={-6} x2={6} z1={-5} z2={5} a="#e7e1d3" b="#d6cfbd" />
-      <Floor x1={1.5} x2={6} z1={-5} z2={-1} a="#d4a373" b="#c48f5b" y={0.008} />
-      <Floor x1={-6} x2={-2} z1={1.5} z2={5} a="#dbeafe" b="#bfdbfe" y={0.008} />
+      <Floor x1={-6} x2={6} z1={-5} z2={5} a="#ece6d8" b="#e2dac8" />
+      <Floor x1={1.5} x2={6} z1={-5} z2={-1} a="#b98552" b="#a8744a" y={0.008} kind="wood" />
+      <Floor x1={-6} x2={-2} z1={1.5} z2={5} a="#e0ecf7" b="#cfe0f0" y={0.008} kind="small" />
       <Walls />
       {/* invisible click/drag surface for walking and placing */}
       <mesh
@@ -311,7 +349,8 @@ export function HomeScene({ me }) {
       <Guests />
       {party && <PartyDecor event={party} home />}
       <Driveway vehicles={visiting ? visiting.host.vehicles : me.vehicles} mine={!visiting} />
-      <pointLight color="#fff7ed" intensity={14} distance={20} position={[0, 4, 0]} />
+      <pointLight color="#fff7ed" intensity={10} distance={20} position={[0, 4, 0]} />
+      </Shadows>
     </group>
   );
 }

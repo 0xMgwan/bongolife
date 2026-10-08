@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { fmtTsh, fmtShort, billboardById, buildingById } from '@shared/world.js';
 import { useApi, act, ago, dt, tzs, go, Kpi, Pager, Modal, StatusBadge } from './Admin.jsx';
 
@@ -409,6 +409,58 @@ export function PhoneApps() {
             </tbody>
           </table>
         </div>
+      </div>
+    </>
+  );
+}
+
+const REASON_LABEL = { harass: 'Harassing / bullying', sexual: 'Sexual / creepy', hate: 'Hate / insults', scam: 'Scam / money', spam: 'Spam', other: 'Something else' };
+/** Player reports from the in-game ⚑ Report sheet, with the recent DM context. */
+export function Reports() {
+  const [status, setStatus] = useState('open');
+  const [open, setOpen] = useState(null);
+  const { data, reload } = useApi(`/admin/reports?status=${status}`);
+  return (
+    <>
+      <div className="adm-head"><div><h1>Player reports</h1><div className="sub">Reports players sent from the ⚑ Report sheet. The reporter has already blocked the person. Recent DMs between them are attached.</div></div></div>
+      <div className="toolbar">
+        <button className={`btn btn-xs ${status === 'open' ? 'btn-dark' : 'btn-outline'}`} onClick={() => setStatus('open')}>Open</button>
+        <button className={`btn btn-xs ${status === 'closed' ? 'btn-dark' : 'btn-outline'}`} onClick={() => setStatus('closed')}>Closed</button>
+      </div>
+      <div className="panel tbl-wrap">
+        <table className="tbl">
+          <thead><tr><th>When</th><th>Reported</th><th>By</th><th>Reason</th><th>Note</th><th></th></tr></thead>
+          <tbody>
+            {data?.map((r) => (
+              <Fragment key={r.id}>
+                <tr>
+                  <td className="small" style={{ whiteSpace: 'nowrap' }}>{ago(r.created_at)}</td>
+                  <td><a href={`#/users/${r.target_id}`}>@{r.target}</a>{r.target_banned && <span className="bdg r" style={{ marginLeft: 6 }}>banned</span>}</td>
+                  <td><a href={`#/users/${r.reporter_id}`}>@{r.reporter}</a></td>
+                  <td>{REASON_LABEL[r.reason] || r.reason}</td>
+                  <td className="small">{r.note}</td>
+                  <td className="num">
+                    <div className="actions" style={{ gap: 4, justifyContent: 'flex-end' }}>
+                      <button className="btn btn-outline btn-xs" onClick={() => setOpen(open === r.id ? null : r.id)}>{open === r.id ? 'Hide chat' : `Chat (${r.context.length})`}</button>
+                      <button className="btn btn-outline btn-xs" onClick={async () => { if (await act(`/users/${r.target_id}/mute`, { body: { minutes: 1440 }, ok: '🔇 Muted 24h' })) reload(); }}>Mute 24h</button>
+                      <a className="btn btn-outline btn-xs" href={`#/users/${r.target_id}`}>Ban…</a>
+                      {status === 'open' && <button className="btn btn-dark btn-xs" onClick={async () => { if (await act(`/reports/${r.id}/close`, { ok: '✓ Closed' })) reload(); }}>Close</button>}
+                    </div>
+                  </td>
+                </tr>
+                {open === r.id && (
+                  <tr><td colSpan={6}>
+                    <div className="small" style={{ display: 'grid', gap: 4, maxHeight: 260, overflow: 'auto' }}>
+                      {[...r.context].reverse().map((m, i) => <div key={i}><b>{m.from_id === r.target_id ? `@${r.target}` : `@${r.reporter}`}:</b> {m.body} <span className="muted">· {ago(m.created_at)}</span></div>)}
+                      {!r.context.length && <span className="muted">No messages between them.</span>}
+                    </div>
+                  </td></tr>
+                )}
+              </Fragment>
+            ))}
+            {data?.length === 0 && <tr><td colSpan={6} className="empty">No {status} reports 🎉</td></tr>}
+          </tbody>
+        </table>
       </div>
     </>
   );

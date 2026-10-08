@@ -12,6 +12,7 @@ import { verifyNtzsWebhook } from './payments/index.js';
 import { online, setIO, publicPlayer, broadcast, emitTo } from './presence.js';
 import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef } from './game.js';
 import { settleElection, currentMayor } from './election.js';
+import { isBlocked } from './crime.js';
 import { addInvite, canVisit } from './social.js';
 
 const PORT = Number(process.env.PORT) || 8787;
@@ -138,6 +139,7 @@ io.on('connection', (socket) => {
     text = cleanText(text);
     const target = typeof to === 'string' && db.prepare('SELECT id, username FROM users WHERE username = ?').get(to.replace(/^@/, ''));
     if (!text || !target || target.id === uid) return ack?.({ error: 'Ujumbe haukutumwa' });
+    if (isBlocked(uid, target.id)) return ack?.({ error: 'blocked' });
     const t = now();
     const muted = getUser(uid).mutedUntil;
     if (muted && muted > t) return ack?.({ error: 'muted' });
@@ -152,6 +154,9 @@ io.on('connection', (socket) => {
 
   // Walk into / out of a venue. Must be standing near it.
   socket.on('inside', (placeId) => {
+    // In custody you stay at the station / court.
+    const j = getUser(uid)?.jail;
+    if (j && (p.inside === 'polisi' || p.inside === 'mahakama') && placeId !== p.inside) return socket.emit('player:inside', { id: uid, inside: p.inside });
     let inside = null;
     if (placeId === 'home') inside = 'home';
     else if (placeId && (ENTERABLE[placeId] || (EVENT_SCENES[placeId] && partyLiveAt(placeId)))) {
@@ -172,6 +177,7 @@ io.on('connection', (socket) => {
     const target = typeof to === 'string' && db.prepare('SELECT id, username FROM users WHERE username = ?').get(to.replace(/^@/, ''));
     if (!target || target.id === uid) return ack?.({ error: 'not_found' });
     if (!online.has(target.id)) return ack?.({ error: 'offline' });
+    if (isBlocked(uid, target.id)) return ack?.({ error: 'blocked' });
     addInvite(uid, target.id);
     emitTo(target.id, 'invite', { fromId: uid, from: p.username, fromName: p.name, appearance: p.appearance });
     ack?.({ ok: true });
@@ -181,6 +187,7 @@ io.on('connection', (socket) => {
   socket.on('hangout', ({ to, placeId } = {}, ack) => {
     const target = typeof to === 'string' && db.prepare('SELECT id FROM users WHERE username = ?').get(to.replace(/^@/, ''));
     if (!target || target.id === uid || !HANGOUT_PLACES.includes(placeId)) return ack?.({ error: 'bad' });
+    if (isBlocked(uid, target.id)) return ack?.({ error: 'blocked' });
     if (!online.has(target.id)) return ack?.({ error: 'offline' });
     if (now() - (lastHangout.get(target.id) || 0) < 8000) return ack?.({ error: 'slow' });
     lastHangout.set(target.id, now());

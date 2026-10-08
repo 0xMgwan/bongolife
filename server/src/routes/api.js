@@ -13,6 +13,7 @@ import { admin } from './admin.js';
 import { canVisit } from '../social.js';
 import { sendMail } from '../mail.js';
 import * as election from '../election.js';
+import * as crime from '../crime.js';
 import * as game from '../game.js';
 import { online, onlineCount, broadcast, emitTo } from '../presence.js';
 import { provider, providers, TOPUP_RATE } from '../payments/index.js';
@@ -444,6 +445,48 @@ api.delete('/contacts/:username', (req, res) => {
   const other = getUserByUsername(req.params.username);
   if (other) db.prepare('DELETE FROM contacts WHERE user_id = ? AND contact_id = ?').run(req.user.id, other.id);
   res.json(contactList(req.user.id));
+});
+
+// ---------------------------------------------------------- street life
+const targetOf = (req) => {
+  const t = getUserByUsername(str(req.params.username, 30).replace(/^@/, ''));
+  if (!t || t.id === req.user.id) throw new GameError(['Mtu huyo hayupo.', 'No such player.'], 404);
+  return t;
+};
+api.post('/players/:username/interact', (req, res) => {
+  const r = crime.interact(req.user.id, targetOf(req), str(req.body.kind, 12));
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
+api.post('/players/:username/rob', (req, res) => {
+  const r = crime.rob(req.user.id, targetOf(req));
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
+api.post('/players/:username/report-police', (req, res) => {
+  const t = targetOf(req);
+  const r = crime.reportToPolice(req.user.id, t);
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
+api.post('/players/:username/block', (req, res) => {
+  const blocked = crime.toggleBlock(req.user.id, targetOf(req).id);
+  res.json({ blocked, me: game.playerState(req.user.id) });
+});
+api.post('/players/:username/report', (req, res) => {
+  const reason = str(req.body.reason, 20);
+  if (!['harass', 'sexual', 'hate', 'scam', 'spam', 'other'].includes(reason)) throw new GameError(['Chagua sababu.', 'Pick a reason.']);
+  crime.reportPlayer(req.user.id, targetOf(req).id, reason, str(req.body.note, 500));
+  res.json({ ok: true, me: game.playerState(req.user.id) });
+});
+api.post('/jail/choose', (req, res) => {
+  const r = crime.jailChoose(req.user.id, str(req.body.option, 10));
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
+api.post('/jail/bail', (req, res) => {
+  const r = crime.payBail(req.user.id);
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
+api.post('/jail/tick', (req, res) => {
+  const r = crime.jailTick(req.user.id);
+  res.json({ ...r, me: game.playerState(req.user.id) });
 });
 
 // ---------------------------------------------------------- invites

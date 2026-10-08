@@ -6,7 +6,7 @@ const SECTIONS = [
   ['🍛', ['Mahitaji', 'Needs'], ['Njaa, Nguvu, Raha, Usafi na Jamii zikishuka, mood na mshahara vinashuka. Vidokezo vilivyo juu vinakuonyesha cha kufanya.', 'When Hunger, Energy, Fun, Hygiene or Social drop, your mood and pay drop too. The tips at the top tell you what to do.']],
   ['🏠', ['Kwangu', 'Home'], ['Lala, oga na pika nyumbani. Kwenye Duka nunua fanicha, iburute mahali unapotaka, izungushe na uweke.', 'Sleep, shower and cook at home. In the Shop, buy furniture, drag it where you want it, rotate and place.']],
   ['💼', ['Kazi na pesa', 'Jobs & money'], ['Fanya shifti upate mshahara na upandishwe cheo. Ongeza salio kwa M-Pesa kwenye Bongo Pesa. Pesa ya mchezo haitolewi.', 'Work shifts to earn and get promoted. Top up with M-Pesa in Bongo Pesa. In-game money cannot be withdrawn.']],
-  ['🪩', ['Starehe', 'Going out'], ['Ingia ndani ya Club Mzuka, Bar ya Kona au Uwanja wa Taifa uone wanaocheza na ujiunge.', 'Go inside Club Mzuka, the Corner Bar or the National Stadium to see who is there and join in.']],
+  ['🪩', ['Starehe', 'Going out'], ['Ingia ndani ya 1245 Club, Elements, Bar ya Kona au Uwanja wa Benjamin Mkapa uone wanaocheza na ujiunge.', 'Go inside 1245 Club, Elements, the Corner Bar or Benjamin Mkapa Stadium to see who is there and join in.']],
   ['📢', ['Matangazo', 'Ads'], ['Mabango ni skrini za kidijitali: tangazo lako linapokezana na mengine kila sekunde 10.', 'Billboards are digital screens: your ad takes turns with others every 10 seconds.']],
 ];
 

@@ -5,6 +5,15 @@ import { sendDm, sendChat } from '../../net.js';
 import { avatarEmoji } from '../../three/Avatar.jsx';
 import { AppHead } from '../Phone.jsx';
 import { L } from '../../i18n.js';
+import { inviteHome, visitHome } from '../social.js';
+
+// "::hello" style system lines from quick interactions.
+const NUDGES = { hello: ['amesalimia 👋', 'said hello 👋'], gist: ['anataka stori 💬', 'wants to gist 💬'], joke: ['amepiga utani 😂', 'cracked a joke 😂'], 'joke:fail': ['alijaribu utani 😬', 'tried a joke 😬'], shade: ['amepiga kijembe 😒', 'threw shade 😒'] };
+export const nudgeText = (body, who) => {
+  const k = body.startsWith('::') && NUDGES[body.slice(2)];
+  return k ? L(`@${who} ${k[0]}`, `@${who} ${k[1]}`) : null;
+};
+const QUICK = [['Mambo vipi? 👋', 'Mambo vipi? 👋'], ['Poa sana 😄', 'Poa sana 😄'], ['Kuna nini leo?', "What's up today?"], ['Twende tukale bata 🎉', "Let's go out 🎉"], ['Uko wapi?', 'Where you at?'], ['Hahaha 😂', 'Hahaha 😂']];
 
 const ago = (t) => {
   const s = (Date.now() - t) / 1000;
@@ -37,7 +46,7 @@ export function Threads({ open, back }) {
               <span className="avatar-dot">{avatarEmoji(t.user.appearance)}{t.user.online && <span className="dot" style={{ position: 'absolute', right: 0, bottom: 0 }} />}</span>
               <div className="grow">
                 <div className="row between"><b>@{t.user.username}</b><span className="small muted">{ago(t.at)}</span></div>
-                <div className="small muted" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.mine ? L('Wewe: ', 'You: ') : ''}{t.last}</div>
+                <div className="small muted" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nudgeText(t.last || '', t.mine ? L('wewe', 'you') : t.user.username) || `${t.mine ? L('Wewe: ', 'You: ') : ''}${t.last}`}</div>
               </div>
               {t.unread > 0 && <span className="badge" style={{ position: 'static' }}>{t.unread}</span>}
             </button>
@@ -73,9 +82,9 @@ export function Dm({ arg: username, back }) {
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'end' });
   }, [data?.messages.length]);
-  const send = async (e) => {
-    e.preventDefault();
-    const t = text.trim();
+  const send = async (e, quick) => {
+    e?.preventDefault();
+    const t = (quick ?? text).trim();
     if (!t) return;
     setText('');
     const r = await sendDm(username, t);
@@ -85,17 +94,33 @@ export function Dm({ arg: username, back }) {
   return (
     <>
       <AppHead title={`@${username}`} onBack={back} right={data?.user.online ? <span className="small green bold">online</span> : null} />
+      <div className="dm-top">
+        <div className="small muted center">🔒 {L(`Faragha · wewe na @${username} pekee mnaona hii`, `Private · only you and @${username} can see this`)}</div>
+        <div className="dm-acts">
+          <button className="g" onClick={() => inviteHome(username)}>🏠 {L('Mwalike kwako', 'Invite over')}</button>
+          <button className="b" onClick={() => visitHome(username)}>🚪 {L('Mtembelee', 'Visit them')}</button>
+          <button className="y" onClick={() => useStore.getState().openPhone('pesa', { send: username })}>💸 {L('Tuma pesa', 'Send money')}</button>
+          <button className="p" onClick={() => useStore.setState({ phone: null, sheet: { type: 'player', id: username } })}>🎉 {L('Mtoke pamoja', 'Go out')}</button>
+        </div>
+      </div>
       <div className="app-body" style={{ background: '#eef2f6' }}>
         <div className="msgs">
           {data?.messages.length === 0 && <div className="center small muted" style={{ padding: 20 }}>{L('Anza stori! Sema "Mambo vipi?" 👋', 'Start chatting! Say "Mambo vipi?" 👋')}</div>}
-          {data?.messages.map((m) => (
-            <div key={m.id} className={`bubble ${m.from_id === me.id ? 'me' : ''}`}>
-              {m.body}
-              <small>{ago(m.created_at)}</small>
-            </div>
-          ))}
+          {data?.messages.map((m) => {
+            const nudge = nudgeText(m.body, m.from_id === me.id ? me.username : username);
+            if (nudge) return <div key={m.id} className="nudge-line">{nudge} · {ago(m.created_at)}</div>;
+            return (
+              <div key={m.id} className={`bubble ${m.from_id === me.id ? 'me' : ''}`}>
+                {m.body}
+                <small>{ago(m.created_at)}{m.from_id === me.id ? ` · ${L('Imetumwa', 'Sent')}` : ''}</small>
+              </div>
+            );
+          })}
           <div ref={end} />
         </div>
+      </div>
+      <div className="quick-replies">
+        {QUICK.map(([sw, en]) => <button key={sw} onClick={() => send(null, L(sw, en))}>{L(sw, en)}</button>)}
       </div>
       <form className="composer" onSubmit={send}>
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder={L('Andika ujumbe…', 'Write a message…')} maxLength={200} enterKeyHint="send" />

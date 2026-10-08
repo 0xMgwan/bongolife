@@ -130,6 +130,7 @@ addColumn('messages', 'deleted_at', 'INTEGER');
 addColumn('users', 'home_seeded', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('users', 'car_seeded', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('users', 'referred_by', 'INTEGER');
+addColumn('users', 'jail', 'TEXT');
 // The starter car changed from a Vitz to a Toyota IST.
 db.prepare("UPDATE vehicles SET model = 'ist' WHERE model = 'vitz'").run();
 addColumn('users', 'referral_paid', 'INTEGER NOT NULL DEFAULT 0');
@@ -152,6 +153,30 @@ CREATE TABLE IF NOT EXISTS contacts (
   contact_id INTEGER NOT NULL REFERENCES users(id),
   created_at INTEGER NOT NULL,
   PRIMARY KEY (user_id, contact_id)
+);
+CREATE TABLE IF NOT EXISTS robberies (
+  id INTEGER PRIMARY KEY,
+  robber_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  victim_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  amount INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  reported INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS blocks (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, blocked_id)
+);
+CREATE TABLE IF NOT EXISTS player_reports (
+  id INTEGER PRIMARY KEY,
+  reporter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reason TEXT NOT NULL,
+  note TEXT,
+  context TEXT,
+  status TEXT NOT NULL DEFAULT 'open',
+  created_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS candidates (
   period INTEGER NOT NULL,
@@ -303,6 +328,7 @@ export function rowToUser(r) {
     outfits: parse(r.outfits, []),
     activeVehicle: r.active_vehicle,
     busy: parse(r.busy, null),
+    jail: parse(r.jail, null),
     isAdmin: !!r.is_admin,
     bannedAt: r.banned_at,
     banReason: r.ban_reason,

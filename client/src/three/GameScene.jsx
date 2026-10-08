@@ -253,6 +253,7 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
       dpr={lowEnd ? [1, 1.25] : [1, 2]}
       gl={{ antialias: !lowEnd, powerPreference: 'high-performance', stencil: false }}
       camera={{ fov: 40, near: 0.5, far: 900, position: [0, 60, 60] }}
+      shadows={lowEnd ? false : 'soft'}
       flat
       onCreated={(state) => {
         state.gl.setClearColor('#cfe6f7');

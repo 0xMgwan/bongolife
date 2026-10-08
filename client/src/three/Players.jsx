@@ -22,7 +22,7 @@ export function busyMode(busy) {
 /** Name tag, chat bubble, emote & busy indicator above a player. */
 export function Overhead({ id, username, height, getBusy }) {
   const mayor = useStore((s) => s.world?.mayor?.username === username);
-  const tag = useMemo(() => labelTexture(mayor ? `👑 @${username}` : `@${username}`, { size: 30, bg: mayor ? 'rgba(180,83,9,.85)' : 'rgba(17,24,39,.72)', fg: '#ffffff', bold: 700 }), [username, mayor]);
+  const tag = useMemo(() => labelTexture(mayor ? `👑 @${username}` : `@${username}`, { size: 30, bg: mayor ? 'rgba(180,83,9,.9)' : 'rgba(37,99,235,.9)', fg: '#ffffff', bold: 700 }), [username, mayor]);
   const bubbleRef = useRef();
   const iconRef = useRef();
   const state = useRef({ text: null, icon: null });

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  ENTERABLE, NEEDS, HANGOUT_PLACES, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
+  ENTERABLE, NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
   outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
 } from '@shared/world.js';
 import { useStore } from '../store.js';
@@ -8,7 +8,7 @@ import { api } from '../api.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
 import { AvatarPreview } from './Creator.jsx';
 import { sfx } from '../audio.js';
-import { setInside } from '../net.js';
+import { setInside, remotes, local } from '../net.js';
 import { inviteHome, goToPlayer } from './social.js';
 import { sendHangout } from '../net.js';
 import { livePartyAt, joinParty } from './events.js';
@@ -310,7 +310,7 @@ function GoOut({ username }) {
         {HANGOUT_PLACES.map((id) => (
           <button key={id} className={sent === id ? 'on' : ''} onClick={() => send(id)}>
             <span>{placeById[id].icon}</span>
-            <small>{loc(placeById[id]).replace(/ (Sinza|Mbagala|Kunduchi|Kwa Mrombo)$/, '')}</small>
+            <small>{loc(placeById[id]).replace(/ (Sinza|Mbagala|Kunduchi|Ubungo|Temeke)$/, '')}</small>
           </button>
         ))}
       </div>
@@ -318,43 +318,119 @@ function GoOut({ username }) {
   );
 }
 
+function distTo(username) {
+  const r = [...remotes.values()].find((x) => x.username === username);
+  if (!r || r.inside === 'home') return Infinity;
+  return Math.hypot(r.tx - local.x, r.tz - local.z);
+}
+
+/** Someone you tapped in town: chat, friend, invite, interact, rob, report, block. */
 function PlayerSheet({ username, onClose }) {
   const [p, setP] = useState(null);
+  const [, tick] = useState(0);
   const run = useStore((s) => s.run);
+  const me = useStore((s) => s.me);
   const openPhone = useStore((s) => s.openPhone);
   useEffect(() => {
     api(`/players/${encodeURIComponent(username)}`).then(setP).catch((e) => useStore.getState().toast(e.message, 'err'));
+    const t = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(t);
   }, [username]);
   if (!p) return null;
   const trait = TRAITS.find((t) => t.id === p.trait);
+  const d = distTo(p.username);
+  const near = d <= INTERACT_RANGE;
+  const blocked = me.blocked?.includes(p.username);
+  const toast = useStore.getState().toast;
+  const interact = async (it) => {
+    const r = await run(`/players/${p.username}/interact`, { method: 'POST', body: { kind: it.id } });
+    if (!r) return;
+    sfx(r.ok ? 'pop' : 'error');
+    toast(r.ok ? L(`${it.emoji} ${it.name} — @${p.username}`, `${it.emoji} ${it.nameEn} — @${p.username}`) : L('😬 Utani haukufika… aibu kidogo.', '😬 The joke flopped… awkward.'));
+  };
+  const rob = async () => {
+    if (!confirm(L(`Umwibie @${p.username}? Polisi wakikukamata utakamatwa!`, `Rob @${p.username}? If the police catch you, you'll be arrested!`))) return;
+    const r = await run(`/players/${p.username}/rob`, { method: 'POST' });
+    if (!r) return;
+    if (r.amount) { sfx('cash'); toast(L(`🦹 Umechukua ${fmtTsh(r.amount)} kutoka kwa @${p.username}! Jificha…`, `🦹 You snatched ${fmtTsh(r.amount)} from @${p.username}! Lie low…`)); }
+    onClose();
+  };
+  const police = async () => {
+    const r = await run(`/players/${p.username}/report-police`, { method: 'POST' });
+    if (!r) return;
+    if (!r.found) toast(L(`🚓 Polisi: hakuna wizi wa karibuni wa @${p.username} dhidi yako.`, `🚓 Police: no recent robbery by @${p.username} against you.`));
+    else if (r.caught) { sfx('cash'); toast(L(`🚓 Polisi wamemkamata @${p.username}! Umerudishiwa ${fmtTsh(r.back || 0)}.`, `🚓 Police caught @${p.username}! ${fmtTsh(r.back || 0)} returned to you.`)); }
+    else toast(L(`🚓 Polisi wanamtafuta @${p.username} lakini ametoroka.`, `🚓 Police are after @${p.username} but they got away.`));
+  };
+  const block = async () => {
+    const r = await run(`/players/${p.username}/block`, { method: 'POST' });
+    if (r) toast(r.blocked ? L(`🚫 Umemzuia @${p.username}.`, `🚫 You blocked @${p.username}.`) : L(`Umemruhusu @${p.username} tena.`, `You unblocked @${p.username}.`));
+  };
   return (
-    <Sheet title={p.name} icon={avatarEmoji(p.appearance)} sub={`@${p.username} · ${p.online ? '🟢 online' : 'offline'}`} onClose={onClose}>
-      <div style={{ height: 200, background: 'linear-gradient(180deg,#dbe9f7,#fff)', borderRadius: 18 }}>
+    <Sheet title={`@${p.username}`} icon={avatarEmoji(p.appearance)} sub={`${p.name} · ${p.online ? (near ? L('🟢 yuko karibu nawe', '🟢 right next to you') : '🟢 online') : 'offline'}`} onClose={onClose}>
+      <div style={{ height: 150, background: 'linear-gradient(180deg,#dbe9f7,#fff)', borderRadius: 18 }}>
         <AvatarPreview appearance={p.appearance} />
       </div>
-      <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+      <div className="row" style={{ gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
         <span className="pill">💰 {fmtShort(p.netWorth)}</span>
         <span className="pill">⭐ {p.fame}</span>
-        <span className="pill">🎓 {L('Elimu', 'Education')} {p.elimu}</span>
+        <span className="pill">🎓 {p.elimu}</span>
         {trait && <span className="pill">{trait.emoji} {loc(trait)}</span>}
-        <span className="pill">🏠 {p.plots.length} {L('viwanja', 'plots')}</span>
-        {p.vehicles.length > 0 && <span className="pill">{p.vehicles.map((v) => vehicleById[v.model]?.emoji).join(' ')}</span>}
+        {p.vehicles.length > 0 && <span className="pill">{p.vehicles.slice(0, 4).map((v) => vehicleById[v.model]?.emoji).join(' ')}</span>}
       </div>
-      <div className="row" style={{ marginTop: 16 }}>
-        <button className="btn btn-green grow" onClick={() => openPhone('dm', p.username)}>💬 {L('Tuma ujumbe', 'Message')}</button>
-        <button className="btn btn-ghost grow" onClick={() => openPhone('pesa', { send: p.username })}>💸 {L('Tuma pesa', 'Send money')}</button>
+      <button className="btn btn-green btn-block" style={{ marginTop: 12 }} disabled={blocked} onClick={() => openPhone('dm', p.username)}>💬 {L('Chat', 'Chat')}</button>
+      <div className="row" style={{ marginTop: 8, gap: 8 }}>
+        <button className="btn btn-white grow" style={{ border: '1px solid var(--line)' }} onClick={() => run('/contacts', { method: 'POST', body: { username: p.username } }).then((r) => r && toast(r.find((c) => c.username === p.username)?.mutual ? L(`🤝 Sasa wewe na @${p.username} ni marafiki!`, `🤝 You and @${p.username} are now friends!`) : L(`📨 Ombi la urafiki limetumwa kwa @${p.username}`, `📨 Friend request sent to @${p.username}`)))}>➕ {L('Rafiki', 'Add friend')}</button>
+        <button className="btn btn-white grow" style={{ border: '1px solid var(--line)' }} onClick={() => openPhone('pesa', { send: p.username })}>💸 {L('Tuma pesa', 'Send money')}</button>
       </div>
-      <div className="row" style={{ marginTop: 8 }}>
-        <button className="btn btn-white grow" style={{ border: '1px solid var(--line)' }} onClick={() => run('/contacts', { method: 'POST', body: { username: p.username } }).then((r) => r && useStore.getState().toast(r.find((c) => c.username === p.username)?.mutual ? L(`🤝 Sasa wewe na @${p.username} ni marafiki!`, `🤝 You and @${p.username} are now friends!`) : L(`📨 Ombi la urafiki limetumwa kwa @${p.username}`, `📨 Friend request sent to @${p.username}`)))}>➕ {L('Ongeza rafiki', 'Add friend')}</button>
-      </div>
-      {p.online && (
-        <div className="row" style={{ marginTop: 8 }}>
+      {p.online && !blocked && (
+        <div className="row" style={{ marginTop: 8, gap: 8 }}>
           <button className="btn btn-dark grow" onClick={() => inviteHome(p.username)}>🏠 {L('Mwalike kwako', 'Invite home')}</button>
           <button className="btn btn-ghost grow" onClick={() => goToPlayer(p.username)}>📍 {L('Nenda kwake', 'Go to them')}</button>
         </div>
       )}
-      {p.online && <GoOut username={p.username} />}
+      {p.online && !blocked && <GoOut username={p.username} />}
+      {p.online && !blocked && (
+        <>
+          <div className="act-grid">
+            {INTERACTIONS.map((it) => (
+              <button key={it.id} className="act-card" disabled={!near} onClick={() => interact(it)}>
+                <span className="ac-ic">{it.emoji}</span>
+                <span><b>{loc(it)}</b><small>{it.chance ? `${Math.round(it.chance * 100)}% · ` : ''}{Object.keys(it.effects).map((k) => `+${k === 'social' ? L('Jamii', 'Social') : L('Raha', 'Fun')}`).join(' · ')}</small></span>
+              </button>
+            ))}
+          </div>
+          {!near && <div className="hint center">{L('Msogelee ili kusalimia, kupiga stori au utani.', 'Walk up to them to say hello, gist or joke.')}</div>}
+        </>
+      )}
+      <div className="mini-acts">
+        {p.online && !blocked && <button disabled={d > CRIME.robRange} onClick={rob}>🦹 {L('Iba · hatari', 'Rob · risky')}</button>}
+        <button onClick={police}>🚓 {L('Ripoti polisi', 'Report to police')}</button>
+        <button onClick={block}>🚫 {blocked ? L('Ondoa kizuizi', 'Unblock') : L('Zuia', 'Block')}</button>
+        <button onClick={() => useStore.setState({ sheet: { type: 'report', id: p.username } })}>⚑ {L('Ripoti', 'Report')}</button>
+      </div>
       <button className="link-share" style={{ marginTop: 10 }} onClick={() => share({ title: `@${p.username}`, text: L(`Mcheki @${p.username} kwenye Bongo Life 🇹🇿`, `Check out @${p.username} on Bongo Life 🇹🇿`), params: { u: p.username } })}>🔗 {L('Shiriki profaili hii', 'Share this profile')}</button>
+    </Sheet>
+  );
+}
+
+/** Report a player to the Bongo Life team (also blocks them). */
+function ReportSheet({ username, onClose }) {
+  const run = useStore((s) => s.run);
+  const [note, setNote] = useState('');
+  const send = async (reason) => {
+    const r = await run(`/players/${encodeURIComponent(username)}/report`, { method: 'POST', body: { reason, note } });
+    if (r) {
+      useStore.getState().toast(L(`⚑ Asante. Timu yetu itaangalia. @${username} amezuiwa.`, `⚑ Thanks. Our team will review it. @${username} is now blocked.`));
+      onClose();
+    }
+  };
+  return (
+    <Sheet title={L(`Ripoti @${username}`, `Report @${username}`)} icon="⚑" sub={L('Kuna nini? Profaili yao na chat zenu za karibuni zitatumwa kwa timu ya Bongo Life, na watazuiwa.', "What's going on? Their profile and your recent chat with them are shared with the Bongo Life team, and they'll be blocked.")} onClose={onClose}>
+      <div className="report-list">
+        {REPORT_REASONS.map(([id, sw, en]) => <button key={id} onClick={() => send(id)}>{L(sw, en)}</button>)}
+      </div>
+      <textarea className="field report-note" rows={2} maxLength={500} placeholder={L('Kuna kingine tujue? (si lazima)', 'Anything else we should know? (optional)')} value={note} onChange={(e) => setNote(e.target.value)} />
     </Sheet>
   );
 }
@@ -414,6 +490,7 @@ export function Sheets() {
   if (!sheet) return null;
   if (sheet.type === 'place') return <PlaceSheet id={sheet.id} onClose={close} />;
   if (sheet.type === 'travel') return <TravelCard id={sheet.id} onClose={close} />;
+  if (sheet.type === 'report') return <ReportSheet username={sheet.id} onClose={close} />;
   if (sheet.type === 'plot') return <PlotSheet id={sheet.id} onClose={close} />;
   if (sheet.type === 'player') return <PlayerSheet username={sheet.id} onClose={close} />;
   if (sheet.type === 'ad') return <AdSheet id={sheet.id} onClose={close} />;

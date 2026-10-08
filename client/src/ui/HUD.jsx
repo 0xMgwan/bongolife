@@ -323,7 +323,7 @@ function useTips(me) {
   if ((n.energy ?? 100) < 35) tips.push({ icon: '😴', c: '#3b82f6', t: L('Umechoka', 'Tired'), s: L('Nenda Kwangu, gusa kitanda', 'Go home and tap your bed'), go: () => goHomeTo('sleep') });
   if ((n.hygiene ?? 100) < 35) tips.push({ icon: '🧼', c: '#06b6d4', t: L('Jisafishe', 'Freshen up'), s: L('Gusa ndoo au bafu Kwangu', 'Tap the bucket or shower at home'), go: () => goHomeTo('bath') });
   if ((n.hunger ?? 100) < 35) tips.push({ icon: '🍛', c: '#f59e0b', t: L('Njaa inauma', 'Hungry'), s: L('Pika Kwangu au kula kwa Mama Ntilie', 'Cook at home or eat at Mama Ntilie'), go: () => goHomeTo('kitchen') });
-  if ((n.fun ?? 100) < 35) tips.push({ icon: '🎉', c: '#ec4899', t: L('Kula bata', 'Have some fun'), s: L('Club Mzuka au Coco Beach', 'Club Mzuka or Coco Beach'), go: () => { set({ tab: 'town' }); goToPlace('club'); } });
+  if ((n.fun ?? 100) < 35) tips.push({ icon: '🎉', c: '#ec4899', t: L('Kula bata', 'Have some fun'), s: L('1245 Club, Elements au Coco Beach', '1245 Club, Elements or Coco Beach'), go: () => { set({ tab: 'town' }); goToPlace('club'); } });
   if ((n.social ?? 100) < 35) tips.push({ icon: '💬', c: '#8b5cf6', t: L('Piga stori', 'Catch up'), s: L('Ongea na watu kwenye chat', 'Talk to people in chat'), go: () => openPhone('mtaa') });
   if (me.pendingIncome > 0) tips.push({ icon: '🏦', c: '#16a34a', t: L('Kodi iko tayari', 'Income ready'), s: fmtTsh(me.pendingIncome), go: () => openPhone('mali') });
   if (me.unread > 0) tips.push({ icon: '✉️', c: '#2563eb', t: L(`Meseji ${me.unread} mpya`, `${me.unread} new messages`), s: L('Fungua Ujumbe', 'Open Messages'), go: () => openPhone('ujumbe') });
