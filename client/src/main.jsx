@@ -6,6 +6,10 @@ import '@fontsource/plus-jakarta-sans/latin-500.css';
 import '@fontsource/plus-jakarta-sans/latin-600.css';
 import '@fontsource/plus-jakarta-sans/latin-700.css';
 import '@fontsource/plus-jakarta-sans/latin-800.css';
+// Archivo (Brand Kit display face) for the branded selfie card.
+import '@fontsource/archivo/latin-400.css';
+import '@fontsource/archivo/latin-600.css';
+import '@fontsource/archivo/latin-800.css';
 import './styles.css';
 
 // Dev-only: drive frames with timers when testing in a hidden/headless tab (?raf-shim).
