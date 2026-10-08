@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TRAVEL, placeById, travelCost, fmtTsh, fmtShort, venueOf, vehicleById, TRIP_MODES, tripKey, cityAt, cityById } from '@shared/world.js';
+import { TRAVEL, placeById, travelCost, fuelCost, tripFuel, bestCar, fmtTsh, fmtShort, venueOf, vehicleById, TRIP_MODES, tripKey, cityAt, cityById } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { local } from '../net.js';
 import { goToPlace, startRide, enterPlace } from '../nav.js';
@@ -34,7 +34,7 @@ export function TravelOptions({ placeId, onDone }) {
   const opts = [
     { mode: 'walk', emoji: '🚶', name: L('Tembea', 'Trek'), cost: 0 },
     ...Object.entries(TRAVEL).filter(([, t]) => !t.own).map(([mode, t]) => ({ mode, emoji: t.emoji, name: t.name.split(' ')[0], cost: travelCost(mode, from, place.pos) })),
-    ...(car ? [{ mode: 'gari', emoji: vehicleById[car.model]?.emoji || '🚗', name: L('Gari langu', 'My car'), cost: 0, own: true }] : []),
+    ...(car ? [{ mode: 'gari', emoji: vehicleById[car.model]?.emoji || '🚗', name: L('Gari langu', 'My car'), cost: fuelCost(car.model, from, place.pos), own: true, fuel: true }] : []),
   ];
   return (
     <div className="travel-row">
@@ -42,7 +42,7 @@ export function TravelOptions({ placeId, onDone }) {
         <button key={o.mode} className={`travel-opt ${o.own ? 'own' : ''}`} disabled={o.cost > me.money} onClick={() => go(o.mode)}>
           <span className="em">{o.emoji}</span>
           <b>{o.name}</b>
-          <small>{o.cost ? fmtTsh(o.cost).replace('TSh ', 'TSh ') : L('Bure', 'Free')}</small>
+          <small>{o.cost ? `${o.fuel ? '⛽ ' : ''}${fmtTsh(o.cost)}` : L('Bure', 'Free')}</small>
         </button>
       ))}
     </div>
@@ -72,13 +72,14 @@ export function TripOptions({ placeId, onDone }) {
   const from = cityAt(local.x, local.z)?.id || 'dar';
   const to = cityAt(...place.pos)?.id;
   const key = tripKey(from, to);
-  const car = [...(me.vehicles || [])].filter((v) => ['car', 'van', 'suv'].includes(vehicleById[v.model]?.kind)).sort((a, b) => vehicleById[b.model].price - vehicleById[a.model].price)[0];
+  const car = bestCar(me.vehicles);
+  const priceOf = (m) => (m.own && car ? tripFuel(m.price[key], car.model) : m.price[key]);
   const modes = Object.entries(TRIP_MODES).filter(([id, m]) => m.price[key] && (!m.own || car));
   const [sel, setSel] = useState(modes.find(([id]) => id === 'car') ? 'car' : modes[0]?.[0]);
   const [ins, setIns] = useState(true);
   if (!modes.length) return <div className="hint">{L('Hakuna usafiri wa moja kwa moja.', 'No direct way to get there.')}</div>;
   const m = TRIP_MODES[sel];
-  const total = m.price[key] + (ins ? m.ins : 0);
+  const total = priceOf(m) + (ins ? m.ins : 0);
   const cityName = cityById[to].name;
   const go = async () => {
     const r = await run('/trip', { method: 'POST', body: { placeId, mode: sel, insured: ins } });
@@ -94,7 +95,7 @@ export function TripOptions({ placeId, onDone }) {
           <button key={id} className={`travel-opt ${sel === id ? 'own' : ''}`} onClick={() => setSel(id)}>
             <span className="em">{t.emoji}</span>
             <b>{L(t.name, t.nameEn).split(' ')[0]}</b>
-            <small>{t.own ? `TSh ${fmtShort(t.price[key])}` : L(`kuanzia ${fmtShort(t.price[key])}`, `from ${fmtShort(t.price[key])}`)}</small>
+            <small>{t.own ? `⛽ TSh ${fmtShort(priceOf(t))}` : L(`kuanzia ${fmtShort(t.price[key])}`, `from ${fmtShort(t.price[key])}`)}</small>
             <small style={{ fontSize: 10.5, textAlign: 'center', lineHeight: 1.2 }}>{t.own ? L('mafuta tu', 'fuel only') : L(t.note[0], t.note[1])}</small>
           </button>
         ))}

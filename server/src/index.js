@@ -4,6 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
 import { Server } from 'socket.io';
+import { bumpStats } from './story.js';
 import { NEED_TICK_SECONDS, isWater, moodOf, placeById, EVENT_LIMITS, HANGOUT_PLACES } from '../../shared/world.js';
 import { db, getUser, saveFields, now, UPLOAD_DIR, getSettings } from './db.js';
 import { verifyToken } from './auth.js';
@@ -211,6 +212,29 @@ io.on('connection', (socket) => {
     const name = placeById[placeId];
     if (accept) emitTo(fromId, 'hangout:accepted', { by: p.username, placeId });
     else emitTo(fromId, 'toast', { text: [`@${p.username} hawezi kuja ${name.name} sasa hivi.`, `@${p.username} can't make it to ${name.name} right now.`] });
+  });
+  // Neighbours: knock on someone's door; they open (→ you may enter) or not.
+  const lastKnock = new Map();
+  socket.on('knock', ({ to } = {}, ack) => {
+    const host = typeof to === 'string' && db.prepare('SELECT id, username FROM users WHERE username = ?').get(to.replace(/^@/, ''));
+    if (!host || host.id === uid) return ack?.({ error: 'not_found' });
+    const o = online.get(host.id);
+    if (!o) return ack?.({ error: 'offline' });
+    if (o.home !== host.id) return ack?.({ error: 'not_home' });
+    if (isBlocked(uid, host.id)) return ack?.({ error: 'blocked' });
+    if (now() - (lastKnock.get(host.id) || 0) < 10_000) return ack?.({ error: 'slow' });
+    lastKnock.set(host.id, now());
+    emitTo(host.id, 'knock', { fromId: uid, from: p.username, fromName: p.name, appearance: p.appearance });
+    ack?.({ ok: true });
+  });
+  socket.on('knock:reply', ({ fromId, accept } = {}) => {
+    if (!online.has(fromId)) return;
+    if (accept) {
+      addInvite(uid, fromId);
+      bumpStats(fromId, ['visits']);
+      bumpStats(uid, ['hosted_visit']);
+    }
+    emitTo(fromId, 'knock:reply', { host: p.username, hostId: uid, accept: !!accept });
   });
   socket.on('invite:reply', ({ fromId, accept } = {}) => {
     if (online.has(fromId)) emitTo(fromId, 'toast', { text: accept ? [`🏠 @${p.username} amekubali — anakuja!`, `🏠 @${p.username} accepted — on the way!`] : [`@${p.username} hawezi kuja sasa.`, `@${p.username} can't come right now.`] });

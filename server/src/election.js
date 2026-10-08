@@ -2,6 +2,7 @@
 // last week's winner becomes Mkuu wa Mkoa with a salary and a city-wide message.
 import { ELECTION, electionPeriod, electionEnds } from '../../shared/world.js';
 import { db, getUser, addMoney, GameError, now } from './db.js';
+import { bumpStats } from './story.js';
 
 const shiftsOf = (u) => Object.values(u.jobXp || {}).reduce((a, b) => a + b, 0);
 const parse = (r) => (r ? { ...r, appearance: JSON.parse(r.appearance || 'null') } : null);
@@ -53,6 +54,7 @@ export const runForMayor = db.transaction((userId, slogan) => {
   if (db.prepare('SELECT 1 FROM candidates WHERE period = ? AND user_id = ?').get(period, userId)) throw new GameError(['Tayari unagombea wiki hii.', "You're already running this week."]);
   addMoney(userId, -ELECTION.fee, 'spend', 'Ada ya kugombea Ukuu wa Mkoa');
   db.prepare('INSERT INTO candidates (period, user_id, slogan, created_at) VALUES (?, ?, ?, ?)').run(period, userId, slogan || null, now());
+  bumpStats(userId, ['ran']);
 });
 
 export const vote = db.transaction((userId, candidateId) => {

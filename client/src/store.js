@@ -47,6 +47,8 @@ export const useStore = create((set, get) => ({
   accident: null, // { health } — knocked down by a car
   eventsVersion: 0,
   events: [], // upcoming + live events (Matukio)
+  knocking: null, // { username } waiting at a neighbour's door
+  knockIn: null, // { fromId, from, appearance } someone at your door
   confirm: null, // in-game confirm dialog (see ui/Confirm.jsx)
   casino: null, // open casino game: 'slots' | 'blackjack' | 'roulette'
   robbed: null, // { by, amount } — just got robbed

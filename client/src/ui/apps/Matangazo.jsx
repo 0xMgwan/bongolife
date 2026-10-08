@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { AD_MAX_DAYS, fmtTsh } from '@shared/world.js';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AD_MAX_DAYS } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { api } from '../../api.js';
 import { AppHead } from '../Phone.jsx';
@@ -16,6 +16,10 @@ export function Matangazo({ arg, back }) {
   const [file, setFile] = useState(null);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [phone, setPhone] = useState(me.phone ? '0' + me.phone.slice(3) : '');
+  const [pay, setPay] = useState(null); // { paymentId, amountTzs, instructions, status }
+  const timer = useRef();
+  useEffect(() => () => clearInterval(timer.current), []);
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
   useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
   const load = () => {
@@ -27,7 +31,7 @@ export function Matangazo({ arg, back }) {
   };
   useEffect(load, []);
   const slot = slots.find((s) => s.id === f.slotId);
-  const cost = slot ? slot.pricePerDay * f.days : 0;
+  const tzs = slot ? (slot.tzsPerDay || 0) * f.days : 0;
   const up = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
   const submit = async () => {
@@ -35,15 +39,22 @@ export function Matangazo({ arg, back }) {
     setBusy(true);
     const form = new FormData();
     for (const [k, v] of Object.entries(f)) form.append(k, String(v));
+    form.append('phone', phone);
     if (file) form.append('image', file);
     try {
       const r = await api('/ads', { method: 'POST', form });
-      useStore.setState({ me: r.me });
-      useStore.getState().toast(r.startsAt > Date.now() + 5000 ? L(`📢 Tangazo limepangwa kuanza ${new Date(r.startsAt).toLocaleString()}`, `📢 Ad scheduled to start ${new Date(r.startsAt).toLocaleString()}`) : L('📢 Tangazo lako liko hewani!', '📢 Your ad is live!'));
-      setF({ ...f, title: '', body: '', link: '' });
-      setFile(null);
-      setTab('mine');
-      load();
+      setPay(r);
+      clearInterval(timer.current);
+      timer.current = setInterval(async () => {
+        try {
+          const s = await api(`/wallet/topup/${r.paymentId}`);
+          if (s.status !== 'pending') {
+            clearInterval(timer.current);
+            setPay((p) => ({ ...p, status: s.status }));
+            if (s.status === 'paid') { setF((x) => ({ ...x, title: '', body: '', link: '' })); setFile(null); load(); }
+          }
+        } catch {}
+      }, 3000);
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -59,7 +70,41 @@ export function Matangazo({ arg, back }) {
           <button className={tab === 'new' ? 'on' : ''} onClick={() => setTab('new')}>{L('Tangazo jipya', 'New ad')}</button>
           <button className={tab === 'mine' ? 'on' : ''} onClick={() => setTab('mine')}>{L('Yangu', 'Mine')} ({mine.length})</button>
         </div>
-        {tab === 'new' && (
+        {tab === 'new' && pay && (
+          <div className="box center">
+            {pay.status === 'paid' ? (
+              <>
+                <div style={{ fontSize: 44 }}>📢</div>
+                <h3 style={{ margin: '6px 0' }}>{L('Malipo yamepokelewa!', 'Payment received!')}</h3>
+                <div className="small muted">{L('Tangazo lako liko hewani (au kwenye foleni ya bango).', 'Your ad is live (or queued for the next free turn on the board).')}</div>
+                <button className="btn btn-green btn-sm" style={{ marginTop: 12 }} onClick={() => { setPay(null); setTab('mine'); }}>{L('Ona matangazo yangu', 'See my ads')}</button>
+              </>
+            ) : pay.status && pay.status !== 'pending' ? (
+              <>
+                <div style={{ fontSize: 44 }}>❌</div>
+                <h3 style={{ margin: '6px 0' }}>{L('Malipo hayakufanikiwa', 'Payment failed')}</h3>
+                <button className="btn btn-ghost btn-sm" onClick={() => setPay(null)}>{L('Jaribu tena', 'Try again')}</button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 40 }} className="busy-em">📲</div>
+                <h3 style={{ margin: '6px 0' }}>{L('Thibitisha kwenye simu yako', 'Confirm on your phone')}</h3>
+                <div className="bold">TZS {Number(pay.amountTzs).toLocaleString()}</div>
+                {pay.instructions?.lipaNamba ? (
+                  <div className="small" style={{ textAlign: 'left', lineHeight: 1.6, marginTop: 6 }}>
+                    {L('Lipa kwa', 'Pay to')} <b>Lipa Namba {pay.instructions.lipaNamba}</b> ({pay.instructions.accountName})
+                    {pay.instructions.note && <div className="muted">{pay.instructions.note}</div>}
+                  </div>
+                ) : (
+                  <div className="small muted">{pay.instructions?.note || L('Weka PIN yako ya mobile money kuthibitisha.', 'Enter your mobile money PIN to confirm.')}</div>
+                )}
+                <div className="progress" style={{ marginTop: 14 }}><div style={{ width: '60%', animation: 'pulse 1s infinite' }} /></div>
+                <div className="small muted" style={{ marginTop: 8 }}>{L('Tangazo litaenda hewani malipo yakithibitishwa.', 'Your ad goes live as soon as the payment confirms.')}</div>
+              </>
+            )}
+          </div>
+        )}
+        {tab === 'new' && !pay && (
           <div className="box">
             <div className="adprev" style={{ background: preview ? `url(${preview}) center/cover` : f.bg }}>
               <b>{f.title || L('Kichwa cha tangazo', 'Ad headline')}</b>
@@ -68,7 +113,7 @@ export function Matangazo({ arg, back }) {
             <div className="label">{L('Bango', 'Billboard')}</div>
             <select className="field" value={f.slotId} onChange={up('slotId')}>
               {slots.map((s) => (
-                <option key={s.id} value={s.id}>{loc(s)} — {fmtTsh(s.pricePerDay)}/{L('siku', 'day')} · {s.live}/{s.capacity}{s.bookedUntil ? L(' (imejaa)', ' (full)') : ''}</option>
+                <option key={s.id} value={s.id}>{loc(s)} — TZS {(s.tzsPerDay || 0).toLocaleString()}/{L('siku', 'day')} · {s.live}/{s.capacity}{s.bookedUntil ? L(' (imejaa)', ' (full)') : ''}</option>
               ))}
             </select>
             {slot?.bookedUntil && <div className="hint">{L(`Skrini hii imejaa (${slot.live}/${slot.capacity}). Lako litaanza ${new Date(slot.bookedUntil).toLocaleString()}.`, `This screen is full (${slot.live}/${slot.capacity}). Yours starts ${new Date(slot.bookedUntil).toLocaleString()}.`)}</div>}
@@ -86,12 +131,14 @@ export function Matangazo({ arg, back }) {
             </div>
             <div className="label">{L('Siku', 'Days')}: {f.days}</div>
             <input type="range" min="1" max={AD_MAX_DAYS} value={f.days} onChange={(e) => setF({ ...f, days: Number(e.target.value) })} style={{ width: '100%', accentColor: 'var(--green)' }} />
+            <div className="label">{L('Namba ya mobile money', 'Mobile money number')}</div>
+            <input className="field" inputMode="tel" placeholder="0712 345 678" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <div className="hint">💳 {L('Matangazo yanalipwa kwa pesa halisi (nTZS · M-Pesa, Tigo Pesa, Airtel Money) — si pesa ya mchezo.', 'Ads are paid with real money (nTZS · M-Pesa, Tigo Pesa, Airtel Money) — not game cash.')}</div>
             {err && <div className="err">{err}</div>}
-            <button className="btn btn-green btn-block" style={{ marginTop: 14 }} disabled={busy || !f.title || me.money < cost} onClick={submit}>
-              {busy ? L('Subiri…', 'Please wait…') : L(`Lipa ${fmtTsh(cost)} & weka hewani`, `Pay ${fmtTsh(cost)} & go live`)}
+            <button className="btn btn-green btn-block" style={{ marginTop: 14 }} disabled={busy || !f.title || !phone} onClick={submit}>
+              {busy ? L('Subiri…', 'Please wait…') : L(`Lipa TZS ${tzs.toLocaleString()} & weka hewani`, `Pay TZS ${tzs.toLocaleString()} & go live`)}
             </button>
             <div className="hint center">{L('Kwa kuweka tangazo unakubali', 'By posting you agree to the')} <a href="/ads-policy" target="_blank">{L('Sera ya Matangazo', 'Advertising Policy')}</a>.</div>
-            {me.money < cost && <div className="hint center red">{L('Salio halitoshi — ongeza kwenye Bongo Pesa.', 'Not enough balance — top up in your Wallet.')}</div>}
           </div>
         )}
         {tab === 'mine' && (
@@ -101,10 +148,10 @@ export function Matangazo({ arg, back }) {
               <div key={a.id} className="tx">
                 <div>
                   <b>{a.title}</b>
-                  <div className="small muted">{loc(slots.find((s) => s.id === a.slot_id))} · {L('hadi', 'until')} {new Date(a.ends_at).toLocaleDateString()}</div>
+                  <div className="small muted">{loc(slots.find((s) => s.id === a.slot_id))}{a.ends_at ? ` · ${L('hadi', 'until')} ${new Date(a.ends_at).toLocaleDateString()}` : ''}{a.paid_tzs ? ` · TZS ${a.paid_tzs.toLocaleString()}` : ''}</div>
                 </div>
                 <span className={`small bold ${a.status === 'live' && a.ends_at > Date.now() ? 'green' : 'muted'}`}>
-                  {a.status !== 'live' ? a.status : a.ends_at < Date.now() ? L('imeisha', 'ended') : a.starts_at > Date.now() ? L('foleni', 'queued') : L('hewani', 'live')}
+                  {a.status === 'awaiting_payment' ? L('inasubiri malipo', 'awaiting payment') : a.status === 'payment_failed' ? L('malipo yameshindwa', 'payment failed') : a.status !== 'live' ? a.status : a.ends_at < Date.now() ? L('imeisha', 'ended') : a.starts_at > Date.now() ? L('foleni', 'queued') : L('hewani', 'live')}
                 </span>
               </div>
             ))}

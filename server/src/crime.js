@@ -3,6 +3,7 @@ import { CRIME, INTERACTIONS, INTERACT_RANGE, POLICE_ID, COURT_ID, placeById } f
 import { db, getUser, saveFields, addMoney, GameError, now } from './db.js';
 import { online, broadcast, emitTo } from './presence.js';
 import { applyNeeds } from './game.js';
+import { bumpStats } from './story.js';
 
 const jailed = (u) => !!u?.jail && u.jail.phase !== 'free';
 export const isJailed = jailed;
@@ -53,6 +54,7 @@ export const interact = db.transaction((userId, target, kind) => {
   const me = getUser(userId);
   const ok = def.chance == null || Math.random() < def.chance;
   saveFields(userId, { needs: applyNeeds(me.needs, ok ? def.effects : def.fail) });
+  bumpStats(userId, ['interact', `interact:${kind}`]);
   if (ok && def.them) saveFields(target.id, { needs: applyNeeds(getUser(target.id).needs, def.them) });
   // A little line in your private chat, like a nudge.
   db.prepare('INSERT INTO messages (from_id, to_id, body, created_at) VALUES (?, ?, ?, ?)').run(userId, target.id, `::${kind}${ok ? '' : ':fail'}`, now());
@@ -72,7 +74,9 @@ export const rob = db.transaction((userId, target) => {
   if (jailed(target)) throw new GameError(['Yuko mikononi mwa polisi.', "They're in police custody."]);
   if (now() - (lastRob.get(userId) || 0) < CRIME.robCooldownMs) throw new GameError(['Polisi wanakuangalia — subiri kwanza.', 'The police are watching you — lie low for a while.'], 429);
   lastRob.set(userId, now());
-  if (Math.random() > CRIME.robSuccess || target.money < CRIME.robMin) {
+  // Every report the police have on you makes the next job riskier.
+  const heat = Math.min(0.25, (me.stats?.police_reports || 0) * 0.05);
+  if (Math.random() > CRIME.robSuccess - heat || target.money < CRIME.robMin) {
     arrest(userId, ['Jaribio la wizi', 'Attempted robbery'], CRIME.fine);
     emitTo(target.id, 'toast', { text: [`🚓 @${me.username} alijaribu kukuibia — polisi wamemkamata!`, `🚓 @${me.username} tried to rob you — the police caught them!`] });
     return { caught: true };
@@ -107,6 +111,7 @@ export const reportToPolice = db.transaction((userId, target) => {
 
 // ------------------------------------------------------- police & court
 export function arrest(userId, reason, fine) {
+  db.prepare('INSERT INTO arrests (user_id, reason, fine, created_at) VALUES (?, ?, ?, ?)').run(userId, JSON.stringify(reason), fine, now());
   saveFields(userId, { jail: { phase: 'arrested', reason, fine, bail: Math.round((fine * CRIME.bailPct) / 1000) * 1000, at: now() }, busy: null });
   moveTo(userId, POLICE_ID);
   const u = getUser(userId);

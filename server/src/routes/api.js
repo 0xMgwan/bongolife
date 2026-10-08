@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   GAME, HAIRSTYLES, SKIN_TONES, HAIR_COLORS, OUTFITS, TRAITS, SPAWNS, BILLBOARDS, AD_MAX_DAYS,
-  billboardById, outfitById, ADS_PER_BOARD, REFERRAL, ELECTION, EVENT_LIMITS, EVENT_PLACES, placeById,
+  billboardById, outfitById, ADS_PER_BOARD, adPriceTzs, adTzsPerDay, CRIME, plotById, togetherById, REFERRAL, ELECTION, EVENT_LIMITS, EVENT_PLACES, placeById,
 } from '../../../shared/world.js';
 import { db, getUser, getUserByUsername, createUser, saveFields, addMoney, GameError, now, UPLOAD_DIR, getSettings } from '../db.js';
 import { hashPassword, checkPassword, signToken, requireAuth, requireAdmin, rateLimit, USERNAME_RE, normalizePhone } from '../auth.js';
@@ -18,6 +18,8 @@ import * as casino from '../casino.js';
 import * as game from '../game.js';
 import { online, onlineCount, broadcast, emitTo } from '../presence.js';
 import { provider, providers, TOPUP_RATE } from '../payments/index.js';
+import * as story from '../story.js';
+import * as invest from '../invest.js';
 
 export const api = express.Router();
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -303,7 +305,7 @@ api.get('/wallet', (req, res) => {
   res.json({
     balance: getUser(req.user.id).money,
     transactions: db.prepare('SELECT id, amount, balance_after, kind, memo, created_at FROM transactions WHERE user_id = ? ORDER BY id DESC LIMIT 60').all(req.user.id),
-    topups: db.prepare('SELECT id, provider, method, amount_tzs, coins, status, instructions, created_at FROM topups WHERE user_id = ? ORDER BY id DESC LIMIT 10').all(req.user.id)
+    topups: db.prepare("SELECT id, provider, method, amount_tzs, coins, status, instructions, created_at FROM topups WHERE user_id = ? AND purpose = 'topup' ORDER BY id DESC LIMIT 10").all(req.user.id)
       .map((t) => ({ ...t, instructions: t.instructions ? JSON.parse(t.instructions) : null })),
     topup: provider
       ? { provider: provider.id, label: provider.label, livemode: provider.livemode, methods: provider.methods, rate: TOPUP_RATE, min: GAME.minTopupTzs, max: GAME.maxTopupTzs, presets: [1_000, 2_000, 5_000, 10_000, 20_000, 50_000] }
@@ -320,7 +322,7 @@ api.post('/wallet/topup', rateLimit('topup', 10, 10 * 60_000), wrap(async (req, 
   const method = provider.methods.includes(req.body.method) ? req.body.method : provider.methods[0];
   const phone = normalizePhone(req.body.phone);
   if (!phone) throw new GameError(['Namba ya simu si sahihi (mfano 0712 345 678).', 'Invalid phone number (e.g. 0712 345 678).']);
-  const pending = db.prepare("SELECT COUNT(*) n FROM topups WHERE user_id = ? AND status = 'pending'").get(req.user.id).n;
+  const pending = db.prepare("SELECT COUNT(*) n FROM topups WHERE user_id = ? AND status = 'pending' AND purpose = 'topup'").get(req.user.id).n;
   if (pending >= 3) throw new GameError(['Una malipo 3 yanayosubiri. Yamalize kwanza.', 'You have 3 pending payments. Finish them first.']);
   let created;
   try {
@@ -360,6 +362,20 @@ export async function settleTopup(t, { recheckExpired = false } = {}) {
 export function applyTopupStatus(t, status) {
   if (status === 'pending') return status;
   const from = status === 'paid' ? "status IN ('pending', 'expired')" : "status = 'pending'";
+  if (t.purpose === 'ad') {
+    let ad = null;
+    db.transaction(() => {
+      const r = db.prepare(`UPDATE topups SET status = ?, credited_at = ? WHERE id = ? AND ${from}`).run(status, status === 'paid' ? now() : null, t.id);
+      if (!r.changes) return;
+      if (status === 'paid') ad = activateAd(t.ref_id);
+      else db.prepare("UPDATE ads SET status = 'payment_failed' WHERE id = ? AND status = 'awaiting_payment'").run(t.ref_id);
+    })();
+    if (ad) {
+      broadcast('ads', liveAds());
+      emitTo(t.user_id, 'toast', { text: [`📢 Malipo yamepokelewa — "${ad.title}" iko hewani!`, `📢 Payment received — "${ad.title}" is live!`], refresh: true });
+    }
+    return status;
+  }
   const credited = db.transaction(() => {
     // Compare-and-set so a topup is only ever credited once.
     const r = db.prepare(`UPDATE topups SET status = ?, credited_at = ? WHERE id = ? AND ${from}`).run(status, status === 'paid' ? now() : null, t.id);
@@ -484,9 +500,19 @@ api.post('/players/:username/rob', (req, res) => {
   const r = crime.rob(req.user.id, targetOf(req));
   res.json({ ...r, me: game.playerState(req.user.id) });
 });
+const reportedAt = new Map();
 api.post('/players/:username/report-police', (req, res) => {
   const t = targetOf(req);
+  if (t.id === req.user.id) throw new GameError(['😅', '😅']);
   const r = crime.reportToPolice(req.user.id, t);
+  // A general report (no matching robbery) still goes on their file — one per reporter per day.
+  if (!r.found) {
+    const key = `rep:${req.user.id}:${t.id}`;
+    if (now() - (reportedAt.get(key) || 0) > 86_400_000) {
+      reportedAt.set(key, now());
+      story.bumpStats(t.id, ['police_reports']);
+    }
+  }
   res.json({ ...r, me: game.playerState(req.user.id) });
 });
 api.post('/players/:username/block', (req, res) => {
@@ -588,6 +614,7 @@ api.post('/events', (req, res) => {
   const info = db.prepare('INSERT INTO events (host_id, title, description, place_id, starts_at, created_at) VALUES (?, ?, ?, ?, ?, ?)')
     .run(req.user.id, title, description || null, placeId, startsAt, now());
   db.prepare('INSERT INTO event_rsvps (event_id, user_id, created_at) VALUES (?, ?, ?)').run(info.lastInsertRowid, req.user.id, now());
+  story.bumpStats(req.user.id, ['hosted']);
   broadcast('toast', { text: [`🎉 Tukio jipya: "${title}" na @${req.user.username}`, `🎉 New event: "${title}" by @${req.user.username}`] });
   broadcast('events:changed', {});
   res.status(201).json(eventRows(req.user.id));
@@ -623,6 +650,90 @@ api.get('/players/:username', (req, res) => {
 });
 api.get('/leaderboard', (_req, res) => res.json(game.leaderboard()));
 
+// ------------------------------------------------------ ambitions & storylines
+story.wireStory({ netWorth: game.netWorth, currentMayor: election.currentMayor });
+api.get('/story', (req, res) => res.json(story.storyState(req.user.id)));
+api.post('/story/choose', (req, res) => {
+  story.chooseAmbition(req.user.id, str(req.body.amb, 20));
+  res.json({ story: story.storyState(req.user.id), me: game.playerState(req.user.id) });
+});
+api.post('/story/claim', (req, res) => {
+  const r = story.claimChapter(req.user.id);
+  res.json({ ...r, story: story.storyState(req.user.id), me: game.playerState(req.user.id) });
+});
+api.post('/story/dilemma', rateLimit('dilemma', 20, 60_000), (req, res) => {
+  const r = story.answerDilemma(req.user.id, str(req.body.id, 20), Math.trunc(Number(req.body.choice)));
+  res.json({ ...r, story: story.storyState(req.user.id), me: game.playerState(req.user.id) });
+});
+
+// ------------------------------------------------------------------ investing
+api.get('/invest', (req, res) => res.json(invest.portfolio(req.user.id)));
+const investDone = (req, res, extra = {}) => res.json({ ...extra, invest: invest.portfolio(req.user.id), me: game.playerState(req.user.id) });
+api.post('/invest/plots/:id/buy', (req, res) => {
+  crime.assertFree(getUser(req.user.id));
+  investDone(req, res, invest.buyPlotRemote(req.user.id, req.params.id));
+});
+api.post('/invest/plots/:id/sell', (req, res) => investDone(req, res, invest.sellPlot(req.user.id, req.params.id)));
+api.post('/invest/trucks', (req, res) => {
+  crime.assertFree(getUser(req.user.id));
+  invest.buyTruck(req.user.id);
+  investDone(req, res);
+});
+api.post('/invest/trucks/:id/sell', (req, res) => investDone(req, res, invest.sellTruck(req.user.id, Number(req.params.id))));
+
+// ---------------------------------------------------------------------- police
+api.get('/police', (req, res) => {
+  const t = now();
+  const arrests = db.prepare('SELECT reason, fine, created_at FROM arrests WHERE user_id = ? ORDER BY id DESC LIMIT 10').all(req.user.id)
+    .map((a) => ({ ...a, reason: JSON.parse(a.reason) }));
+  const arrestCount = db.prepare('SELECT COUNT(*) n FROM arrests WHERE user_id = ?').get(req.user.id).n;
+  const robbed = db.prepare(`SELECT r.id, r.amount, r.created_at, r.reported, u.username FROM robberies r JOIN users u ON u.id = r.robber_id
+    WHERE r.victim_id = ? AND r.created_at > ? ORDER BY r.id DESC LIMIT 10`).all(req.user.id, t - 7 * 86_400_000)
+    .map((r) => ({ ...r, canReport: !r.reported && t - r.created_at < CRIME.reportWindowMs }));
+  const gains = db.prepare('SELECT COALESCE(SUM(amount),0) s FROM robberies WHERE robber_id = ? AND created_at > ?').get(req.user.id, t - 7 * 86_400_000).s;
+  const reportsOnMe = db.prepare('SELECT COUNT(*) n FROM robberies WHERE robber_id = ? AND reported = 1 AND created_at > ?').get(req.user.id, t - 30 * 86_400_000).n;
+  res.json({ arrests, arrestCount, robbed, takukuru: { watching: gains >= 300_000 || reportsOnMe >= 2 || arrestCount >= 3, gains, reportsOnMe }, jail: getUser(req.user.id).jail });
+});
+
+// ------------------------------------------------------------------ neighbours
+api.get('/neighbours', (req, res) => {
+  const blocked = new Set(crime.blockedIds(req.user.id));
+  const rows = db.prepare(`SELECT u.id, u.username, u.name, u.appearance, u.last_seen,
+      (SELECT COUNT(*) FROM home_items h WHERE h.user_id = u.id) items,
+      (SELECT p.id FROM plots p WHERE p.owner_id = u.id AND p.building IS NOT NULL LIMIT 1) house
+    FROM users u WHERE u.onboarded = 1 AND u.banned_at IS NULL AND u.id != ? ORDER BY u.last_seen DESC LIMIT 120`).all(req.user.id);
+  const list = rows.filter((r) => !blocked.has(r.id)).map((r) => {
+    const o = online.get(r.id);
+    const plot = r.house && plotById[r.house];
+    return { username: r.username, name: r.name, appearance: JSON.parse(r.appearance || 'null'), online: !!o, atHome: !!o && o.home === r.id, items: r.items, home: plot ? { kind: 'house', district: plot.district } : { kind: 'apartment' }, lastSeen: r.last_seen };
+  });
+  list.sort((a, b) => (b.atHome - a.atHome) || (b.online - a.online) || (b.lastSeen - a.lastSeen));
+  res.json(list.slice(0, 40));
+});
+const lastTogether = new Map();
+api.post('/visit/:username/together', (req, res) => {
+  const host = getUserByUsername(String(req.params.username).replace(/^@/, ''));
+  const act = togetherById[str(req.body.act, 12)];
+  if (!host || !act) throw new GameError(['Haipo', 'Not found'], 404);
+  const me = online.get(req.user.id);
+  const isHost = host.id === req.user.id;
+  // Both of you must be in the same home right now.
+  const others = [...online].filter(([id, o]) => id !== req.user.id && o.home === host.id).map(([id]) => id);
+  if (!me || me.home !== host.id || !others.length) throw new GameError(['Mnahitaji kuwa nyumbani pamoja.', 'You both need to be in the home together.']);
+  const key = `${host.id}:${act.id}`;
+  if (now() - (lastTogether.get(key) || 0) < 45_000) throw new GameError(['Pole pole — mmeshafanya hivyo sasa hivi.', 'Easy — you just did that.'], 429);
+  lastTogether.set(key, now());
+  const who = [req.user.id, ...others];
+  for (const id of who) {
+    const u = getUser(id);
+    saveFields(id, { needs: game.applyNeeds(u.needs, act.effects) });
+    story.bumpStats(id, ['together']);
+    if (id !== req.user.id) emitTo(id, 'toast', { text: [`${act.emoji} @${req.user.username}: ${act.name[0]}!`, `${act.emoji} @${req.user.username}: ${act.name[1]}!`], refresh: true });
+  }
+  void isHost;
+  res.json({ ok: true, me: game.playerState(req.user.id) });
+});
+
 // ------------------------------------------------------------- ads
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1_500_000, files: 1 } });
 const MAGIC = [
@@ -645,14 +756,15 @@ api.get('/ads/slots', (_req, res) => {
   res.json(BILLBOARDS.map((b) => {
     const l = map[b.id];
     const full = (l?.n || 0) >= ADS_PER_BOARD;
-    return { ...b, live: l?.n || 0, capacity: ADS_PER_BOARD, bookedUntil: full ? l.next_free : null };
+    return { ...b, tzsPerDay: adTzsPerDay(b), live: l?.n || 0, capacity: ADS_PER_BOARD, bookedUntil: full ? l.next_free : null };
   }));
 });
 api.get('/ads/mine', (req, res) => {
   res.json(db.prepare('SELECT * FROM ads WHERE user_id = ? ORDER BY id DESC LIMIT 30').all(req.user.id));
 });
 
-api.post('/ads', rateLimit('ads', 10, 60 * 60_000), upload.single('image'), (req, res) => {
+api.post('/ads', rateLimit('ads', 10, 60 * 60_000), upload.single('image'), wrap(async (req, res) => {
+  if (!provider) throw new GameError(['Malipo ya simu hayajawashwa bado — matangazo yanalipwa kwa nTZS.', 'Mobile payments are not switched on yet — ads are paid with nTZS.'], 503);
   if (!getSettings().adsEnabled) throw new GameError(['Matangazo mapya yamesimamishwa kwa muda.', 'New ads are temporarily paused.'], 503);
   const slot = billboardById[str(req.body.slotId, 30)];
   if (!slot) throw new GameError(['Chagua bango (billboard).', 'Choose a billboard.']);
@@ -664,27 +776,48 @@ api.post('/ads', rateLimit('ads', 10, 60 * 60_000), upload.single('image'), (req
   if (title.length < 2) throw new GameError(['Andika kichwa cha tangazo.', 'Enter an ad headline.']);
   if (!(days >= 1 && days <= AD_MAX_DAYS)) throw new GameError([`Siku kati ya 1 na ${AD_MAX_DAYS}.`, `Between 1 and ${AD_MAX_DAYS} days.`]);
   if (link && !/^https:\/\/[^\s]+$/i.test(link)) throw new GameError(['Link lazima ianze na https://', 'Link must start with https://']);
+  const phone = normalizePhone(req.body.phone);
+  if (!phone) throw new GameError(['Namba ya simu si sahihi (mfano 0712 345 678).', 'Invalid phone number (e.g. 0712 345 678).']);
+  const method = provider.methods.includes(req.body.method) ? req.body.method : provider.methods[0];
+  const pendingAds = db.prepare("SELECT COUNT(*) n FROM ads WHERE user_id = ? AND status = 'awaiting_payment'").get(req.user.id).n;
+  if (pendingAds >= 3) throw new GameError(['Una matangazo 3 yanayosubiri malipo. Yamalize kwanza.', 'You have 3 ads waiting for payment. Finish those first.']);
   let image = null;
   if (req.file) {
     const kind = MAGIC.find((m) => m.test(req.file.buffer));
     if (!kind) throw new GameError(['Picha iwe PNG, JPG au WEBP.', 'Image must be PNG, JPG or WEBP.']);
     image = `ads/${crypto.randomUUID()}.${kind.ext}`;
   }
-  const result = db.transaction(() => {
-    // Digital board: goes live now if there's a free turn, otherwise when the next ad ends.
-    const ends = db.prepare("SELECT ends_at FROM ads WHERE slot_id = ? AND status = 'live' AND ends_at > ? ORDER BY ends_at").all(slot.id, now()).map((r) => r.ends_at);
-    const startsAt = ends.length < ADS_PER_BOARD ? now() : ends[ends.length - ADS_PER_BOARD];
-    const cost = slot.pricePerDay * days;
-    addMoney(req.user.id, -cost, 'ads', `Tangazo "${title}" — ${slot.name} siku ${days}`);
-    const info = db.prepare(
-      'INSERT INTO ads (user_id, slot_id, title, body, link, image, bg, starts_at, ends_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run(req.user.id, slot.id, title, body || null, link || null, image, bg, startsAt, startsAt + days * 86400_000, now());
-    return { id: info.lastInsertRowid, startsAt, cost };
-  })();
+  // Real money: start an nTZS mobile-money payment; the ad goes live once it's paid.
+  const amountTzs = adPriceTzs(slot, days);
+  let created;
+  try {
+    created = await provider.create({ amountTzs, phone, method, user: req.user });
+  } catch (e) {
+    throw new GameError(e.userMessage || ['Imeshindikana kuanzisha malipo. Jaribu tena.', 'Could not start the payment. Please try again.'], e.status || 502, e.code);
+  }
   if (image) fs.writeFileSync(path.join(UPLOAD_DIR, image), req.file.buffer);
-  broadcast('ads', liveAds());
-  res.status(201).json({ ...result, me: game.playerState(req.user.id) });
-});
+  const result = db.transaction(() => {
+    const ad = db.prepare(
+      "INSERT INTO ads (user_id, slot_id, title, body, link, image, bg, starts_at, ends_at, status, days, paid_tzs, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 'awaiting_payment', ?, ?, ?)",
+    ).run(req.user.id, slot.id, title, body || null, link || null, image, bg, days, amountTzs, now());
+    const pay = db.prepare(
+      "INSERT INTO topups (user_id, provider, provider_ref, method, phone, amount_tzs, coins, status, instructions, created_at, purpose, ref_id) VALUES (?, ?, ?, ?, ?, ?, 0, 'pending', ?, ?, 'ad', ?)",
+    ).run(req.user.id, provider.id, created.ref, method, phone, amountTzs, created.instructions ? JSON.stringify(created.instructions) : null, now(), ad.lastInsertRowid);
+    return { adId: ad.lastInsertRowid, paymentId: pay.lastInsertRowid };
+  })();
+  if (!req.user.phone) saveFields(req.user.id, { phone });
+  res.status(201).json({ ...result, amountTzs, status: 'pending', instructions: created.instructions, livemode: provider.livemode });
+}));
+
+/** A paid billboard ad goes live (now, or when the board next has a free turn). */
+function activateAd(adId) {
+  const ad = db.prepare('SELECT * FROM ads WHERE id = ?').get(adId);
+  if (!ad || ad.status !== 'awaiting_payment') return null;
+  const ends = db.prepare("SELECT ends_at FROM ads WHERE slot_id = ? AND status = 'live' AND ends_at > ? ORDER BY ends_at").all(ad.slot_id, now()).map((r) => r.ends_at);
+  const startsAt = ends.length < ADS_PER_BOARD ? now() : ends[ends.length - ADS_PER_BOARD];
+  db.prepare("UPDATE ads SET status = 'live', starts_at = ?, ends_at = ? WHERE id = ?").run(startsAt, startsAt + (ad.days || 1) * 86400_000, ad.id);
+  return { ...ad, startsAt };
+}
 
 api.post('/ads/:id/report', (req, res) => {
   const ad = db.prepare('SELECT * FROM ads WHERE id = ?').get(req.params.id);

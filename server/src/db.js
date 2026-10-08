@@ -130,6 +130,31 @@ addColumn('messages', 'deleted_at', 'INTEGER');
 addColumn('users', 'home_seeded', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('users', 'car_seeded', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('users', 'referred_by', 'INTEGER');
+// Real-money payments that aren't wallet top-ups (e.g. billboard ads paid in nTZS).
+addColumn('topups', 'purpose', "TEXT NOT NULL DEFAULT 'topup'");
+addColumn('topups', 'ref_id', 'INTEGER');
+addColumn('ads', 'days', 'INTEGER');
+addColumn('ads', 'paid_tzs', 'INTEGER');
+// Ambitions & storylines: play counters + chosen life path progress.
+addColumn('users', 'stats', 'TEXT');
+addColumn('users', 'story', 'TEXT');
+db.exec(`
+CREATE TABLE IF NOT EXISTS trucks (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  bought_at INTEGER NOT NULL,
+  last_paid INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS trucks_user ON trucks(user_id);
+CREATE TABLE IF NOT EXISTS arrests (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reason TEXT NOT NULL,
+  fine INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS arrests_user ON arrests(user_id);
+`);
 addColumn('users', 'jail', 'TEXT');
 // The starter car changed from a Vitz to a Toyota IST.
 db.prepare("UPDATE vehicles SET model = 'ist' WHERE model = 'vitz'").run();
@@ -339,6 +364,8 @@ export function rowToUser(r) {
     carSeeded: r.car_seeded || 0,
     health: r.health ?? 100,
     injuredAt: r.injured_at,
+    stats: parse(r.stats, {}),
+    story: parse(r.story, null),
   };
 }
 

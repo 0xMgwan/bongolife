@@ -124,6 +124,8 @@ const midi = (n) => 440 * 2 ** ((n - 69) / 12);
 // ------------------------------------------------------------- effects
 const SFX = {
   click: (t) => tone(sfxBus, { type: 'sine', freq: 880, t, d: 0.05, peak: 0.12 }),
+  // Three knocks on a wooden door.
+  knock: (t) => [0, 0.16, 0.32].forEach((o) => tone(sfxBus, { type: 'triangle', freq: 140, t: t + o, d: 0.07, peak: 0.45 })),
   coin: (t) => {
     tone(sfxBus, { type: 'triangle', freq: midi(83), t, d: 0.08, peak: 0.25 });
     tone(sfxBus, { type: 'triangle', freq: midi(88), t: t + 0.07, d: 0.25, peak: 0.25 });

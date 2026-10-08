@@ -170,6 +170,17 @@ export function connect() {
     if (cur) Object.assign(cur, g);
   });
   socket.on('home:leave', ({ id }) => { homeGuests.delete(id); bumpHome(); });
+  // Neighbours knocking on your door / answering your knock.
+  socket.on('knock', (k) => {
+    sfx('notify');
+    useStore.setState({ knockIn: { ...k, at: Date.now() } });
+  });
+  socket.on('knock:reply', ({ host, accept }) => {
+    if (st().knocking?.username !== host) return;
+    useStore.setState({ knocking: null });
+    if (accept) import('./ui/social.js').then((m) => m.visitHome(host));
+    else st().toast(L(`🚪 @${host} hajafungua mlango sasa hivi.`, `🚪 @${host} didn't open the door this time.`));
+  });
   socket.on('connect', () => {
     // Re-join the home room after a reconnect.
     const h = st().homeHost;
@@ -206,6 +217,16 @@ export function enterHome(hostId) {
       resolve(r || {});
     });
   });
+}
+/** Knock on a neighbour's door. Resolves { ok } or { error }. */
+export function knock(username) {
+  return new Promise((resolve) => {
+    if (!socket?.connected) return resolve({ error: 'offline' });
+    socket.emit('knock', { to: username }, (r) => resolve(r || {}));
+  });
+}
+export function replyKnock(fromId, accept) {
+  socket?.emit('knock:reply', { fromId, accept });
 }
 export function leaveHome() {
   homeGuests.clear();

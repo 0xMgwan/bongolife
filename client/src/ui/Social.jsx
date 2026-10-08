@@ -12,6 +12,7 @@ import { placeById } from '@shared/world.js';
 import { replyHangout } from '../net.js';
 import { loc } from '../i18n.js';
 import { ConfirmModal } from './Confirm.jsx';
+import { KnockModals, TogetherBar } from './Neighbours.jsx';
 
 /** Incoming "come to my place" invite. */
 function InviteModal() {
@@ -199,6 +200,8 @@ export function SocialModals() {
       <JailPanel />
       <CasinoModal />
       <ConfirmModal />
+      <KnockModals />
+      <TogetherBar />
       <AccidentModal />
     </>
   );

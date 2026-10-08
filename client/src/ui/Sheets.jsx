@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
+  adPriceTzs, NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
   outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
 } from '@shared/world.js';
 import { useStore } from '../store.js';
@@ -480,8 +480,8 @@ function AdSheet({ id, onClose }) {
       <button className="btn btn-white btn-block" style={{ marginTop: 12, border: '1px solid var(--line)' }} onClick={() => openPhone('matangazo', id)}>＋ {L('Weka tangazo lako hapa', 'Add your ad to this board')}</button>
       <div className="hint center" style={{ marginTop: 8 }}>
         {L(
-          `Skrini ya kidijitali: tangazo lako linaanza ukilipia na linapokezana na mengine hapa · ${fmtTsh(slot.pricePerDay * 7)} kwa siku 7`,
-          `A digital board: yours goes live as soon as you pay and takes turns with the ads here · ${fmtTsh(slot.pricePerDay * 7)} for 7 days`,
+          `Skrini ya kidijitali: tangazo lako linaanza ukilipia na linapokezana na mengine hapa · TZS ${adPriceTzs(slot, 7).toLocaleString()} kwa siku 7 (nTZS)`,
+          `A digital board: yours goes live as soon as you pay and takes turns with the ads here · TZS ${adPriceTzs(slot, 7).toLocaleString()} for 7 days (nTZS)`,
         )}
       </div>
     </Sheet>

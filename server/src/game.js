@@ -1,7 +1,7 @@
 import {
   GAME, NEEDS, PLACES, PLOTS, VEHICLES, BUILDINGS, ALLOWED_BUILDINGS, VEHICLE_COLORS,
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
-  shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf,
+  shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST,
   furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
 } from '../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
@@ -12,6 +12,8 @@ export function liveEvent() {
   return currentEvent();
 }
 import { online, positionOf, broadcast, emitTo } from './presence.js';
+import { bumpStats, storySummary } from './story.js';
+import { plotValue, truckPending, collectTrucks } from './invest.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const HOUR = 3600_000;
@@ -60,17 +62,20 @@ export function pendingIncome(userId, t = now()) {
     const place = placeById[b.id];
     if (place?.business) total += accrued(b.last_collect, place.business.incomePerHour, t);
   }
-  return total;
+  return total + truckPending(userId, t);
 }
 
 export const collectIncome = db.transaction((userId) => {
   const t = now();
   const amount = pendingIncome(userId, t);
   if (amount <= 0) throw new GameError(['Hakuna kodi ya kukusanya bado. Rudi baadaye.', 'No income to collect yet. Come back later.']);
+  const rentBiz = amount - truckPending(userId, t); // rent + businesses
+  const trucks = collectTrucks(userId, t);
   for (const p of q.plotsOf.all(userId)) q.collectPlot.run(t, p.id);
   for (const b of q.bizOf.all(userId)) q.collectBiz.run(t, b.id);
-  addMoney(userId, amount, 'income', 'Kodi na mapato ya biashara');
-  return amount;
+  if (rentBiz) addMoney(userId, rentBiz, 'income', 'Kodi na mapato ya biashara');
+  if (trucks) addMoney(userId, trucks, 'truck', '🚛 Mapato ya malori (baada ya dereva na matengenezo)');
+  return rentBiz + trucks;
 });
 
 // --------------------------------------------------------------- state
@@ -78,7 +83,8 @@ export function netWorth(userId) {
   const u = getUser(userId);
   let worth = u.money;
   for (const v of q.vehicles.all(userId)) worth += (vehicleById[v.model]?.price || 0) * 0.7;
-  for (const p of q.plotsOf.all(userId)) worth += (plotById[p.id]?.price || 0) + (p.building ? buildingById[p.building]?.price || 0 : 0);
+  for (const p of q.plotsOf.all(userId)) worth += plotValue(p);
+  worth += db.prepare('SELECT COUNT(*) n FROM trucks WHERE user_id = ?').get(userId).n * INVEST.truck.resale;
   for (const b of q.bizOf.all(userId)) worth += placeById[b.id]?.business?.price || 0;
   return Math.round(worth);
 }
@@ -98,6 +104,7 @@ export function playerState(userId) {
     pendingIncome: pendingIncome(userId),
     unread: q.unread.get(userId).n,
     netWorth: netWorth(userId),
+    story: storySummary(u),
     blocked: db.prepare('SELECT u.username FROM blocks b JOIN users u ON u.id = b.blocked_id WHERE b.user_id = ?').all(userId).map((r) => r.username),
   };
 }
@@ -410,6 +417,11 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
   }
   saveFields(userId, fields);
   setBusy(userId, null);
+  // Count it towards ambitions.
+  const pl = placeById[busy.placeId];
+  if (busy.kind === 'activity') bumpStats(userId, ['acts', `place:${busy.placeId}`, `act:${busy.id}`, pl && `type:${pl.type === 'lounge' ? 'club' : pl.type}`]);
+  else if (busy.kind === 'job' && frac >= 1) bumpStats(userId, ['shifts', `job:${busy.id}`]);
+  else if (busy.kind === 'trip') bumpStats(userId, ['trips', `city:${busy.to}`, `trip:${busy.id}`]);
   return result;
 });
 
@@ -545,9 +557,11 @@ export const startTrip = db.transaction((userId, placeId, mode, insured) => {
   const from = cityAt(ux, uz)?.id || 'dar';
   const to = cityAt(...place.pos)?.id;
   if (!to || to === from) throw new GameError(['Uko kwenye mji huo tayari.', "You're already in that city."]);
-  const fare = m.price[tripKey(from, to)];
+  const car = m.own ? bestCar(q.vehicles.all(userId)) : null;
+  const base = m.price[tripKey(from, to)];
+  const fare = car ? tripFuel(base, car.model) : base;
   if (!fare) throw new GameError(['Hakuna usafiri huo kati ya miji hii.', "That way of travelling doesn't connect these cities."]);
-  if (m.own && !q.vehicles.all(userId).some((v) => ['car', 'van', 'suv'].includes(vehicleById[v.model]?.kind)))
+  if (m.own && !car)
     throw new GameError(['Unahitaji gari kuendesha safari hii.', 'You need a car to drive there.']);
   const cost = fare + (insured ? m.ins : 0);
   addMoney(userId, -cost, 'travel', `${m.name} kwenda ${cityById[to].name}${insured ? ' (+bima)' : ''}`);
@@ -577,8 +591,9 @@ export const travel = db.transaction((userId, placeId, mode) => {
   let dest = [px, pz + place.size[1] / 2 + 3];
   for (const cand of [dest, [px, pz - place.size[1] / 2 - 3], [px - place.size[0] / 2 - 3, pz], [px + place.size[0] / 2 + 3, pz]])
     if (!isWater(cand[0], cand[1])) { dest = cand; break; }
-  const cost = travelCost(mode, from, dest);
-  if (cost) addMoney(userId, -cost, 'travel', `${TRAVEL[mode].name} kwenda ${place.name}`);
+  const cost = car ? fuelCost(car.model, from, dest) : travelCost(mode, from, dest);
+  if (cost) addMoney(userId, -cost, 'travel', car ? `⛽ Mafuta kwenda ${place.name}` : `${TRAVEL[mode].name} kwenda ${place.name}`);
+  bumpStats(userId, ['rides', `ride:${mode}`]);
   saveFields(userId, { x: dest[0], z: dest[1] });
   const p = online.get(userId);
   if (p) {

@@ -853,6 +853,9 @@ export const BILLBOARDS = [
 ];
 export const billboardById = Object.fromEntries(BILLBOARDS.map((b) => [b.id, b]));
 export const AD_MAX_DAYS = 14;
+// Billboards are paid in real money (nTZS mobile money), not game cash.
+export const adTzsPerDay = (slot) => Math.max(1_000, Math.round(slot.pricePerDay / 50 / 500) * 500);
+export const adPriceTzs = (slot, days) => adTzsPerDay(slot) * days;
 // Billboards are digital screens: up to this many ads share a board, taking turns.
 export const ADS_PER_BOARD = 9;
 export const AD_ROTATE_SECONDS = 10;
@@ -864,7 +867,7 @@ export const TRAVEL = {
   bajaji: { name: 'Bajaji', emoji: '🛺', perUnit: 25, min: 1_000, kind: 'bajaji', color: '#facc15', speed: 20 },
   boda: { name: 'Bodaboda', emoji: '🏍️', perUnit: 15, min: 700, kind: 'moto', color: '#dc2626', speed: 24 },
   taxi: { name: 'Taxi Mtandao', emoji: '🚕', perUnit: 45, min: 2_500, kind: 'car', color: '#f8fafc', speed: 26 },
-  // Your own vehicle: free, drives you there along the roads (skippable).
+  // Your own vehicle: you pay fuel (see fuelCost), drives you there along the roads (skippable).
   gari: { name: 'Gari langu', emoji: '🚗', perUnit: 0, min: 0, kind: 'car', color: '#2563eb', speed: 26, own: true },
 };
 
@@ -881,6 +884,26 @@ export const REFERRAL = { newPlayer: 20_000, referrer: 30_000, maxPaid: 50 };
 // Every new player gets a used car to drive around in.
 export const STARTER_CAR = 'ist';
 export const CAR_KINDS = ['car', 'van', 'suv'];
+// Fuel for your own vehicle: bigger, faster cars drink more. Bodas and bajajis sip.
+export function fuelMult(model) {
+  const v = vehicleById[model];
+  if (!v) return 1;
+  if (v.kind === 'bike') return 0;
+  if (v.kind === 'moto') return 0.4;
+  if (v.kind === 'bajaji') return 0.6;
+  return 0.7 + (v.tier || 1) * 0.3;
+}
+export function fuelCost(model, from, to) {
+  const m = fuelMult(model);
+  if (!m) return 0;
+  const d = Math.hypot(to[0] - from[0], to[1] - from[1]);
+  return Math.max(500, Math.round((d * 9 * m) / 100) * 100);
+}
+/** Long-distance drive between cities: the base fuel price scaled by your car. */
+export const tripFuel = (fare, model) => Math.max(10_000, Math.round((fare * fuelMult(model)) / 1000) * 1000);
+/** The car you'd drive out of town: your priciest car/van/SUV. */
+export const bestCar = (vehicles) => [...(vehicles || [])].filter((v) => ['car', 'van', 'suv'].includes(vehicleById[v.model]?.kind)).sort((a, b) => vehicleById[b.model].price - vehicleById[a.model].price)[0] || null;
+
 export function travelCost(mode, from, to) {
   const t = TRAVEL[mode];
   const d = Math.hypot(to[0] - from[0], to[1] - from[1]);
@@ -1384,3 +1407,138 @@ export const EVENT_SCENES = { coco: 'beach', kigbeach: 'beach', mall: 'cinema', 
 // Places you can invite someone to hang out at.
 export const HANGOUT_PLACES = ['club', 'lounge', 'bar', 'singeli', 'nyamachoma', 'coco', 'waterpark', 'karting', 'serena', 'slipway', 'mall', 'masakigrill', 'kinyozi', 'golf', 'makumbusho', 'uwanja', 'gym', 'mamantilie'];
 export const isEventLive = (e, t = Date.now()) => !e.cancelled && e.starts_at <= t && t <= e.starts_at + EVENT_LIMITS.windowAfterMs;
+
+// ============================================================ ambitions & storylines
+// Pick a life path; each chapter tells a bit of story, sets a goal and pays a reward.
+// Goal kinds: stat (counter from play), fame, money (cash), worth (net worth), friends,
+// plots, house, assets (businesses + trucks), mayor.
+const ch = (title, story, goal, hint, go, reward) => ({ title, story, goal, hint, go, reward });
+export const AMBITIONS = [
+  {
+    id: 'msanii', emoji: '🎤', name: ['Nyota wa Bongo Flava', 'Bongo Flava Star'], color: ['#ec4899', '#7c3aed'],
+    blurb: ['Kutoka kuimba bafuni hadi kujaza Uwanja wa Taifa.', 'From singing in the shower to selling out the National Stadium.'],
+    chapters: [
+      ch(['Ndoto inaanza', 'The dream begins'], ['Una mistari kichwani tangu shule. Leo unaingia studio kwa mara ya kwanza — producer anakusubiri.', "You've had bars in your head since school. Today you step into a studio for the first time — the producer is waiting."], { stat: 'type:studio', n: 1 }, ['Rekodi kwenye Studio ya Bongo Flava', 'Record at the Bongo Flava Studio'], { place: 'studio' }, { money: 50_000, fame: 2 }),
+      ch(['Mtaa usikie', 'Let the streets hear it'], ['Wimbo uko tayari, lakini hakuna anayekujua. Mbagala ndiko singeli inazaliwa — panda jukwaani.', "The track is ready, but nobody knows you. Mbagala is where singeli is born — get on that stage."], { stat: 'place:singeli', n: 2 }, ['Cheza Uwanja wa Singeli Mbagala mara 2', 'Perform at Mbagala Singeli Ground twice'], { place: 'singeli' }, { money: 100_000, fame: 3 }),
+      ch(['Jina linakua', 'The name is growing'], ['Watu wameanza kukuita kwa jina la usanii. Endelea kujituma — umaarufu ndio mtaji.', 'People are calling you by your stage name now. Keep grinding — fame is capital.'], { fame: 25 }, ['Fikia umaarufu ⭐25', 'Reach ⭐25 fame'], null, { money: 250_000, fame: 0 }),
+      ch(['EP ya kwanza', 'The first EP'], ['Label ndogo inataka EP. Rudi studio, rekodi nyimbo zaidi na video.', 'A small label wants an EP. Back to the studio — more tracks and a video.'], { stat: 'type:studio', n: 5 }, ['Vipindi 5 vya studio', '5 studio sessions'], { place: 'studio' }, { money: 500_000, fame: 5 }),
+      ch(['Show ya Zanzibar', 'The Zanzibar show'], ['Kendwa Rocks wanakualika kwenye full moon party. Panda boti au ndege — usikose!', "Kendwa Rocks invites you to the full moon party. Take the ferry or a flight — don't miss it!"], { stat: 'place:kendwa', n: 1 }, ['Tumbuiza Kendwa Rocks, Zanzibar', 'Perform at Kendwa Rocks, Zanzibar'], { place: 'kendwa' }, { money: 1_000_000, fame: 10 }),
+      ch(['Nyota wa Taifa', 'National star'], ['Redio zote zinapiga wimbo wako. Kitu kimoja kimebaki: kuwa jina kubwa kuliko wote.', 'Every radio station plays your song. One thing left: become the biggest name of all.'], { fame: 150 }, ['Fikia umaarufu ⭐150', 'Reach ⭐150 fame'], null, { money: 5_000_000, fame: 20 }),
+    ],
+  },
+  {
+    id: 'tajiri', emoji: '💼', name: ['Tajiri wa Bongo', 'Bongo Tycoon'], color: ['#16a34a', '#065f46'],
+    blurb: ['Kutoka kwenye shifti ya kwanza hadi bilionea wa Masaki.', 'From your first shift to a Masaki billionaire.'],
+    chapters: [
+      ch(['Chakarika', 'The hustle'], ['Kila tajiri alianzia mahali. Tafuta kazi, piga shifti, jenga nidhamu ya pesa.', 'Every rich person started somewhere. Find a job, work shifts, build money discipline.'], { stat: 'shifts', n: 3 }, ['Fanya shifti 3 za kazi', 'Work 3 shifts'], { app: 'kazi' }, { money: 100_000, fame: 1 }),
+      ch(['Akiba', 'Savings'], ['Pesa ya matumizi si mtaji. Weka akiba ya kutosha kununua ardhi.', "Spending money isn't capital. Save enough to buy land."], { money: 5_000_000 }, ['Kuwa na TSh 5M mkononi', 'Hold TSh 5M in cash'], null, { money: 200_000, fame: 1 }),
+      ch(['Kiwanja cha kwanza', 'First plot'], ['Ardhi haipotei thamani. Nunua kiwanja chako cha kwanza.', "Land doesn't lose value. Buy your first plot."], { plots: 1 }, ['Nunua kiwanja (app ya Wekeza)', 'Buy a plot (Invest app)'], { app: 'wekeza' }, { money: 500_000, fame: 2 }),
+      ch(['Nyumba yangu', 'My own house'], ['Kiwanja kitupu hakileti kodi. Jenga nyumba — ukae au upangishe.', "An empty plot pays no rent. Build a house — live in it or rent it out."], { house: 1 }, ['Jenga nyumba kwenye kiwanja chako', 'Build a house on your plot'], { app: 'mali' }, { money: 1_000_000, fame: 3 }),
+      ch(['Pesa ikufanyie kazi', 'Make money work for you'], ['Matajiri hawalali na pesa — wanaiwekeza. Nunua biashara au lori la mizigo.', "The rich don't sit on cash — they invest it. Buy a business or a haulage truck."], { assets: 1 }, ['Miliki biashara au lori 1', 'Own 1 business or truck'], { app: 'wekeza' }, { money: 2_000_000, fame: 5 }),
+      ch(['Bilionea', 'Billionaire'], ['Jina lako linatajwa kwenye vikao vya biashara. Lengo la mwisho: mali ya TSh nusu bilioni.', 'Your name comes up in boardrooms. Final goal: half a billion in net worth.'], { worth: 500_000_000 }, ['Mali yenye thamani TSh 500M', 'TSh 500M net worth'], { app: 'wekeza' }, { money: 10_000_000, fame: 20 }),
+    ],
+  },
+  {
+    id: 'mwanasiasa', emoji: '🗳️', name: ['Mwanasiasa', 'Politician'], color: ['#f59e0b', '#b45309'],
+    blurb: ['Jenga mtandao, shinda mioyo, uwe Meya wa jiji.', 'Build a network, win hearts, become the city Mayor.'],
+    chapters: [
+      ch(['Wajue watu', 'Know people'], ['Siasa ni watu. Anza kwa kupata marafiki wa kweli mtaani.', 'Politics is people. Start by making real friends on the street.'], { friends: 3 }, ['Pata marafiki 3', 'Make 3 friends'], { app: 'watu' }, { money: 100_000, fame: 1 }),
+      ch(['Kusanya watu', 'Bring people together'], ['Kiongozi huwakusanya watu. Andaa tukio — sherehe, mechi au chakula.', 'A leader brings people together. Host an event — a party, a match, a meal.'], { stat: 'hosted', n: 1 }, ['Andaa tukio (app ya Matukio)', 'Host an event (Events app)'], { app: 'matukio' }, { money: 200_000, fame: 3 }),
+      ch(['Sauti ya mtaa', 'Voice of the street'], ['Watu wanaanza kukusikiliza. Ongeza jina lako.', 'People are starting to listen. Grow your name.'], { fame: 30 }, ['Fikia umaarufu ⭐30', 'Reach ⭐30 fame'], null, { money: 300_000, fame: 0 }),
+      ch(['Kugombea', 'Running'], ['Ni wakati. Jiandikishe kugombea umeya wiki hii.', "It's time. Register to run for Mayor this week."], { stat: 'ran', n: 1 }, ['Jiandikishe kugombea Meya', 'Register to run for Mayor'], { app: 'viongozi' }, { money: 500_000, fame: 3 }),
+      ch(['Kampeni', 'Campaign'], ['Kura hazitoki hewani. Jenga ngome — marafiki kumi watakaokupigia kura.', "Votes don't fall from the sky. Build a base — ten friends who'll vote for you."], { friends: 10 }, ['Pata marafiki 10', 'Have 10 friends'], { app: 'watu' }, { money: 1_000_000, fame: 5 }),
+      ch(['Mheshimiwa Meya', 'Your Honour the Mayor'], ['Siku ya kura imefika. Shinda uchaguzi na uongoze Dar.', 'Election day is here. Win and lead Dar.'], { mayor: 1 }, ['Shinda uchaguzi wa Meya', 'Win the Mayor election'], { app: 'viongozi' }, { money: 5_000_000, fame: 30 }),
+    ],
+  },
+  {
+    id: 'msafiri', emoji: '🌍', name: ['Msafiri', 'Explorer'], color: ['#0ea5e9', '#1d4ed8'],
+    blurb: ['Zanzibar, Arusha, Serengeti hadi kilele cha Kilimanjaro.', 'Zanzibar, Arusha, the Serengeti and the top of Kilimanjaro.'],
+    chapters: [
+      ch(['Jua mji wako', 'Know your city'], ['Kabla ya kuona dunia, jua Dar. Panda daladala, bajaji au boda kwenda mahali.', 'Before seeing the world, know Dar. Ride a daladala, bajaji or boda somewhere.'], { stat: 'rides', n: 2 }, ['Safari 2 za usafiri wa mjini', 'Take 2 rides around town'], { app: 'ramani' }, { money: 30_000, fame: 1 }),
+      ch(['Kisiwani', 'To the island'], ['Harufu ya karafuu inakuita. Panda boti ya Azam au ndege kwenda Zanzibar.', 'The scent of cloves is calling. Take the Azam ferry or a flight to Zanzibar.'], { stat: 'city:znz', n: 1 }, ['Fika Zanzibar', 'Get to Zanzibar'], { place: 'stonetown' }, { money: 150_000, fame: 2 }),
+      ch(['Mji Mkongwe', 'Stone Town'], ['Vichochoro, milango ya kuchonga, historia kila kona. Tembelea Stone Town.', 'Alleys, carved doors, history on every corner. Explore Stone Town.'], { stat: 'place:stonetown', n: 1 }, ['Fanya kitu Stone Town', 'Do something in Stone Town'], { place: 'stonetown' }, { money: 150_000, fame: 2 }),
+      ch(['Kaskazini', 'Up north'], ['Arusha — mji wa safari. Panda ndege, basi au endesha gari lako.', 'Arusha — the safari capital. Fly, take the coach or drive yourself.'], { stat: 'city:aru', n: 1 }, ['Fika Arusha', 'Get to Arusha'], { place: 'safari' }, { money: 300_000, fame: 3 }),
+      ch(['Big Five', 'The Big Five'], ['Simba, tembo, twiga… Panda gari la safari uwaone kwa macho yako.', 'Lions, elephants, giraffes… Get in a safari jeep and see them yourself.'], { stat: 'place:safari', n: 1 }, ['Nenda safari', 'Go on safari'], { place: 'safari' }, { money: 500_000, fame: 5 }),
+      ch(['Paa la Afrika', 'Roof of Africa'], ['Mita 5,895 juu ya bahari. Panda Kilimanjaro hadi Uhuru Peak.', '5,895 metres above the sea. Climb Kilimanjaro to Uhuru Peak.'], { stat: 'act:kili', n: 1 }, ['Panda Kilimanjaro', 'Climb Kilimanjaro'], { place: 'meru' }, { money: 3_000_000, fame: 20 }),
+    ],
+  },
+  {
+    id: 'sosholaiti', emoji: '💃', name: ['Sosholaiti', 'Socialite'], color: ['#f43f5e', '#be123c'],
+    blurb: ['Kila mtu anakujua, kila sherehe inakusubiri.', 'Everyone knows you, every party waits for you.'],
+    chapters: [
+      ch(['Salamu', 'Hellos'], ['Bongo ni salamu. Msalimie mtu, piga stori, mchekeshe.', 'Bongo runs on greetings. Say hi, gist, crack a joke.'], { stat: 'interact', n: 3 }, ['Ongea na watu mara 3', 'Chat with players 3 times'], null, { money: 50_000, fame: 1 }),
+      ch(['Jirani mwema', 'Good neighbour'], ['Gonga mlango wa jirani — chai, stori na kicheko.', "Knock on a neighbour's door — tea, gist and laughs."], { stat: 'visits', n: 1 }, ['Tembelea jirani', 'Visit a neighbour'], { app: 'majirani' }, { money: 100_000, fame: 2 }),
+      ch(['Usiku wa Dar', 'Dar nights'], ['Club ndiko mastaa wanaonekana. Toka usiku mara tatu.', 'The clubs are where the stars get seen. Go out three nights.'], { stat: 'type:club', n: 3 }, ['Fanya kitu club mara 3', 'Do something at a club 3 times'], { place: 'club' }, { money: 200_000, fame: 3 }),
+      ch(['Mtandao', 'Network'], ['Sosholaiti wa kweli ana watu kila kona. Fikisha marafiki 10.', 'A real socialite has people everywhere. Get to 10 friends.'], { friends: 10 }, ['Marafiki 10', '10 friends'], { app: 'watu' }, { money: 500_000, fame: 3 }),
+      ch(['Mwenyeji', 'The host'], ['Sasa ni zamu yako kuwakaribisha. Andaa matukio mawili.', 'Now it’s your turn to host. Throw two events.'], { stat: 'hosted', n: 2 }, ['Andaa matukio 2', 'Host 2 events'], { app: 'matukio' }, { money: 1_000_000, fame: 5 }),
+      ch(['Malkia/Mfalme wa Jiji', 'Queen/King of the City'], ['Kila picha ya sherehe una wewe. Fikia umaarufu wa juu.', "You're in every party photo. Reach the top of fame."], { fame: 100 }, ['Fikia umaarufu ⭐100', 'Reach ⭐100 fame'], null, { money: 3_000_000, fame: 15 }),
+    ],
+  },
+];
+export const ambitionById = Object.fromEntries(AMBITIONS.map((a) => [a.id, a]));
+export const STORY = { switchCooldownMs: 24 * 3600_000, dilemmaEveryMs: 6 * 3600_000 };
+
+// "Mambo ya mtaa": street dilemmas, one every few hours. Outcomes may be chancy.
+// effects: money (TSh, or pct of cash when |x|<1), fame, needs, chance → win/lose.
+export const DILEMMAS = [
+  { id: 'binamu', emoji: '📞', text: ['Binamu yako kutoka Mwanza anapiga simu: anahitaji TSh 50,000 ya ada ya shule.', 'Your cousin from Mwanza calls: they need TSh 50,000 for school fees.'],
+    choices: [
+      { label: ['Mtumie 💸', 'Send it 💸'], out: { money: -50_000, fame: 1, needs: { social: 15 }, msg: ['Familia inakusifu. Baraka zimekujia. 🙏', 'The family is singing your praises. Blessings are coming. 🙏'] } },
+      { label: ['Sina sasa hivi', "Can't right now"], out: { needs: { social: -8 }, msg: ['Alielewa… lakini shangazi amesikia. 😬', 'They understood… but auntie heard about it. 😬'] } },
+    ] },
+  { id: 'dili', emoji: '📱', text: ['Jamaa wa Kariakoo ana "dili": simu za mkononi nusu bei. Anataka TSh 200,000 sasa hivi.', 'A Kariakoo guy has a "deal": phones at half price. He wants TSh 200,000 right now.'],
+    choices: [
+      { label: ['Weka pesa 🤝', 'Put the money in 🤝'], out: { chance: 0.4, win: { money: 500_000, msg: ['Dili limetiki! Umeuza zote — faida TSh 300k. 🔥', 'The deal came through! Sold the lot — TSh 300k profit. 🔥'] }, lose: { money: -200_000, msg: ['Jamaa amepotea na pesa yako. Simu zilikuwa feki. 😤', 'The guy vanished with your money. The phones were fake. 😤'] } } },
+      { label: ['Hapana, asante', 'No thanks'], out: { msg: ['Wiki ijayo unasikia polisi wamemkamata. Umepona! 😅', 'Next week you hear the police caught him. Dodged that one! 😅'] } },
+    ] },
+  { id: 'mafuriko', emoji: '🌧️', text: ['Mvua kubwa imeleta mafuriko Jangwani. Vijana wanajitolea kusaidia familia.', 'Heavy rain has flooded Jangwani. Young people are volunteering to help families.'],
+    choices: [
+      { label: ['Jitolee 🦺', 'Volunteer 🦺'], out: { fame: 3, needs: { energy: -20, social: 15 }, msg: ['Picha yako ikisaidia imesambaa mitandaoni. Shujaa wa mtaa! 🦸', 'A photo of you helping went viral. Street hero! 🦸'] } },
+      { label: ['Kaa ndani', 'Stay in'], out: { needs: { energy: 10 }, msg: ['Umepumzika, lakini mtaa unaongea… 🤐', 'You rested, but the street is talking… 🤐'] } },
+    ] },
+  { id: 'producer', emoji: '🎧', text: ['Producer amesikia freestyle yako. Anataka TSh 100,000 kurekodi hook kwenye wimbo wake.', 'A producer heard your freestyle. He wants TSh 100,000 to put you on a hook.'],
+    choices: [
+      { label: ['Twende studio 🎤', "Let's record 🎤"], out: { money: -100_000, chance: 0.5, win: { fame: 6, msg: ['Wimbo umeshika redio! ⭐+6', 'The song is on the radio! ⭐+6'] }, lose: { fame: 1, msg: ['Wimbo haukuvuma, lakini umejifunza. ⭐+1', "The song didn't blow up, but you learned a lot. ⭐+1"] } } },
+      { label: ['Siko tayari', 'Not ready'], out: { msg: ['Siku yako itafika. 🎶', 'Your day will come. 🎶'] } },
+    ] },
+  { id: 'mkopo', emoji: '🤲', text: ['Jirani yako anaomba mkopo wa TSh 30,000 — anaahidi kurudisha 40,000 Ijumaa.', 'Your neighbour asks to borrow TSh 30,000 — promises 40,000 back on Friday.'],
+    choices: [
+      { label: ['Mkopeshe', 'Lend it'], out: { chance: 0.7, win: { money: 10_000, needs: { social: 10 }, msg: ['Amerudisha 40k kama alivyoahidi. Jirani mwema! 🤝', 'They paid back 40k as promised. Good neighbour! 🤝'] }, lose: { money: -30_000, msg: ['Ijumaa imepita… na nyingine… 🙄', 'Friday came and went… and the next one… 🙄'] } } },
+      { label: ['Kataa kwa upole', 'Politely decline'], out: { needs: { social: -5 }, msg: ['Ameelewa, ingawa amenuna kidogo.', 'They understood, though they sulked a little.'] } },
+    ] },
+  { id: 'kahawa', emoji: '☕', text: ['Karambezi Café ina shindano la kuonja kahawa. Kiingilio TSh 20,000, zawadi TSh 200,000.', 'Karambezi Café is running a coffee-tasting contest. TSh 20,000 to enter, TSh 200,000 prize.'],
+    choices: [
+      { label: ['Shiriki ☕', 'Enter ☕'], out: { money: -20_000, chance: 0.3, win: { money: 200_000, fame: 2, msg: ['Ulitambua kahawa ya Kilimanjaro kwa harufu tu. Bingwa! 🏆', 'You named the Kilimanjaro beans by smell alone. Champion! 🏆'] }, lose: { needs: { fun: 10 }, msg: ['Hukushinda, lakini kahawa ilikuwa tamu. 😋', "You didn't win, but the coffee was great. 😋"] } } },
+      { label: ['Pita', 'Skip it'], out: { msg: ['Labda mwakani.', 'Maybe next year.'] } },
+    ] },
+  { id: 'harusi', emoji: '💍', text: ['Rafiki yako anaoa! Kamati ya harusi inaomba mchango wa TSh 100,000.', 'Your friend is getting married! The wedding committee asks for a TSh 100,000 contribution.'],
+    choices: [
+      { label: ['Changia 🎉', 'Contribute 🎉'], out: { money: -100_000, fame: 2, needs: { social: 25, fun: 20 }, msg: ['Ulitajwa kwenye hotuba na ukacheza hadi asubuhi! 💃', 'You got a shout-out in the speech and danced till morning! 💃'] } },
+      { label: ['Sina hela sasa', "I'm broke right now"], out: { needs: { social: -12 }, msg: ['Hukualikwa kwenye send-off… 😶', "You weren't invited to the send-off… 😶"] } },
+    ] },
+  { id: 'wahuni', emoji: '🌙', text: ['Ni usiku Kariakoo na vijana wawili wanakufuata. Mmoja anakuita kwa jina.', "It's night in Kariakoo and two guys are following you. One calls your name."],
+    choices: [
+      { label: ['Kimbia 🏃', 'Run 🏃'], out: { needs: { energy: -15 }, msg: ['Umefika salama, unahema kama umekimbia marathon. 😮‍💨', 'You got home safe, panting like you ran a marathon. 😮‍💨'] } },
+      { label: ['Simama uwakabili', 'Stand your ground'], out: { chance: 0.5, win: { fame: 2, msg: ['Kumbe ni mashabiki wako! Wameomba selfie. 🤳', 'Turns out they were fans! They wanted a selfie. 🤳'] }, lose: { money: -0.15, msg: ['Wamekunyang’anya pochi. Ripoti polisi. 😠', 'They snatched your wallet. Report it to the police. 😠'] } } },
+    ] },
+];
+export const dilemmaById = Object.fromEntries(DILEMMAS.map((d) => [d.id, d]));
+
+// ============================================================ investing
+// Land grows in value the longer you hold it; agents take a cut when you sell.
+export const INVEST = {
+  landGrowthPerDay: 0.006, landGrowthCap: 0.6, agentFee: 0.05, remoteBuyFee: 0.05, buildingResale: 0.8,
+  truck: { price: 18_000_000, resale: 11_000_000, earnMin: 600_000, earnMax: 1_100_000, driver: 150_000, breakChance: 0.1, repair: 500_000, max: 10, maxDays: 3 },
+};
+
+// ============================================================ neighbours: hanging out at home
+// Things a visitor and host can do together indoors. Both get the effects.
+export const TOGETHER = [
+  { id: 'movie', emoji: '🍿', name: ['Tazameni filamu', 'Watch a movie'], effects: { fun: 20, social: 15 } },
+  { id: 'fifa', emoji: '🎮', name: ['Chezeni FIFA', 'Play FIFA'], effects: { fun: 25, social: 10 } },
+  { id: 'pika', emoji: '🍳', name: ['Pikeni pamoja', 'Cook together'], effects: { hunger: 30, social: 12 } },
+  { id: 'chai', emoji: '☕', name: ['Chai na stori', 'Tea & gist'], effects: { social: 20, energy: 5 } },
+  { id: 'muziki', emoji: '🎶', name: ['Sikilizeni muziki', 'Vibe to music'], effects: { fun: 15, social: 15 } },
+  { id: 'karata', emoji: '🃏', name: ['Karata', 'Card games'], effects: { fun: 18, social: 18 } },
+];
+export const togetherById = Object.fromEntries(TOGETHER.map((t) => [t.id, t]));

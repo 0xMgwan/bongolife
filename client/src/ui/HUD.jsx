@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH, TRAVEL, flightPhase, findActivity, PLACES, DISTRICTS, CITIES, CITY_ARRIVAL } from '@shared/world.js';
+import { ambitionById, NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH, TRAVEL, flightPhase, findActivity, PLACES, DISTRICTS, CITIES, CITY_ARRIVAL } from '@shared/world.js';
 import { L, loc, pick, isEn } from '../i18n.js';
 import { useStore } from '../store.js';
 import { input, sendChat, sendEmote, setInside, remotes, local, view, jump } from '../net.js';
@@ -676,6 +676,42 @@ function BottomNav({ me }) {
 
 /** Town chips: jump the map to ads, plots, the sea or people — or walk again. */
 /** Map view: jump between Dar es Salaam, Zanzibar and Arusha (like Lagos / PH / Abuja). */
+/** Lagos-style quest card: your ambition's current goal, street news, or a nudge to pick a dream. */
+function QuestCard({ me }) {
+  const s = me.story;
+  if (!s) return null;
+  const openNdoto = () => { sfx('open'); useStore.getState().openPhone('ndoto'); };
+  let icon = '🌟';
+  let title;
+  let sub;
+  let ready = false;
+  if (s.dilemma) {
+    icon = '📰';
+    title = L('Mambo ya mtaa', 'Street news');
+    sub = L('Kuna jambo limetokea — amua sasa', 'Something happened — your call');
+    ready = true;
+  } else if (!s.amb) {
+    title = L('Chagua ndoto yako', 'Choose your ambition');
+    sub = L('Nyota, tajiri, mwanasiasa, msafiri…', 'Star, tycoon, politician, explorer…');
+  } else if (s.done) {
+    return null;
+  } else {
+    const amb = ambitionById[s.amb];
+    const ch = amb?.chapters[s.step];
+    if (!ch) return null;
+    icon = amb.emoji;
+    title = pick(ch.hint);
+    ready = s.ready;
+    sub = s.ready ? L('🎁 Imekamilika — dai zawadi!', '🎁 Done — claim your reward!') : `${L('Sura', 'Chapter')} ${s.step + 1}/${s.total} · ${s.need >= 100_000 ? `${fmtShort(Math.min(s.have, s.need))}/${fmtShort(s.need)}` : `${Math.min(s.have, s.need)}/${s.need}`}`;
+  }
+  return (
+    <button className={`quest-card ${ready ? 'ready' : ''}`} onClick={openNdoto}>
+      <span className="qc-ic">{icon}</span>
+      <span className="qc-t"><b>{title}</b><small>{sub}</small></span>
+    </button>
+  );
+}
+
 function CityChips() {
   const cityView = useStore((s) => s.cityView);
   const [, tick] = useState(0);
@@ -841,6 +877,7 @@ export function HUD() {
       )}
       {!shop && !riding && (
         <div className="hud-left">
+          {!scene && <QuestCard me={me} />}
           <SocialChips me={me} />
           {town && !scene && me.busy?.kind !== 'job' && <TownChips />}
           <Tips me={me} />
