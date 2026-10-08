@@ -582,7 +582,7 @@ function PlaceModel({ place, owner }) {
           {Array.from({ length: 5 }, (_, i) => (
             <mesh key={i} geometry={geo('box', w / 5 - 0.3, 0.12, 2.2)} material={mat(['#ef4444', '#22c55e', '#3b82f6', '#f97316', '#a855f7'][i])} position={[-w / 2 + (i + 0.5) * (w / 5), 3, d / 2 + 1]} rotation={[0.35, 0, 0]} />
           ))}
-          <Sign text={L('SOKO LA KARIAKOO', 'KARIAKOO MARKET')} w={w * 0.8} y={h - 1.6} z={d / 2 + 0.02} />
+          <Sign text={loc(place).toUpperCase()} w={w * 0.8} y={h - 1.6} z={d / 2 + 0.02} />
         </group>
       );
     case 'casino':

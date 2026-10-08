@@ -10,16 +10,11 @@ import { share } from './share.js';
 
 const CASINO_GAMES = [['slots', '🎰', 'Slot machines', 'Slot machines'], ['blackjack', '🃏', 'Meza ya Blackjack', 'Blackjack table'], ['roulette', '🎡', 'Roulette', 'Roulette']];
 
-/** The place you're at (inside, doing something there, or standing in its area/door), else null. */
-export function placeHere(me, scene, inside) {
-  const id = [scene?.placeId, inside, me.busy?.placeId].find((x) => x && placeById[x]);
+/** The place you're in (entered, inside its scene, or doing something there), else null. */
+export function placeHere(me, scene, inside, entered) {
+  const id = [scene?.placeId, inside, me.busy?.placeId, entered].find((x) => x && placeById[x]);
   if (id) return id;
-  for (const p of Object.values(placeById)) {
-    // Only when you're actually on the plot, or standing at its entrance — not just walking past.
-    const onPlot = Math.abs(local.x - p.pos[0]) <= p.size[0] / 2 + 0.4 && Math.abs(local.z - p.pos[1]) <= p.size[1] / 2 + 0.4;
-    const [dx, dz] = placeDoor(p.id);
-    if (onPlot || Math.hypot(local.x - dx, local.z - dz) < 1.8) return p.id;
-  }
+  // Standing outside (even at the door) isn't "in" the place — the location pill covers that.
   return null;
 }
 

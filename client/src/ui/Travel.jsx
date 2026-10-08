@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { TRAVEL, placeById, travelCost, fmtTsh, fmtShort, ENTERABLE, vehicleById, TRIP_MODES, tripKey, cityAt, cityById } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { local } from '../net.js';
-import { goToPlace, startRide } from '../nav.js';
+import { goToPlace, startRide, enterPlace } from '../nav.js';
 import { placeDoor } from '../three/Players.jsx';
 import { L, loc } from '../i18n.js';
 import { sfx } from '../audio.js';
@@ -28,7 +28,7 @@ export function TravelOptions({ placeId, onDone }) {
     startRide(mode, r.pos, placeId, () => {
       sfx('pop');
       useStore.getState().toast(r.cost ? L(`${TRAVEL[mode].emoji} Umefika ${place.name} · ${fmtTsh(r.cost)}`, `${TRAVEL[mode].emoji} Arrived at ${loc(place)} · ${fmtTsh(r.cost)}`) : L(`📍 Umefika ${place.name}`, `📍 Arrived at ${loc(place)}`));
-      useStore.setState({ sheet: { type: 'place', id: placeId } });
+      enterPlace(placeId);
     }, look);
   };
   const opts = [
@@ -140,7 +140,7 @@ export function TravelCard({ id, onClose }) {
         {cityAt(...p.pos)?.id !== cityAt(local.x, local.z)?.id ? (
           <TripOptions placeId={id} onDone={onClose} />
         ) : near ? (
-          <button className="btn btn-green btn-block" style={{ marginTop: 12 }} onClick={() => { onClose(); useStore.setState({ sheet: { type: 'place', id } }); }}>{L('Uko hapa · Ona shughuli', "You're here · See activities")} →</button>
+          <button className="btn btn-green btn-block" style={{ marginTop: 12 }} onClick={() => { onClose(); enterPlace(id); }}>{L('Ingia · Ona shughuli', 'Go in · See activities')} →</button>
         ) : (
           <TravelOptions placeId={id} onDone={onClose} />
         )}

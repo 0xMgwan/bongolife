@@ -20,9 +20,22 @@ export function walkTo(pos, then, label, placeId = null) {
 }
 
 export function goToPlace(placeId, open = true) {
+  walkTo(placeDoor(placeId), open ? () => enterPlace(placeId) : null, null, placeId);
+}
+
+/** Step into a place: its dock (who's here, chat, things to do) opens. Walking away leaves it. */
+export function enterPlace(placeId) {
+  if (!placeById[placeId]) return;
+  useStore.setState({ entered: placeId, sheet: null });
+}
+
+/** Are you still at the place you entered? (on its plot or near its entrance) */
+export function stillAt(placeId) {
   const p = placeById[placeId];
-  walkTo(placeDoor(placeId), open ? () => useStore.setState({ sheet: { type: 'place', id: placeId } }) : null, null, placeId);
-  void p;
+  if (!p) return false;
+  const onPlot = Math.abs(local.x - p.pos[0]) <= p.size[0] / 2 + 1 && Math.abs(local.z - p.pos[1]) <= p.size[1] / 2 + 1;
+  const [dx, dz] = placeDoor(placeId);
+  return onPlot || Math.hypot(local.x - dx, local.z - dz) < 5;
 }
 
 

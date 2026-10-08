@@ -26,6 +26,16 @@ app.use((_req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   next();
 });
+// Players (and admins) should always land on the real domain, not the *.up.railway.app one.
+// API, sockets, uploads and webhooks are left alone so nothing already pointing here breaks.
+const CANONICAL_URL = (process.env.CANONICAL_URL || 'https://play.bongolife.app').replace(/\/$/, '');
+app.use((req, res, next) => {
+  const host = req.hostname || '';
+  if (req.method === 'GET' && /\.up\.railway\.app$/i.test(host) && !/^\/(api|socket\.io|uploads)\b/.test(req.path)) {
+    return res.redirect(301, CANONICAL_URL + req.originalUrl);
+  }
+  next();
+});
 // nTZS webhooks need the raw body for signature verification, so they come before express.json.
 app.post('/api/webhooks/ntzs', express.raw({ type: '*/*', limit: '100kb' }), (req, res) => {
   const raw = req.body?.toString('utf8') || '';

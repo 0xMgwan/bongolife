@@ -8,7 +8,7 @@ import { setZoom, getZoom } from '../three/GameScene.jsx';
 import { setAudioSettings, sfx } from '../audio.js';
 import { useAudioSettings } from './useAudioSettings.js';
 import { activeScene } from '../scene.js';
-import { goToPlace, skipRide, skipTrip } from '../nav.js';
+import { goToPlace, skipRide, skipTrip, enterPlace, stillAt } from '../nav.js';
 import { goHomeTo } from './homeNav.js';
 import { goHospital, leaveVisit } from './social.js';
 import { WorkPanel } from './WorkPanel.jsx';
@@ -205,7 +205,10 @@ function Dock({ me, scene }) {
     const t = setInterval(() => tick((n) => n + 1), 1200);
     return () => clearInterval(t);
   }, []);
-  const placeId = tab === 'town' && cityView !== 'map' ? placeHere(me, scene, inside) : null;
+  const entered = useStore((s) => s.entered);
+  // Walked away from the place you went into → you've left it.
+  if (entered && !stillAt(entered)) setTimeout(() => useStore.getState().entered === entered && useStore.setState({ entered: null }), 0);
+  const placeId = tab === 'town' && cityView !== 'map' ? placeHere(me, scene, inside, entered && stillAt(entered) ? entered : null) : null;
   if (!placeId) return <LocationPill me={me} scene={scene} />;
   return (
     <PlaceDock
@@ -255,6 +258,8 @@ function LocationPill({ me, scene }) {
       name = d?.name || 'Dar es Salaam';
     }
   }
+  // Standing at a place's entrance → offer to go in.
+  const atDoor = !atHome && placeId && !inside && stillAt(placeId) ? placeId : null;
   const here = placeId ? 1 + [...remotes.values()].filter((r) => r.inside === placeId || r.busy?.placeId === placeId).length : 0;
   const openName = () => {
     sfx('click');
@@ -263,6 +268,7 @@ function LocationPill({ me, scene }) {
   return (
     <div className="loc-pill">
       <button className="lp-name" onClick={openName}>{icon} {name}{here > 1 && <small>· 👥{here}</small>} {placeId && <span style={{ fontSize: 12 }}>˄</span>}</button>
+      {!atHome && atDoor && <button className="lp-enter" onClick={() => { sfx('open'); enterPlace(atDoor); }}>🚪 {L('Ingia', 'Go in')}</button>}
       <span className="lp-sep" />
       <button className="lp-btn" aria-label={L('Ramani', 'Map')} onClick={() => { sfx('click'); useStore.setState({ tab: 'town', cityView: 'map', visiting: null, sheet: null, mapFilter: null }); }}>🗺️</button>
       {atHome ? (

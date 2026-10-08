@@ -3,8 +3,12 @@ import { L } from '../i18n.js';
 import { sfx } from '../audio.js';
 
 /** A link into the game; carries your username as the invite code (?ref=). */
+// Links always point at the real domain (not whatever host this page was opened on, e.g. Railway).
+const LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$|\.(localhost|test)$/.test(location.hostname);
+export const PUBLIC_ORIGIN = LOCAL ? location.origin : (import.meta.env.VITE_PUBLIC_URL || 'https://play.bongolife.app').replace(/\/$/, '');
+
 export function shareUrl(params = {}) {
-  const u = new URL(`${location.origin}/`);
+  const u = new URL(`${PUBLIC_ORIGIN}/`);
   for (const [k, v] of Object.entries(params)) if (v != null) u.searchParams.set(k, v);
   const me = useStore.getState().me;
   if (me?.username) u.searchParams.set('ref', me.username);
