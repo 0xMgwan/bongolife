@@ -1299,3 +1299,9 @@ html, body { background: #1e2a47; }
 .land-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #0b0b0b url(/landing-hero.jpg) center / cover no-repeat; }
 .land-video + .layer::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(8,8,8,.45) 0%, rgba(8,8,8,.1) 35%, rgba(8,8,8,.1) 65%, rgba(8,8,8,.5) 100%); }
 @media (prefers-reduced-motion: reduce) { .land-video { visibility: hidden; } .land-video + .layer { background: url(/landing-hero.jpg) center / cover no-repeat; } }
+
+/* Chat dock stays mounted so the input can be focused inside the tap (phones raise the keyboard). */
+.chat-dock { transition: opacity .18s, transform .18s; }
+.chat-dock.closed { opacity: 0; transform: translateY(16px); pointer-events: none; }
+/* 16px: iOS zooms the page into any focused input smaller than that. */
+.chat-dock input { font-size: 16px; }

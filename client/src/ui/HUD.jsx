@@ -800,6 +800,14 @@ function TownChips() {
 
 const EMOTES = ['👋', '😂', '🔥', '❤️', '🙏', '💃', '😎', '🇹🇿'];
 
+// Phones only raise the keyboard when an input is focused inside the tap itself, so the chat
+// input stays mounted (hidden while closed) and the 💬 button focuses it straight away.
+const chatInput = { el: null };
+export function openChat() {
+  useStore.setState({ chatOpen: true });
+  chatInput.el?.focus({ preventScroll: true });
+}
+
 function ChatDock() {
   const open = useStore((s) => s.chatOpen);
   const set = useStore((s) => s.set);
@@ -807,7 +815,13 @@ function ChatDock() {
   const [text, setText] = useState('');
   const inputRef = useRef();
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50);
+    chatInput.el = inputRef.current;
+    return () => { chatInput.el = null; };
+  }, []);
+  useEffect(() => {
+    // Opened another way (Enter on desktop): focus after render. Closed: drop the keyboard.
+    if (open) { if (document.activeElement !== inputRef.current) inputRef.current?.focus({ preventScroll: true }); }
+    else inputRef.current?.blur();
   }, [open]);
   const recent = feed.filter((m) => Date.now() - (m.at || 0) < 10_000).slice(-3);
   const submit = (e) => {
@@ -822,11 +836,11 @@ function ChatDock() {
       <div className="feed">
         {recent.map((m) => <div key={`${m.mid ?? m.id}-${m.at}`}><b>@{m.username}</b> {m.text}</div>)}
       </div>
-      {open && (
-        <div className="chat-dock">
+      {(
+        <div className={`chat-dock ${open ? '' : 'closed'}`} aria-hidden={!open}>
           <div className="emote-row">{EMOTES.map((e) => <button key={e} onClick={() => { sendEmote(e); set({ chatOpen: false }); }}>{e}</button>)}</div>
           <form onSubmit={submit}>
-            <input ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} placeholder={L('Sema kitu mtaani…', 'Say something…')} maxLength={200} enterKeyHint="send" />
+            <input ref={inputRef} tabIndex={open ? 0 : -1} value={text} onChange={(e) => setText(e.target.value)} placeholder={L('Sema kitu mtaani…', 'Say something…')} maxLength={200} enterKeyHint="send" />
             <button className="btn btn-green btn-xs" disabled={!text.trim()}>{L('Tuma', 'Send')}</button>
             <button type="button" className="btn btn-ghost btn-xs" onClick={() => set({ chatOpen: false })}>✕</button>
           </form>
@@ -890,7 +904,7 @@ export function HUD() {
       {!shop && (
         <div className="side">
           <button onClick={() => { Object.assign(view, { yaw: 0, pitch: 1.0, homeYaw: 0.75, homePitch: 0.95, homeDist: 30 }); sfx('click'); }} aria-label={L('Rudisha kamera', 'Reset camera')}>🧭</button>
-          {town && <button onClick={() => useStore.setState({ chatOpen: !chatOpen })} className={chatOpen ? 'on' : ''} aria-label="Chat">💬</button>}
+          {town && <button onClick={() => (chatOpen ? useStore.setState({ chatOpen: false }) : openChat())} className={chatOpen ? 'on' : ''} aria-label="Chat">💬</button>}
           <button onClick={() => (town ? setZoom(getZoom() * 0.8) : (view.homeDist = Math.max(14, view.homeDist * 0.8)))} aria-label="Zoom in">＋</button>
           <button onClick={() => (town ? setZoom(getZoom() * 1.25) : (view.homeDist = Math.min(48, view.homeDist * 1.25)))} aria-label="Zoom out">－</button>
         </div>
