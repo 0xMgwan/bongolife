@@ -42,6 +42,11 @@
   <main>
     <!-- ------------------------------------------------------------ hero -->
     <section class="hero">
+      <!-- Silent looping flyover behind the hero; the poster shows while it loads and for reduced motion. -->
+      <video class="hero-video" autoplay muted loop playsinline preload="auto" poster="assets/hero-poster.jpg" aria-hidden="true" tabindex="-1">
+        <source src="assets/hero.webm" type="video/webm" />
+        <source src="assets/hero.mp4" type="video/mp4" />
+      </video>
       <div class="hero-copy">
         <span class="badge" data-sw="🇹🇿 Mchezo wa maisha ya Dar es Salaam" data-en="🇹🇿 The Dar es Salaam life-sim">🇹🇿 Mchezo wa maisha ya Dar es Salaam</span>
         <h1 data-sw="Ishi maisha yako ya Dar — <em>na watu halisi.</em>" data-en="Live your Dar story — <em>with real people.</em>" data-html>Ishi maisha yako ya Dar — <em>na watu halisi.</em></h1>

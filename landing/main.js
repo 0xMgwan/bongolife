@@ -90,3 +90,14 @@ document.getElementById('year').textContent = new Date().getFullYear();
 applyLang();
 loadStats();
 setInterval(loadStats, 30_000);
+
+// ---------------------------------------------------------------- hero video
+// Muted autoplay can still be refused (Low Power Mode, a tab opened in the background):
+// retry when the page becomes visible and on the first tap.
+const heroVideo = document.querySelector('.hero-video');
+if (heroVideo && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const play = () => heroVideo.play().catch(() => {});
+  play();
+  document.addEventListener('visibilitychange', () => !document.hidden && play());
+  window.addEventListener('pointerdown', play, { once: true });
+}
