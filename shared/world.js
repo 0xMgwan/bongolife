@@ -1576,3 +1576,35 @@ export const COMPANY_EVENTS = [
   { id: 'mteja', p: 0.05, bonus: 0.5, text: ['🤝 Mteja mkubwa ameweka oda ya jumla!', '🤝 A big client placed a bulk order!'] },
   { id: 'wizi', p: 0.03, fine: 0.03, text: ['🦹 Mfanyakazi ameiba mzigo.', '🦹 A worker made off with some stock.'] },
 ];
+
+// ============================================================ player shops
+// A company can open a shop: other players buy these items; the owner keeps (price − stock cost).
+// price = base retail price (owner's markup multiplies it); effects apply to the buyer.
+export const SHOP_ITEMS = {
+  food: [
+    { id: 'chipsi', emoji: '🍟', name: ['Chipsi mayai', 'Chips mayai'], price: 3_000, effects: { hunger: 35 } },
+    { id: 'mishkaki', emoji: '🍢', name: ['Mishkaki', 'Mishkaki skewers'], price: 5_000, effects: { hunger: 30, fun: 8 } },
+    { id: 'pilau', emoji: '🍛', name: ['Pilau ya nyama', 'Beef pilau'], price: 7_000, effects: { hunger: 50, social: 5 } },
+  ],
+  salon: [
+    { id: 'kunyoa', emoji: '💈', name: ['Kunyoa', 'Fresh cut'], price: 8_000, effects: { hygiene: 25, fun: 10 } },
+    { id: 'kusuka', emoji: '💇🏾', name: ['Kusuka', 'Braids'], price: 25_000, effects: { hygiene: 20, social: 15, fun: 10 } },
+    { id: 'kucha', emoji: '💅🏾', name: ['Kucha', 'Nails'], price: 12_000, effects: { hygiene: 15, fun: 15 } },
+  ],
+  duka: [
+    { id: 'soda', emoji: '🥤', name: ['Soda baridi', 'Cold soda'], price: 1_500, effects: { energy: 8, fun: 5 } },
+    { id: 'mkate', emoji: '🍞', name: ['Mkate & maziwa', 'Bread & milk'], price: 4_000, effects: { hunger: 30 } },
+    { id: 'sabuni', emoji: '🧼', name: ['Sabuni & mafuta', 'Soap & lotion'], price: 6_000, effects: { hygiene: 35 } },
+  ],
+  fashion: [
+    { id: 'kitenge', emoji: '👗', name: ['Kitenge kipya', 'New kitenge'], price: 45_000, effects: { fun: 20, social: 20 } },
+    { id: 'raba', emoji: '👟', name: ['Raba kali', 'Fresh sneakers'], price: 80_000, effects: { fun: 25, social: 15 } },
+    { id: 'miwani', emoji: '🕶️', name: ['Miwani ya jua', 'Sunglasses'], price: 25_000, effects: { fun: 15, social: 10 } },
+  ],
+  pharmacy: [
+    { id: 'panadol', emoji: '💊', name: ['Dawa ya maumivu', 'Painkillers'], price: 3_000, health: 10, effects: { energy: 5 } },
+    { id: 'vitamini', emoji: '🍊', name: ['Vitamini', 'Vitamins'], price: 9_000, health: 5, effects: { energy: 20 } },
+    { id: 'firstaid', emoji: '🩹', name: ['Kifaa cha huduma ya kwanza', 'First-aid kit'], price: 20_000, health: 30, effects: {} },
+  ],
+};
+export const SHOP = { stockCost: 0.55, markups: [1, 1.2, 1.5, 2], buyCooldownMs: 3000 };

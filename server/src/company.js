@@ -1,6 +1,7 @@
 // Start-your-own companies: daily trading days settled lazily (like trucks), with a company account.
 import { db, getUser, addMoney, GameError, now } from './db.js';
-import { INDUSTRIES, industryById, COMPANY, COMPANY_EVENTS } from '../../shared/world.js';
+import { INDUSTRIES, industryById, COMPANY, COMPANY_EVENTS, SHOP_ITEMS, SHOP, NEEDS } from '../../shared/world.js';
+import { emitTo } from './presence.js';
 import { bumpStats } from './story.js';
 
 const DAY = 86_400_000;
@@ -34,6 +35,10 @@ CREATE TABLE IF NOT EXISTS company_days (
 );
 CREATE INDEX IF NOT EXISTS company_days_c ON company_days(company_id, day);
 `);
+// Player shops (added later): open flag, markup over retail, lifetime sales.
+for (const [col, def] of [['shop_open', 'INTEGER NOT NULL DEFAULT 0'], ['shop_markup', 'REAL NOT NULL DEFAULT 1.2'], ['shop_sales', 'INTEGER NOT NULL DEFAULT 0']]) {
+  if (!db.prepare('PRAGMA table_info(companies)').all().some((c) => c.name === col)) db.exec(`ALTER TABLE companies ADD COLUMN ${col} ${def}`);
+}
 
 const q = {
   mine: db.prepare('SELECT * FROM companies WHERE owner_id = ? ORDER BY id'),
@@ -165,6 +170,13 @@ export const updateCompany = db.transaction((userId, id, { action, value }) => {
       addMoney(userId, -amt, 'spend', `🏢 Mtaji kwa ${c.name}`);
       db.prepare('UPDATE companies SET balance = balance + ? WHERE id = ?').run(amt, c.id);
     }
+  } else if (action === 'shop') {
+    if (!SHOP_ITEMS[c.industry]) throw new GameError(['Sekta hii haiuzi bidhaa kwa wachezaji.', "This industry doesn't sell to players."]);
+    db.prepare('UPDATE companies SET shop_open = ? WHERE id = ?').run(value ? 1 : 0, c.id);
+  } else if (action === 'markup') {
+    const m = Number(value);
+    if (!SHOP.markups.includes(m)) throw new GameError(['Bei si sahihi.', 'Invalid markup.']);
+    db.prepare('UPDATE companies SET shop_markup = ? WHERE id = ?').run(m, c.id);
   } else if (action === 'rename') {
     const name = cleanName(value);
     if (name.length < 2) throw new GameError(['Jina fupi mno.', 'Name is too short.']);
@@ -181,3 +193,37 @@ export const updateCompany = db.transaction((userId, id, { action, value }) => {
 
 export const companyCount = (userId) => q.mine.all(userId).length;
 void INDUSTRIES;
+
+// ------------------------------------------------------------ player shops
+const shopPrice = (item, markup) => Math.round((item.price * markup) / 100) * 100;
+
+/** All open player shops, with their items at the owner's prices. */
+export function openShops(viewerId) {
+  return db.prepare(`SELECT c.id, c.name, c.logo, c.color, c.industry, c.shop_markup, c.shop_sales, c.reputation, u.username owner, u.id owner_id
+      FROM companies c JOIN users u ON u.id = c.owner_id WHERE c.shop_open = 1 AND u.banned_at IS NULL ORDER BY c.shop_sales DESC, c.id LIMIT 60`).all()
+    .filter((s) => SHOP_ITEMS[s.industry])
+    .map((s) => ({ ...s, mine: s.owner_id === viewerId, items: SHOP_ITEMS[s.industry].map((i) => ({ ...i, price: shopPrice(i, s.shop_markup) })) }));
+}
+
+const lastBuy = new Map();
+const clamp = (v) => Math.max(0, Math.min(100, v));
+export const buyFromShop = db.transaction((buyerId, companyId, itemId) => {
+  const c = db.prepare('SELECT * FROM companies WHERE id = ? AND shop_open = 1').get(Number(companyId));
+  if (!c) throw new GameError(['Duka hili limefungwa.', 'This shop is closed.'], 404);
+  if (c.owner_id === buyerId) throw new GameError(['Huwezi kununua dukani kwako.', "You can't buy from your own shop."]);
+  const item = SHOP_ITEMS[c.industry]?.find((i) => i.id === itemId);
+  if (!item) throw new GameError(['Bidhaa haipo.', 'Item not found.'], 404);
+  if (Date.now() - (lastBuy.get(buyerId) || 0) < SHOP.buyCooldownMs) throw new GameError(['Pole pole!', 'Easy there!'], 429);
+  lastBuy.set(buyerId, Date.now());
+  const price = shopPrice(item, c.shop_markup);
+  const buyer = getUser(buyerId);
+  addMoney(buyerId, -price, 'spend', `${item.emoji} ${item.name[0]} — ${c.name}`);
+  const profit = price - Math.round(item.price * SHOP.stockCost);
+  db.prepare('UPDATE companies SET balance = balance + ?, shop_sales = shop_sales + 1 WHERE id = ?').run(profit, c.id);
+  const needs = { ...buyer.needs };
+  for (const [k, v] of Object.entries(item.effects || {})) if (NEEDS.some((n) => n.id === k)) needs[k] = clamp((needs[k] ?? 50) + v);
+  db.prepare('UPDATE users SET needs = ?, health = ? WHERE id = ?').run(JSON.stringify(needs), Math.min(100, (buyer.health ?? 100) + (item.health || 0)), buyerId);
+  bumpStats(buyerId, ['shop_buys']);
+  emitTo(c.owner_id, 'toast', { text: [`🛍️ @${buyer.username} amenunua ${item.name[0]} — ${c.name} (+TSh ${profit.toLocaleString()})`, `🛍️ @${buyer.username} bought ${item.name[1]} at ${c.name} (+TSh ${profit.toLocaleString()})`] });
+  return { item: item.id, price, shop: c.name };
+});

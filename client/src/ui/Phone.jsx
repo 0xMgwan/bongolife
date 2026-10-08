@@ -22,6 +22,7 @@ import { Wekeza } from './apps/Wekeza.jsx';
 import { Polisi } from './apps/Polisi.jsx';
 import { Majirani } from './apps/Majirani.jsx';
 import { Kampuni } from './apps/Kampuni.jsx';
+import { Maduka } from './apps/Maduka.jsx';
 import { api } from '../api.js';
 
 // Built-in apps. `g` is the icon gradient.
@@ -30,6 +31,7 @@ export const APPS = [
   { id: 'kazi', name: 'Kazi', nameEn: 'Jobs', icon: '💼', g: ['#34d399', '#059669'], C: Kazi },
   { id: 'wekeza', name: 'Wekeza', nameEn: 'Invest', icon: '📈', g: ['#4ade80', '#15803d'], C: Wekeza },
   { id: 'kampuni', name: 'Kampuni', nameEn: 'Company', icon: '🏢', g: ['#93c5fd', '#1e40af'], C: Kampuni },
+  { id: 'maduka', name: 'Maduka', nameEn: 'Shops', icon: '🛍️', g: ['#fda4af', '#e11d48'], C: Maduka },
   { id: 'ujumbe', name: 'Ujumbe', nameEn: 'Messages', icon: '💬', g: ['#60a5fa', '#2563eb'], C: Threads },
   { id: 'watu', name: 'Watu', nameEn: 'People', icon: '🤝', g: ['#f472b6', '#db2777'], C: Watu },
   { id: 'safari', name: 'Safari', nameEn: 'Travel', icon: '✈️', g: ['#38bdf8', '#1d4ed8'], C: Safari },

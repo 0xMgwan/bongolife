@@ -689,6 +689,12 @@ api.post('/companies', (req, res) => {
   const id = company.createCompany(req.user.id, { name: req.body.name, logo: req.body.logo, color: req.body.color, industry: str(req.body.industry, 20) });
   res.status(201).json({ id, companies: company.myCompanies(req.user.id), me: game.playerState(req.user.id) });
 });
+api.get('/shops', (req, res) => res.json(company.openShops(req.user.id)));
+api.post('/shops/:id/buy', (req, res) => {
+  crime.assertFree(getUser(req.user.id));
+  const r = company.buyFromShop(req.user.id, req.params.id, str(req.body.item, 20));
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
 api.post('/companies/:id', (req, res) => {
   const r = company.updateCompany(req.user.id, req.params.id, { action: str(req.body.action, 12), value: req.body.value });
   res.json({ ...r, companies: company.myCompanies(req.user.id), me: game.playerState(req.user.id) });

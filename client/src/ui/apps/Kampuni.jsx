@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { INDUSTRIES, industryById, COMPANY, fmtTsh, fmtShort } from '@shared/world.js';
+import { INDUSTRIES, industryById, COMPANY, SHOP_ITEMS, SHOP, fmtTsh, fmtShort } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { api } from '../../api.js';
 import { AppHead } from '../Phone.jsx';
@@ -125,6 +125,30 @@ function CompanyView({ c, onBack, onChanged }) {
         {Object.keys(COMPANY.prices).map((p) => <button key={p} className={c.price === p ? 'on' : ''} onClick={() => act('price', p)}>{pick(PRICE_LABEL[p])}</button>)}
       </div>
       <div className="hint" style={{ marginTop: 4 }}>{L('Bei nafuu huleta wateja wengi; bei ya juu inafaa ukishajenga sifa.', 'Cheap brings crowds; premium pays off once you have a reputation.')}</div>
+
+      {SHOP_ITEMS[c.industry] && (
+        <>
+          <div className="section-t">{L('DUKA LA WACHEZAJI', 'PLAYER SHOP')}</div>
+          <div className="co-box">
+            <div className="row between">
+              <span>🛍️ {c.shop_open ? L(`Liko wazi · mauzo ${c.shop_sales}`, `Open · ${c.shop_sales} sales`) : L('Wachezaji wengine wanunue kwako', 'Let other players buy from you')}</span>
+              <button className={`btn btn-sm ${c.shop_open ? 'btn-ghost' : 'btn-green'}`} onClick={() => act('shop', !c.shop_open, null, c.shop_open ? L('Duka limefungwa', 'Shop closed') : L('🛍️ Duka liko wazi! Liko kwenye app ya Maduka.', '🛍️ Shop open! It’s listed in the Shops app.'))}>{c.shop_open ? L('Funga', 'Close') : L('Fungua duka', 'Open shop')}</button>
+            </div>
+            {c.shop_open ? (
+              <>
+                <div className="seg" style={{ margin: '4px 0 0' }}>
+                  {SHOP.markups.map((m) => <button key={m} className={c.shop_markup === m ? 'on' : ''} onClick={() => act('markup', m)}>×{m}</button>)}
+                </div>
+                {SHOP_ITEMS[c.industry].map((i) => {
+                  const price = Math.round((i.price * c.shop_markup) / 100) * 100;
+                  return <small key={i.id} className="muted">{i.emoji} {pick(i.name)} · {fmtShort(price)} · {L('faida', 'profit')} {fmtShort(price - Math.round(i.price * SHOP.stockCost))}</small>;
+                })}
+                <small className="muted">{L('Bei juu = faida zaidi kwa kila mauzo, lakini wanunuzi huchagua maduka ya bei nafuu.', 'Higher markup = more profit per sale, but buyers shop around.')}</small>
+              </>
+            ) : null}
+          </div>
+        </>
+      )}
 
       <div className="section-t">{L('MATANGAZO', 'MARKETING')}</div>
       <div className="co-box">
