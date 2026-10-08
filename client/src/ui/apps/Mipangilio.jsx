@@ -10,6 +10,7 @@ import { L, loc } from '../../i18n.js';
 import { setAudioSettings, sfx } from '../../audio.js';
 import { useAudioSettings } from '../useAudioSettings.js';
 import { InviteCard } from '../Invite.jsx';
+import { InstallRow } from '../InstallApp.jsx';
 
 function SoundSettings() {
   const s = useAudioSettings();
@@ -173,6 +174,7 @@ export function Mipangilio({ back }) {
         <Security />
         <SoundSettings />
         <Haptics />
+        <InstallRow />
         <div className="box">
           <div className="bold" style={{ marginBottom: 8 }}>{L('Lugha', 'Language')}</div>
           <LangToggle full />

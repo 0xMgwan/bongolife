@@ -117,9 +117,9 @@ export function labelTexture(text, { bg = 'rgba(255,255,255,.95)', fg = '#111827
   const w = tw + pad * 2;
   const h = Math.round(size * 1.7);
   const texture = canvasTex(w, h + 8, (ctx) => {
-    ctx.shadowColor = 'rgba(0,0,0,.18)';
-    ctx.shadowBlur = 6;
-    ctx.shadowOffsetY = 2;
+    ctx.shadowColor = 'rgba(15,23,42,.22)';
+    ctx.shadowBlur = Math.max(6, size * 0.1);
+    ctx.shadowOffsetY = Math.max(2, size * 0.04);
     ctx.fillStyle = bg;
     roundRect(ctx, 2, 2, w - 4, h - 2, (h - 2) / 2);
     ctx.fill();
@@ -129,6 +129,9 @@ export function labelTexture(text, { bg = 'rgba(255,255,255,.95)', fg = '#111827
     ctx.textBaseline = 'middle';
     ctx.fillText(full, pad, h / 2 + 2);
   });
+  // Labels are shown at screen size: no mipmaps, so the text stays sharp instead of smeared.
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
   const res = { texture, aspect: w / (h + 8) };
   if (labelCache.size > 400) labelCache.clear();
   labelCache.set(key, res);

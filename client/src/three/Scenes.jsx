@@ -1980,6 +1980,133 @@ function Lion({ p, ry = 0 }) {
     </group>
   );
 }
+/** A thin straight rope/pole between two points. */
+function Rope({ a, b, r = 0.025, c = '#3f2a14' }) {
+  const { pos, quat, len } = useMemo(() => {
+    const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+    const d = B.clone().sub(A);
+    return { pos: A.clone().add(B).multiplyScalar(0.5).toArray(), quat: new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize()), len: d.length() };
+  }, [a, b]);
+  return <mesh geometry={geo('cyl', r, r, 1, 5)} material={mat(c)} position={pos} quaternion={quat} scale={[1, len, 1]} />;
+}
+
+function wickerTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  x.fillStyle = '#8a5a2b'; x.fillRect(0, 0, 128, 128);
+  for (let r = 0; r < 16; r++) for (let k = 0; k < 16; k++) {
+    x.fillStyle = (r + k) % 2 ? '#b07a3f' : '#9c6731';
+    x.fillRect(k * 8 + 1, r * 8 + 1, 6, 6);
+  }
+  x.fillStyle = 'rgba(60,35,10,.5)';
+  for (let r = 0; r <= 16; r++) x.fillRect(0, r * 8, 128, 1);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 1);
+  return t;
+}
+function goresTexture(colors) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 64;
+  const x = c.getContext('2d');
+  const n = 16;
+  for (let i = 0; i < n; i++) { x.fillStyle = colors[i % colors.length]; x.fillRect((i * 512) / n, 0, 512 / n + 1, 64); }
+  x.fillStyle = 'rgba(0,0,0,.18)';
+  for (let i = 0; i < n; i++) x.fillRect((i * 512) / n, 0, 2, 64); // seams
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+// Teardrop envelope profile (radius, height), throat at the bottom.
+const ENVELOPE = [[0.5, 0], [0.75, 0.5], [1.35, 1.3], [2.15, 2.2], [2.75, 3.1], [3.1, 4.1], [3.15, 5.0], [2.95, 5.9], [2.45, 6.7], [1.7, 7.3], [0.8, 7.65], [0, 7.75]].map(([r, y]) => new THREE.Vector2(r, y));
+
+/** Hot-air balloon: striped envelope, rigging, wicker basket and a burner that flares. */
+function Balloon({ colors = ['#dc2626', '#facc15', '#f97316', '#facc15'], children }) {
+  const env = useMemo(() => new THREE.LatheGeometry(ENVELOPE, 40), []);
+  const envMat = useMemo(() => new THREE.MeshLambertMaterial({ map: goresTexture(colors), side: THREE.DoubleSide }), [colors]);
+  const wicker = useMemo(() => new THREE.MeshLambertMaterial({ map: wickerTexture() }), []);
+  const flame = useRef();
+  useFrame(({ clock }) => {
+    if (!flame.current) return;
+    const t = clock.elapsedTime;
+    const on = Math.sin(t * 0.9) > 0.35; // burner fires in bursts
+    const k = on ? 1 + Math.sin(t * 40) * 0.15 : 0.001;
+    flame.current.scale.set(k, k * 1.4, k);
+  });
+  const throat = 2.9;
+  return (
+    <group>
+      <mesh geometry={env} material={envMat} position={[0, throat, 0]} />
+      <mesh geometry={geo('torus', 0.5, 0.05, 6, 20)} material={mat('#3f2a14')} position={[0, throat, 0]} rotation={[Math.PI / 2, 0, 0]} />
+      {/* basket */}
+      <mesh geometry={unitBox} material={wicker} scale={[1.5, 1.05, 1.5]} />
+      <Box p={[0, 1.0, 0]} s={[1.62, 0.12, 1.62]} c="#5b3a1a" />
+      {[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([x, z], i) => (
+        <group key={i}>
+          <Rope a={[x * 0.74, 1.1, z * 0.74]} b={[x * 0.32, 2.2, z * 0.32]} />
+          <Rope a={[x * 0.32, 2.2, z * 0.32]} b={[x * 0.36, throat + 0.02, z * 0.36]} />
+        </group>
+      ))}
+      {/* burner + flame */}
+      <mesh geometry={geo('cyl', 0.22, 0.26, 0.3, 10)} material={mat('#9ca3af')} position={[0, 2.25, 0]} />
+      <mesh ref={flame} geometry={geo('cone', 0.2, 0.9, 10)} material={basic('#fb923c', { transparent: true, opacity: 0.9 })} position={[0, 2.85, 0]} />
+      {children}
+    </group>
+  );
+}
+
+/** Open-sided Land Cruiser game-drive vehicle: canvas pop-top, bench seats, snorkel, spare wheel. Faces +z. */
+function SafariJeep({ me, myBusy }) {
+  const body = '#6b7d3a';
+  const tyre = mat('#1f2937');
+  const rim = mat('#9ca3af');
+  return (
+    <group>
+      {[[-0.98, 1.6], [0.98, 1.6], [-0.98, -1.55], [0.98, -1.55]].map(([x, z], i) => (
+        <group key={i} position={[x, 0.48, z]} rotation={[0, 0, Math.PI / 2]}>
+          <mesh geometry={geo('cyl', 0.48, 0.48, 0.38, 18)} material={tyre} />
+          <mesh geometry={geo('cyl', 0.26, 0.26, 0.4, 10)} material={rim} />
+        </group>
+      ))}
+      <Box p={[0, 0.5, 0.1]} s={[1.95, 0.75, 4.85]} c={body} />
+      {[[-1, 1.6], [1, 1.6], [-1, -1.55], [1, -1.55]].map(([x, z], i) => <Box key={i} p={[x, 0.82, z]} s={[0.1, 0.22, 1.25]} c="#1f2937" />)}
+      <Box p={[0, 0.35, 0.1]} s={[2.0, 0.12, 2.0]} c="#1f2937" />
+      {/* bonnet, grille, lights, bull bar */}
+      <Box p={[0, 1.25, 1.65]} s={[1.85, 0.42, 1.6]} c={body} />
+      <Box p={[0, 0.62, 2.48]} s={[1.55, 0.95, 0.06]} c="#1f2937" />
+      {[-0.62, 0.62].map((x) => <mesh key={x} geometry={geo('cyl', 0.16, 0.16, 0.06, 14)} material={basic('#fef9c3')} position={[x, 1.2, 2.52]} rotation={[Math.PI / 2, 0, 0]} />)}
+      <Rope a={[-0.95, 1.0, 2.68]} b={[0.95, 1.0, 2.68]} r={0.05} c="#111827" />
+      {[-0.45, 0.45].map((x) => <Rope key={x} a={[x, 0.45, 2.66]} b={[x, 1.35, 2.66]} r={0.05} c="#111827" />)}
+      {/* windscreen + cab roof */}
+      {[-0.9, 0.9].map((x) => <Box key={x} p={[x, 1.6, 0.85]} s={[0.08, 0.95, 0.08]} c={body} />)}
+      <Box p={[0, 1.62, 0.86]} s={[1.75, 0.9, 0.04]} m={mat('#1e293b', { transparent: true, opacity: 0.55 })} />
+      <Box p={[0, 2.55, 0.35]} s={[1.98, 0.08, 1.15]} c={body} />
+      {[-0.95, 0.95].map((x) => <Box key={x} p={[x, 1.6, -0.2]} s={[0.07, 0.95, 0.07]} c={body} />)}
+      {/* open rear: waist-high sides, benches, pop-top canvas roof */}
+      {[-0.95, 0.95].map((x) => <Box key={x} p={[x, 1.25, -1.15]} s={[0.06, 0.38, 2.6]} c={body} />)}
+      <Box p={[0, 1.25, -2.43]} s={[1.95, 0.55, 0.06]} c={body} />
+      {[-0.55, -1.65].map((z) => (
+        <group key={z}>
+          <Box p={[0, 1.25, z]} s={[1.75, 0.16, 0.5]} c="#7c4a21" />
+          <Box p={[0, 1.4, z - 0.24]} s={[1.75, 0.45, 0.09]} c="#7c4a21" />
+        </group>
+      ))}
+      {[[-0.92, -0.3], [0.92, -0.3], [-0.92, -2.35], [0.92, -2.35]].map(([x, z], i) => <Box key={i} p={[x, 1.25, z]} s={[0.07, 2.0, 0.07]} c="#374151" />)}
+      <Box p={[0, 3.25, -1.33]} s={[2.1, 0.09, 2.35]} c="#d6c7a1" />
+      <Box p={[0, 3.17, -1.33]} s={[2.14, 0.08, 2.39]} c="#a8946a" />
+      {/* snorkel, spare wheel, roof rack */}
+      <Rope a={[1.02, 0.9, 1.1]} b={[1.02, 2.55, 0.9]} r={0.07} c="#111827" />
+      <Box p={[1.02, 2.5, 0.84]} s={[0.16, 0.12, 0.22]} c="#111827" />
+      <group position={[0, 1.35, -2.62]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh geometry={geo('cyl', 0.46, 0.46, 0.3, 18)} material={tyre} />
+        <mesh geometry={geo('cyl', 0.24, 0.24, 0.32, 10)} material={rim} />
+      </group>
+      <group position={[1.0, 0.98, -0.6]} rotation={[0, Math.PI / 2, 0]}><Sign text="SERENGETI SAFARIS" p={[0, 0, 0]} h={0.26} fg="#fef3c7" /></group>
+      <group position={[-1.0, 0.98, -0.6]} rotation={[0, -Math.PI / 2, 0]}><Sign text="SERENGETI SAFARIS" p={[0, 0, 0]} h={0.26} fg="#fef3c7" /></group>
+      {/* people: guide driving, you standing up in the pop-top with a tourist */}
+      <Person slot={[0.45, 0.75, 0.25, 0]} appearance={NPC_LOOKS[6]} mode="sit" />
+      <Person slot={[0.4, 0.95, -1.05, 0]} appearance={me.appearance} mode={myBusy?.kind === 'job' ? 'idle' : 'cheer'} id={me.id} username={me.username} />
+      <Person slot={[-0.45, 0.95, -1.95, 0]} appearance={NPC_LOOKS[11]} mode="idle" />
+    </group>
+  );
+}
+
 /** Safari: open savannah, a pop-top Land Cruiser on a game drive — or a hot-air balloon over the Serengeti. */
 function SafariScene({ me, myBusy }) {
   const balloon = myBusy?.id === 'balloon';
@@ -1987,15 +2114,35 @@ function SafariScene({ me, myBusy }) {
   const forest = myBusy?.placeId === 'jozani';
   const jeep = useRef();
   const herd = useRef();
+  const bal = useRef();
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
-    if (jeep.current) { jeep.current.position.x = Math.sin(t * 0.15) * 6; jeep.current.rotation.y = Math.cos(t * 0.15) > 0 ? Math.PI / 2 : -Math.PI / 2; }
+    if (jeep.current) {
+      // Slow loop around the herd; nose follows the track.
+      const a = t * 0.12;
+      const x = Math.sin(a) * 7, z = -1 + Math.cos(a) * 2.5;
+      jeep.current.position.set(x, Math.abs(Math.sin(t * 6)) * 0.02, z);
+      jeep.current.rotation.y = Math.atan2(Math.cos(a) * 7, -Math.sin(a) * 2.5);
+      sceneCam.pos = [8, 7, 15];
+      sceneCam.look = [x * 0.6, -1.2, -3];
+    }
+    if (bal.current) {
+      const bx = Math.sin(t * 0.05) * 10, by = 24 + Math.sin(t * 0.3) * 0.6, bz = -8 + Math.cos(t * 0.04) * 4;
+      bal.current.position.set(bx, by, bz);
+      bal.current.rotation.y = t * 0.03;
+      sceneCam.pos = [bx + 13, by + 3, bz + 19];
+      sceneCam.look = [bx, by + 3.2, bz];
+    }
     if (herd.current) herd.current.position.x = Math.sin(t * 0.08) * 3;
   });
-  const acacias = useMemo(() => Array.from({ length: 22 }, (_, i) => [((i * 47) % 80) - 40, -10 - ((i * 31) % 50)]), []);
+  const acacias = useMemo(() => {
+    const rnd = (n) => { const v = Math.sin(n * 12.9898) * 43758.5453; return v - Math.floor(v); };
+    const W = balloon ? 90 : 40, D = balloon ? 120 : 50;
+    return Array.from({ length: balloon ? 70 : 22 }, (_, i) => [(rnd(i + 1) * 2 - 1) * W, -8 - rnd(i + 101) * D + (balloon ? 40 : 0)]).filter(([x, z]) => Math.abs(x) > 4 || z < -14);
+  }, [balloon]);
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -20]}><planeGeometry args={[300, 200]} /><meshLambertMaterial color={forest ? '#3f6212' : crater ? '#84a35a' : '#c9b37a'} /></mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -20]}><planeGeometry args={[400, 300]} /><meshLambertMaterial color={forest ? '#3f6212' : crater ? '#84a35a' : '#c9b37a'} /></mesh>
       {crater && <mesh geometry={geo('cyl', 90, 110, 22, 24, 1, true)} material={mat('#57534e', { side: THREE.DoubleSide })} position={[0, 11, -40]} />}
       {acacias.map(([x, z], i) => (
         <group key={i} position={[x, 0, z]}>
@@ -2009,6 +2156,7 @@ function SafariScene({ me, myBusy }) {
           <Zebra p={[4, 0, -9]} ry={-0.4} /><Zebra p={[6, 0, -10.5]} ry={-0.2} /><Zebra p={[5, 0, -7.5]} ry={-0.6} />
           <Elephant p={[12, 0, -20]} ry={-0.8} /><Elephant p={[16, 0, -23]} ry={-1} />
           <Lion p={[-2, 0, -6]} ry={0.3} />
+          {balloon && <><Giraffe p={[-20, 0, -30]} ry={1.2} /><Elephant p={[22, 0, -2]} ry={2} /><Zebra p={[10, 0, 4]} ry={1} /><Zebra p={[12, 0, 5]} ry={1.1} /><Zebra p={[11, 0, 7]} ry={0.8} /></>}
         </group>
       )}
       {forest && Array.from({ length: 6 }, (_, i) => (
@@ -2017,19 +2165,19 @@ function SafariScene({ me, myBusy }) {
         </Mover>
       ))}
       {balloon ? (
-        <Mover fn={(o, t) => o.position.set(Math.sin(t * 0.1) * 3, 9 + Math.sin(t * 0.4) * 0.5, -4)}>
-          <mesh geometry={geo('sphere', 3, 16, 12)} material={mat('#ef4444')} position={[0, 5, 0]} scale={[1, 1.2, 1]} />
-          <mesh geometry={geo('cone', 1.5, 2, 12)} material={mat('#facc15')} position={[0, 1.8, 0]} rotation={[Math.PI, 0, 0]} />
-          <Box p={[0, -0.6, 0]} s={[1.6, 0.9, 1.6]} c="#92400e" />
-          <Person slot={[0, -0.6, 0, 0]} appearance={me.appearance} mode="cheer" id={me.id} username={me.username} />
-        </Mover>
+        <>
+          <group ref={bal}>
+            <Balloon>
+              <Person slot={[0.3, 0.15, 0.2, 0.4]} appearance={me.appearance} mode="cheer" id={me.id} username={me.username} />
+              <Person slot={[-0.35, 0.15, -0.3, 0.4]} appearance={NPC_LOOKS[3]} mode="idle" />
+            </Balloon>
+          </group>
+          <group position={[-28, 20, -36]}><Balloon colors={['#2563eb', '#f8fafc', '#2563eb', '#22c55e']} /></group>
+          <group position={[34, 15, -52]}><Balloon colors={['#a21caf', '#f472b6', '#facc15', '#f472b6']} /></group>
+          <group position={[-10, 27, -75]}><Balloon colors={['#059669', '#fde047']} /></group>
+        </>
       ) : (
-        <group ref={jeep} position={[0, 0, -2]}>
-          <Car body="suv-big" color="#65a30d" />
-          <Box p={[0, 2.9, -0.3]} s={[1.8, 0.08, 2.6]} c="#d6d3d1" />
-          {[[-0.6, -0.9], [0.6, -0.9], [-0.6, 0.6], [0.6, 0.6]].map(([x, z], i) => <Box key={i} p={[x, 1.9, z]} s={[0.06, 1, 0.06]} c="#374151" />)}
-          <group position={[0.4, 1.3, -0.6]}><Person slot={[0, 0, 0, 0]} appearance={me.appearance} mode={myBusy?.kind === 'job' ? 'idle' : 'cheer'} id={me.id} username={me.username} /></group>
-        </group>
+        <group ref={jeep}><SafariJeep me={me} myBusy={myBusy} /></group>
       )}
     </group>
   );
@@ -2140,7 +2288,7 @@ export const SCENES = {
   heli: { C: Heli, camera: { pos: [9, 36, 16], look: [0, 29, -2] }, bg: '#7dd3fc', light: 1.1 },
   ferry: { C: Ferry, camera: { pos: [9, 8, 19], look: [0, 3, -24] }, bg: '#7dd3fc', light: 1.05 },
   road: { C: Road, camera: { pos: [3.5, 4.8, 9.5], look: [1, 1, -6] }, bg: '#bae6fd', light: 1.1 },
-  safari: { C: SafariScene, camera: { pos: [6, 8, 14], look: [0, 2.5, -8] }, bg: '#fed7aa', light: 1.1 },
+  safari: { C: SafariScene, camera: { pos: [6, 8, 14], look: [0, 2.5, -8] }, dynamic: true, bg: '#fed7aa', light: 1.1 },
   hike: { C: Hike, camera: { pos: [4, 5, 9], look: [0, 2, -10] }, bg: '#bae6fd', light: 1.1 },
   casino: { C: CasinoScene, camera: { pos: [3, 13, 13], look: [0, 0.2, -1.5] }, dark: true, bg: '#0c0a09', light: 0.45 },
   police: { C: Police, camera: { pos: [-1.5, 8, 9.5], look: [-3.6, 0.6, -1.6] }, bg: '#1c1917', light: 0.95 },

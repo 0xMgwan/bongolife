@@ -649,10 +649,10 @@ function towerFacade(color) {
  */
 export function Marker({ emoji, y, scale = 3.2, label, onClick, ring, pill }) {
   // Map view: one white pill with the icon and the name (like Lagos), easy to read from above.
-  const pillTex = useMemo(() => (pill && label ? labelTexture(label, { size: 36, emoji, bold: 700 }) : null), [pill, label, emoji]);
+  const pillTex = useMemo(() => (pill && label ? labelTexture(label, { size: 76, emoji, bold: 800, fg: '#0f172a', bg: '#ffffff' }) : null), [pill, label, emoji]);
   // Map markers keep their disc: bare emojis are too small to spot over buildings on a phone.
   const tex = useMemo(() => emojiTexture(emoji, { ring }), [emoji, ring]);
-  const lab = useMemo(() => (label && !pill ? labelTexture(label, { size: 34 }) : null), [label, pill]);
+  const lab = useMemo(() => (label && !pill ? labelTexture(label, { size: 60, bold: 700 }) : null), [label, pill]);
   if (pillTex) {
     const ph = 0.034;
     return (

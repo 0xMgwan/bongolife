@@ -55,6 +55,8 @@ app.get('/healthz', (_req, res) => res.json({ ok: true }));
 
 const dist = path.resolve(import.meta.dirname, '../../client/dist');
 if (fs.existsSync(dist)) {
+  // The service worker must never be cached, or installed apps would keep an old one.
+  app.get('/sw.js', (_req, res) => res.set('Cache-Control', 'no-cache').sendFile(path.join(dist, 'sw.js')));
   app.use(express.static(dist, { maxAge: '1h', index: false }));
   app.use('/assets', express.static(path.join(dist, 'assets'), { maxAge: '365d', immutable: true }));
   app.get('*', (_req, res) => res.sendFile(path.join(dist, 'index.html')));

@@ -8,6 +8,7 @@ import { useStore } from '../store.js';
 import { api, visitorId } from '../api.js';
 import { connect, local, input, setInside, enterHome, leaveHome, jump } from '../net.js';
 import { SocialModals } from './Social.jsx';
+import { InstallBanner } from './InstallApp.jsx';
 import { PresenceAlerts } from './LiveNow.jsx';
 import { readDeepLink } from './share.js';
 import { loadEvents } from './events.js';
@@ -165,6 +166,7 @@ export default function Game() {
       <Phone />
       <SocialModals />
       <PresenceAlerts />
+      <InstallBanner />
     </div>
   );
 }
