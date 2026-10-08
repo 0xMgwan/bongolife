@@ -145,11 +145,11 @@ export function Topups() {
                 <td><StatusBadge s={t.status} />{t.credited_at ? <div className="small muted">{ago(t.credited_at)}</div> : null}</td>
                 <td className="small muted" style={{ maxWidth: 160, wordBreak: 'break-all' }}>{t.provider_ref}</td>
                 <td>
-                  {t.status === 'pending' && (
+                  {(t.status === 'pending' || t.status === 'expired') && (
                     <div className="actions" style={{ gap: 4 }}>
                       <button className="btn btn-outline btn-xs" onClick={async () => { const r = await act(`/topups/${t.id}/recheck`, { ok: '🔄 Re-checked' }); if (r) reload(); }}>Re-check</button>
                       <button className="btn btn-outline btn-xs" onClick={() => setModal({ t, status: 'paid' })}>Mark paid</button>
-                      <button className="btn btn-outline btn-xs" onClick={() => setModal({ t, status: 'failed' })}>Mark failed</button>
+                      {t.status === 'pending' && <button className="btn btn-outline btn-xs" onClick={() => setModal({ t, status: 'failed' })}>Mark failed</button>}
                     </div>
                   )}
                 </td>

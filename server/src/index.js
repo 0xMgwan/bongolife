@@ -115,7 +115,7 @@ io.on('connection', (socket) => {
     p.x = d.x;
     p.z = d.z;
     p.ry = Number.isFinite(d.ry) ? d.ry : p.ry;
-    p.m = d.m ? 1 : 0;
+    p.m = d.m === 2 ? 2 : d.m ? 1 : 0; // 2 = running
     pendingMoves.set(uid, [uid, +p.x.toFixed(2), +p.z.toFixed(2), +p.ry.toFixed(2), p.m]);
   });
 
@@ -231,6 +231,13 @@ io.on('connection', (socket) => {
   });
   socket.on('home:leave', leaveHome);
 
+  socket.on('jump', () => {
+    const t = now();
+    if (t - (p.lastJump || 0) < 400) return;
+    p.lastJump = t;
+    socket.broadcast.emit('jump', { id: uid });
+  });
+
   socket.on('emote', (e) => {
     if (typeof e === 'string' && e.length <= 8) broadcast('emote', { id: uid, e });
   });
@@ -300,10 +307,20 @@ setInterval(() => {
   }
 }, 30_000);
 
-// Settle pending top-ups in the background (webhook-free, idempotent).
+// Settle pending top-ups in the background (webhook-free, idempotent). Walks the pending set in
+// batches with a cursor so 25+ abandoned pushes can't starve newer top-ups, and never overlaps runs.
+let topupCursor = 0;
+let settling = false;
 setInterval(async () => {
-  const rows = db.prepare("SELECT * FROM topups WHERE status = 'pending' ORDER BY id LIMIT 25").all();
-  for (const t of rows) await settleTopup(t);
+  if (settling) return;
+  settling = true;
+  try {
+    const rows = db.prepare("SELECT * FROM topups WHERE status = 'pending' AND id > ? ORDER BY id LIMIT 25").all(topupCursor);
+    topupCursor = rows.length < 25 ? 0 : rows[rows.length - 1].id;
+    for (const t of rows) await settleTopup(t);
+  } finally {
+    settling = false;
+  }
 }, 15_000);
 
 server.listen(PORT, () => console.log(`🇹🇿 Bongo Life server on http://localhost:${PORT}`));

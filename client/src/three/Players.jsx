@@ -9,6 +9,16 @@ import { api } from '../api.js';
 import { sfx } from '../audio.js';
 import { useStore } from '../store.js';
 
+const WALK_SPEED = 7.5;
+const RUN_SPEED = 13;
+const JUMP_MS = 560;
+const JUMP_H = 1.4;
+/** Height above the ground for a hop started at `at` (performance.now()), 0 once landed. */
+function jumpHeight(at) {
+  const t = (performance.now() - (at || 0)) / JUMP_MS;
+  return t > 0 && t < 1 ? 4 * JUMP_H * t * (1 - t) : 0;
+}
+
 const DANCE = new Set(['cheza', 'vip', 'mzunguko', 'sundowner', 'dabi']);
 const SIT = new Set(['lala', 'pumzika', 'sinema', 'mpira', 'kijiweni', 'kozi', 'maktaba']);
 export function busyMode(busy) {
@@ -255,9 +265,14 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
     }
     const len = Math.hypot(dx, dz);
     const moving = !busy && len > 0.05;
+    // On foot you run when the stick is pushed most of the way (keys count as full), or when
+    // heading somewhere further off; a gentle push still walks. Injured players can't run.
+    const injured = healthRef.current < HEALTH.injuredBelow;
+    const running = moving && !vehicle && !injured && (manual ? len > 0.75 : len > 6);
+    local.running = running;
     if (moving) {
-      const tired = (energyRef.current < 12 ? 0.6 : 1) * (healthRef.current < HEALTH.injuredBelow ? 0.55 : 1);
-      const speed = 7.5 * speedMult * tired * Math.min(1, manual ? len : 1);
+      const tired = (energyRef.current < 12 ? 0.6 : 1) * (injured ? 0.55 : 1);
+      const speed = (running ? RUN_SPEED : WALK_SPEED) * speedMult * tired * Math.min(1, manual ? len : 1);
       const step = Math.min(speed * dt, manual ? Infinity : len);
       const nx = local.x + (dx / len) * step;
       const nz = local.z + (dz / len) * step;
@@ -275,8 +290,9 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
     local.moving = moving;
     motion.current.moving = moving;
     motion.current.speed = Math.min(1.6, speedMult);
-    motion.current.mode = busy ? busyMode(busy) : moving ? 'walk' : 'idle';
-    g.position.set(local.x, 0.1, local.z);
+    const hop = vehicle ? 0 : jumpHeight(local.jumpAt);
+    motion.current.mode = busy ? busyMode(busy) : hop > 0 ? 'jump' : running ? 'run' : moving ? 'walk' : 'idle';
+    g.position.set(local.x, 0.1 + hop, local.z);
     g.rotation.y = local.ry;
     sendMove();
   });
@@ -309,13 +325,14 @@ function RemotePlayer({ r, onClick }) {
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
     p.ry += diff * Math.min(1, dt * 10);
     const g = group.current;
-    g.position.set(p.x, 0.1, p.z);
+    const hop = r.v ? 0 : jumpHeight(r.jumpAt);
+    g.position.set(p.x, 0.1 + hop, p.z);
     g.rotation.y = p.ry;
     // Cheap LOD: hide players far from the camera focus.
     g.visible = !r.inside && Math.hypot(camera.position.x - p.x, camera.position.z - p.z) < 140;
     const busy = r.busy && r.busy.endsAt > Date.now() ? r.busy : null;
     motion.current.moving = !!r.m || dist > 0.3;
-    motion.current.mode = busy ? busyMode(busy) : motion.current.moving ? 'walk' : 'idle';
+    motion.current.mode = busy ? busyMode(busy) : hop > 0 ? 'jump' : r.m === 2 ? 'run' : motion.current.moving ? 'walk' : 'idle';
     motion.current.speed = r.v ? 1.5 : 1;
   });
   const click = (e) => {

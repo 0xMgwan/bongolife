@@ -6,8 +6,9 @@ import { walkTo, goToPlace } from '../nav.js';
 import { L, loc } from '../i18n.js';
 import { useStore } from '../store.js';
 import { api, visitorId } from '../api.js';
-import { connect, local, input, setInside, enterHome, leaveHome } from '../net.js';
+import { connect, local, input, setInside, enterHome, leaveHome, jump } from '../net.js';
 import { SocialModals } from './Social.jsx';
+import { PresenceAlerts } from './LiveNow.jsx';
 import { readDeepLink } from './share.js';
 import { loadEvents } from './events.js';
 import { sfx } from '../audio.js';
@@ -76,6 +77,7 @@ export default function Game() {
         input.keys.add(k);
         e.preventDefault();
       }
+      if (k === ' ') { jump(); e.preventDefault(); }
       if (k === 'enter') set({ chatOpen: true });
       if (k === 'p') set({ phone: useStore.getState().phone ? null : 'home' });
     };
@@ -162,6 +164,7 @@ export default function Game() {
       <Sheets />
       <Phone />
       <SocialModals />
+      <PresenceAlerts />
     </div>
   );
 }

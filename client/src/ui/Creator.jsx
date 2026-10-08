@@ -1,9 +1,12 @@
 import { useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { SKIN_TONES, HAIR_COLORS, HAIRSTYLES, OUTFITS, TRAITS, SPAWNS, randomAppearance, fmtTsh, outfitById, outfitFits } from '@shared/world.js';
+import { SKIN_TONES, HAIR_COLORS, HAIRSTYLES, OUTFITS, TRAITS, SPAWNS, GAME, REFERRAL, randomAppearance, fmtTsh, outfitById, outfitFits } from '@shared/world.js';
 import { Avatar } from '../three/Avatar.jsx';
 import { useStore } from '../store.js';
 import { L, loc } from '../i18n.js';
+import { api } from '../api.js';
+import { AuthCard } from './Auth.jsx';
+import { pendingRef } from './share.js';
 
 const STEPS = () => [L('Muonekano', 'Look'), L('Mavazi', 'Outfit'), L('Tabia', 'Personality'), L('Mtaa', 'Neighbourhood'), L('Tayari', 'Ready')];
 
@@ -57,10 +60,18 @@ export function AvatarPreview({ appearance, height = '100%' }) {
   );
 }
 
+/**
+ * The way into Bongo Life. Guests design their Mbongo first and create the account on the last
+ * step (the username they picked carries over); "Log in" pops up over it. Signed-in players who
+ * haven't finished onboarding see it as before.
+ */
 export default function Creator() {
   const me = useStore((s) => s.me);
   const run = useStore((s) => s.run);
   const set = useStore((s) => s.set);
+  const loginOpen = useStore((s) => s.loginOpen);
+  const guest = !me;
+  const [uname, setUname] = useState('');
   const [step, setStep] = useState(0);
   const steps = STEPS();
   const [a, setA] = useState(() => me?.appearance || { ...randomAppearance(), outfit: 'kitenge', body: 'woman', hair: 'misuko' });
@@ -82,7 +93,19 @@ export default function Creator() {
     setSaving(false);
     if (r) set({ me: r, screen: 'game' });
   };
-  const next = () => (step < steps.length - 1 ? setStep(step + 1) : finish());
+  // Account just created on the last step: save the Mbongo they designed, then into the city.
+  const claimed = async () => {
+    const r = await api('/me/profile', { method: 'POST', body: { appearance: a, trait, spawn } });
+    set({ me: r, screen: 'game' });
+  };
+  // Logged in from the pop-up: finished players go to the game; otherwise keep designing.
+  const loggedIn = (r) => {
+    set({ me: r.me, loginOpen: false, screen: r.me.onboarded ? 'game' : 'creator' });
+    if (!r.me.onboarded && r.me.appearance) setA(r.me.appearance);
+  };
+  const last = step === steps.length - 1;
+  const next = () => (!last ? setStep(step + 1) : guest ? null : finish());
+  const startMoney = me?.money ?? GAME.startMoney + (pendingRef() ? REFERRAL.newPlayer : 0);
   const shuffle = () => {
     setA(randomAppearance());
   };
@@ -90,14 +113,14 @@ export default function Creator() {
   return (
     <div className="creator">
       <div className="creator-head">
-        <button className="round" onClick={() => (step ? setStep(step - 1) : set({ screen: 'landing' }))} aria-label={L('Rudi', 'Back')}>‹</button>
+        <button className="round" onClick={() => (step ? setStep(step - 1) : set({ screen: 'landing', loginOpen: false }))} aria-label={L('Rudi', 'Back')}>‹</button>
         <div>
           <div className="creator-title">{steps[step]}</div>
           <div className="steps">{steps.map((_, i) => <i key={i} className={i <= step ? 'on' : ''} />)}</div>
         </div>
         <div className="row" style={{ gap: 8 }}>
           <button className="round" onClick={shuffle} aria-label={L('Changanya', 'Shuffle')}>🔀</button>
-          <button className="btn btn-green btn-sm" onClick={next} disabled={saving}>{step === steps.length - 1 ? L('Anza', 'Start') : L('Endelea', 'Next')}</button>
+          {!(guest && last) && <button className="btn btn-green btn-sm" onClick={next} disabled={saving}>{last ? L('Anza', 'Start') : L('Endelea', 'Next')}</button>}
         </div>
       </div>
       <div className="creator-stage">
@@ -106,7 +129,17 @@ export default function Creator() {
       </div>
       <div className="creator-panel">
         <div className="scroll">
-          <div className="namebox">@{me?.username}<span>{L('jina la Sim wako', "your Sim's name")}</span></div>
+          {guest ? (
+            <label className="namebox namebox-edit">
+              @<input value={uname} readOnly={last} onChange={(e) => setUname(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20))} placeholder={L('chagua_jina', 'pick_a_name')} autoCapitalize="none" autoCorrect="off" maxLength={20} />
+              <span>{L('jina la Sim wako', "your Sim's name")}</span>
+            </label>
+          ) : (
+            <div className="namebox">@{me.username}<span>{L('jina la Sim wako', "your Sim's name")}</span></div>
+          )}
+          {guest && step === 0 && (
+            <button className="link-btn creator-login" onClick={() => set({ loginOpen: true })}>{L('Una akaunti tayari? Ingia', 'Already have an account? Log in')} ›</button>
+          )}
 
           {step === 0 && (
             <>
@@ -181,7 +214,7 @@ export default function Creator() {
               <div className="box" style={{ background: 'var(--chip)' }}>
                 <div className="row between"><span className="muted">{L('Tabia', 'Personality')}</span><b>{loc(TRAITS.find((t) => t.id === trait))}</b></div>
                 <div className="row between" style={{ marginTop: 8 }}><span className="muted">{L('Mtaa', 'Neighbourhood')}</span><b>{SPAWNS[spawn].name}</b></div>
-                <div className="row between" style={{ marginTop: 8 }}><span className="muted">{L('Mfukoni', 'Wallet')}</span><b className="green">{fmtTsh(me?.money)}</b></div>
+                <div className="row between" style={{ marginTop: 8 }}><span className="muted">{L('Mfukoni', 'Wallet')}</span><b className="green">{fmtTsh(startMoney)}</b></div>
               </div>
               <p className="small muted" style={{ lineHeight: 1.5 }}>
                 {L(
@@ -189,15 +222,32 @@ export default function Creator() {
                   <>You start with a rented room in Manzese. Work, eat, sleep, hang out with friends, buy a bodaboda, a plot in Kigamboni and build your villa. Become the richest in Dar and you're the <b>Mayor</b> 👑</>,
                 )}
               </p>
+              {guest && (
+                <>
+                  <div className="label">{L('Hifadhi Mbongo wako 👑', 'Claim your Mbongo 👑')}</div>
+                  <AuthCard username={uname} lockTab="signup" onAuthed={claimed} />
+                </>
+              )}
             </>
           )}
         </div>
-        <div className="creator-foot">
+        {!(guest && last) && <div className="creator-foot">
           <button className="btn btn-green btn-block" onClick={next} disabled={saving}>
-            {saving ? L('Subiri…', 'Please wait…') : step === steps.length - 1 ? L('Ingia Bongo 🚀', 'Enter Bongo 🚀') : L('Endelea', 'Continue')}
+            {saving ? L('Subiri…', 'Please wait…') : last ? L('Ingia Bongo 🚀', 'Enter Bongo 🚀') : L('Endelea', 'Continue')}
           </button>
-        </div>
+        </div>}
       </div>
+      {loginOpen && guest && (
+        <div className="sheet-wrap" onClick={() => set({ loginOpen: false })}>
+          <div className="login-pop" onClick={(e) => e.stopPropagation()}>
+            <div className="row between" style={{ marginBottom: 8 }}>
+              <h3 style={{ margin: 0 }}>👋 {L('Karibu tena', 'Welcome back')}</h3>
+              <button className="me-x" onClick={() => set({ loginOpen: false })} aria-label={L('Funga', 'Close')}>✕</button>
+            </div>
+            <AuthCard lockTab="login" onAuthed={loggedIn} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

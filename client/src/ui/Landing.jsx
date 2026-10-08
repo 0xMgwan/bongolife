@@ -22,7 +22,8 @@ export default function Landing() {
     return () => clearInterval(t);
   }, []);
   const ads = useStore((s) => s.ads);
-  const go = (tab) => set({ screen: 'auth', authTab: tab });
+  // Both start in the creator: sign-up designs the Mbongo first, log-in pops up over it.
+  const go = (tab) => set({ screen: 'creator', me: null, loginOpen: tab === 'login' });
   const faces = stats?.faces?.length ? stats.faces : [{ body: 'woman', skin: 1 }, { body: 'man', skin: 0 }, { body: 'woman', skin: 3 }, { body: 'man', skin: 2 }];
 
   return (
@@ -51,7 +52,7 @@ export default function Landing() {
           {stats?.announcement && <div className="announce">📣 {L(stats.announcement.text, stats.announcement.textEn)}</div>}
           {stats?.maintenance && <div className="announce">🔧 {L('Tuko kwenye matengenezo — tutarudi hivi punde.', 'Under maintenance — back shortly.')}</div>}
         </div>
-        <span className="coming" style={{ left: 12, top: '46%' }}>🚧 ✈️ Airport · {L('Inakuja hivi karibuni', 'Coming soon')}</span>
+        <span className="coming" style={{ left: 12, top: '46%' }}>✈️ JNIA · {L('Ruka hadi Zanzibar', 'Fly to Zanzibar')}</span>
         <div className="land-bottom card">
           <div className="row" style={{ marginBottom: 12 }}>
             <div className="faces">

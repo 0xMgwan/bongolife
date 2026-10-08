@@ -141,7 +141,7 @@ export function Avatar({ appearance, motion, scale = 1 }) {
   useFrame((_, dt) => {
     const mo = motion?.current || {};
     const mode = mo.mode || (mo.moving ? 'walk' : 'idle');
-    const rate = { type: 6, walk: 9 * (mo.speed || 1), dance: 7, cheer: 6, swim: 5, lift: 3, sing: 4, dj: 7, eat: 2.5 }[mode] || 2;
+    const rate = { type: 6, walk: 9 * (mo.speed || 1), run: 15 * (mo.speed || 1), jump: 1, dance: 7, cheer: 6, swim: 5, lift: 3, sing: 4, dj: 7, eat: 2.5 }[mode] || 2;
     phase.current += dt * rate;
     const p = phase.current;
     let legL_ = 0, legR_ = 0, armL_ = 0, armR_ = 0, zL = 0.08, zR = -0.08, bob = 0, tilt = 0, yaw = null;
@@ -155,6 +155,22 @@ export function Avatar({ appearance, motion, scale = 1 }) {
         eL = 0.25 + Math.max(0, Math.sin(p)) * 0.3; eR = 0.25 + Math.max(0, -Math.sin(p)) * 0.3;
         bob = Math.abs(Math.cos(p)) * 0.035;
         nod = Math.sin(p * 2) * 0.03;
+        break;
+      case 'run':
+        // Longer stride, knees high, arms pumping, leaning into it.
+        legL_ = Math.sin(p) * 0.95; legR_ = -legL_;
+        kL = Math.max(0, Math.sin(p + 1.3)) * 1.35; kR = Math.max(0, Math.sin(p + 1.3 + Math.PI)) * 1.35;
+        armL_ = -Math.sin(p) * 0.95; armR_ = -armL_;
+        eL = 1.1 + Math.max(0, Math.sin(p)) * 0.35; eR = 1.1 + Math.max(0, -Math.sin(p)) * 0.35;
+        bob = Math.abs(Math.cos(p)) * 0.09;
+        tilt = 0.18;
+        nod = Math.sin(p * 2) * 0.04;
+        break;
+      case 'jump':
+        // Tucked legs, arms thrown up.
+        legL_ = legR_ = -0.55; kL = kR = 1.1;
+        armL_ = armR_ = -2.5; eL = eR = 0.3;
+        zL = 0.3; zR = -0.3;
         break;
       case 'dance':
         armL_ = -(2.0 + Math.sin(p * 2) * 0.3) + Math.sin(p) * 0.4; armR_ = -(1.8 + Math.sin(p * 2) * 0.3) - Math.sin(p) * 0.4;

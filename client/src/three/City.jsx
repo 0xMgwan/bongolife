@@ -534,6 +534,7 @@ function towerFacade(color) {
  * `scale` is the old world size; it maps to a fraction of the screen height.
  */
 export function Marker({ emoji, y, scale = 3.2, label, onClick, ring }) {
+  // Map markers keep their disc: bare emojis are too small to spot over buildings on a phone.
   const tex = useMemo(() => emojiTexture(emoji, { ring }), [emoji, ring]);
   const lab = useMemo(() => (label ? labelTexture(label, { size: 34 }) : null), [label]);
   const s = scale * 0.016;
@@ -626,7 +627,7 @@ const Plots = memo(function Plots({ plots, onPlot, myUsername }) {
           y={b ? b.floors * 2.6 + 4.5 : 3}
           scale={2.4}
           label={st ? `@${st.owner}` : `TSh ${fmtShort(p.price)}`}
-          ring={mine ? '#2fb06f' : undefined}
+          ring={mine ? '#f5b800' : undefined}
           onClick={click}
         />
       </group>

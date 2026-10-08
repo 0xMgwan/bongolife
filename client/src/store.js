@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { api, token } from './api.js';
 import { sfx } from './audio.js';
+import { haptic } from './haptics.js';
 
 let toastId = 0;
 
@@ -11,6 +12,8 @@ export const useStore = create((set, get) => ({
   world: { plots: {}, businesses: {}, event: null },
   ads: [],
   online: 0,
+  presence: [],
+  loginOpen: false, // log-in pop-up over the creator // "@x is online" alerts, newest last
   roster: 0, // bumps when remote players join/leave
   sheet: null, // { type: 'place'|'plot'|'player'|'ad', id }
   phone: null, // null | 'home' | app id
@@ -68,6 +71,7 @@ export const useStore = create((set, get) => ({
   toast: (text, kind) => {
     if (Array.isArray(text)) text = get().lang === 'en' ? text[1] : text[0];
     if (kind === 'err') sfx('error');
+    else haptic('notify');
     const id = ++toastId;
     set((s) => ({ toasts: [...s.toasts.slice(-3), { id, text, kind }] }));
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 3300);

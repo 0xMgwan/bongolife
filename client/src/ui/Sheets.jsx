@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ENTERABLE, NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
   outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
@@ -16,10 +16,13 @@ import { TravelCard } from './Travel.jsx';
 import { share } from './share.js';
 import { vehicleThumb, cachedThumb } from '../three/thumbs.jsx';
 import { L, loc, isEn } from '../i18n.js';
+import { useSlideSelect } from './useSlideSelect.js';
 
 const jt = (j, n) => (isEn() ? jobTitleEn(j, n) : jobTitle(j, n));
 
 export function Sheet({ title, icon, sub, onClose, children }) {
+  const body = useRef(null);
+  useSlideSelect(body);
   return (
     <div className="sheet-wrap" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
@@ -29,7 +32,7 @@ export function Sheet({ title, icon, sub, onClose, children }) {
           {sub && <div className="small muted" style={{ marginTop: 4 }}>{sub}</div>}
           <button className="x" onClick={onClose} aria-label={L('Funga', 'Close')}>✕</button>
         </div>
-        <div className="sheet-body">{children}</div>
+        <div className="sheet-body" ref={body}>{children}</div>
       </div>
     </div>
   );

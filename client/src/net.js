@@ -6,7 +6,7 @@ import { sfx } from './audio.js';
 
 // ---- Mutable, per-frame game state kept outside React for performance.
 export const local = {
-  x: 0, z: 0, ry: 0, moving: false,
+  x: 0, z: 0, ry: 0, moving: false, running: false, jumpAt: 0,
   target: null, // [x, z]
   arrive: null, // callback when target reached
   teleported: 0,
@@ -57,8 +57,12 @@ export function connect() {
     bump();
   });
   socket.on('player:join', (p) => {
+    const known = remotes.has(p.id);
     remotes.set(p.id, { ...p, tx: p.x, tz: p.z, tr: p.ry });
     bump();
+    // Pop a "who's online" alert for someone new arriving (not a re-sync of someone already here).
+    if (!known && p.username && p.username !== st().me?.username)
+      useStore.setState((s) => ({ presence: [...s.presence.slice(-2), { key: `${p.id}-${Date.now()}`, id: p.id, username: p.username, appearance: p.appearance }] }));
   });
   socket.on('player:leave', ({ id }) => {
     remotes.delete(id);
@@ -101,6 +105,10 @@ export function connect() {
     if (st().me?.blocked?.includes(msg.username)) return;
     bubbles.set(msg.id, { text: msg.text, until: Date.now() + 6000 });
     useStore.setState((s) => ({ publicFeed: [...s.publicFeed.slice(-40), msg] }));
+  });
+  socket.on('jump', ({ id }) => {
+    const r = remotes.get(id);
+    if (r) r.jumpAt = performance.now();
   });
   socket.on('emote', ({ id, e }) => {
     emotes.set(id, { e, until: Date.now() + 3000 });
@@ -248,15 +256,23 @@ export function sendMove(force = false) {
   if (!socket?.connected) return;
   const t = performance.now();
   if (!force && t - lastSent < 100) return;
-  const key = `${local.x.toFixed(1)},${local.z.toFixed(1)},${local.ry.toFixed(1)},${local.moving}`;
+  const key = `${local.x.toFixed(1)},${local.z.toFixed(1)},${local.ry.toFixed(1)},${local.moving},${local.running}`;
   if (key === lastPos && !force) return;
   lastPos = key;
   lastSent = t;
-  socket.emit('move', { x: local.x, z: local.z, ry: local.ry, m: local.moving ? 1 : 0 });
+  // m: 0 idle, 1 walking, 2 running.
+  socket.emit('move', { x: local.x, z: local.z, ry: local.ry, m: local.moving ? (local.running ? 2 : 1) : 0 });
 }
 
 export function sendChat(text) {
   socket?.emit('chat', text);
+}
+/** Hop (on foot only); everyone nearby sees it. */
+export function jump() {
+  const t = performance.now();
+  if (t - local.jumpAt < 600 || local.driving) return;
+  local.jumpAt = t;
+  socket?.emit('jump');
 }
 export function sendEmote(e) {
   socket?.emit('emote', e);

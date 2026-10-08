@@ -333,9 +333,11 @@ api.post('/wallet/topup', rateLimit('topup', 10, 10 * 60_000), wrap(async (req, 
   res.status(201).json({ id: info.lastInsertRowid, status: 'pending', coins, instructions: created.instructions });
 }));
 
-export async function settleTopup(t) {
+// `expired` is our own 72h timeout, not the provider's verdict, so a deposit can still be paid
+// after it. Admin re-checks pass { recheckExpired: true } to look again.
+export async function settleTopup(t, { recheckExpired = false } = {}) {
   const prov = providers[t.provider];
-  if (!prov || t.status !== 'pending') return t.status;
+  if (!prov || !(t.status === 'pending' || (recheckExpired && t.status === 'expired'))) return t.status;
   let status;
   try {
     status = await prov.check(t.provider_ref);
@@ -344,15 +346,20 @@ export async function settleTopup(t) {
     return 'pending';
   }
   if (status === 'pending' && now() - t.created_at > 72 * 3600_000) status = 'expired';
+  if (status === 'expired' && t.status === 'expired') return t.status;
   return applyTopupStatus(t, status);
 }
 
-/** Move a pending top-up to its final state; credits the player exactly once. */
+/**
+ * Move a pending top-up to its final state; credits the player exactly once.
+ * A `paid` result also lifts an `expired` top-up: the player paid after our timeout and must still be credited.
+ */
 export function applyTopupStatus(t, status) {
   if (status === 'pending') return status;
+  const from = status === 'paid' ? "status IN ('pending', 'expired')" : "status = 'pending'";
   const credited = db.transaction(() => {
     // Compare-and-set so a topup is only ever credited once.
-    const r = db.prepare("UPDATE topups SET status = ?, credited_at = ? WHERE id = ? AND status = 'pending'").run(status, status === 'paid' ? now() : null, t.id);
+    const r = db.prepare(`UPDATE topups SET status = ?, credited_at = ? WHERE id = ? AND ${from}`).run(status, status === 'paid' ? now() : null, t.id);
     if (r.changes && status === 'paid') {
       addMoney(t.user_id, t.coins, 'topup', `Umeongeza salio: TZS ${t.amount_tzs.toLocaleString()} → TSh ${t.coins.toLocaleString()}`);
       return true;

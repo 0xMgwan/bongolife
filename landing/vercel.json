@@ -9,6 +9,6 @@
     ] }
   ],
   "redirects": [
-    { "source": "/play", "destination": "https://bongolife-production.up.railway.app/", "permanent": false }
+    { "source": "/play", "destination": "https://play.bongolife.app/", "permanent": false }
   ]
 }
