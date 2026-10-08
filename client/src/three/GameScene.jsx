@@ -163,10 +163,14 @@ function CameraRig({ mode, sceneKey }) {
       return;
     }
     if (mode === 'home') {
+      // Build mode glides the camera over to the yard beside the house.
+      const want = useStore.getState().building ? 14 : 0;
+      view.homeFx = (view.homeFx ?? 0) + (want - (view.homeFx ?? 0)) * Math.min(1, dt * 4);
+      const ox = HOME_ORIGIN[0] + view.homeFx;
       const dist = view.homeDist;
       const flat = Math.cos(view.homePitch) * dist;
-      camera.position.set(HOME_ORIGIN[0] + Math.sin(view.homeYaw) * flat, 1 + Math.sin(view.homePitch) * dist, HOME_ORIGIN[2] + Math.cos(view.homeYaw) * flat);
-      camera.lookAt(HOME_ORIGIN[0], 0.5, HOME_ORIGIN[2]);
+      camera.position.set(ox + Math.sin(view.homeYaw) * flat, 1 + Math.sin(view.homePitch) * dist, HOME_ORIGIN[2] + Math.cos(view.homeYaw) * flat);
+      camera.lookAt(ox, 0.5, HOME_ORIGIN[2]);
       return;
     }
     const a = 1 - Math.exp(-dt * 6);

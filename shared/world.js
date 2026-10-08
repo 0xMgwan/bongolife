@@ -1173,6 +1173,25 @@ export function sceneFor(busy) {
 // Every player has an apartment ("Kwangu"). Furniture sits on a grid; x/z are the
 // item's centre in world units, rot is quarter turns. size = [w, d] in cells.
 export const HOME = { w: 12, d: 10, sellBack: 0.5 };
+// ------------------------------------------------------------------ yard (build mode)
+// Every player gets a free empty yard beside their house to build on, Minecraft-style: one
+// block per grid cell, stacked up to `h` high. Removing a block refunds half.
+export const YARD = { w: 12, d: 12, h: 6, maxBlocks: 400, refund: 0.5, sale: 1_000 };
+export const YARD_BLOCKS = [
+  { id: 'floor', name: 'Sakafu', nameEn: 'Floor', emoji: '🟫', price: 300, color: '#b98552', slab: true },
+  { id: 'brick', name: 'Tofali', nameEn: 'Brick wall', emoji: '🧱', price: 800, color: '#b4532a' },
+  { id: 'plaster', name: 'Ukuta mweupe', nameEn: 'White wall', emoji: '⬜', price: 800, color: '#f1ece2' },
+  { id: 'gold', name: 'Ukuta wa dhahabu', nameEn: 'Gold wall', emoji: '🟨', price: 1_200, color: '#f5b800' },
+  { id: 'glass', name: 'Kioo', nameEn: 'Glass', emoji: '🪟', price: 1_000, color: '#bfe3f5', glass: true },
+  { id: 'roof', name: 'Bati', nameEn: 'Roof', emoji: '🏠', price: 700, color: '#64748b', slab: true },
+  { id: 'door', name: 'Mlango', nameEn: 'Door', emoji: '🚪', price: 1_500, color: '#7c4a22' },
+  { id: 'counter', name: 'Kaunta', nameEn: 'Counter', emoji: '🪵', price: 2_000, color: '#8b5e34', counter: true },
+  { id: 'shelf', name: 'Rafu', nameEn: 'Shelf', emoji: '🗄️', price: 1_800, color: '#a16207', shelf: true },
+  { id: 'sign', name: 'Bango', nameEn: 'Sign', emoji: '🪧', price: 2_500, color: '#0f172a', sign: true },
+  { id: 'plant', name: 'Mmea', nameEn: 'Plant', emoji: '🪴', price: 600, color: '#3f9b4a', plant: true },
+  { id: 'lamp', name: 'Taa', nameEn: 'Lamp', emoji: '💡', price: 900, color: '#fde68a', lamp: true },
+];
+export const yardBlockById = Object.fromEntries(YARD_BLOCKS.map((b) => [b.id, b]));
 export const FURNITURE_CATS = [
   { id: 'sleep', name: 'Kulala', nameEn: 'Sleep', icon: '🛏️' },
   { id: 'sit', name: 'Kukaa', nameEn: 'Seating', icon: '🛋️' },

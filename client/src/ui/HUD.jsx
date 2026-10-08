@@ -19,6 +19,7 @@ import { useSwipeRow } from './useSwipeRow.js';
 import { Crown } from './Logo.jsx';
 import { LiveNow } from './LiveNow.jsx';
 import { SidePop } from './SidePop.jsx';
+import { startBuild } from './BuildBar.jsx';
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -596,6 +597,7 @@ function NeedsPanel({ me }) {
               <button onClick={act(() => openPhone('kazi'))}>💼<span>{L('Kazi', 'Jobs')}</span></button>
               <button onClick={act(() => openPhone('pesa'))}>🏦<span>{L('Benki', 'Bank')}</span></button>
               <button onClick={act(() => openPhone('mali'))}>🏡<span>{L('Mali', 'Assets')}</span></button>
+              <button onClick={act(startBuild)}>🔨<span>{L('Jenga', 'Build')}</span></button>
             </div>
           )}
         </div>

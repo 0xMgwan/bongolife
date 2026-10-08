@@ -163,6 +163,21 @@ addColumn('users', 'health', 'INTEGER NOT NULL DEFAULT 100');
 addColumn('users', 'injured_at', 'INTEGER');
 db.exec(`
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS yard_blocks (
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  x INTEGER NOT NULL,
+  y INTEGER NOT NULL,
+  z INTEGER NOT NULL,
+  kind TEXT NOT NULL,
+  PRIMARY KEY (user_id, x, y, z)
+);
+CREATE TABLE IF NOT EXISTS yards (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id),
+  name TEXT,
+  open INTEGER NOT NULL DEFAULT 0,
+  sales INTEGER NOT NULL DEFAULT 0,
+  earned INTEGER NOT NULL DEFAULT 0
+);
 CREATE TABLE IF NOT EXISTS home_items (
   id INTEGER PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id),
