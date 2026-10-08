@@ -17,6 +17,7 @@ import { share } from './share.js';
 import { vehicleThumb, cachedThumb } from '../three/thumbs.jsx';
 import { L, loc, isEn } from '../i18n.js';
 import { useSlideSelect } from './useSlideSelect.js';
+import { TogetherRow } from './Together.jsx';
 import { ask } from './Confirm.jsx';
 
 const jt = (j, n) => (isEn() ? jobTitleEn(j, n) : jobTitle(j, n));
@@ -412,6 +413,7 @@ function PlayerSheet({ username, onClose }) {
             ))}
           </div>
           {!near && <div className="hint center">{L('Msogelee ili kusalimia, kupiga stori au utani.', 'Walk up to them to say hello, gist or joke.')}</div>}
+          <TogetherRow username={p.username} near={near} />
         </>
       )}
       <button className="link-share" style={{ marginTop: 10 }} onClick={() => share({ title: `@${p.username}`, text: L(`Mcheki @${p.username} kwenye Bongo Life 🇹🇿`, `Check out @${p.username} on Bongo Life 🇹🇿`), params: { u: p.username } })}>🔗 {L('Shiriki profaili hii', 'Share this profile')}</button>

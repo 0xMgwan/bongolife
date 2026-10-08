@@ -11,6 +11,7 @@ import { SocialModals } from './Social.jsx';
 import { InstallBanner } from './InstallApp.jsx';
 import { PresenceAlerts } from './LiveNow.jsx';
 import { DmPop } from './DmPop.jsx';
+import { InteractAsk, SelfieCard } from './Together.jsx';
 import { readDeepLink } from './share.js';
 import { loadEvents } from './events.js';
 import { sfx } from '../audio.js';
@@ -169,6 +170,8 @@ export default function Game() {
       <SocialModals />
       <PresenceAlerts />
       <DmPop />
+      <InteractAsk />
+      <SelfieCard />
       <InstallBanner />
     </div>
   );

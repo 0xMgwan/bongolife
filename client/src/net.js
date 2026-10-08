@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client';
+import { haptic } from './haptics.js';
 import { token } from './api.js';
 import { useStore } from './store.js';
 import { L } from './i18n.js';
@@ -104,6 +105,28 @@ export function connect() {
     if (st().me?.blocked?.includes(msg.username)) return;
     bubbles.set(msg.id, { text: msg.text, until: Date.now() + 6000 });
     useStore.setState((s) => ({ publicFeed: [...s.publicFeed.slice(-40), msg] }));
+  });
+  // Together interactions: someone asks you; or one plays (both sims animate and face each other).
+  socket.on('interact:ask', (req) => {
+    sfx('notify');
+    useStore.setState({ interactAsk: req });
+  });
+  socket.on('interact:play', ({ a, b, kind, ms, winner, winnerName, aName, bName }) => {
+    const until = performance.now() + ms;
+    const myId = st().myId;
+    for (const [id, other] of [[a, b], [b, a]]) {
+      const act = { kind, until, other };
+      if (id === myId) local.action = act;
+      else { const r = remotes.get(id); if (r) r.action = act; }
+      emotes.set(id, { e: TOGETHER_EMOJI[kind] || '✨', until: Date.now() + ms });
+    }
+    if (a === myId || b === myId) {
+      haptic(kind === 'fight' ? 'heavy' : 'success');
+      sfx(kind === 'fight' ? 'crash' : 'pop');
+      const them = a === myId ? bName : aName;
+      if (kind === 'fight') setTimeout(() => st().toast(winner === myId ? L(`🏆 Umeshinda pigano dhidi ya @${them}! ⭐ +2`, `🏆 You won the play-fight with @${them}! ⭐ +2`) : L(`🥊 @${winnerName} ameshinda safari hii. Mechi ijayo!`, `🥊 @${winnerName} won this round. Rematch?`)), ms - 300);
+      if (kind === 'selfie') setTimeout(() => useStore.setState({ selfie: { with: them, at: Date.now() } }), ms - 600);
+    }
   });
   socket.on('jump', ({ id }) => {
     const r = remotes.get(id);
@@ -290,6 +313,19 @@ export function sendMove(force = false) {
 export function sendChat(text) {
   socket?.emit('chat', text);
 }
+const TOGETHER_EMOJI = { highfive: '✋', fistbump: '👊', hug: '🤗', dance: '💃', treat: '🍹', selfie: '🤳', fight: '🥊' };
+/** Ask someone nearby to do a together-interaction; resolves with { ok } or { error }. */
+export function interactWith(to, kind) {
+  return new Promise((resolve) => {
+    if (!socket?.connected) return resolve({ error: L('Hakuna connection', 'No connection') });
+    socket.emit('interact', { to, kind }, (r) => resolve(r || {}));
+  });
+}
+export function answerInteract(rid, ok) {
+  socket?.emit('interact:answer', { rid, ok });
+  useStore.setState({ interactAsk: null });
+}
+
 /** Hop (on foot only); everyone nearby sees it. */
 export function jump() {
   const t = performance.now();

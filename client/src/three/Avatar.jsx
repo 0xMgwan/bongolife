@@ -141,7 +141,7 @@ export function Avatar({ appearance, motion, scale = 1 }) {
   useFrame((_, dt) => {
     const mo = motion?.current || {};
     const mode = mo.mode || (mo.moving ? 'walk' : 'idle');
-    const rate = { type: 6, walk: 9 * (mo.speed || 1), run: 15 * (mo.speed || 1), jump: 1, dance: 7, cheer: 6, swim: 5, lift: 3, sing: 4, dj: 7, eat: 2.5 }[mode] || 2;
+    const rate = { type: 6, walk: 9 * (mo.speed || 1), run: 15 * (mo.speed || 1), jump: 1, highfive: 5, hug: 3, pose: 2, box: 9, dance: 7, cheer: 6, swim: 5, lift: 3, sing: 4, dj: 7, eat: 2.5 }[mode] || 2;
     phase.current += dt * rate;
     const p = phase.current;
     let legL_ = 0, legR_ = 0, armL_ = 0, armR_ = 0, zL = 0.08, zR = -0.08, bob = 0, tilt = 0, yaw = null;
@@ -166,6 +166,36 @@ export function Avatar({ appearance, motion, scale = 1 }) {
         tilt = 0.18;
         nod = Math.sin(p * 2) * 0.04;
         break;
+      case 'highfive': {
+        // Right hand swings up and slaps forward, twice.
+        const up = Math.sin(p) * 0.5 + 0.5;
+        armR_ = -2.2 - up * 0.6; eR = 0.2 + (1 - up) * 0.5; zR = -0.15;
+        armL_ = -0.2; bob = up * 0.03; nod = up * 0.05;
+        break;
+      }
+      case 'hug':
+        // Arms forward and wrapped, gentle sway.
+        armL_ = armR_ = -1.35; eL = eR = 1.2; zL = 0.35; zR = -0.35;
+        tilt = 0.08; yaw = Math.sin(p) * 0.12;
+        break;
+      case 'pose':
+        // Selfie: one arm out holding the phone, the other a peace sign.
+        armR_ = -1.9; eR = 0.15; zR = -0.25;
+        armL_ = -2.6; eL = 1.4; zL = 0.3;
+        nod = -0.08;
+        break;
+      case 'box': {
+        // Play-boxing: guard up, alternating jabs, light bounce on the feet.
+        const jabL = Math.max(0, Math.sin(p));
+        const jabR = Math.max(0, Math.sin(p + Math.PI));
+        armL_ = -1.3 - jabL * 0.35; eL = 1.6 - jabL * 1.3;
+        armR_ = -1.3 - jabR * 0.35; eR = 1.6 - jabR * 1.3;
+        zL = 0.2; zR = -0.2;
+        legL_ = 0.25; legR_ = -0.2; kL = kR = 0.35;
+        bob = Math.abs(Math.sin(p * 0.5)) * 0.06;
+        tilt = 0.12;
+        break;
+      }
       case 'jump':
         // Tucked legs, arms thrown up.
         legL_ = legR_ = -0.55; kL = kR = 1.1;
