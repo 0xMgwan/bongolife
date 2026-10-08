@@ -119,8 +119,11 @@ export function connect() {
       sfx('notify');
       const reading = s.phone === 'dm' && s.phoneArg === msg.from;
       if (!reading) {
-        s.toast(`💬 @${msg.from}: ${msg.body.slice(0, 60)}`);
-        if (s.me) useStore.setState({ me: { ...s.me, unread: (s.me.unread || 0) + 1 } });
+        // Pop the conversation beside 💬 (unless you're already chatting with someone else there).
+        if (!s.dmPop || s.dmPop.from === msg.from) useStore.setState({ dmPop: { from: msg.from, at: Date.now() } });
+        else s.toast(`💬 @${msg.from}: ${msg.body.slice(0, 60)}`);
+        if (s.me && s.dmPop?.from !== msg.from) useStore.setState({ me: { ...s.me, unread: (s.me.unread || 0) + 1 } });
+        systemNotify(`💬 @${msg.from}`, msg.body.slice(0, 120), msg.from);
       }
     }
     useStore.setState((x) => ({ dmVersion: x.dmVersion + 1, lastDm: msg }));
@@ -297,6 +300,29 @@ export function jump() {
 export function sendEmote(e) {
   socket?.emit('emote', e);
 }
+/**
+ * While the game is in the background, show the DM as a phone/desktop notification. Uses the
+ * service worker when there is one (Android only allows notifications through it).
+ */
+async function systemNotify(title, body, from) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted' || !document.hidden) return;
+  const opts = { body, tag: `dm-${from}`, renotify: true, icon: '/icon-192.png', badge: '/icon-192.png', data: { dm: from } };
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    if (reg) return void reg.showNotification(title, opts);
+    const n = new Notification(title, opts);
+    n.onclick = () => { window.focus(); useStore.setState({ dmPop: { from, at: Date.now() } }); n.close(); };
+  } catch {}
+}
+// Tapping a notification (handled by the service worker) opens that conversation here.
+navigator.serviceWorker?.addEventListener('message', (e) => {
+  if (e.data?.type === 'open-dm' && e.data.from) useStore.setState({ dmPop: { from: e.data.from, at: Date.now() } });
+});
+if (typeof location !== 'undefined') {
+  const dm = new URLSearchParams(location.search).get('dm');
+  if (dm) setTimeout(() => useStore.setState({ dmPop: { from: dm, at: Date.now() } }), 1500);
+}
+
 export function sendDm(to, text) {
   return new Promise((resolve) => {
     if (!socket?.connected) return resolve({ error: L('Hakuna connection', 'No connection') });

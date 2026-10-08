@@ -904,7 +904,11 @@ export function HUD() {
       {!shop && (
         <div className="side">
           <button onClick={() => { Object.assign(view, { yaw: 0, pitch: 1.0, homeYaw: 0.75, homePitch: 0.95, homeDist: 30 }); sfx('click'); }} aria-label={L('Rudisha kamera', 'Reset camera')}>🧭</button>
-          {town && <button onClick={() => (chatOpen ? useStore.setState({ chatOpen: false }) : openChat())} className={chatOpen ? 'on' : ''} aria-label="Chat">💬</button>}
+          {town && (
+            <button key={`chat-${me.unread || 0}`} onClick={() => (chatOpen ? useStore.setState({ chatOpen: false }) : openChat())} className={`${chatOpen ? 'on' : ''} ${me.unread > 0 ? 'has-unread' : ''}`} aria-label="Chat">
+              💬{me.unread > 0 && <b className="badge">{me.unread}</b>}
+            </button>
+          )}
           <button onClick={() => (town ? setZoom(getZoom() * 0.8) : (view.homeDist = Math.max(14, view.homeDist * 0.8)))} aria-label="Zoom in">＋</button>
           <button onClick={() => (town ? setZoom(getZoom() * 1.25) : (view.homeDist = Math.min(48, view.homeDist * 1.25)))} aria-label="Zoom out">－</button>
         </div>
