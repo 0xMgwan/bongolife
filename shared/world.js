@@ -1434,7 +1434,7 @@ export const AMBITIONS = [
       ch(['Akiba', 'Savings'], ['Pesa ya matumizi si mtaji. Weka akiba ya kutosha kununua ardhi.', "Spending money isn't capital. Save enough to buy land."], { money: 5_000_000 }, ['Kuwa na TSh 5M mkononi', 'Hold TSh 5M in cash'], null, { money: 200_000, fame: 1 }),
       ch(['Kiwanja cha kwanza', 'First plot'], ['Ardhi haipotei thamani. Nunua kiwanja chako cha kwanza.', "Land doesn't lose value. Buy your first plot."], { plots: 1 }, ['Nunua kiwanja (app ya Wekeza)', 'Buy a plot (Invest app)'], { app: 'wekeza' }, { money: 500_000, fame: 2 }),
       ch(['Nyumba yangu', 'My own house'], ['Kiwanja kitupu hakileti kodi. Jenga nyumba — ukae au upangishe.', "An empty plot pays no rent. Build a house — live in it or rent it out."], { house: 1 }, ['Jenga nyumba kwenye kiwanja chako', 'Build a house on your plot'], { app: 'mali' }, { money: 1_000_000, fame: 3 }),
-      ch(['Pesa ikufanyie kazi', 'Make money work for you'], ['Matajiri hawalali na pesa — wanaiwekeza. Nunua biashara au lori la mizigo.', "The rich don't sit on cash — they invest it. Buy a business or a haulage truck."], { assets: 1 }, ['Miliki biashara au lori 1', 'Own 1 business or truck'], { app: 'wekeza' }, { money: 2_000_000, fame: 5 }),
+      ch(['Pesa ikufanyie kazi', 'Make money work for you'], ['Matajiri hawalali na pesa — wanaiwekeza. Nunua biashara au lori la mizigo.', "The rich don't sit on cash — they invest it. Buy a business or a haulage truck."], { assets: 1 }, ['Anzisha kampuni, nunua biashara au lori', 'Start a company, buy a business or a truck'], { app: 'wekeza' }, { money: 2_000_000, fame: 5 }),
       ch(['Bilionea', 'Billionaire'], ['Jina lako linatajwa kwenye vikao vya biashara. Lengo la mwisho: mali ya TSh nusu bilioni.', 'Your name comes up in boardrooms. Final goal: half a billion in net worth.'], { worth: 500_000_000 }, ['Mali yenye thamani TSh 500M', 'TSh 500M net worth'], { app: 'wekeza' }, { money: 10_000_000, fame: 20 }),
     ],
   },
@@ -1542,3 +1542,37 @@ export const TOGETHER = [
   { id: 'karata', emoji: '🃏', name: ['Karata', 'Card games'], effects: { fun: 18, social: 18 } },
 ];
 export const togetherById = Object.fromEntries(TOGETHER.map((t) => [t.id, t]));
+
+// ============================================================ companies (start your own)
+// Each evening (every 24h) a company runs a day: customers depend on price, staff, reputation,
+// marketing and your fame. Profit lands in the company account; withdraw it to your wallet.
+// ticket = average sale, margin = share of sales kept after stock, base = customers/day with no staff.
+export const INDUSTRIES = [
+  { id: 'food', emoji: '🍲', name: ['Genge la chakula', 'Food spot'], cost: 1_500_000, ticket: 4_000, margin: 0.45, base: 30, wage: 15_000, rent: 15_000, maxStaff: 4, logos: ['🍲', '🍗', '🌶️', '🍟', '🥘', '🍢'], blurb: ['Chipsi mayai, wali maharage, mishkaki. Mtaji mdogo kuanza.', 'Chips mayai, rice & beans, mishkaki. Cheap to start.'] },
+  { id: 'salon', emoji: '💇🏾', name: ['Saluni', 'Salon'], cost: 3_000_000, ticket: 15_000, margin: 0.6, base: 10, wage: 25_000, rent: 30_000, maxStaff: 5, logos: ['💇🏾', '💈', '💅🏾', '✂️', '👑'], blurb: ['Kusuka, kunyoa, kucha. Wateja wa kudumu wanarudi.', 'Braids, cuts, nails. Regulars keep coming back.'] },
+  { id: 'duka', emoji: '🛒', name: ['Duka la rejareja', 'Provisions'], cost: 5_000_000, ticket: 8_000, margin: 0.3, base: 45, wage: 20_000, rent: 35_000, maxStaff: 4, logos: ['🛒', '🧺', '🥫', '🧃', '🍞'], blurb: ['Sukari, unga, sabuni — wateja wengi, faida ndogo kwa kila mmoja.', 'Sugar, flour, soap — lots of customers, small margin each.'] },
+  { id: 'fashion', emoji: '👗', name: ['Mitindo', 'Fashion'], cost: 9_000_000, ticket: 45_000, margin: 0.4, base: 8, wage: 30_000, rent: 60_000, maxStaff: 5, logos: ['👗', '👠', '🧥', '👜', '🕶️'], blurb: ['Vitenge, viatu, mitumba ya kwanza. Umaarufu wako unauza.', 'Kitenge, shoes, first-grade mitumba. Your fame sells.'] },
+  { id: 'events', emoji: '🎉', name: ['Matukio & sherehe', 'Events'], cost: 12_000_000, ticket: 500_000, margin: 0.4, base: 1.2, wage: 30_000, rent: 70_000, maxStaff: 6, logos: ['🎉', '💍', '🎂', '🎈', '🎤'], blurb: ['Harusi, send-off, birthday. Siku chache, oda kubwa.', 'Weddings, send-offs, birthdays. Few days, big orders.'] },
+  { id: 'pharmacy', emoji: '💊', name: ['Duka la dawa', 'Pharmacy'], cost: 18_000_000, ticket: 20_000, margin: 0.35, base: 40, wage: 45_000, rent: 80_000, maxStaff: 5, logos: ['💊', '🩺', '⚕️', '🧴'], blurb: ['Mahitaji hayaishi. Imara, lakini mtaji mkubwa.', 'Demand never stops. Steady, but costly to start.'] },
+  { id: 'dispatch', emoji: '🛵', name: ['Usafirishaji', 'Dispatch'], cost: 25_000_000, ticket: 6_000, margin: 0.5, base: 90, wage: 35_000, rent: 70_000, maxStaff: 10, logos: ['🛵', '📦', '🚚', '🏍️'], blurb: ['Boda za delivery mjini kote. Waajiri madereva zaidi, safari zaidi.', 'Delivery bodas all over town. More riders, more trips.'] },
+  { id: 'tech', emoji: '💻', name: ['Kampuni ya teknolojia', 'Tech startup'], cost: 50_000_000, ticket: 1_200_000, margin: 0.8, base: 0.6, wage: 120_000, rent: 150_000, maxStaff: 12, logos: ['💻', '📱', '🚀', '🤖', '🛰️'], blurb: ['Apps na mifumo kwa makampuni. Hatari kubwa, zawadi kubwa.', 'Apps and systems for businesses. High risk, high reward.'] },
+];
+export const industryById = Object.fromEntries(INDUSTRIES.map((i) => [i.id, i]));
+export const COMPANY = {
+  max: 2,
+  prices: { cheap: { price: 0.8, cust: 1.35 }, normal: { price: 1, cust: 1 }, premium: { price: 1.35, cust: 0.7 } },
+  staffBoost: 0.5, // +50% customers per staff member
+  marketing: { costPct: 0.08, days: 3, boost: 0.35 },
+  maxDays: 3, // unsettled days are capped (nobody minding the shop)
+  sellBack: 0.5, // sell the company for half the startup cost (+ its balance)
+  colors: ['#16a34a', '#0f766e', '#1d4ed8', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#111827'],
+};
+// Random things that happen on a company's day.
+export const COMPANY_EVENTS = [
+  { id: 'viral', p: 0.06, cust: 1.6, text: ['📱 Video ya biashara yako imesambaa TikTok!', '📱 A video of your business went viral on TikTok!'] },
+  { id: 'umeme', p: 0.07, cust: 0.5, text: ['⚡ Umeme umekatika nusu siku.', '⚡ Power cut for half the day.'] },
+  { id: 'mvua', p: 0.06, cust: 0.7, text: ['🌧️ Mvua kubwa — wateja wachache.', '🌧️ Heavy rain — fewer customers.'] },
+  { id: 'tra', p: 0.05, fine: 0.04, text: ['🧾 Ukaguzi wa TRA — faini ya kodi.', '🧾 TRA inspection — tax fine.'] },
+  { id: 'mteja', p: 0.05, bonus: 0.5, text: ['🤝 Mteja mkubwa ameweka oda ya jumla!', '🤝 A big client placed a bulk order!'] },
+  { id: 'wizi', p: 0.03, fine: 0.03, text: ['🦹 Mfanyakazi ameiba mzigo.', '🦹 A worker made off with some stock.'] },
+];

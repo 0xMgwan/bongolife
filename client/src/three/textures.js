@@ -116,7 +116,8 @@ export function labelTexture(text, { bg = 'rgba(255,255,255,.95)', fg = '#111827
   const pad = size * 0.6;
   const w = tw + pad * 2;
   const h = Math.round(size * 1.7);
-  const texture = canvasTex(w, h + 8, (ctx) => {
+  const paint = (ctx) => {
+    ctx.clearRect(0, 0, w, h + 8);
     ctx.shadowColor = 'rgba(15,23,42,.22)';
     ctx.shadowBlur = Math.max(6, size * 0.1);
     ctx.shadowOffsetY = Math.max(2, size * 0.04);
@@ -127,12 +128,13 @@ export function labelTexture(text, { bg = 'rgba(255,255,255,.95)', fg = '#111827
     ctx.fillStyle = fg;
     ctx.font = `${bold} ${size}px ${FONT}`;
     ctx.textBaseline = 'middle';
-    ctx.fillText(full, pad, h / 2 + 2);
-  });
+    ctx.fillText(full, pad, h / 2 + 2, w - pad * 2);
+  };
+  const texture = canvasTex(w, h + 8, paint);
   // Labels are shown at screen size: no mipmaps, so the text stays sharp instead of smeared.
   texture.generateMipmaps = false;
   texture.minFilter = THREE.LinearFilter;
-  const res = { texture, aspect: w / (h + 8) };
+  const res = { texture, aspect: w / (h + 8), paint };
   if (labelCache.size > 400) labelCache.clear();
   labelCache.set(key, res);
   return res;
@@ -345,4 +347,17 @@ export function adTexture(ad, slotName) {
     }).catch(() => {});
   }
   return tex;
+}
+
+// Safety net: if the brand font finishes loading after some labels were drawn with a fallback,
+// repaint them in place (same canvas size; text is fitted to the width).
+if (typeof document !== 'undefined' && document.fonts) {
+  document.fonts.addEventListener?.('loadingdone', () => {
+    for (const res of labelCache.values()) {
+      const c = res.texture.image;
+      if (!res.paint || !c?.getContext) continue;
+      res.paint(c.getContext('2d'));
+      res.texture.needsUpdate = true;
+    }
+  });
 }

@@ -11,7 +11,7 @@ import { sfx } from '../../audio.js';
 const sign = (n) => (n >= 0 ? `+${fmtShort(n)}` : `-${fmtShort(-n)}`);
 
 /** Invest: land that grows, haulage trucks, businesses — like Lagos Life's Invest app. */
-export function Wekeza({ back, close }) {
+export function Wekeza({ back, close, open }) {
   const me = useStore((s) => s.me);
   const run = useStore((s) => s.run);
   const [d, setD] = useState(null);
@@ -49,6 +49,12 @@ export function Wekeza({ back, close }) {
           </div>
           <div className="ic-note">{L('Kodi, biashara na malori hulipa kila siku. Ardhi hupanda thamani unapoishikilia — unalipwa ukiuza.', 'Rent, businesses and trucks pay daily. Land grows the longer you hold it — it pays when you sell.')}</div>
         </div>
+
+        <button className="co-start" style={{ marginTop: 12 }} onClick={() => open?.('kampuni')}>
+          <span className="em">🏢</span>
+          <span className="grow"><b>{L('Anzisha kampuni: kuanzia 1.5M', 'Start a company: from 1.5M')}</b><small>{L('Wafanyakazi, bei, wateja kila jioni', 'Staff, prices, customers every evening')}</small></span>
+          <span className="go">{L('Fungua', 'Open')}</span>
+        </button>
 
         <div className="section-t">{L('ARDHI YAKO', 'YOUR LAND')}</div>
         {d.plots.length === 0 && <div className="box small muted">{L('Huna kiwanja bado — nunua kimoja hapa chini.', 'No land yet — buy a plot below.')}</div>}

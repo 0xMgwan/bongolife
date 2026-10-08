@@ -1,7 +1,7 @@
 import {
   GAME, NEEDS, PLACES, PLOTS, VEHICLES, BUILDINGS, ALLOWED_BUILDINGS, VEHICLE_COLORS,
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
-  shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST,
+  shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST, industryById, COMPANY,
   furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
 } from '../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
@@ -85,6 +85,9 @@ export function netWorth(userId) {
   for (const v of q.vehicles.all(userId)) worth += (vehicleById[v.model]?.price || 0) * 0.7;
   for (const p of q.plotsOf.all(userId)) worth += plotValue(p);
   worth += db.prepare('SELECT COUNT(*) n FROM trucks WHERE user_id = ?').get(userId).n * INVEST.truck.resale;
+  try {
+    for (const c of db.prepare('SELECT industry, balance FROM companies WHERE owner_id = ?').all(userId)) worth += (industryById[c.industry]?.cost || 0) * COMPANY.sellBack + c.balance;
+  } catch { /* table created on first import of company.js */ }
   for (const b of q.bizOf.all(userId)) worth += placeById[b.id]?.business?.price || 0;
   return Math.round(worth);
 }

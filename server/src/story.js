@@ -18,6 +18,7 @@ const friendsOf = db.prepare('SELECT COUNT(*) n FROM contacts x JOIN contacts y 
 const plotsOf = db.prepare('SELECT COUNT(*) n, SUM(building IS NOT NULL) built FROM plots WHERE owner_id = ?');
 const bizOf = db.prepare('SELECT COUNT(*) n FROM businesses WHERE owner_id = ?');
 const trucksOf = db.prepare('SELECT COUNT(*) n FROM trucks WHERE user_id = ?');
+const companiesOf = (id) => { try { return db.prepare('SELECT COUNT(*) n FROM companies WHERE owner_id = ?').get(id).n; } catch { return 0; } };
 
 let worthFn = () => 0;
 let mayorFn = () => null;
@@ -36,7 +37,7 @@ export function progressOf(u, goal) {
   if (goal.friends != null) return { have: friendsOf.get(u.id).n, need: goal.friends };
   if (goal.plots != null) return { have: plotsOf.get(u.id).n, need: goal.plots };
   if (goal.house != null) return { have: plotsOf.get(u.id).built || 0, need: goal.house };
-  if (goal.assets != null) return { have: bizOf.get(u.id).n + trucksOf.get(u.id).n, need: goal.assets };
+  if (goal.assets != null) return { have: bizOf.get(u.id).n + trucksOf.get(u.id).n + companiesOf(u.id), need: goal.assets };
   if (goal.mayor != null) return { have: mayorFn()?.username === u.username ? 1 : 0, need: 1 };
   return { have: 0, need: 1 };
 }

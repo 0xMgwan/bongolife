@@ -20,6 +20,7 @@ import { online, onlineCount, broadcast, emitTo } from '../presence.js';
 import { provider, providers, TOPUP_RATE } from '../payments/index.js';
 import * as story from '../story.js';
 import * as invest from '../invest.js';
+import * as company from '../company.js';
 
 export const api = express.Router();
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -680,6 +681,18 @@ api.post('/invest/trucks', (req, res) => {
   investDone(req, res);
 });
 api.post('/invest/trucks/:id/sell', (req, res) => investDone(req, res, invest.sellTruck(req.user.id, Number(req.params.id))));
+
+// ------------------------------------------------------------------- companies
+api.get('/companies', (req, res) => res.json(company.myCompanies(req.user.id)));
+api.post('/companies', (req, res) => {
+  crime.assertFree(getUser(req.user.id));
+  const id = company.createCompany(req.user.id, { name: req.body.name, logo: req.body.logo, color: req.body.color, industry: str(req.body.industry, 20) });
+  res.status(201).json({ id, companies: company.myCompanies(req.user.id), me: game.playerState(req.user.id) });
+});
+api.post('/companies/:id', (req, res) => {
+  const r = company.updateCompany(req.user.id, req.params.id, { action: str(req.body.action, 12), value: req.body.value });
+  res.json({ ...r, companies: company.myCompanies(req.user.id), me: game.playerState(req.user.id) });
+});
 
 // ---------------------------------------------------------------------- police
 api.get('/police', (req, res) => {
