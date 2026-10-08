@@ -1032,9 +1032,9 @@ html, body { background: #1e2a47; }
 .pd-item small { color: var(--mute); font-size: 12px; }
 .pd-item .go { background: var(--gold, #f5b800); color: var(--on-gold, #111); border-radius: 999px; padding: 6px 12px; font-weight: 800; font-size: 13px; }
 .pd-item:disabled { opacity: .5; }
-.city-chips { position: absolute; top: calc(70px + var(--safe-top)); left: 0; right: 0; display: flex; justify-content: center; gap: 6px; z-index: 14; padding: 0 10px; }
-.city-chips button { background: rgba(255,255,255,.96); border-radius: 999px; padding: 8px 14px; font-weight: 800; font-size: 13.5px; box-shadow: var(--shadow); color: var(--ink); }
-.city-chips button.on { background: #2563eb; color: #fff; }
+.city-chips { position: absolute; bottom: calc(146px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); display: flex; gap: 2px; z-index: 14; padding: 4px; background: rgba(255,255,255,.96); border-radius: 999px; box-shadow: var(--shadow); max-width: calc(100vw - 24px); }
+.city-chips button { border-radius: 999px; padding: 8px 13px; font-weight: 800; font-size: 13px; color: var(--ink); white-space: nowrap; }
+.city-chips button.on { background: var(--ink, #111827); color: #fff; }
 /* ---- casino */
 .casino-wrap { z-index: 40; }
 .casino { width: min(94vw, 420px); padding: 14px; background: linear-gradient(180deg, #1c1917, #0c0a09); color: #fde68a; border: 2px solid #f5b800; box-shadow: 0 0 40px rgba(245,184,0,.25); max-height: 88vh; overflow-y: auto; }
@@ -1101,7 +1101,6 @@ html, body { background: #1e2a47; }
   .pd-name b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 14.5px; line-height: 1.2; }
   .pd-btn { width: 32px; height: 32px; }
 }
-.app:has(.city-chips) .hud-left { transform: translateY(42px); }
 /* ---------- install the app (Android / iOS home screen) ---------- */
 .install-banner { position: absolute; left: 10px; right: 10px; top: calc(env(safe-area-inset-top, 0px) + 6px); z-index: 45; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; border-radius: 20px; background: #fff; color: #111827; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
 .install-banner img { width: 44px; height: 44px; border-radius: 12px; flex: none; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
@@ -1146,3 +1145,4 @@ html, body { background: #1e2a47; }
 .confirm-btns .btn { flex: 1; padding: 13px 10px; font-size: 15px; }
 .confirm-card .btn-ghost { background: #f1f5f9; color: #111827; }
 .loc-pill .lp-enter { flex: none; margin-left: 4px; padding: 8px 12px; border-radius: 999px; background: var(--green); color: var(--on-gold, #111); font-weight: 800; font-size: 13.5px; white-space: nowrap; }
+.place-dock .pd-exit { background: #fee2e2; }

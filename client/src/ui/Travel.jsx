@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TRAVEL, placeById, travelCost, fmtTsh, fmtShort, ENTERABLE, vehicleById, TRIP_MODES, tripKey, cityAt, cityById } from '@shared/world.js';
+import { TRAVEL, placeById, travelCost, fmtTsh, fmtShort, venueOf, vehicleById, TRIP_MODES, tripKey, cityAt, cityById } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { local } from '../net.js';
 import { goToPlace, startRide, enterPlace } from '../nav.js';
@@ -136,7 +136,7 @@ export function TravelCard({ id, onClose }) {
         <p className="tc-blurb">{loc(p, 'blurb')}</p>
         <button className="link-share" onClick={() => share({ title: loc(p), text: L(`Tukutane ${p.name} kwenye Bongo Life! 🇹🇿`, `Meet me at ${loc(p)} in Bongo Life! 🇹🇿`), params: { place: id } })}>🔗 {L(`Shiriki link ya ${p.name}`, `Share a link to ${loc(p)}`)}</button>
         {things.length > 0 && <div className="tc-chips">{things.map((t) => <span key={t}>{t}</span>)}</div>}
-        {ENTERABLE[id] && <div className="tc-note">🚪 {L('Unaweza kuingia ndani na kuona nani yupo.', "You can go inside and see who's there.")}</div>}
+        {venueOf(id) && <div className="tc-note">🚪 {L('Unaweza kuingia ndani na kuona nani yupo.', "You can go inside and see who's there.")}</div>}
         {cityAt(...p.pos)?.id !== cityAt(local.x, local.z)?.id ? (
           <TripOptions placeId={id} onDone={onClose} />
         ) : near ? (

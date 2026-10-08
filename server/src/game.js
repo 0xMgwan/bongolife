@@ -1,7 +1,7 @@
 import {
   GAME, NEEDS, PLACES, PLOTS, VEHICLES, BUILDINGS, ALLOWED_BUILDINGS, VEHICLE_COLORS,
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
-  shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, ENTERABLE,
+  shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf,
   furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
 } from '../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
@@ -172,7 +172,7 @@ function setBusy(userId, busy) {
     p.busy = busy ? { kind: busy.kind, id: busy.id, placeId: busy.placeId, emoji: busy.emoji, endsAt: busy.endsAt } : null;
     broadcast('player:busy', { id: userId, busy: p.busy });
     // Starting something at a venue puts you inside it, so others see you there.
-    if (busy && ENTERABLE[busy.placeId] && p.inside !== busy.placeId) {
+    if (busy && venueOf(busy.placeId) && p.inside !== busy.placeId) {
       p.inside = busy.placeId;
       broadcast('player:inside', { id: userId, inside: p.inside });
     }

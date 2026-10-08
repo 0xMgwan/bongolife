@@ -2,13 +2,44 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
-    { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }] },
-    { "source": "/(.*)", "headers": [
-      { "key": "X-Content-Type-Options", "value": "nosniff" },
-      { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
-    ] }
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
   ],
   "redirects": [
-    { "source": "/play", "destination": "https://play.bongolife.app/", "permanent": false }
+    {
+      "source": "/play",
+      "destination": "https://play.bongolife.app/",
+      "permanent": false
+    },
+    {
+      "source": "/admin",
+      "destination": "https://play.bongolife.app/admin",
+      "permanent": true
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "https://play.bongolife.app/admin/:path*",
+      "permanent": true
+    }
   ]
 }

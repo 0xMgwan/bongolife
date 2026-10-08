@@ -245,8 +245,8 @@ export function replyInvite(fromId, accept) {
 export function setInside(placeId) {
   useStore.setState({ inside: placeId });
   local.target = null;
+  sendMove(true); // the server checks you're at the door, so send where you are first
   socket?.emit('inside', placeId);
-  sendMove(true);
 }
 
 let lastSent = 0;

@@ -1,7 +1,7 @@
 import { placeById, isWater, TRAVEL, ROADS } from '@shared/world.js';
 import { placeDoor } from './three/Players.jsx';
 import { useStore } from './store.js';
-import { local } from './net.js';
+import { local, setInside } from './net.js';
 import { L, loc } from './i18n.js';
 
 /** Walk to a spot and run `then` on arrival (or now, if already there). */
@@ -26,7 +26,8 @@ export function goToPlace(placeId, open = true) {
 /** Step into a place: its dock (who's here, chat, things to do) opens. Walking away leaves it. */
 export function enterPlace(placeId) {
   if (!placeById[placeId]) return;
-  useStore.setState({ entered: placeId, sheet: null });
+  useStore.setState({ sheet: null, cityView: 'follow' });
+  setInside(placeId);
 }
 
 /** Are you still at the place you entered? (on its plot or near its entrance) */

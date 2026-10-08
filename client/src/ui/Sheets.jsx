@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ENTERABLE, NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
+  NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
   outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
 } from '@shared/world.js';
 import { useStore } from '../store.js';
@@ -167,7 +167,7 @@ function PlaceSheet({ id, onClose }) {
           🎉 {L(`Ingia kwenye pati: ${party.title}`, `Join the party: ${party.title}`)} · 🙋 {party.going}
         </button>
       )}
-      {(ENTERABLE[p.id] || party) && (
+      {!p.comingSoon && (
         useStore.getState().inside === p.id ? (
           <button className="btn btn-ghost btn-block" style={{ marginTop: 6 }} onClick={() => { setInside(null); onClose(); }}>🚪 {L('Toka nje', 'Leave')}</button>
         ) : (

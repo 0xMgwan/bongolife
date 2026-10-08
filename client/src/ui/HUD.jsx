@@ -205,10 +205,7 @@ function Dock({ me, scene }) {
     const t = setInterval(() => tick((n) => n + 1), 1200);
     return () => clearInterval(t);
   }, []);
-  const entered = useStore((s) => s.entered);
-  // Walked away from the place you went into → you've left it.
-  if (entered && !stillAt(entered)) setTimeout(() => useStore.getState().entered === entered && useStore.setState({ entered: null }), 0);
-  const placeId = tab === 'town' && cityView !== 'map' ? placeHere(me, scene, inside, entered && stillAt(entered) ? entered : null) : null;
+  const placeId = tab === 'town' && cityView !== 'map' ? placeHere(me, scene, inside) : null;
   if (!placeId) return <LocationPill me={me} scene={scene} />;
   return (
     <PlaceDock

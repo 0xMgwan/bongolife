@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { placeById, fmtShort, fmtTsh, NEEDS, ENTERABLE, findJob } from '@shared/world.js';
+import { placeById, fmtShort, fmtTsh, NEEDS, findJob } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { local, remotes, sendChat, setInside } from '../net.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
@@ -11,8 +11,8 @@ import { share } from './share.js';
 const CASINO_GAMES = [['slots', '🎰', 'Slot machines', 'Slot machines'], ['blackjack', '🃏', 'Meza ya Blackjack', 'Blackjack table'], ['roulette', '🎡', 'Roulette', 'Roulette']];
 
 /** The place you're in (entered, inside its scene, or doing something there), else null. */
-export function placeHere(me, scene, inside, entered) {
-  const id = [scene?.placeId, inside, me.busy?.placeId, entered].find((x) => x && placeById[x]);
+export function placeHere(me, scene, inside) {
+  const id = [scene?.placeId, inside, me.busy?.placeId].find((x) => x && placeById[x]);
   if (id) return id;
   // Standing outside (even at the door) isn't "in" the place — the location pill covers that.
   return null;
@@ -46,7 +46,8 @@ export function PlaceDock({ me, placeId, onHome, onMap }) {
     if (t) { sendChat(t); sfx('pop'); }
     setText('');
   };
-  const canEnter = ENTERABLE[placeId] && useStore.getState().inside !== placeId && near;
+  const isIn = useStore.getState().inside === placeId;
+  const canEnter = !isIn && near;
   const busyLabel = me.busy && me.busy.placeId === placeId && me.busy.endsAt > Date.now() ? `${me.busy.emoji} ${loc(me.busy, 'label')}` : null;
   if (min) {
     return (
@@ -66,6 +67,7 @@ export function PlaceDock({ me, placeId, onHome, onMap }) {
           <small>{busyLabel || `👥 ${here} ${L('hapa', 'here')} · ${p.district}`}</small>
         </button>
         <span className="pd-money">💵 {fmtShort(me.money)}</span>
+        {isIn && <button className="pd-btn pd-exit" aria-label={L('Toka nje', 'Leave')} onClick={() => { sfx('close'); setInside(null); }}>🚪</button>}
         <button className="pd-btn" aria-label={L('Shiriki', 'Share')} onClick={() => share({ title: loc(p), text: L(`Tukutane ${p.name} kwenye Bongo Life! 🇹🇿`, `Meet me at ${loc(p)} in Bongo Life! 🇹🇿`), params: { place: placeId } })}>🔗</button>
         <button className="pd-btn" aria-label={L('Ramani', 'Map')} onClick={onMap}>🗺️</button>
         <button className="pd-btn" aria-label={L('Nyumbani', 'Home')} onClick={onHome}>🏠</button>

@@ -155,7 +155,8 @@ export default function Game() {
 
   if (!me) return null;
   const homeTab = tab === 'home' || tab === 'shop';
-  const scene = homeTab ? null : activeScene({ me, inside });
+  // The map always shows the city, even if you're inside somewhere.
+  const scene = homeTab || cityView === 'map' ? null : activeScene({ me, inside });
   const mode = homeTab ? 'home' : cityView === 'map' ? 'map' : 'play';
   return (
     <div className="app">

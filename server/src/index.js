@@ -4,7 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
 import { Server } from 'socket.io';
-import { NEED_TICK_SECONDS, isWater, moodOf, ENTERABLE, placeById, EVENT_SCENES, EVENT_LIMITS, HANGOUT_PLACES } from '../../shared/world.js';
+import { NEED_TICK_SECONDS, isWater, moodOf, placeById, EVENT_LIMITS, HANGOUT_PLACES } from '../../shared/world.js';
 import { db, getUser, saveFields, now, UPLOAD_DIR, getSettings } from './db.js';
 import { verifyToken } from './auth.js';
 import { api, settleTopup, applyTopupStatus } from './routes/api.js';
@@ -171,7 +171,7 @@ io.on('connection', (socket) => {
     if (j && (p.inside === 'polisi' || p.inside === 'mahakama') && placeId !== p.inside) return socket.emit('player:inside', { id: uid, inside: p.inside });
     let inside = null;
     if (placeId === 'home') inside = 'home';
-    else if (placeId && (ENTERABLE[placeId] || (EVENT_SCENES[placeId] && partyLiveAt(placeId)))) {
+    else if (placeId && placeById[placeId]) {
       const pl = placeById[placeId];
       const dx = Math.max(Math.abs(p.x - pl.pos[0]) - pl.size[0] / 2, 0);
       const dz = Math.max(Math.abs(p.z - pl.pos[1]) - pl.size[1] / 2, 0);
