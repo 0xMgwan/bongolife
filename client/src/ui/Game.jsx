@@ -12,7 +12,7 @@ import { InstallBanner } from './InstallApp.jsx';
 import { PresenceAlerts } from './LiveNow.jsx';
 import { DmPop } from './DmPop.jsx';
 import { InteractAsk, SelfieCard } from './Together.jsx';
-import { BuildBar, VisitShop } from './BuildBar.jsx';
+import { BuildBar } from './BuildBar.jsx';
 import { readDeepLink } from './share.js';
 import { loadEvents } from './events.js';
 import { sfx } from '../audio.js';
@@ -174,7 +174,6 @@ export default function Game() {
       <InteractAsk />
       <SelfieCard />
       <BuildBar />
-      <VisitShop />
       <InstallBanner />
     </div>
   );

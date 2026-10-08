@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { YARD, yardBlockById } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
-import { geo, mat, labelTexture } from './textures.js';
+import { geo, mat } from './textures.js';
 import { haptic } from '../haptics.js';
 import { sfx } from '../audio.js';
 
@@ -73,7 +73,6 @@ export function Yard({ yard, mine, origin }) {
   const [hover, setHover] = useState(null);
   const blocks = yard?.blocks || [];
   const occupied = useMemo(() => new Set(blocks.map((b) => `${b.x},${b.y},${b.z}`)), [blocks]);
-  const sign = useMemo(() => (yard?.name ? labelTexture(`${yard.open ? '🛍️ ' : ''}${yard.name}`, { size: 34, bg: yard.open ? 'rgba(245,184,0,.95)' : 'rgba(15,23,42,.85)', fg: yard.open ? '#111' : '#fff' }) : null), [yard?.name, yard?.open]);
   const building = mine && build;
 
   const send = async (method, body) => {
@@ -125,11 +124,6 @@ export function Yard({ yard, mine, origin }) {
         <mesh geometry={geo('box', 1.02, 1.02, 1.02)} position={center(hover.x, hover.y, hover.z)}>
           <meshBasicMaterial color={build.erase ? '#ef4444' : '#f5b800'} transparent opacity={0.35} depthWrite={false} />
         </mesh>
-      )}
-      {sign && (
-        <sprite position={[YARD_X0 + YARD.w / 2, Math.max(3, ...blocks.map((b) => b.y + 2)), YARD_Z0 + YARD.d / 2]} scale={[sign.aspect * 0.9, 0.9, 1]}>
-          <spriteMaterial map={sign.texture} depthWrite={false} />
-        </sprite>
       )}
     </group>
   );

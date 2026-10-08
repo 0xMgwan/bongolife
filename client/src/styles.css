@@ -1372,12 +1372,7 @@ html, body { background: #1e2a47; }
 .bb-block small { font-size: 10px; color: #ffd23f; }
 .bb-block.on { transform: translateY(-4px) scale(1.08); background: rgba(245,184,0,.28); box-shadow: inset 0 0 0 2px var(--gold); }
 .bb-hint { font-size: 12px; color: rgba(255,255,255,.85); }
-.bb-shop { display: flex; flex-direction: column; gap: 8px; }
-.bb-shop input { border: 0; outline: 0; border-radius: 999px; padding: 10px 14px; font-size: 16px; background: rgba(255,255,255,.95); color: var(--ink); text-shadow: none; }
-.bb-shop small { font-size: 12px; color: rgba(255,255,255,.88); }
-.bb-shop .btn { text-shadow: none; }
 .app:has(.build-bar) .bottom-nav, .app:has(.build-bar) .loc-pill, .app:has(.build-bar) .needs-panel, .app:has(.build-bar) .hud-left, .app:has(.build-bar) .side-pop, .app:has(.build-bar) .side-tab { opacity: 0; pointer-events: none; }
-.visit-shop { position: absolute; left: 50%; bottom: calc(150px + var(--safe-bottom)); transform: translateX(-50%); z-index: 20; padding: 12px 20px; border-radius: 999px; background: var(--gold); color: var(--on-gold); font-weight: 800; font-size: 15px; box-shadow: 0 10px 24px rgba(0,0,0,.3); animation: fab-in .4s cubic-bezier(.2,1.4,.4,1) both; white-space: nowrap; }
 /* A soft dark fade behind the build bar keeps white labels readable over the light yard. */
 .build-bar::before { content: ''; position: absolute; left: -8px; right: -8px; bottom: calc(-10px - var(--safe-bottom)); top: -28px; z-index: -1; background: linear-gradient(180deg, rgba(15,23,42,0) 0%, rgba(15,23,42,.62) 38%, rgba(15,23,42,.78) 100%); pointer-events: none; }
 /* Sheets, the phone and pop-ups sit above build mode: tuck the build bar away while one is open. */

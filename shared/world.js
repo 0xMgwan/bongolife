@@ -1176,7 +1176,7 @@ export const HOME = { w: 12, d: 10, sellBack: 0.5 };
 // ------------------------------------------------------------------ yard (build mode)
 // Every player gets a free empty yard beside their house to build on, Minecraft-style: one
 // block per grid cell, stacked up to `h` high. Removing a block refunds half.
-export const YARD = { w: 12, d: 12, h: 6, maxBlocks: 400, refund: 0.5, sale: 1_000 };
+export const YARD = { w: 12, d: 12, h: 6, maxBlocks: 400, refund: 0.5 };
 export const YARD_BLOCKS = [
   { id: 'floor', name: 'Sakafu', nameEn: 'Floor', emoji: '🟫', price: 300, color: '#b98552', slab: true },
   { id: 'brick', name: 'Tofali', nameEn: 'Brick wall', emoji: '🧱', price: 800, color: '#b4532a' },
