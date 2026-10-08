@@ -11,6 +11,7 @@ import { answerInvite, callAmbulance, goHospital, leaveVisit } from './social.js
 import { placeById } from '@shared/world.js';
 import { replyHangout } from '../net.js';
 import { loc } from '../i18n.js';
+import { ConfirmModal } from './Confirm.jsx';
 
 /** Incoming "come to my place" invite. */
 function InviteModal() {
@@ -197,6 +198,7 @@ export function SocialModals() {
       <ArrestModal />
       <JailPanel />
       <CasinoModal />
+      <ConfirmModal />
       <AccidentModal />
     </>
   );

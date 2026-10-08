@@ -1137,3 +1137,11 @@ html, body { background: #1e2a47; }
 .tg-energy { background: #dbeafe; color: #1d4ed8; }
 .tg-clean { background: #cffafe; color: #0e7490; }
 .tg-fame { background: #ede9fe; color: #6d28d9; }
+/* In-game confirm dialog (replaces the browser's OK/Cancel box) */
+.confirm-wrap { z-index: 70; background: rgba(10,12,20,.45); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.confirm-card { background: #fff; color: #111827; width: min(88vw, 340px); border-radius: 26px; padding: 22px 20px 18px; }
+.confirm-card h3 { font-size: 19px; line-height: 1.25; margin: 10px 0 4px; }
+.confirm-text { font-size: 14.5px; line-height: 1.45; color: #4b5563; margin: 0 0 4px; }
+.confirm-btns { display: flex; gap: 10px; margin-top: 16px; }
+.confirm-btns .btn { flex: 1; padding: 13px 10px; font-size: 15px; }
+.confirm-card .btn-ghost { background: #f1f5f9; color: #111827; }

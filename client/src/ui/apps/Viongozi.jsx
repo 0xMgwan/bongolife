@@ -138,7 +138,12 @@ export function Viongozi({ back, open }) {
                 <span className="rank">{i + 1}</span>
                 <span className="avatar-dot" style={{ width: 34, height: 34, fontSize: 17 }}>{avatarEmoji(r.appearance)}</span>
                 <div className="grow"><b>@{r.username}</b><div className="small muted">{r.name}</div></div>
-                <b>{tab === 'rich' ? `TSh ${fmtShort(r.worth)}` : `⭐ ${r.fame}`}</b>
+                {tab === 'rich' ? (
+                  <span style={{ textAlign: 'right' }}>
+                    <b>TSh {fmtShort(r.money)}</b>
+                    <div className="small muted">{L('Mali', 'Worth')} {fmtShort(r.worth)}</div>
+                  </span>
+                ) : <b>⭐ {r.fame}</b>}
               </button>
             ))}
           </div>

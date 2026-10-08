@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import { L, loc, pick } from '../i18n.js';
 import { sfx } from '../audio.js';
 import { haptic } from '../haptics.js';
+import { ask } from './Confirm.jsx';
 
 const hhmmAt = (ms) => {
   // Real Dar time at a future moment.
@@ -61,7 +62,7 @@ export function WorkPanel({ me }) {
   };
   const leave = async () => {
     if (!canLeavePaid) {
-      if (!confirm(L('Ukiondoka sasa hupati malipo. Uhakika?', "Leave now and you won't get paid. Sure?"))) return;
+      if (!(await ask({ icon: '💼', title: L('Ondoka kazini?', 'Leave your shift?'), text: L('Ukiondoka sasa hupati malipo.', "Leave now and you won't get paid."), ok: L('Ondoka', 'Leave'), cancel: L('Endelea kazi', 'Keep working'), danger: true }))) return;
       return run('/act/cancel', { method: 'POST' });
     }
     try {

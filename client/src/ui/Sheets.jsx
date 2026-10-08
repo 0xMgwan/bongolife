@@ -17,6 +17,7 @@ import { share } from './share.js';
 import { vehicleThumb, cachedThumb } from '../three/thumbs.jsx';
 import { L, loc, isEn } from '../i18n.js';
 import { useSlideSelect } from './useSlideSelect.js';
+import { ask } from './Confirm.jsx';
 
 const jt = (j, n) => (isEn() ? jobTitleEn(j, n) : jobTitle(j, n));
 
@@ -352,7 +353,7 @@ function PlayerSheet({ username, onClose }) {
     toast(r.ok ? L(`${it.emoji} ${it.name} — @${p.username}`, `${it.emoji} ${it.nameEn} — @${p.username}`) : L('😬 Utani haukufika… aibu kidogo.', '😬 The joke flopped… awkward.'));
   };
   const rob = async () => {
-    if (!confirm(L(`Umwibie @${p.username}? Polisi wakikukamata utakamatwa!`, `Rob @${p.username}? If the police catch you, you'll be arrested!`))) return;
+    if (!(await ask({ icon: '🦹', title: L(`Umwibie @${p.username}?`, `Rob @${p.username}?`), text: L('Ukifanikiwa unachukua sehemu ya pesa zao. Polisi wakikukamata, unakamatwa na kupelekwa kituoni.', 'Pull it off and you take a cut of their cash. If the police catch you, you get arrested and taken to the station.'), ok: L('🦹 Iba', '🦹 Rob them'), danger: true }))) return;
     const r = await run(`/players/${p.username}/rob`, { method: 'POST' });
     if (!r) return;
     if (r.amount) { sfx('cash'); toast(L(`🦹 Umechukua ${fmtTsh(r.amount)} kutoka kwa @${p.username}! Jificha…`, `🦹 You snatched ${fmtTsh(r.amount)} from @${p.username}! Lie low…`)); }

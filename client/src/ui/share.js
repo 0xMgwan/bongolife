@@ -27,7 +27,7 @@ export async function share({ title = 'Bongo Life', text = '', params } = {}) {
     await navigator.clipboard.writeText(url);
     useStore.getState().toast(L('🔗 Link imenakiliwa — itume kwa washkaji!', '🔗 Link copied — send it to your friends!'));
   } catch {
-    window.prompt(L('Nakili link hii:', 'Copy this link:'), url);
+    useStore.getState().toast(L(`🔗 Nakili link: ${url}`, `🔗 Copy this link: ${url}`));
   }
 }
 

@@ -611,10 +611,11 @@ export function clearLeaderboardCache() {
   lbCache = { at: 0, data: null };
 }
 export function leaderboard() {
-  if (now() - lbCache.at < 30_000 && lbCache.data) return lbCache.data;
-  const rows = db.prepare('SELECT id, username, name, fame, appearance FROM users WHERE onboarded = 1 AND banned_at IS NULL').all();
+  if (now() - lbCache.at < 10_000 && lbCache.data) return lbCache.data;
+  const rows = db.prepare('SELECT id, username, name, fame, money, appearance FROM users WHERE onboarded = 1 AND banned_at IS NULL').all();
   const scored = rows.map((r) => ({ ...r, appearance: JSON.parse(r.appearance || 'null'), worth: netWorth(r.id) }));
-  const rich = [...scored].sort((a, b) => b.worth - a.worth).slice(0, 20);
+  // Wealth = cash on hand right now (net worth incl. cars/land/businesses is shown alongside).
+  const rich = [...scored].sort((a, b) => b.money - a.money).slice(0, 20);
   const famous = [...scored].sort((a, b) => b.fame - a.fame).slice(0, 20);
   lbCache = { at: now(), data: { rich, famous } };
   return lbCache.data;

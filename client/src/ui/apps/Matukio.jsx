@@ -9,6 +9,7 @@ import { goToPlace } from '../../nav.js';
 import { avatarEmoji } from '../../three/Avatar.jsx';
 import { share } from '../share.js';
 import { joinParty, loadEvents } from '../events.js';
+import { ask } from '../Confirm.jsx';
 
 const COVERS = [['#7c3aed', '#db2777'], ['#f59e0b', '#ef4444'], ['#0ea5e9', '#6366f1'], ['#10b981', '#0d9488'], ['#ec4899', '#f97316']];
 
@@ -48,7 +49,7 @@ export function Matukio({ back }) {
     if (r) { setList(r); loadEvents(); }
   };
   const cancel = async (e) => {
-    if (!confirm(L('Ghairi tukio hili?', 'Cancel this event?'))) return;
+    if (!(await ask({ icon: '🗓️', title: L('Ghairi tukio hili?', 'Cancel this event?'), text: L('Walioalikwa wataarifiwa.', 'Everyone invited will be told.'), ok: L('Ghairi tukio', 'Cancel event'), cancel: L('Hapana', 'Keep it'), danger: true }))) return;
     const r = await run(`/events/${e.id}`, { method: 'DELETE' });
     if (r) setList(r);
   };

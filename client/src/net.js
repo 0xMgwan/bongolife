@@ -42,8 +42,7 @@ export function connect() {
       banned: L('Akaunti yako imefungiwa.', 'Your account has been banned.'),
       maintenance: L('Bongo Life iko kwenye matengenezo 🔧', 'Bongo Life is under maintenance 🔧'),
     }[reason] || L('Umetolewa kwenye mchezo. Ingia tena.', 'You were signed out. Please log in again.');
-    alert(msg);
-    st().logout();
+    import('./ui/Confirm.jsx').then(({ ask }) => ask({ icon: reason === 'maintenance' ? '🔧' : '🚪', title: msg, alert: true })).finally(() => st().logout());
   });
   socket.on('announcement', (announcement) => useStore.setState({ announcement }));
   socket.on('chat:delete', ({ ids }) => {

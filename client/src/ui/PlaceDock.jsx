@@ -15,9 +15,10 @@ export function placeHere(me, scene, inside) {
   const id = [scene?.placeId, inside, me.busy?.placeId].find((x) => x && placeById[x]);
   if (id) return id;
   for (const p of Object.values(placeById)) {
-    const dx = Math.max(Math.abs(local.x - p.pos[0]) - p.size[0] / 2, 0);
-    const dz = Math.max(Math.abs(local.z - p.pos[1]) - p.size[1] / 2, 0);
-    if (Math.hypot(dx, dz) < 2.8) return p.id; // standing in the area or at its door
+    // Only when you're actually on the plot, or standing at its entrance — not just walking past.
+    const onPlot = Math.abs(local.x - p.pos[0]) <= p.size[0] / 2 + 0.4 && Math.abs(local.z - p.pos[1]) <= p.size[1] / 2 + 0.4;
+    const [dx, dz] = placeDoor(p.id);
+    if (onPlot || Math.hypot(local.x - dx, local.z - dz) < 1.8) return p.id;
   }
   return null;
 }
