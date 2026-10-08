@@ -1404,3 +1404,8 @@ html, body { background: #1e2a47; }
 .pk-check { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--gold); color: var(--on-gold); display: grid; place-items: center; font-size: 13px; font-weight: 900; text-shadow: none; }
 .pk-opt .pk-badge + .pk-check { margin-left: 0; }
 @media (prefers-reduced-motion: reduce) { .picker-pop, .pk-opt { animation: none; } }
+
+/* Keyboard open (see --kb in main.jsx): lift the chat input and the DM reply above it. */
+:root { --kb: 0px; }
+.kb-open .chat-dock { bottom: calc(var(--kb) + 10px); z-index: 60; transition: bottom .18s ease-out; }
+.kb-open .dm-pop { top: auto; bottom: calc(var(--kb) + 10px); z-index: 60; }
