@@ -42,8 +42,8 @@ export default function Landing() {
   return (
     <div className="app">
       <video ref={video} className="land-video" autoPlay muted loop playsInline preload="auto" poster="/landing-hero.jpg" aria-hidden="true" tabIndex={-1}>
-        <source src="/landing-hero.webm" type="video/webm" />
-        <source src="/landing-hero.mp4" type="video/mp4" />
+        <source src="/landing-hero-1080.mp4" type="video/mp4" media="(min-width: 900px), (min-resolution: 2dppx)" />
+        <source src="/landing-hero-720.mp4" type="video/mp4" />
       </video>
       <div className="layer">
         <div className="land-top">

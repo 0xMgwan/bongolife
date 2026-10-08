@@ -44,8 +44,9 @@
     <section class="hero">
       <!-- Silent looping flyover behind the hero; the poster shows while it loads and for reduced motion. -->
       <video class="hero-video" autoplay muted loop playsinline preload="auto" poster="assets/hero-poster.jpg" aria-hidden="true" tabindex="-1">
-        <source src="assets/hero.webm" type="video/webm" />
-        <source src="assets/hero.mp4" type="video/mp4" />
+        <!-- Full-quality master on wide or high-density screens; a lighter 1280 copy otherwise. -->
+        <source src="assets/hero-1080.mp4" type="video/mp4" media="(min-width: 900px), (min-resolution: 2dppx)" />
+        <source src="assets/hero-720.mp4" type="video/mp4" />
       </video>
       <div class="hero-copy">
         <span class="badge" data-sw="🇹🇿 Mchezo wa maisha ya Dar es Salaam" data-en="🇹🇿 The Dar es Salaam life-sim">🇹🇿 Mchezo wa maisha ya Dar es Salaam</span>
