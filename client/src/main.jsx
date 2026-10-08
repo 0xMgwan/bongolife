@@ -23,6 +23,20 @@ import { installAudioUnlock, sfx } from './audio.js';
 import { haptic } from './haptics.js';
 
 installAudioUnlock();
+
+// On-screen keyboard: iOS slides it over the page instead of resizing it, so anything pinned near
+// the bottom (chat input, DM reply) would sit behind it. Track the covered height as --kb.
+if (window.visualViewport) {
+  const vv = window.visualViewport;
+  const sync = () => {
+    const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    document.documentElement.style.setProperty('--kb', `${kb > 80 ? kb : 0}px`);
+    document.documentElement.classList.toggle('kb-open', kb > 80);
+  };
+  vv.addEventListener('resize', sync);
+  vv.addEventListener('scroll', sync);
+  sync();
+}
 // Soft click + haptic on every button press (not on the 3D canvas). The sound plays on pointerdown
 // so it feels instant; the haptic waits for the click, because iOS only plays its switch haptic
 // inside a user activation and a touch's pointerdown doesn't grant one.
