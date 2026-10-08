@@ -2,7 +2,7 @@ import {
   GAME, NEEDS, PLACES, PLOTS, VEHICLES, BUILDINGS, ALLOWED_BUILDINGS, VEHICLE_COLORS,
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, ENTERABLE,
-  furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL,
+  furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
 } from '../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
 
@@ -358,6 +358,30 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
       result.teleport = [x, z];
     }
     result.title = [`${act.emoji} ${act.name}`, `${act.emoji} ${act.nameEn}`];
+  } else if (busy.kind === 'trip') {
+    // Arrive in the other city — and, if you skipped insurance, maybe some wahala on the way.
+    const m = TRIP_MODES[busy.id];
+    const dest = placeById[busy.placeId];
+    const [x, z] = doorOf(dest);
+    fields.x = x;
+    fields.z = z;
+    const p = online.get(userId);
+    if (p) Object.assign(p, { x, z, inside: null });
+    result.teleport = [x, z];
+    const city = cityById[busy.to];
+    result.title = [`${m.emoji} Karibu ${city.name}!`, `${m.emoji} Welcome to ${city.name}!`];
+    fields.needs = applyNeeds(user.needs, m.own ? { energy: -25, fun: 5 } : { energy: -8, fun: 10 });
+    if (Math.random() < m.risk) {
+      const W = WAHALA[busy.id];
+      const w = W[Math.floor(Math.random() * W.length)];
+      if (busy.insured) result.lines.push([`🛡️ ${w[0]} — bima imelipia kila kitu.`, `🛡️ ${w[1]} — your insurance covered it.`]);
+      else {
+        const cost = Math.min(w[2], Math.max(0, user.money));
+        if (cost) addMoney(userId, -cost, 'spend', `Safari: ${w[0]}`);
+        if (w[3]) fields.needs = applyNeeds(fields.needs, w[3]);
+        result.lines.push([`⚠️ ${w[0]}${cost ? ` (−TSh ${cost.toLocaleString()})` : ''}. Hukuwa na bima!`, `⚠️ ${w[1]}${cost ? ` (−TSh ${cost.toLocaleString()})` : ''}. No insurance!`]);
+      }
+    } else result.lines.push(['✅ Safari salama.', '✅ Smooth trip.']);
   } else {
     const { job } = findJob(busy.id);
     const shifts = user.jobXp[busy.id] || 0;
@@ -409,9 +433,10 @@ export const buyVehicle = db.transaction((userId, model, color) => {
 /** Hand every player a used starter car once (new and existing accounts). */
 export const ensureStarterCar = db.transaction((userId) => {
   const u = getUser(userId);
-  if (!u || u.carSeeded) return false;
-  saveFields(userId, { carSeeded: 1 });
-  if (q.vehicles.all(userId).length) return false;
+  // v2: everyone without an actual car gets one (v1 skipped people who only had a bike/boda).
+  if (!u || u.carSeeded >= 2) return false;
+  saveFields(userId, { carSeeded: 2 });
+  if (q.vehicles.all(userId).some((v) => ['car', 'van', 'suv'].includes(vehicleById[v.model]?.kind))) return false;
   const v = vehicleById[STARTER_CAR];
   const color = VEHICLE_COLORS[Math.floor(Math.random() * VEHICLE_COLORS.length)] || v.color;
   q.insertVehicle.run(userId, v.id, color, plate(), now());
@@ -493,12 +518,54 @@ export function homeActivity(userId, plotId, act) {
   saveFields(userId, { needs: applyNeeds(user.needs, effects) });
 }
 
+// ------------------------------------------------------------ trips
+const doorOf = (place) => {
+  const [px, pz] = place.pos;
+  const cands = [[px, pz + place.size[1] / 2 + 3], [px, pz - place.size[1] / 2 - 3], [px - place.size[0] / 2 - 3, pz], [px + place.size[0] / 2 + 3, pz]];
+  return cands.find(([x, z]) => !isWater(x, z)) || cands[0];
+};
+// Things that go wrong on the road / at sea / in the air when you're not insured: [sw, en, cost, needs]
+const WAHALA = {
+  car: [['Gari limeharibika njiani, fundi amekutoza', 'Your car broke down — the mechanic charged you', 80_000], ['Tairi limepasuka', 'A flat tyre', 25_000], ['Faini ya polisi barabarani', 'A police checkpoint fine', 30_000]],
+  bus: [['Basi limeharibika, umechelewa sana', 'The coach broke down — hours late', 0, { energy: -20, fun: -10 }], ['Mzigo wako umepotea', 'Your luggage went missing', 30_000]],
+  ferry: [['Bahari imechafuka — umetapika', 'Rough seas — you got seasick', 0, { hygiene: -30, fun: -20 }], ['Umepoteza simu baharini', 'You dropped your phone overboard', 50_000]],
+  flight: [['Ndege imechelewa saa nne', 'The flight was delayed four hours', 0, { energy: -20, fun: -15 }], ['Mzigo umepotea uwanjani', 'Lost luggage at the airport', 40_000]],
+  heli: [['Hali ya hewa mbaya — mmetua mahali pengine', 'Bad weather — you landed somewhere else and paid a cab', 60_000]],
+};
+
+/** Book a trip to a place in another city (flight, helicopter, ferry, coach or your own car). */
+export const startTrip = db.transaction((userId, placeId, mode, insured) => {
+  const user = getUser(userId);
+  assertNotJailed(user);
+  if (user.busy && user.busy.endsAt > now()) throw new GameError(['Bado uko bize na kitu kingine.', "You're still busy with something else."]);
+  const place = placeById[placeId];
+  const m = TRIP_MODES[mode];
+  if (!place || !m) throw new GameError(['Safari si sahihi', 'Invalid trip']);
+  const [ux, uz] = positionOf(user);
+  const from = cityAt(ux, uz)?.id || 'dar';
+  const to = cityAt(...place.pos)?.id;
+  if (!to || to === from) throw new GameError(['Uko kwenye mji huo tayari.', "You're already in that city."]);
+  const fare = m.price[tripKey(from, to)];
+  if (!fare) throw new GameError(['Hakuna usafiri huo kati ya miji hii.', "That way of travelling doesn't connect these cities."]);
+  if (m.own && !q.vehicles.all(userId).some((v) => ['car', 'van', 'suv'].includes(vehicleById[v.model]?.kind)))
+    throw new GameError(['Unahitaji gari kuendesha safari hii.', 'You need a car to drive there.']);
+  const cost = fare + (insured ? m.ins : 0);
+  addMoney(userId, -cost, 'travel', `${m.name} kwenda ${cityById[to].name}${insured ? ' (+bima)' : ''}`);
+  const busy = { kind: 'trip', id: mode, placeId, from, to, insured: !!insured, emoji: m.emoji, label: `${m.name} → ${cityById[to].name}`, labelEn: `${m.nameEn} → ${cityById[to].name}`, startedAt: now(), endsAt: now() + m.secs * 1000 };
+  setBusy(userId, busy);
+  return { busy, cost };
+});
+
 // ------------------------------------------------------------ travel
 export const travel = db.transaction((userId, placeId, mode) => {
   assertNotJailed(getUser(userId));
   const user = getUser(userId);
   const place = placeById[placeId];
   if (!place || !TRAVEL[mode]) throw new GameError(['Safari si sahihi', 'Invalid trip']);
+  {
+    const [ux, uz] = positionOf(user);
+    if (cityAt(ux, uz)?.id !== cityAt(...place.pos)?.id) throw new GameError(['Mji mwingine — panda ndege, boti au basi.', "That's another city — take a flight, ferry or coach."], 400, 'other_city');
+  }
   let car = null;
   if (TRAVEL[mode].own) {
     car = q.vehicles.all(userId).find((v) => v.id === user.activeVehicle) || q.vehicles.all(userId).find((v) => ['car', 'van', 'suv', 'moto', 'bajaji'].includes(vehicleById[v.model]?.kind));

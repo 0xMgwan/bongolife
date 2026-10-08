@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { gameClock } from '@shared/world.js';
+import { gameClock, CITIES } from '@shared/world.js';
 import { City } from './City.jsx';
 import { LocalPlayer, RemotePlayers, ParkedCar } from './Players.jsx';
 import { AudioDriver } from './AudioDriver.jsx';
@@ -67,8 +67,10 @@ function useCameraGestures(modeRef) {
         const k = view.mapDist / 450;
         const c = Math.cos(view.yaw);
         const s = Math.sin(view.yaw);
-        view.mapX = Math.max(-150, Math.min(150, view.mapX - (dx * c + dy * s) * k));
-        view.mapZ = Math.max(-150, Math.min(150, view.mapZ - (-dx * s + dy * c) * k));
+        // Pan within whichever city the map is showing.
+        const city = CITIES.reduce((a, b) => (Math.hypot(view.mapX - b.center[0], view.mapZ - b.center[1]) < Math.hypot(view.mapX - a.center[0], view.mapZ - a.center[1]) ? b : a));
+        view.mapX = Math.max(city.center[0] - city.half, Math.min(city.center[0] + city.half, view.mapX - (dx * c + dy * s) * k));
+        view.mapZ = Math.max(city.center[1] - city.half, Math.min(city.center[1] + city.half, view.mapZ - (-dx * s + dy * c) * k));
       } else if (isHome()) {
         view.homeYaw -= dx * 0.008;
         view.homePitch = Math.max(0.45, Math.min(1.45, view.homePitch + dy * 0.005));
@@ -112,6 +114,13 @@ function CameraRig({ mode, sceneKey }) {
   const sceneLerp = useRef({ pos: [0, 5, 10], look: [0, 1, 0] });
   const modeRef = useRef(mode);
   modeRef.current = mode;
+  // Opening the map: show the city you're in.
+  useEffect(() => {
+    if (mode !== 'map') return;
+    const here = CITIES.find((c) => Math.abs(local.x - c.center[0]) <= c.half && Math.abs(local.z - c.center[1]) <= c.half);
+    const showing = CITIES.find((c) => Math.abs(view.mapX - c.center[0]) <= c.half && Math.abs(view.mapZ - c.center[1]) <= c.half);
+    if (here && showing !== here) { view.mapX = local.x; view.mapZ = local.z; }
+  }, [mode]);
   useCameraGestures(modeRef);
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.1);

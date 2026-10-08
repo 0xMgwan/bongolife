@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH, TRAVEL, flightPhase, findActivity, PLACES, DISTRICTS } from '@shared/world.js';
+import { NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH, TRAVEL, flightPhase, findActivity, PLACES, DISTRICTS, CITIES, CITY_ARRIVAL } from '@shared/world.js';
 import { L, loc, pick, isEn } from '../i18n.js';
 import { useStore } from '../store.js';
 import { input, sendChat, sendEmote, setInside, remotes, local, view, jump } from '../net.js';
@@ -12,6 +12,7 @@ import { goToPlace, skipRide, skipTrip } from '../nav.js';
 import { goHomeTo } from './homeNav.js';
 import { goHospital, leaveVisit } from './social.js';
 import { WorkPanel } from './WorkPanel.jsx';
+import { PlaceDock, placeHere } from './PlaceDock.jsx';
 import { useLiveEvents, joinParty } from './events.js';
 import { haptic } from '../haptics.js';
 import { useSwipeRow } from './useSwipeRow.js';
@@ -84,7 +85,7 @@ function FlightBar({ me }) {
   const opt = (v, label) => <button className={view === v ? 'on' : ''} onClick={() => { sfx('click'); useStore.setState({ flightView: v }); }}>{label}</button>;
   return (
     <div className="flight-bar">
-      <div className="pill">{icon} {L(ph[2], ph[3])}{act ? ` · ${act.flight.dest}` : ''}</div>
+      <div className="pill">{icon} {L(ph[2], ph[3])}{act ? ` · ${act.flight.dest}` : b?.kind === 'trip' ? ` · ${CITY_ARRIVAL[b.to]?.dest}` : ''}</div>
       <div className="seg-mini">
         {opt(null, '🎬')}
         {opt('inside', L('👀 Ndani', '👀 Inside'))}
@@ -191,6 +192,28 @@ function HeadingBanner({ me }) {
       <div className="pill">{driving ? '🚗' : '🚶'} {L(`Unaelekea ${p?.name}…`, `Heading to ${loc(p)}…`)}</div>
       {hasCar && <button className="pill" onClick={() => { sfx('horn'); skipTrip(); }}>⏭ {L('Ruka', 'Skip')}</button>}
     </div>
+  );
+}
+
+/** At a place: the full Lagos-style dock. Out on the street or at home: the compact pill. */
+function Dock({ me, scene }) {
+  const tab = useStore((s) => s.tab);
+  const inside = useStore((s) => s.inside);
+  const cityView = useStore((s) => s.cityView);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 1200);
+    return () => clearInterval(t);
+  }, []);
+  const placeId = tab === 'town' && cityView !== 'map' ? placeHere(me, scene, inside) : null;
+  if (!placeId) return <LocationPill me={me} scene={scene} />;
+  return (
+    <PlaceDock
+      me={me}
+      placeId={placeId}
+      onMap={() => { sfx('click'); useStore.setState({ tab: 'town', cityView: 'map', visiting: null, sheet: null, mapFilter: null }); }}
+      onHome={() => { sfx('open'); useStore.setState({ tab: 'home', visiting: null, sheet: null, cityView: 'follow' }); }}
+    />
   );
 }
 
@@ -649,6 +672,25 @@ function BottomNav({ me }) {
 }
 
 /** Town chips: jump the map to ads, plots, the sea or people — or walk again. */
+/** Map view: jump between Dar es Salaam, Zanzibar and Arusha (like Lagos / PH / Abuja). */
+function CityChips() {
+  const cityView = useStore((s) => s.cityView);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 700);
+    return () => clearInterval(t);
+  }, []);
+  if (cityView !== 'map') return null;
+  const showing = CITIES.find((c) => Math.abs(view.mapX - c.center[0]) <= c.half && Math.abs(view.mapZ - c.center[1]) <= c.half);
+  return (
+    <div className="city-chips">
+      {CITIES.map((c) => (
+        <button key={c.id} className={showing?.id === c.id ? 'on' : ''} onClick={() => { sfx('click'); view.mapX = c.center[0]; view.mapZ = c.center[1]; view.mapDist = 240; tick((n) => n + 1); }}>{c.icon} {c.name}</button>
+      ))}
+    </div>
+  );
+}
+
 function TownChips() {
   const cityView = useStore((s) => s.cityView);
   const filter = useStore((s) => s.mapFilter);
@@ -787,6 +829,7 @@ export function HUD() {
   return (
     <div className="layer">
       {!shop && <TopBar me={me} />}
+      {town && <CityChips />}
       {!shop && !riding && !clean && (
         <SidePop items={[
           ...(world?.event && town && !scene ? [{ key: 'event', tone: 'green', text: loc(world.event, 'text') }] : []),
@@ -802,7 +845,7 @@ export function HUD() {
       )}
       <Busy me={me} />
       {scene && scene.key === 'flight' && <FlightBar me={me} />}
-      {!shop && !riding && <LocationPill me={me} scene={scene} />}
+      {!shop && !riding && <Dock me={me} scene={scene} />}
       {town && !riding && <HeadingBanner me={me} />}
       {!shop && (
         <div className="side">

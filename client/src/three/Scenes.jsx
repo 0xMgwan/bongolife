@@ -4,8 +4,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { randomAppearance, findActivity, gameClock, workStage, flightPhase, placeById } from '@shared/world.js';
-import { Plane, Car } from './Vehicle.jsx';
+import { randomAppearance, findActivity, gameClock, workStage, flightPhase, placeById, vehicleById as vehicleByIdS, CITY_ARRIVAL } from '@shared/world.js';
+import { Plane, Car, Vehicle as VehicleS } from './Vehicle.jsx';
 import { PartyDecor } from './Party.jsx';
 import { Shadows } from './Shadows.jsx';
 import { livePartyAt } from '../ui/events.js';
@@ -1218,6 +1218,7 @@ function Flight({ me, myBusy }) {
   const [st, setSt] = useState({ phase: 'boarding', k: 0, f: 0 });
   const job = myBusy?.kind === 'job' ? myBusy.id : null;
   const act = myBusy?.kind === 'activity' ? findActivity(myBusy.placeId, myBusy.id) : null;
+  const tripFlight = myBusy?.kind === 'trip' ? CITY_ARRIVAL[myBusy.to] : null;
   useFrame(({ clock }) => {
     if (!myBusy) return;
     const f = Math.min(1, Math.max(0, (Date.now() - myBusy.startedAt) / (myBusy.endsAt - myBusy.startedAt)));
@@ -1245,7 +1246,7 @@ function Flight({ me, myBusy }) {
   return (
     <group>
       <Cabin me={me} phase={st.phase} job={job} crewRef={crewRef} />
-      <group position={OUT}><Sky phase={st.phase} k={st.k} flight={act?.flight} /></group>
+      <group position={OUT}><Sky phase={st.phase} k={st.k} flight={act?.flight || tripFlight} /></group>
     </group>
   );
 }
@@ -1268,7 +1269,7 @@ function Salon({ me, myBusy, people }) {
   return (
     <group>
       <Room w={12} d={9} h={4.5} floor="#f5f5f4" wall="#fbcfe8" back="#f9a8d4" />
-      <Sign text="💈 KINYOZI · SALUNI 💇🏾‍♀️" p={[0, 3.4, -4.35]} h={0.5} fg="#831843" />
+      <Sign text="💈 KINYOZI · SALUNI 💇🏾‍♀️" p={[0, 3.4, -4.28]} h={0.5} fg="#831843" />
       {[-4.6, -1.8, 1.8].map((x) => (
         <group key={x} position={[x, 0, -3.3]}>
           <Box p={[0, 1.1, -0.8]} s={[1.4, 1.5, 0.05]} m={basic('#e0f2fe')} />
@@ -1692,12 +1693,12 @@ function Police({ me, myBusy, people }) {
   const held = !!me.jail;
   const officer = myBusy?.kind === 'job';
   const flash = useRef();
-  useFrame(({ clock }) => { if (flash.current) flash.current.color.set(Math.sin(clock.elapsedTime * 6) > 0 ? '#3b82f6' : '#ef4444'); });
+  useFrame(({ clock }) => { if (flash.current) { const k = (Math.sin(clock.elapsedTime * 2.2) + 1) / 2; flash.current.color.setRGB(0.94 * (1 - k) + 0.23 * k, 0.27 * (1 - k) + 0.51 * k, 0.27 * (1 - k) + 0.96 * k); } });
   return (
     <group>
       <Room w={16} d={11} h={4.5} floor="#d6d3d1" wall="#dbeafe" back="#bfdbfe" />
-      <Box p={[0, 3.2, -5.4]} s={[16, 0.5, 0.05]} c="#1e3a8a" />
-      <Sign text="🚓 POLISI · KITUO CHA OYSTERBAY" p={[0, 3.45, -5.35]} h={0.42} fg="#ffffff" />
+      <Box p={[0, 3.2, -5.3]} s={[16, 0.5, 0.06]} c="#1e3a8a" />
+      <Sign text="🚓 POLISI · KITUO CHA OYSTERBAY" p={[0, 3.45, -5.24]} h={0.42} fg="#ffffff" />
       {/* front desk */}
       <group position={[3.5, 0, -1.5]}>
         <Box s={[5, 1.1, 1]} c="#1e3a8a" />
@@ -1711,7 +1712,7 @@ function Police({ me, myBusy, people }) {
       {/* cells */}
       <group position={[-4.9, 0, -2.3]} rotation={[0, Math.PI / 2, 0]}><Bars p={[0, 0, 0]} w={6.2} h={3} /></group>
       <Bars p={[-6.4, 0, 0.8]} w={3} h={3} />
-      <Box p={[-6.4, 0, -2.3]} s={[3, 0.04, 6.2]} c="#a8a29e" />
+      <Box p={[-6.4, 0.005, -2.3]} s={[3, 0.03, 6.2]} c="#a8a29e" />
       <Box p={[-7.2, 0, -3.6]} s={[1.4, 0.45, 3]} c="#78716c" />
       <Box p={[-6.4, 4.3, -2]} s={[0.5, 0.1, 0.5]} m={basic('#fef9c3')} />
       {held ? (
@@ -1742,7 +1743,7 @@ function Court({ me, myBusy, people }) {
   return (
     <group>
       <Room w={14} d={12} h={5} floor="#a16207" wall="#fef3c7" back="#f5e6c8" />
-      <Sign text="⚖️ MAHAKAMA YA HAKIMU MKAZI KISUTU" p={[0, 4.2, -5.85]} h={0.42} fg="#713f12" />
+      <Sign text="⚖️ MAHAKAMA YA HAKIMU MKAZI KISUTU" p={[0, 4.2, -5.78]} h={0.42} fg="#713f12" />
       {/* Tanzania flag */}
       <group position={[-4.5, 0, -5]}>
         <Box s={[0.06, 3.4, 0.06]} c="#a3a3a3" />
@@ -1782,6 +1783,348 @@ function Court({ me, myBusy, people }) {
   );
 }
 
+// ------------------------------------------------------- travel scenes
+/** Ground that streams past underneath (sea, coast or savannah) to fake forward motion. */
+function drawGround(kind) {
+  return (ctx, t) => {
+    const w = ctx.canvas.width, h = ctx.canvas.height;
+    ctx.fillStyle = kind === 'sea' ? '#0e7490' : '#a3b56b';
+    ctx.fillRect(0, 0, w, h);
+    const off = (t * 40) % h;
+    for (let i = -1; i < 4; i++) {
+      const y = i * (h / 3) + off;
+      if (kind === 'sea') {
+        ctx.fillStyle = 'rgba(255,255,255,.25)';
+        for (let k = 0; k < 6; k++) ctx.fillRect((k * 53 + i * 31) % w, y + (k * 17) % 40, 26, 3);
+      } else {
+        ctx.fillStyle = 'rgba(77,124,15,.55)';
+        for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc((k * 61 + i * 37) % w, y + (k * 23) % 60, 10, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = 'rgba(146,64,14,.35)';
+        ctx.fillRect(w / 2 - 4, y, 8, h / 3);
+      }
+    }
+  };
+}
+const drawSeaGround = drawGround('sea');
+const drawLandGround = drawGround('land');
+
+function Helicopter() {
+  const rotor = useRef();
+  const tail = useRef();
+  useFrame((_, dt) => {
+    if (rotor.current) rotor.current.rotation.y += dt * 22;
+    if (tail.current) tail.current.rotation.x += dt * 30;
+  });
+  return (
+    <group>
+      <mesh geometry={geo('sphere', 1.3, 18, 12)} material={mat('#f8fafc')} scale={[1, 0.9, 1.5]} />
+      <mesh geometry={geo('sphere', 1, 16, 12)} material={mat('#0f172a', { transparent: true, opacity: 0.8 })} position={[0, 0.2, 0.75]} scale={[1.05, 0.8, 1.05]} />
+      <mesh geometry={geo('box', 2.62, 0.25, 3.2)} material={mat('#dc2626')} position={[0, -0.35, -0.1]} />
+      <mesh geometry={geo('cyl', 0.22, 0.12, 4.2, 10)} material={mat('#f8fafc')} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.25, -3.6]} />
+      <mesh geometry={geo('box', 0.12, 1.1, 0.8)} material={mat('#dc2626')} position={[0, 0.8, -5.5]} />
+      <group ref={tail} position={[0.2, 0.7, -5.6]}>{[0, 1].map((i) => <mesh key={i} geometry={geo('box', 0.04, 1.2, 0.12)} material={mat('#111827')} rotation={[(i * Math.PI) / 2, 0, 0]} />)}</group>
+      <mesh geometry={geo('cyl', 0.1, 0.1, 0.5, 8)} material={mat('#374151')} position={[0, 1.3, 0]} />
+      <group ref={rotor} position={[0, 1.55, 0]}>{[0, 1].map((i) => <mesh key={i} geometry={geo('box', 9, 0.04, 0.3)} material={mat('#111827')} rotation={[0, (i * Math.PI) / 2, 0]} />)}</group>
+      {[-0.8, 0.8].map((x) => <mesh key={x} geometry={geo('cyl', 0.06, 0.06, 3.2, 6)} material={mat('#374151')} rotation={[Math.PI / 2, 0, 0]} position={[x, -1.3, 0]} />)}
+    </group>
+  );
+}
+/** Helicopter: tilt forward over the sea (to Zanzibar) or the savannah (Arusha / Kilimanjaro). */
+function Heli({ myBusy }) {
+  const sea = myBusy?.kind === 'trip' ? myBusy.to === 'znz' || myBusy.from === 'znz' : myBusy?.placeId === 'zn-airport';
+  const tex = useCanvasTexture(256, 256, sea ? drawSeaGround : drawLandGround, 20);
+  useMemo(() => { tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(6, 6); }, [tex]);
+  const h = useRef();
+  useFrame(({ clock }) => { if (h.current) { h.current.position.y = 30 + Math.sin(clock.elapsedTime * 0.8) * 0.4; h.current.rotation.z = Math.sin(clock.elapsedTime * 0.5) * 0.05; } });
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}><planeGeometry args={[400, 400]} /><meshBasicMaterial map={tex} /></mesh>
+      {!sea && <group position={[30, 0, -150]}><mesh geometry={geo('cone', 70, 60, 10)} material={mat('#6b7280')} position={[0, 30, 0]} /><mesh geometry={geo('cone', 22, 20, 10)} material={mat('#f8fafc')} position={[0, 50, 0]} /></group>}
+      {sea && <group position={[-20, 0, -160]}>{Array.from({ length: 14 }, (_, i) => <Box key={i} p={[(i - 7) * 6, 0, (i % 3) * 3]} s={[4.5, 4 + (i % 4) * 2, 4]} c={['#f5f5f4', '#fef3c7', '#fde68a'][i % 3]} />)}</group>}
+      <group ref={h} rotation={[0.18, 0, 0]}><Helicopter /></group>
+      {CLOUDS.slice(0, 12).map((c, i) => (
+        <Mover key={i} fn={(o, t) => { o.position.set(c.x * 0.6, 22 + (i % 4) * 4, ((c.z + t * 25) % 300) - 150); }}>
+          <mesh geometry={geo('sphere', 1, 8, 6)} material={basic('#ffffff', { transparent: true, opacity: 0.85 })} scale={[c.s, c.s * 0.4, c.s * 0.7]} />
+        </Mover>
+      ))}
+    </group>
+  );
+}
+
+/** Azam fast ferry: catamaran on the waves, passengers on deck, Zanzibar coming into view. */
+function Ferry({ me, myBusy, people }) {
+  const boat = useRef();
+  const island = useRef();
+  const toZnz = myBusy?.to === 'znz';
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    if (boat.current) { boat.current.position.y = Math.sin(t * 1.4) * 0.15; boat.current.rotation.z = Math.sin(t * 0.9) * 0.025; boat.current.rotation.x = Math.sin(t * 1.1) * 0.02; }
+    if (island.current && myBusy) {
+      const f = Math.min(1, (Date.now() - myBusy.startedAt) / (myBusy.endsAt - myBusy.startedAt));
+      island.current.position.z = -220 + f * 150;
+    }
+  });
+  const deck = [[-1, 3.2, 1, 0], [1, 3.2, 1.2, 0], [-1.2, 3.2, -1, 0.2], [1.2, 3.2, -0.8, -0.2], [0, 3.2, 2.4, 0], [-1.4, 3.2, 2.6, 0.4]];
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}><planeGeometry args={[600, 600]} /><meshLambertMaterial color="#0e7490" /></mesh>
+      {Array.from({ length: 30 }, (_, i) => (
+        <Mover key={i} fn={(o, t) => o.position.set(((i * 37) % 60) - 30, 0.05, (((i * 53) % 120) + t * 12) % 120 - 60)}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[2.5, 0.3]} /><meshBasicMaterial color="#e0f2fe" transparent opacity={0.6} /></mesh>
+        </Mover>
+      ))}
+      <group ref={island} position={[10, 0, -200]}>
+        <mesh geometry={geo('sphere', 40, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)} material={mat('#fde68a')} scale={[1.6, 0.06, 0.5]} />
+        {Array.from({ length: 16 }, (_, i) => <Box key={i} p={[(i - 8) * 5, 0, -6 + (i % 3) * 3]} s={[4, 4 + (i % 5) * 2, 4]} c={['#f5f5f4', '#fef3c7', '#fed7aa'][i % 3]} />)}
+        {[-30, -12, 14, 32].map((x) => <group key={x} position={[x, 0, 6]}><mesh geometry={geo('cyl', 0.4, 0.5, 9, 6)} material={mat('#9a7b4f')} position={[0, 4.5, 0]} /><mesh geometry={geo('cone', 3.5, 1.5, 7)} material={mat('#2f9e57')} position={[0, 9, 0]} /></group>)}
+      </group>
+      <group ref={boat}>
+        {[-1.8, 1.8].map((x) => <Box key={x} p={[x, 0, 0]} s={[1.2, 1.4, 14]} c="#f8fafc" />)}
+        <Box p={[0, 1.2, 0]} s={[5, 0.5, 13]} c="#e2e8f0" />
+        <Box p={[0, 1.7, -1.5]} s={[4.4, 1.6, 7]} c="#f8fafc" />
+        <Box p={[0, 2.2, -1.5]} s={[4.45, 0.5, 6.8]} m={basic('#1e3a8a')} />
+        <Sign text="AZAM MARINE · KILIMANJARO" p={[2.26, 2.25, -1.5]} h={0.35} fg="#ffffff" />
+        <Box p={[0, 3.1, 0.5]} s={[4.6, 0.1, 4.5]} c="#cbd5e1" />
+        <Crowd me={me} myBusy={myBusy} people={people} slots={deck} localSlot={[0.3, 3.2, 0.2, 0]} crowd={6} modeFor={(who, b, n) => (n % 3 === 2 ? 'sit' : 'idle')} />
+      </group>
+      {!toZnz && null}
+    </group>
+  );
+}
+
+/** Highway: your car (or the coach) on the open road, acacias & baobabs streaming past, Kili ahead. */
+function Road({ me, myBusy }) {
+  const own = myBusy?.id === 'car';
+  const car = own && [...(me.vehicles || [])].filter((v) => ['car', 'van', 'suv'].includes(vehicleByIdS[v.model]?.kind)).sort((a, b) => vehicleByIdS[b.model].price - vehicleByIdS[a.model].price)[0];
+  const def = car && vehicleByIdS[car.model];
+  const dash = useRef();
+  const scenery = useRef();
+  const v = useRef();
+  useFrame(({ clock }, dt) => {
+    const t = clock.elapsedTime;
+    if (dash.current) dash.current.position.z = (t * 18) % 6;
+    if (scenery.current) scenery.current.children.forEach((c) => { c.position.z += dt * 18; if (c.position.z > 30) c.position.z -= 180; });
+    if (v.current) v.current.position.y = Math.abs(Math.sin(t * 9)) * 0.03;
+  });
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, -60]}><planeGeometry args={[400, 300]} /><meshLambertMaterial color="#c9b37a" /></mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -60]}><planeGeometry args={[9, 300]} /><meshLambertMaterial color="#3f3f46" /></mesh>
+      <group ref={dash}>{Array.from({ length: 40 }, (_, i) => <Box key={i} p={[0, 0.01, -i * 6 + 20]} s={[0.25, 0.02, 3]} m={basic('#fde047')} />)}</group>
+      <group ref={scenery}>
+        {Array.from({ length: 24 }, (_, i) => {
+          const side = i % 2 ? 1 : -1;
+          const baobab = i % 5 === 0;
+          return (
+            <group key={i} position={[side * (9 + (i * 7) % 18), 0, -i * 7.5 + 20]}>
+              <mesh geometry={geo('cyl', baobab ? 1.2 : 0.18, baobab ? 1.6 : 0.25, baobab ? 5 : 4, 7)} material={mat('#7c5a3a')} position={[0, baobab ? 2.5 : 2, 0]} />
+              <mesh geometry={geo('sphere', 1, 8, 5)} material={mat(baobab ? '#65a30d' : '#4d7c0f')} position={[0, baobab ? 5.4 : 4.2, 0]} scale={baobab ? [2.6, 1, 2.6] : [3, 0.6, 3]} />
+            </group>
+          );
+        })}
+      </group>
+      <group position={[20, 0, -180]}>
+        <mesh geometry={geo('cone', 90, 55, 10)} material={mat('#6b7280')} position={[0, 27, 0]} />
+        <mesh geometry={geo('cone', 28, 17, 10)} material={mat('#f8fafc')} position={[0, 46, 0]} />
+      </group>
+      <group ref={v} position={[1.6, 0, 0]} rotation={[0, Math.PI, 0]}>
+        {def ? <Car body={def.body} color={car.color} lux={def.lux} /> : <VehicleS kind="bus" color="#1d4ed8" />}
+      </group>
+    </group>
+  );
+}
+
+// ------------------------------------------------------ safari & hiking
+function Giraffe({ p, ry = 0 }) {
+  return (
+    <group position={p} rotation={[0, ry, 0]}>
+      {[[-0.35, -0.6], [0.35, -0.6], [-0.35, 0.6], [0.35, 0.6]].map(([x, z], i) => <Box key={i} p={[x, 0, z]} s={[0.18, 1.9, 0.18]} c="#d97706" />)}
+      <Box p={[0, 1.9, 0]} s={[1, 0.9, 1.9]} c="#f59e0b" />
+      <mesh geometry={geo('cyl', 0.16, 0.24, 2.4, 8)} material={mat('#f59e0b')} position={[0, 3.6, 0.85]} rotation={[0.35, 0, 0]} />
+      <Box p={[0, 4.6, 1.3]} s={[0.35, 0.35, 0.7]} c="#d97706" />
+    </group>
+  );
+}
+function Zebra({ p, ry = 0 }) {
+  const m = useMemo(() => {
+    const c = document.createElement('canvas'); c.width = 64; c.height = 16;
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 64, 16); x.fillStyle = '#111';
+    for (let i = 0; i < 8; i++) x.fillRect(i * 8, 0, 4, 16);
+    const t = new THREE.CanvasTexture(c); return new THREE.MeshLambertMaterial({ map: t });
+  }, []);
+  return (
+    <group position={p} rotation={[0, ry, 0]}>
+      {[[-0.25, -0.5], [0.25, -0.5], [-0.25, 0.5], [0.25, 0.5]].map(([x, z], i) => <Box key={i} p={[x, 0, z]} s={[0.14, 0.9, 0.14]} c="#e5e7eb" />)}
+      <mesh geometry={unitBox} material={m} position={[0, 0.9, 0]} scale={[0.7, 0.7, 1.5]} />
+      <mesh geometry={unitBox} material={m} position={[0, 1.3, 0.95]} scale={[0.3, 0.8, 0.35]} rotation={[0.5, 0, 0]} />
+    </group>
+  );
+}
+function Elephant({ p, ry = 0 }) {
+  return (
+    <group position={p} rotation={[0, ry, 0]}>
+      {[[-0.6, -0.8], [0.6, -0.8], [-0.6, 0.8], [0.6, 0.8]].map(([x, z], i) => <mesh key={i} geometry={geo('cyl', 0.32, 0.36, 1.6, 8)} material={mat('#78716c')} position={[x, 0.8, z]} />)}
+      <mesh geometry={geo('sphere', 1.4, 12, 10)} material={mat('#78716c')} position={[0, 2.2, 0]} scale={[1, 0.85, 1.4]} />
+      <mesh geometry={geo('sphere', 0.8, 10, 8)} material={mat('#78716c')} position={[0, 2.5, 1.9]} />
+      {[-1, 1].map((s) => <mesh key={s} geometry={geo('circle', 0.8, 10)} material={mat('#6b6460', { side: THREE.DoubleSide })} position={[s * 0.75, 2.5, 1.6]} rotation={[0, s * 1.2, 0]} />)}
+      <mesh geometry={geo('cyl', 0.16, 0.08, 1.6, 8)} material={mat('#78716c')} position={[0, 1.7, 2.45]} rotation={[0.25, 0, 0]} />
+    </group>
+  );
+}
+function Lion({ p, ry = 0 }) {
+  return (
+    <group position={p} rotation={[0, ry, 0]}>
+      <Box p={[0, 0.35, 0]} s={[0.8, 0.6, 1.6]} c="#d4a017" />
+      <mesh geometry={geo('sphere', 0.55, 10, 8)} material={mat('#92400e')} position={[0, 0.95, 0.85]} />
+      <mesh geometry={geo('sphere', 0.32, 10, 8)} material={mat('#d4a017')} position={[0, 0.95, 1.2]} />
+    </group>
+  );
+}
+/** Safari: open savannah, a pop-top Land Cruiser on a game drive — or a hot-air balloon over the Serengeti. */
+function SafariScene({ me, myBusy }) {
+  const balloon = myBusy?.id === 'balloon';
+  const crater = myBusy?.id === 'ngorongoro';
+  const forest = myBusy?.placeId === 'jozani';
+  const jeep = useRef();
+  const herd = useRef();
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    if (jeep.current) { jeep.current.position.x = Math.sin(t * 0.15) * 6; jeep.current.rotation.y = Math.cos(t * 0.15) > 0 ? Math.PI / 2 : -Math.PI / 2; }
+    if (herd.current) herd.current.position.x = Math.sin(t * 0.08) * 3;
+  });
+  const acacias = useMemo(() => Array.from({ length: 22 }, (_, i) => [((i * 47) % 80) - 40, -10 - ((i * 31) % 50)]), []);
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -20]}><planeGeometry args={[300, 200]} /><meshLambertMaterial color={forest ? '#3f6212' : crater ? '#84a35a' : '#c9b37a'} /></mesh>
+      {crater && <mesh geometry={geo('cyl', 90, 110, 22, 24, 1, true)} material={mat('#57534e', { side: THREE.DoubleSide })} position={[0, 11, -40]} />}
+      {acacias.map(([x, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <mesh geometry={geo('cyl', 0.2, 0.3, forest ? 6 : 3.5, 6)} material={mat('#5b4636')} position={[0, forest ? 3 : 1.75, 0]} />
+          <mesh geometry={geo('sphere', 1, 8, 5)} material={mat(forest ? '#166534' : '#4d7c0f')} position={[0, forest ? 6.5 : 3.8, 0]} scale={forest ? [2.5, 2, 2.5] : [3.2, 0.5, 3.2]} />
+        </group>
+      ))}
+      {!forest && (
+        <group ref={herd}>
+          <Giraffe p={[-8, 0, -12]} ry={0.6} /><Giraffe p={[-5, 0, -16]} ry={0.9} />
+          <Zebra p={[4, 0, -9]} ry={-0.4} /><Zebra p={[6, 0, -10.5]} ry={-0.2} /><Zebra p={[5, 0, -7.5]} ry={-0.6} />
+          <Elephant p={[12, 0, -20]} ry={-0.8} /><Elephant p={[16, 0, -23]} ry={-1} />
+          <Lion p={[-2, 0, -6]} ry={0.3} />
+        </group>
+      )}
+      {forest && Array.from({ length: 6 }, (_, i) => (
+        <Mover key={i} fn={(o, t) => { o.position.set(-6 + i * 2.4, 4.8 + Math.sin(t * 2 + i) * 0.4, -9 - (i % 2) * 2); }}>
+          <mesh geometry={geo('sphere', 0.35, 8, 6)} material={mat(i % 2 ? '#7f1d1d' : '#111827')} />
+        </Mover>
+      ))}
+      {balloon ? (
+        <Mover fn={(o, t) => o.position.set(Math.sin(t * 0.1) * 3, 9 + Math.sin(t * 0.4) * 0.5, -4)}>
+          <mesh geometry={geo('sphere', 3, 16, 12)} material={mat('#ef4444')} position={[0, 5, 0]} scale={[1, 1.2, 1]} />
+          <mesh geometry={geo('cone', 1.5, 2, 12)} material={mat('#facc15')} position={[0, 1.8, 0]} rotation={[Math.PI, 0, 0]} />
+          <Box p={[0, -0.6, 0]} s={[1.6, 0.9, 1.6]} c="#92400e" />
+          <Person slot={[0, -0.6, 0, 0]} appearance={me.appearance} mode="cheer" id={me.id} username={me.username} />
+        </Mover>
+      ) : (
+        <group ref={jeep} position={[0, 0, -2]}>
+          <Car body="suv-big" color="#65a30d" />
+          <Box p={[0, 2.9, -0.3]} s={[1.8, 0.08, 2.6]} c="#d6d3d1" />
+          {[[-0.6, -0.9], [0.6, -0.9], [-0.6, 0.6], [0.6, 0.6]].map(([x, z], i) => <Box key={i} p={[x, 1.9, z]} s={[0.06, 1, 0.06]} c="#374151" />)}
+          <group position={[0.4, 1.3, -0.6]}><Person slot={[0, 0, 0, 0]} appearance={me.appearance} mode={myBusy?.kind === 'job' ? 'idle' : 'cheer'} id={me.id} username={me.username} /></group>
+        </group>
+      )}
+    </group>
+  );
+}
+
+/** Mountain trail: Mount Meru or the Kilimanjaro summit, with porters ahead. */
+function Hike({ me, myBusy }) {
+  const kili = myBusy?.id === 'kili';
+  const walkers = useRef();
+  useFrame(({ clock }) => { if (walkers.current) walkers.current.position.z = -((clock.elapsedTime * 0.6) % 6); });
+  return (
+    <group>
+      <mesh geometry={geo('cone', 60, 40, 16)} material={mat(kili ? '#78716c' : '#4d7c0f')} position={[0, 15, -55]} />
+      <mesh geometry={geo('cone', 20, 13, 16)} material={mat('#f8fafc')} position={[0, 28.5, -55]} />
+      <mesh rotation={[-Math.PI / 2 + 0.12, 0, 0]} position={[0, 0, -10]}><planeGeometry args={[80, 60]} /><meshLambertMaterial color={kili ? '#a8a29e' : '#65a30d'} /></mesh>
+      <mesh rotation={[-Math.PI / 2 + 0.12, 0, 0]} position={[0, 0.05, -10]}><planeGeometry args={[2.4, 60]} /><meshLambertMaterial color="#a16207" /></mesh>
+      {Array.from({ length: 12 }, (_, i) => <mesh key={i} geometry={geo('sphere', 0.6 + (i % 3) * 0.3, 6, 5)} material={mat('#78716c')} position={[((i * 7) % 20) - 10 + (i % 2 ? 3 : -3), 0.3, -i * 3]} />)}
+      <group ref={walkers}>
+        {[0, 1, 2].map((i) => (
+          <group key={i} position={[0.2, 0.4 + i * 0.6, -4 - i * 4]}>
+            <Person slot={[0, 0, 0, Math.PI]} appearance={NPC_LOOKS[(i * 5) % NPC_LOOKS.length]} mode="walk" />
+            <Box p={[0, 1.4, -0.25]} s={[0.6, 0.6, 0.4]} c={['#dc2626', '#2563eb', '#f59e0b'][i]} />
+          </group>
+        ))}
+      </group>
+      <Person slot={[0, 0, 1.5, Math.PI]} appearance={me.appearance} mode="walk" id={me.id} username={me.username} />
+      {kili && <Sign text="UHURU PEAK 5,895 m" p={[0, 3, -16]} h={0.9} fg="#ffffff" bg="rgba(120,53,15,.85)" />}
+    </group>
+  );
+}
+
+// ---------------------------------------------------------------- casino
+function drawSlotScreen(ctx, t) {
+  const w = ctx.canvas.width, h = ctx.canvas.height;
+  ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, w, h);
+  const S = ['🍒', '7', '💎', '⭐'];
+  ctx.font = 'bold 28px system-ui'; ctx.textAlign = 'center';
+  for (let i = 0; i < 3; i++) { ctx.fillStyle = ['#f472b6', '#facc15', '#22d3ee'][i]; ctx.fillText(S[Math.floor(t * 4 + i * 1.7) % 4], w * (i + 0.5) / 3, h * 0.65); }
+}
+/** Le Grande Casino floor: gold-lit edges, slot machines, blackjack, roulette and poker. */
+function CasinoScene({ me, myBusy, people }) {
+  const screen = useCanvasTexture(96, 48, drawSlotScreen, 6);
+  const wheel = useRef();
+  useFrame((_, dt) => { if (wheel.current) wheel.current.rotation.y += dt * 1.6; });
+  const slots = useMemo(() => [[-5, 1.5, 0], [-3, 1.5, 0], [-1, 1.5, 0], [1, 1.5, 0], [3, 1.5, 0], [5, 1.5, 0], [-6, 4.6, Math.PI], [-3, 4.6, Math.PI], [0, 4.6, Math.PI]], []);
+  const croupier = myBusy?.kind === 'job';
+  return (
+    <group>
+      <Room w={20} d={16} h={5} floor="#3f0d12" wall="#1c1917" back="#0c0a09" />
+      {[[0, -7.85, 20, 0.08], [0, 7.85, 20, 0.08]].map(([x, z, w, d], i) => <Box key={i} p={[x, 0.02, z]} s={[w, 0.03, d]} m={basic('#fbbf24')} />)}
+      {[-9.85, 9.85].map((x) => <Box key={x} p={[x, 0.02, 0]} s={[0.08, 0.03, 16]} m={basic('#fbbf24')} />)}
+      <Box p={[0, 4.9, -7.85]} s={[20, 0.06, 0.06]} m={basic('#fbbf24')} />
+      <Sign text="LE GRANDE CASINO" p={[0, 3.8, -7.82]} h={0.8} fg="#fde047" />
+      {/* slot machines along the back wall */}
+      {[-7, -5.6, -4.2, -2.8, 2.8, 4.2, 5.6, 7].map((x) => (
+        <group key={x} position={[x, 0, -6.8]}>
+          <Box s={[1.1, 2, 0.9]} c="#7f1d1d" />
+          <mesh position={[0, 1.4, 0.46]}><planeGeometry args={[0.8, 0.45]} /><meshBasicMaterial map={screen} toneMapped={false} /></mesh>
+          <Box p={[0, 2, 0.1]} s={[1.1, 0.25, 0.8]} m={basic('#facc15')} />
+          <mesh geometry={geo('cyl', 0.03, 0.03, 0.6, 6)} material={mat('#9ca3af')} position={[0.6, 1.1, 0.2]} />
+        </group>
+      ))}
+      {/* blackjack table */}
+      <group position={[-4, 0, 0]}>
+        <mesh geometry={geo('cyl', 1.95, 1.95, 0.84, 24, 1, false, 0, Math.PI)} material={mat('#a16207')} position={[0, 0.42, 0]} rotation={[0, -Math.PI / 2, 0]} />
+        <mesh geometry={geo('cyl', 1.75, 1.75, 0.9, 24, 1, false, 0, Math.PI)} material={mat('#15803d')} position={[0, 0.45, 0.01]} rotation={[0, -Math.PI / 2, 0]} />
+        <Person slot={[0, 0, -0.7, 0]} appearance={croupier ? me.appearance : NPC_LOOKS[4]} mode="idle" id={croupier ? me.id : undefined} username={croupier ? me.username : undefined} />
+      </group>
+      {/* roulette table with a spinning wheel */}
+      <group position={[4, 0, 0]}>
+        <Box s={[3.2, 0.84, 1.8]} c="#a16207" />
+        <Box s={[2.9, 0.9, 1.5]} c="#15803d" />
+        <group ref={wheel} position={[-0.9, 0.95, 0]}>
+          <mesh geometry={geo('cyl', 0.55, 0.55, 0.08, 24)} material={mat('#111827')} />
+          {Array.from({ length: 12 }, (_, i) => <Box key={i} p={[Math.cos((i / 12) * Math.PI * 2) * 0.4, 0.03, Math.sin((i / 12) * Math.PI * 2) * 0.4]} s={[0.12, 0.04, 0.12]} c={i % 2 ? '#dc2626' : '#111827'} />)}
+        </group>
+        <Person slot={[0.6, 0, -1.2, 0]} appearance={NPC_LOOKS[9]} mode="idle" />
+      </group>
+      {/* poker table */}
+      <group position={[0, 0, 4]}>
+        <mesh geometry={geo('cyl', 1.75, 1.75, 0.84, 24)} material={mat('#a16207')} position={[0, 0.42, 0]} scale={[1.4, 1, 1]} />
+        <mesh geometry={geo('cyl', 1.55, 1.55, 0.9, 24)} material={mat('#15803d')} position={[0, 0.45, 0]} scale={[1.4, 1, 1]} />
+        {[0, 1, 2, 3, 4].map((i) => <Box key={i} p={[-0.8 + i * 0.4, 0.9, 0.2]} s={[0.26, 0.01, 0.36]} c="#f8fafc" />)}
+      </group>
+      {/* bar */}
+      <group position={[8.6, 0, 3]}>
+        <Box s={[1.2, 1.1, 5]} c="#1c1917" />
+        <Box p={[0, 1.1, 0]} s={[1.3, 0.06, 5.1]} m={basic('#fbbf24')} />
+      </group>
+      <Crowd me={croupier ? { ...me, appearance: NPC_LOOKS[2], id: undefined, username: undefined } : me} myBusy={myBusy} people={people} slots={slots.map(([x, z, ry], i) => (i < 6 ? [x * 0.7 - 4.2 + (i % 2) * 0, 0, 1.6 + (i % 2) * 0.2, Math.PI] : [x + 3, 0, 5.8, Math.PI]))} crowd={10} modeFor={(who, b, n) => (n % 3 === 0 ? 'cheer' : 'idle')} />
+      {[[-5, 4, -2], [5, 4, -2], [0, 4, 4]].map((p, i) => <pointLight key={i} color={i === 2 ? '#fbbf24' : '#f472b6'} intensity={7} distance={12} position={p} />)}
+    </group>
+  );
+}
+
 // ---------------------------------------------------------------- config
 export const SCENES = {
   club: { C: Club, camera: { pos: [3, 14, 13], look: [-1, 0.2, -2.2] }, dark: true, bg: '#0b0614', light: 0.25 },
@@ -1794,6 +2137,12 @@ export const SCENES = {
   studio: { C: Studio, camera: { pos: [0, 4.5, 7.5], look: [0, 1.4, 0] }, bg: '#0b0614', light: 0.4 },
   cinema: { C: Cinema, camera: { pos: [0, 6.5, 10.5], look: [0, 2.6, -8] }, bg: '#000000', light: 0.25 },
   gym: { C: Gym, camera: { pos: [0, 5, 8], look: [0, 1, -1] }, bg: '#1c1917', light: 0.9 },
+  heli: { C: Heli, camera: { pos: [9, 36, 16], look: [0, 29, -2] }, bg: '#7dd3fc', light: 1.1 },
+  ferry: { C: Ferry, camera: { pos: [9, 8, 19], look: [0, 3, -24] }, bg: '#7dd3fc', light: 1.05 },
+  road: { C: Road, camera: { pos: [3.5, 4.8, 9.5], look: [1, 1, -6] }, bg: '#bae6fd', light: 1.1 },
+  safari: { C: SafariScene, camera: { pos: [6, 8, 14], look: [0, 2.5, -8] }, bg: '#fed7aa', light: 1.1 },
+  hike: { C: Hike, camera: { pos: [4, 5, 9], look: [0, 2, -10] }, bg: '#bae6fd', light: 1.1 },
+  casino: { C: CasinoScene, camera: { pos: [3, 13, 13], look: [0, 0.2, -1.5] }, dark: true, bg: '#0c0a09', light: 0.45 },
   police: { C: Police, camera: { pos: [-1.5, 8, 9.5], look: [-3.6, 0.6, -1.6] }, bg: '#1c1917', light: 0.95 },
   court: { C: Court, camera: { pos: [0, 7, 11], look: [0, 1, -1.5] }, bg: '#1c1917', light: 0.95 },
   salon: { C: Salon, camera: { pos: [0.5, 7, 10], look: [0, 0.8, -1.2] }, bg: '#1c1917', light: 0.95 },

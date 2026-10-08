@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
   WATER, LAND_PATCHES, BRIDGES, BEACHES, ROADS, PLACES, PLOTS, BILLBOARDS, DISTRICTS, WORLD_SIZE,
-  isWater, onRoad, buildingById, fmtShort, randomAppearance, AD_ROTATE_SECONDS,
+  isWater, onRoad, buildingById, fmtShort, randomAppearance, AD_ROTATE_SECONDS, CITIES,
 } from '@shared/world.js';
 import { mat, geo, emojiTexture, labelTexture, windowTexture, adTexture } from './textures.js';
 import { Vehicle, Boat, Plane, Car } from './Vehicle.jsx';
@@ -106,6 +106,110 @@ function WaterText() {
     </>
   );
 }
+
+// ---------------------------------------------------- other cities
+const SEA = '#3aa7d9';
+/** Ground, sea, beaches, buildings and landmarks for Zanzibar and Arusha. */
+const CityGround = memo(function CityGround({ city, onGround }) {
+  const [cx, cz] = city.center;
+  const h = city.half;
+  const handle = (e) => {
+    if (e.delta > 10) return;
+    e.stopPropagation();
+    onGround?.([e.point.x, e.point.z]);
+  };
+  const land = city.land || [{ x1: -h, z1: -h, x2: h, z2: h }];
+  return (
+    <group>
+      {city.land && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0.01, cz]} material={mat(SEA)}>
+          <planeGeometry args={[h * 2 + 400, h * 2 + 400]} />
+        </mesh>
+      )}
+      {!city.land && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.02, cz]} material={mat('#9bb57d')}>
+          <planeGeometry args={[h * 2 + 400, h * 2 + 400]} />
+        </mesh>
+      )}
+      {land.map((r, i) => (
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[cx + (r.x1 + r.x2) / 2, 0.04, cz + (r.z1 + r.z2) / 2]} material={mat(city.ground || GRASS)} onClick={handle}>
+          <planeGeometry args={[r.x2 - r.x1, r.z2 - r.z1]} />
+        </mesh>
+      ))}
+      {(city.beaches || []).map((b, i) => (
+        <mesh key={`b${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[cx + (b.x1 + b.x2) / 2, 0.07, cz + (b.z1 + b.z2) / 2]} material={mat(SAND)} onClick={handle}>
+          <planeGeometry args={[b.x2 - b.x1, b.z2 - b.z1]} />
+        </mesh>
+      ))}
+      <CityFiller city={city} />
+      {city.id === 'aru' && <Mountains cx={cx} cz={cz} />}
+      {city.id === 'znz' && <FlatText text={L('BAHARI YA HINDI', 'INDIAN OCEAN')} pos={[cx - 120, cz]} size={9} />}
+      <FlatText text={city.name.toUpperCase()} pos={[cx, cz + h - 12]} size={7} />
+    </group>
+  );
+});
+
+/** Kilimanjaro and Mount Meru on the horizon behind Arusha. */
+function Mountains({ cx, cz }) {
+  return (
+    <group>
+      <group position={[cx + 160, 0, cz - 230]}>
+        <mesh geometry={geo('cone', 120, 70, 10)} material={mat('#6b7280')} position={[0, 35, 0]} />
+        <mesh geometry={geo('cone', 38, 22, 10)} material={mat('#f8fafc')} position={[0, 59, 0]} />
+      </group>
+      <group position={[cx - 150, 0, cz - 210]}>
+        <mesh geometry={geo('cone', 80, 55, 9)} material={mat('#57534e')} position={[0, 27, 0]} />
+        <mesh geometry={geo('cone', 20, 12, 9)} material={mat('#e7e5e4')} position={[0, 49, 0]} />
+      </group>
+    </group>
+  );
+}
+
+/** Procedural buildings & trees for a city: Stone Town is dense coral-white, Arusha leafy with acacias. */
+const CityFiller = memo(function CityFiller({ city }) {
+  const data = useMemo(() => {
+    const r = rng(city.id === 'znz' ? 777 : 909);
+    const houses = [];
+    const trees = [];
+    const palms = [];
+    const [cx, cz] = city.center;
+    const step = 8.5;
+    const half = city.half - 6;
+    const ZCOL = ['#f5f5f4', '#fef3c7', '#fde68a', '#fed7aa', '#e7e5e4', '#fecaca'];
+    const ACOL = ['#f5f5f4', '#fde68a', '#d6d3d1', '#fecaca', '#bfdbfe', '#e9d5ff'];
+    for (let x = -half; x <= half; x += step)
+      for (let z = -half; z <= half; z += step) {
+        const jx = cx + x + (r() - 0.5) * 3;
+        const jz = cz + z + (r() - 0.5) * 3;
+        if (isWater(jx, jz) || isWater(jx + 4, jz) || isWater(jx - 4, jz) || isWater(jx, jz + 4) || isWater(jx, jz - 4)) continue;
+        if (onRoad(jx, jz, 4) || isReserved(jx, jz, 1)) {
+          if (!onRoad(jx, jz, 1.2) && !isReserved(jx, jz, 4) && r() < 0.25) (city.id === 'znz' ? palms : trees).push([jx, jz, 0.8 + r() * 0.6]);
+          continue;
+        }
+        const stone = city.id === 'znz' && x < -10 && z > -70 && z < 60;
+        const cbd = city.id === 'aru' && Math.abs(x) < 50 && Math.abs(z) < 50;
+        const p = r();
+        if (p < (stone ? 0.85 : cbd ? 0.7 : 0.35)) {
+          const w = 4 + r() * 3;
+          const d = 4 + r() * 3;
+          houses.push({ x: jx, z: jz, w, d, h: stone ? 4 + r() * 6 : cbd ? 3 + r() * 7 : 2.4 + r() * 2.6, c: (city.id === 'znz' ? ZCOL : ACOL)[Math.floor(r() * 6)] });
+        } else if (p < 0.85 && !isReserved(jx, jz, 4)) (city.id === 'znz' ? palms : trees).push([jx, jz, 0.7 + r() * 0.5]);
+      }
+    return { houses, trees, palms };
+  }, [city]);
+  const { houses, trees, palms } = data;
+  const acacia = city.id === 'aru';
+  return (
+    <group>
+      <Instanced items={houses} geometry={unitBox} material={whiteMat} transform={(h) => ({ pos: [h.x, 0, h.z], scale: [h.w, h.h, h.d], color: h.c })} />
+      <Instanced items={houses} geometry={unitBox} material={roofMat} transform={(h) => ({ pos: [h.x, h.h, h.z], scale: [h.w + 0.4, 0.35, h.d + 0.4], color: city.id === 'znz' ? '#b45309' : '#9ca3af' })} />
+      <Instanced items={trees} geometry={trunkGeo} material={mat('#7c5a3a')} transform={([x, z, s]) => ({ pos: [x, 0, z], scale: [s, (acacia ? 2.4 : 1.6) * s, s] })} />
+      <Instanced items={trees} geometry={crownGeo} material={mat(acacia ? '#4d7c0f' : '#3f9b4a')} transform={([x, z, s]) => ({ pos: [x, (acacia ? 3.6 : 2.2) * s, z], scale: acacia ? [2.4 * s, 0.5 * s, 2.4 * s] : [1.5 * s, 1.4 * s, 1.5 * s] })} />
+      <Instanced items={palms} geometry={trunkGeo} material={mat('#9a7b4f')} transform={([x, z, s]) => ({ pos: [x, 0, z], scale: [s * 0.8, 4.5 * s, s * 0.8] })} />
+      <Instanced items={palms} geometry={palmLeafGeo} material={mat('#2f9e57')} transform={([x, z, s]) => ({ pos: [x, 4.6 * s, z], scale: [s, s, s], rot: x })} />
+    </group>
+  );
+});
 
 // -------------------------------------------------------------- roads
 function Roads({ onGround }) {
@@ -481,6 +585,16 @@ function PlaceModel({ place, owner }) {
           <Sign text={L('SOKO LA KARIAKOO', 'KARIAKOO MARKET')} w={w * 0.8} y={h - 1.6} z={d / 2 + 0.02} />
         </group>
       );
+    case 'casino':
+      return (
+        <group>
+          <Box w={w} h={h} d={d} color={c} />
+          <Box w={w + 0.4} h={0.5} d={d + 0.4} color="#fbbf24" y={h} />
+          <mesh geometry={geo('box', w + 0.1, 0.2, d + 0.1)} material={mat('#fbbf24', { emissive: '#f59e0b', emissiveIntensity: 0.8 })} position={[0, 1.4, 0]} />
+          {[-w / 3, 0, w / 3].map((x) => <mesh key={x} geometry={geo('cyl', 0.35, 0.35, h, 10)} material={mat('#fde68a')} position={[x, h / 2, d / 2 + 0.4]} />)}
+          <Sign text="LE GRANDE CASINO" w={w * 0.85} y={h - 1.6} z={d / 2 + 0.8} bg="#7f1d1d" fg="#fde047" />
+        </group>
+      );
     case 'club':
     case 'lounge':
       return (
@@ -533,10 +647,22 @@ function towerFacade(color) {
  * Map icon: a constant on-screen size (like a map pin) at any zoom.
  * `scale` is the old world size; it maps to a fraction of the screen height.
  */
-export function Marker({ emoji, y, scale = 3.2, label, onClick, ring }) {
+export function Marker({ emoji, y, scale = 3.2, label, onClick, ring, pill }) {
+  // Map view: one white pill with the icon and the name (like Lagos), easy to read from above.
+  const pillTex = useMemo(() => (pill && label ? labelTexture(label, { size: 36, emoji, bold: 700 }) : null), [pill, label, emoji]);
   // Map markers keep their disc: bare emojis are too small to spot over buildings on a phone.
   const tex = useMemo(() => emojiTexture(emoji, { ring }), [emoji, ring]);
-  const lab = useMemo(() => (label ? labelTexture(label, { size: 34 }) : null), [label]);
+  const lab = useMemo(() => (label && !pill ? labelTexture(label, { size: 34 }) : null), [label, pill]);
+  if (pillTex) {
+    const ph = 0.034;
+    return (
+      <group position={[0, y, 0]}>
+        <sprite scale={[ph * pillTex.aspect, ph, 1]} onClick={onClick} renderOrder={6}>
+          <spriteMaterial map={pillTex.texture} depthWrite={false} depthTest={false} sizeAttenuation={false} />
+        </sprite>
+      </group>
+    );
+  }
   const s = scale * 0.016;
   const lh = 0.022;
   return (
@@ -553,7 +679,7 @@ export function Marker({ emoji, y, scale = 3.2, label, onClick, ring }) {
   );
 }
 
-const Places = memo(function Places({ onPlace, businesses, showLabels }) {
+const Places = memo(function Places({ onPlace, businesses, showLabels, mapMode }) {
   return PLACES.map((p) => {
     const click = (e) => {
       if (e.delta > 10) return;
@@ -572,7 +698,7 @@ const Places = memo(function Places({ onPlace, businesses, showLabels }) {
         <mesh position={[0, Math.max(2, p.h) / 2, 0]} onClick={click} visible={false}>
           <boxGeometry args={[w + 2, Math.max(4, p.h), d + 2]} />
         </mesh>
-        <Marker emoji={p.icon} y={Math.max(p.h, 2) + 3.4} label={showLabels ? loc(p) : null} onClick={click} />
+        <Marker emoji={p.icon} y={Math.max(p.h, 2) + 3.4} label={showLabels || mapMode ? loc(p) : null} pill={mapMode} onClick={click} />
       </group>
     );
   });
@@ -701,7 +827,9 @@ function Traffic() {
   const refs = useRef([]);
   const state = useMemo(() => {
     const r = rng(7);
-    return TRAFFIC_KINDS.map(([kind, color], i) => {
+    const n = Math.max(TRAFFIC_KINDS.length, Math.round(ROADS.length * 1.3));
+    return Array.from({ length: n }, (_, i) => {
+      const [kind, color] = TRAFFIC_KINDS[i % TRAFFIC_KINDS.length];
       const road = ROADS[i % ROADS.length];
       return { kind, color, road, t: r(), dir: r() < 0.5 ? 1 : -1, speed: kind === 'bus' ? 7 : kind === 'moto' ? 13 : 10 };
     });
@@ -854,10 +982,11 @@ export function City({ world, ads, onPlace, onPlot, onBillboard, onGround, myUse
   return (
     <group>
       <Terrain onGround={onGround} />
+      {CITIES.filter((c) => c.id !== 'dar').map((c) => <CityGround key={c.id} city={c} onGround={onGround} />)}
       <Roads onGround={onGround} />
       <Filler />
       <Districts />
-      <Places onPlace={onPlace} businesses={world?.businesses} showLabels={showLabels} />
+      <Places onPlace={onPlace} businesses={world?.businesses} showLabels={showLabels} mapMode={mapMode} />
       <Plots plots={world?.plots} onPlot={onPlot} myUsername={myUsername} />
       <Billboards ads={ads} onBillboard={onBillboard} big={mapMode} />
       <Traffic />

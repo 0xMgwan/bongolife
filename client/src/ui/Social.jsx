@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { sfx } from '../audio.js';
 import { pick } from '../i18n.js';
+import { CasinoModal } from './Casino.jsx';
 import { useStore } from '../store.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
 import { L } from '../i18n.js';
@@ -195,6 +196,7 @@ export function SocialModals() {
       <RobbedModal />
       <ArrestModal />
       <JailPanel />
+      <CasinoModal />
       <AccidentModal />
     </>
   );

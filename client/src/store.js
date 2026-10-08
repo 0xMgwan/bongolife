@@ -47,6 +47,7 @@ export const useStore = create((set, get) => ({
   accident: null, // { health } — knocked down by a car
   eventsVersion: 0,
   events: [], // upcoming + live events (Matukio)
+  casino: null, // open casino game: 'slots' | 'blackjack' | 'roulette'
   robbed: null, // { by, amount } — just got robbed
   hangout: null, // incoming "let's go out" invite { fromId, from, placeId }
   meetup: null, // agreed meet-up { with, placeId, until }

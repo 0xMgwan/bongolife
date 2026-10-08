@@ -33,7 +33,32 @@ export const BEACHES = [
 
 const inRect = (r, x, z) => x >= r.x1 && x <= r.x2 && z >= r.z1 && z <= r.z2;
 
+// ---------------------------------------------------------------- cities
+// Each city is its own map far away from the others in the same world space.
+export const CITIES = [
+  { id: 'dar', name: 'Dar es Salaam', icon: '🏙️', center: [0, 0], half: 150 },
+  {
+    id: 'znz', name: 'Zanzibar', icon: '🏝️', center: [1600, 0], half: 125, ground: '#b9d58f',
+    // land (local coords): the island plus its beaches; everything else is the Indian Ocean
+    land: [{ x1: -70, z1: -110, x2: 110, z2: 110 }, { x1: -78, z1: -60, x2: -70, z2: 70 }, { x1: -20, z1: -118, x2: 90, z2: -110 }, { x1: 110, z1: -60, x2: 118, z2: 60 }],
+    beaches: [{ x1: -78, z1: -60, x2: -70, z2: 70 }, { x1: -20, z1: -118, x2: 90, z2: -110 }, { x1: 110, z1: -60, x2: 118, z2: 60 }],
+  },
+  { id: 'aru', name: 'Arusha', icon: '⛰️', center: [-1600, 0], half: 120, ground: '#a9c48c' },
+];
+export const cityById = Object.fromEntries(CITIES.map((c) => [c.id, c]));
+export const cityAt = (x, z) => CITIES.find((c) => Math.abs(x - c.center[0]) <= c.half && Math.abs(z - c.center[1]) <= c.half) || null;
+const Z = (x, z) => [1600 + x, z];
+const A = (x, z) => [-1600 + x, z];
+
 export function isWater(x, z) {
+  const c = cityAt(x, z);
+  if (!c) return true;
+  if (c.id !== 'dar') {
+    if (!c.land) return false;
+    const lx = x - c.center[0];
+    const lz = z - c.center[1];
+    return !c.land.some((r) => inRect(r, lx, lz));
+  }
   const half = WORLD_SIZE / 2;
   if (Math.abs(x) > half || Math.abs(z) > half) return true;
   if (BRIDGES.some((b) => inRect(b, x, z))) return false;
@@ -54,6 +79,19 @@ export const ROADS = [
   [30, -148, 30, 38, 6, 'Barabara ya Ali Hassan Mwinyi'],
   [75, -90, 75, 38, 6, 'Barabara ya Ocean'],
   [80, 35, 80, 148, 6, 'Barabara ya Kigamboni'],
+  // Zanzibar
+  [...Z(-62, 0), ...Z(105, 0), 6, 'Barabara ya Michamvi'],
+  [...Z(-50, -100), ...Z(-50, 100), 6, 'Barabara ya Malawi'],
+  [...Z(30, -100), ...Z(30, 100), 6, 'Barabara ya Nungwi'],
+  [...Z(-50, 60), ...Z(105, 60), 6, 'Barabara ya Uwanja wa Ndege'],
+  [...Z(-50, -70), ...Z(30, -70), 6, 'Barabara ya Bububu'],
+  // Arusha
+  [...A(-110, 0), ...A(110, 0), 6, 'Barabara ya Sokoine'],
+  [...A(0, -110), ...A(0, 110), 6, 'Barabara ya Boma'],
+  [...A(-110, -60), ...A(110, -60), 6, 'Barabara ya Nairobi'],
+  [...A(-60, -110), ...A(-60, 110), 6, 'Barabara ya Njiro'],
+  [...A(60, -110), ...A(60, 110), 6, 'Barabara ya Moshi'],
+  [...A(-110, 60), ...A(110, 60), 6, 'Barabara ya Dodoma'],
 ];
 
 export function onRoad(x, z, pad = 0) {
@@ -65,6 +103,11 @@ export function onRoad(x, z, pad = 0) {
 
 // --------------------------------------------------------------- districts
 export const DISTRICTS = [
+  { id: 'stonetown', name: 'Stone Town', pos: Z(-45, -45) },
+  { id: 'nungwi', name: 'Nungwi', pos: Z(55, -92) },
+  { id: 'michamvi', name: 'Michamvi', pos: Z(85, 15) },
+  { id: 'arusha-cbd', name: 'Arusha CBD', pos: A(18, -15) },
+  { id: 'njiro', name: 'Njiro', pos: A(-80, 20) },
   { id: 'kariakoo', name: 'Kariakoo', pos: [7, 18] },
   { id: 'posta', name: 'Posta', pos: [52, 0] },
   { id: 'sinza', name: 'Sinza', pos: [-82, -66] },
@@ -586,6 +629,158 @@ export const PLACES = [
     ],
     jobs: [{ id: 'receptionist', title: 'Mpokeaji wageni', titles: ['Receptionist', 'Meneja wa mapokezi', 'Meneja wa hoteli'], secs: 60, pay: 34_000, energy: 10, requires: { elimu: 1 } }],
   },
+  // ------------------------------------------------------------- Zanzibar
+  {
+    id: 'zn-port', name: 'Bandari ya Zanzibar', district: 'Stone Town', type: 'port', icon: '⛴️', pos: Z(-66, 32), size: [8, 12], h: 4, color: '#e2e8f0',
+    blurb: 'Boti za Azam kutoka Dar zinatia nanga hapa. Karibu Unguja!',
+    activities: [{ id: 'gereza', name: 'Boti hadi Kisiwa cha Changuu (Prison Island)', cost: 30_000, secs: 25, effects: { fun: 30 }, emoji: '🐢', fame: 1 }],
+  },
+  {
+    id: 'forodhani', name: 'Bustani ya Forodhani', district: 'Stone Town', type: 'grill', icon: '🍕', pos: Z(-62, -12), size: [10, 12], h: 3, color: '#fde68a',
+    blurb: 'Soko la usiku: Zanzibar pizza, urojo, mishkaki na juisi ya miwa — machweo baharini.',
+    activities: [
+      { id: 'pizza', name: 'Zanzibar pizza', cost: 5_000, secs: 8, effects: { hunger: 35, fun: 6 }, emoji: '🍕' },
+      { id: 'urojo', name: 'Urojo (Zanzibar mix)', cost: 4_000, secs: 8, effects: { hunger: 30, fun: 4 }, emoji: '🥣' },
+      { id: 'miwa', name: 'Juisi ya miwa', cost: 2_000, secs: 4, effects: { energy: 12, hunger: 6 }, emoji: '🧃' },
+      { id: 'machweo', name: 'Tazama vijana wakiruka baharini', cost: 0, secs: 12, effects: { fun: 16, social: 8 }, emoji: '🌅' },
+    ],
+    jobs: [{ id: 'mpishi-pizza', title: 'Mpishi wa Zanzibar pizza', titles: ['Mpishi', 'Mpishi mkuu'], secs: 45, pay: 15_000, energy: 9 }],
+  },
+  {
+    id: 'stonetown', name: 'Mji Mkongwe (Stone Town)', district: 'Stone Town', type: 'stonetown', icon: '🏛️', pos: Z(-38, -25), size: [14, 14], h: 9, color: '#f5e6c8',
+    blurb: 'Vichochoro, milango ya Kizanzibari, Ngome Kongwe na nyumba ya Freddie Mercury.',
+    activities: [
+      { id: 'ziara', name: 'Ziara ya Mji Mkongwe', cost: 15_000, secs: 20, effects: { fun: 22, social: 10, energy: -6 }, emoji: '🚶🏾' },
+      { id: 'milango', name: 'Picha za milango ya Zanzibar', cost: 0, secs: 12, effects: { fun: 12 }, emoji: '🚪', fame: 1 },
+      { id: 'kahawa-baraza', name: 'Kahawa na kashata barazani', cost: 2_000, secs: 8, effects: { energy: 12, social: 12 }, emoji: '☕' },
+    ],
+    jobs: [{ id: 'mwongoza', title: 'Mwongoza watalii', titles: ['Mwongoza watalii', 'Mwongoza mzoefu', 'Mmiliki wa tour'], secs: 60, pay: 30_000, energy: 10 }],
+  },
+  {
+    id: 'darajani', name: 'Soko la Darajani', district: 'Stone Town', type: 'market', icon: '🧺', pos: Z(-36, 18), size: [12, 10], h: 5, color: '#fca5a5',
+    blurb: 'Viungo, matunda, samaki na kanga — soko kuu la Unguja.',
+    activities: [
+      { id: 'viungo', name: 'Nunua viungo (karafuu, mdalasini)', cost: 8_000, secs: 8, effects: { fun: 8 }, emoji: '🌶️' },
+      { id: 'matunda', name: 'Matunda ya msimu', cost: 3_000, secs: 6, effects: { hunger: 20, energy: 6 }, emoji: '🥭' },
+    ],
+  },
+  {
+    id: 'spice', name: 'Shamba la Viungo', district: 'Kizimbani', type: 'farm', icon: '🌿', pos: Z(8, -30), size: [14, 12], h: 3, color: '#4d7c0f',
+    blurb: 'Ziara ya shamba la karafuu, vanila na pilipili manga.',
+    activities: [{ id: 'ziara-viungo', name: 'Ziara ya shamba la viungo', cost: 30_000, secs: 22, effects: { fun: 25, hunger: 10 }, emoji: '🌿' }],
+  },
+  {
+    id: 'jozani', name: 'Msitu wa Jozani', district: 'Jozani', type: 'forest', icon: '🐒', pos: Z(60, 30), size: [16, 14], h: 2, color: '#166534',
+    blurb: 'Kima punju (red colobus) na mikoko — hazina ya Zanzibar.',
+    activities: [{ id: 'kima', name: 'Tembelea kima punju', cost: 25_000, secs: 22, effects: { fun: 30, energy: -6 }, emoji: '🐒', fame: 1 }],
+  },
+  {
+    id: 'therock', name: 'The Rock Restaurant', district: 'Michamvi', type: 'restaurant', icon: '🪨', pos: Z(100, 30), size: [8, 8], h: 5, color: '#f5f5f4',
+    blurb: 'Mgahawa juu ya mwamba baharini — wa kipekee duniani.',
+    activities: [{ id: 'dinner-rock', name: 'Dinner juu ya mwamba', cost: 90_000, secs: 18, effects: { hunger: 70, fun: 25, social: 10 }, emoji: '🦞', fame: 2 }],
+  },
+  {
+    id: 'zn-airport', name: 'Uwanja wa Ndege wa Abeid Amani Karume', district: 'Unguja', type: 'airport', icon: '✈️', pos: Z(0, 82), size: [30, 16], h: 7, color: '#cbd5e1',
+    blurb: 'Uwanja wa ndege wa kimataifa wa Zanzibar.',
+    activities: [{ id: 'heli-znz', name: 'Ziara ya helikopta juu ya Unguja', cost: 450_000, secs: 40, effects: { fun: 60 }, emoji: '🚁', fame: 4 }],
+  },
+  {
+    id: 'nungwi', name: 'Fukwe za Nungwi', district: 'Nungwi', type: 'beach', icon: '🏖️', pos: Z(55, -108), size: [40, 10], h: 0, color: '#fde68a',
+    blurb: 'Maji ya rangi ya feruzi, machweo na jahazi za Nungwi.',
+    activities: [
+      { id: 'ogelea', name: 'Ogelea Nungwi', cost: 0, secs: 15, effects: { fun: 30, hygiene: 10, energy: -8 }, emoji: '🏊' },
+      { id: 'jahazi', name: 'Jahazi la machweo', cost: 40_000, secs: 30, effects: { fun: 45, social: 15 }, emoji: '⛵', fame: 1 },
+      { id: 'mnemba', name: 'Snorkel Mnemba', cost: 80_000, secs: 35, effects: { fun: 55, hygiene: 10, energy: -12 }, emoji: '🤿', fame: 2 },
+    ],
+  },
+  {
+    id: 'kendwa', name: 'Kendwa Rocks', district: 'Kendwa', type: 'stage', icon: '🌕', pos: Z(5, -100), size: [14, 10], h: 3, color: '#f59e0b',
+    blurb: 'Full Moon Party maarufu ufukweni — kula bata mpaka alfajiri.',
+    activities: [
+      { id: 'fullmoon', name: 'Full Moon Party', cost: 25_000, secs: 25, effects: { fun: 55, social: 30, energy: -15 }, emoji: '🌕', fame: 2 },
+      { id: 'cocktail-kendwa', name: 'Cocktail ufukweni', cost: 12_000, secs: 8, effects: { fun: 15, social: 8 }, emoji: '🍹' },
+    ],
+  },
+  {
+    id: 'zn-hotel', name: 'Park Hyatt Zanzibar', district: 'Stone Town', type: 'hotel', icon: '🏨', pos: Z(-62, -45), size: [10, 12], h: 12, color: '#fef3c7',
+    blurb: 'Hoteli ya kifahari ufukweni mwa Mji Mkongwe.',
+    activities: [
+      { id: 'massage', name: 'Spa na massage', cost: 60_000, secs: 25, effects: { energy: 40, hygiene: 25, fun: 15 }, emoji: '💆🏾' },
+      { id: 'suite', name: 'Lala kwenye suite', cost: 150_000, secs: 30, effects: { energy: 95, hygiene: 30, fun: 10 }, emoji: '🛏️' },
+    ],
+  },
+  // --------------------------------------------------------------- Arusha
+  {
+    id: 'clocktower', name: 'Mnara wa Saa', district: 'Arusha CBD', type: 'monument', icon: '🕰️', pos: A(10, 10), size: [8, 8], h: 8, color: '#f5f5f4',
+    blurb: 'Katikati ya Arusha — nusu ya njia kati ya Cairo na Cape Town.',
+    activities: [{ id: 'picha-mnara', name: 'Piga picha kwenye Mnara wa Saa', cost: 0, secs: 8, effects: { fun: 8 }, emoji: '📸', fame: 1 }],
+  },
+  {
+    id: 'ar-bus', name: 'Stendi Kuu ya Arusha', district: 'Arusha CBD', type: 'terminal', icon: '🚌', pos: A(-25, 20), size: [14, 12], h: 6, color: '#e5e7eb',
+    blurb: 'Mabasi kutoka Dar yanafika hapa.',
+    activities: [],
+  },
+  {
+    id: 'maasai', name: 'Soko la Wamasai', district: 'Arusha CBD', type: 'market', icon: '🛡️', pos: A(-30, -25), size: [16, 12], h: 5, color: '#dc2626',
+    blurb: 'Shuka, shanga, vinyago na tanzanite — na ngoma ya kuruka ya Wamasai.',
+    activities: [
+      { id: 'adumu', name: 'Tazama ngoma ya kuruka (adumu)', cost: 5_000, secs: 18, effects: { fun: 25, social: 10 }, emoji: '🦘' },
+      { id: 'shanga', name: 'Nunua shanga na shuka', cost: 20_000, secs: 8, effects: { fun: 10 }, emoji: '📿' },
+    ],
+  },
+  {
+    id: 'coffee', name: 'Shamba la Kahawa Arusha', district: 'Arusha', type: 'farm', icon: '☕', pos: A(35, -30), size: [14, 12], h: 3, color: '#65a30d',
+    blurb: 'Kutoka mbegu hadi kikombe — ziara ya kahawa ya mlima Meru.',
+    activities: [{ id: 'ziara-kahawa', name: 'Ziara na kuonja kahawa', cost: 25_000, secs: 20, effects: { fun: 20, energy: 18 }, emoji: '☕' }],
+    jobs: [{ id: 'barista', title: 'Barista', titles: ['Barista', 'Barista mkuu'], secs: 45, pay: 18_000, energy: 8 }],
+  },
+  {
+    id: 'viavia', name: 'Via Via Café', district: 'Arusha', type: 'bar', icon: '🎸', pos: A(30, 25), size: [10, 8], h: 4, color: '#b45309',
+    blurb: 'Muziki wa live, chakula na wasanii wa Arusha.',
+    activities: [{ id: 'live', name: 'Usiku wa muziki wa live', cost: 10_000, secs: 20, effects: { fun: 30, social: 20 }, emoji: '🎸' }],
+  },
+  {
+    id: 'ar-hotel', name: 'Gran Meliá Arusha', district: 'Arusha', type: 'hotel', icon: '🏨', pos: A(-30, 40), size: [16, 12], h: 14, color: '#e7e5e4',
+    blurb: 'Hoteli yenye mwonekano wa Mlima Meru.',
+    activities: [
+      { id: 'massage', name: 'Spa na massage', cost: 50_000, secs: 25, effects: { energy: 40, hygiene: 25, fun: 15 }, emoji: '💆🏾' },
+      { id: 'rooftop', name: 'Siku kwenye bwawa', cost: 30_000, secs: 20, effects: { fun: 30, social: 20 }, emoji: '🏊' },
+    ],
+  },
+  {
+    id: 'safari', name: 'Lango la Safari', district: 'Ngorongoro · Serengeti', type: 'safari', icon: '🦒', pos: A(85, -85), size: [20, 16], h: 4, color: '#a16207',
+    blurb: 'Hifadhi ya Arusha, Kreta ya Ngorongoro na Serengeti — Big Five!',
+    activities: [
+      { id: 'game-drive', name: 'Game drive — Hifadhi ya Arusha', cost: 120_000, secs: 40, effects: { fun: 50 }, emoji: '🦓', fame: 2 },
+      { id: 'ngorongoro', name: 'Kreta ya Ngorongoro', cost: 350_000, secs: 50, effects: { fun: 70, energy: -10 }, emoji: '🦁', fame: 4 },
+      { id: 'balloon', name: 'Puto la hewa — Serengeti', cost: 1_200_000, secs: 50, effects: { fun: 90 }, emoji: '🎈', fame: 8 },
+    ],
+    jobs: [{ id: 'safari-guide', title: 'Dereva wa safari', titles: ['Dereva wa safari', 'Mwongoza mzoefu', 'Mmiliki wa kampuni ya safari'], secs: 80, pay: 60_000, energy: 14, requires: { elimu: 1 } }],
+  },
+  {
+    id: 'meru', name: 'Mlima Meru & Kilimanjaro', district: 'Arusha', type: 'mountain', icon: '🏔️', pos: A(-85, -85), size: [18, 14], h: 4, color: '#57534e',
+    blurb: 'Panda Mlima Meru — au fika kilele cha Kilimanjaro, paa la Afrika!',
+    activities: [
+      { id: 'meru', name: 'Panda Mlima Meru', cost: 60_000, secs: 40, effects: { fun: 40, energy: -30 }, emoji: '🥾', fame: 2 },
+      { id: 'kili', name: 'Kilele cha Kilimanjaro (Uhuru Peak)', cost: 900_000, secs: 60, effects: { fun: 80, energy: -60 }, emoji: '🏔️', fame: 10 },
+    ],
+    jobs: [{ id: 'porter', title: 'Mbeba mizigo mlimani', titles: ['Porter', 'Porter mkuu', 'Kiongozi wa msafara'], secs: 60, pay: 22_000, energy: 16 }],
+  },
+  {
+    id: 'kia', name: 'Uwanja wa Ndege wa Kilimanjaro (KIA)', district: 'Kilimanjaro', type: 'airport', icon: '✈️', pos: A(85, 85), size: [28, 16], h: 7, color: '#cbd5e1',
+    blurb: 'Lango la safari na Kilimanjaro.',
+    activities: [{ id: 'heli-kili', name: 'Ziara ya helikopta — Kilimanjaro', cost: 1_500_000, secs: 40, effects: { fun: 80 }, emoji: '🚁', fame: 6 }],
+  },
+  // ----------------------------------------------------------------- Dar
+  {
+    id: 'casino', name: 'Le Grande Casino', district: 'Kisutu', type: 'casino', icon: '🎰', pos: [-1, 50], size: [12, 10], h: 8, color: '#111827',
+    blurb: 'Slot machines, blackjack na roulette — pesa ya mchezo tu, kwa burudani.',
+    activities: [
+      { id: 'cocktail', name: 'Cocktail kwenye baa ya kasino', cost: 15_000, secs: 8, effects: { fun: 15, social: 8 }, emoji: '🍸' },
+      { id: 'buffet', name: 'Buffet ya usiku wa manane', cost: 25_000, secs: 12, effects: { hunger: 60, fun: 6 }, emoji: '🍤' },
+    ],
+    jobs: [{ id: 'croupier', title: 'Croupier', titles: ['Croupier', 'Pit boss', 'Meneja wa kasino'], secs: 60, pay: 30_000, energy: 10 }],
+  },
 ];
 export const placeById = Object.fromEntries(PLACES.map((p) => [p.id, p]));
 
@@ -787,6 +982,27 @@ const EN = {
     kigbeach: ['Kipepeo Beach', 'Clean beaches far from the city noise.', { pumzika: 'Relax on the beach', ogelea2: 'Swim' }],
     hospitali: ['Muhimbili Hospital', 'Emergency care and health check-ups — open 24 hours.', {
       matibabu: 'Get treatment', pima: 'Health check-up', 'pumzika-wodini': 'Rest on the ward' }],
+    'zn-port': ['Zanzibar Port', 'The Azam ferries from Dar dock here. Welcome to Unguja!', { gereza: 'Boat to Prison Island (Changuu)' }],
+    forodhani: ['Forodhani Gardens', 'Night food market: Zanzibar pizza, urojo, mishkaki and sugarcane juice — sunset by the sea.', { pizza: 'Zanzibar pizza', urojo: 'Urojo (Zanzibar mix)', miwa: 'Sugarcane juice', machweo: 'Watch the boys dive into the sea' }],
+    stonetown: ['Stone Town', 'Narrow alleys, carved Zanzibar doors, the Old Fort and the Freddie Mercury House.', { ziara: 'Stone Town walking tour', milango: 'Photograph the Zanzibar doors', 'kahawa-baraza': 'Coffee and kashata on a baraza' }],
+    darajani: ['Darajani Market', "Spices, fruit, fish and kangas — Unguja's main market.", { viungo: 'Buy spices (cloves, cinnamon)', matunda: 'Seasonal fruit' }],
+    spice: ['Spice Farm', 'A tour of the clove, vanilla and pepper farm.', { 'ziara-viungo': 'Spice farm tour' }],
+    jozani: ['Jozani Forest', "Red colobus monkeys and mangroves — Zanzibar's treasure.", { kima: 'See the red colobus monkeys' }],
+    therock: ['The Rock Restaurant', "A restaurant on a rock in the sea — one of a kind.", { 'dinner-rock': 'Dinner on the rock' }],
+    'zn-airport': ['Abeid Amani Karume Airport', "Zanzibar's international airport.", { 'heli-znz': 'Helicopter tour over Unguja' }],
+    nungwi: ['Nungwi Beach', 'Turquoise water, sunsets and the dhows of Nungwi.', { ogelea: 'Swim at Nungwi', jahazi: 'Sunset dhow', mnemba: 'Snorkel at Mnemba' }],
+    kendwa: ['Kendwa Rocks', 'The famous Full Moon Party on the beach — party till sunrise.', { fullmoon: 'Full Moon Party', 'cocktail-kendwa': 'Cocktail on the beach' }],
+    'zn-hotel': ['Park Hyatt Zanzibar', 'A luxury hotel on the Stone Town seafront.', { massage: 'Spa & massage', suite: 'Sleep in a suite' }],
+    clocktower: ['Clock Tower', 'The heart of Arusha — halfway between Cairo and Cape Town.', { 'picha-mnara': 'Take a photo at the Clock Tower' }],
+    'ar-bus': ['Arusha Bus Terminal', 'Coaches from Dar arrive here.', {}],
+    maasai: ['Maasai Market', 'Shukas, beads, carvings and tanzanite — and the Maasai jumping dance.', { adumu: 'Watch the jumping dance (adumu)', shanga: 'Buy beads and a shuka' }],
+    coffee: ['Arusha Coffee Farm', 'From bean to cup — a Mount Meru coffee tour.', { 'ziara-kahawa': 'Coffee tour & tasting' }],
+    viavia: ['Via Via Café', "Live music, food and Arusha's artists.", { live: 'Live music night' }],
+    'ar-hotel': ['Gran Meliá Arusha', 'A hotel with a view of Mount Meru.', { massage: 'Spa & massage', rooftop: 'Pool day' }],
+    safari: ['Safari Gate', 'Arusha National Park, Ngorongoro Crater and the Serengeti — the Big Five!', { 'game-drive': 'Game drive — Arusha National Park', ngorongoro: 'Ngorongoro Crater', balloon: 'Hot-air balloon — Serengeti' }],
+    meru: ['Mount Meru & Kilimanjaro', 'Climb Mount Meru — or reach the top of Kilimanjaro, the roof of Africa!', { meru: 'Climb Mount Meru', kili: 'Kilimanjaro summit (Uhuru Peak)' }],
+    kia: ['Kilimanjaro International Airport (KIA)', 'The gateway to safaris and Kilimanjaro.', { 'heli-kili': 'Helicopter tour — Kilimanjaro' }],
+    casino: ['Le Grande Casino', 'Slot machines, blackjack and roulette — game money only, just for fun.', { cocktail: 'Cocktail at the casino bar', buffet: 'Midnight buffet' }],
     polisi: ['Oysterbay Police Station', 'Report crime, pay a fine or bail — or sit in the cell.', { tembelea: 'Visit someone in the cells' }],
     mahakama: ["Kisutu Resident Magistrate's Court", 'Cases are heard here.', { sikiliza: 'Watch a trial' }],
     kinyozi: ['Sinza Barber & Salon', 'Fresh fades, new braids and all the neighbourhood gossip.', { nyoa: 'Get a fresh fade', suka: 'Get braids / locs done', kucha: 'Manicure & pedicure', umbea: 'Gossip at the salon' }],
@@ -823,6 +1039,12 @@ const EN = {
     mbebaji: ['Baggage handler', ['Baggage handler', 'Baggage supervisor']],
     'mhudumu-ndege': ['Cabin crew', ['Cabin crew', 'Senior cabin crew', 'Purser']],
     rubani: ['Pilot', ['First officer', 'Pilot', 'Captain', 'Chief captain']],
+    'mpishi-pizza': ['Zanzibar pizza cook', ['Cook', 'Head cook']],
+    mwongoza: ['Tour guide', ['Tour guide', 'Senior guide', 'Tour company owner']],
+    barista: ['Barista', ['Barista', 'Head barista']],
+    'safari-guide': ['Safari driver-guide', ['Safari driver', 'Senior guide', 'Safari company owner']],
+    porter: ['Mountain porter', ['Porter', 'Head porter', 'Expedition leader']],
+    croupier: ['Croupier', ['Croupier', 'Pit boss', 'Casino manager']],
     askari: ['Police officer', ['Constable', 'Corporal', 'Sergeant', 'Inspector', 'Superintendent']],
     'karani-mahakama': ['Court clerk', ['Clerk', 'Senior clerk']],
     wakili: ['Lawyer', ['Junior advocate', 'Advocate', 'Senior advocate', 'State attorney']],
@@ -877,7 +1099,7 @@ export function moodLabelEn(m) {
 
 // ------------------------------------------------------------ interiors
 // Venues you can walk into (others see you there), and which scene an activity shows.
-export const ENTERABLE = { polisi: 'police', mahakama: 'court', club: 'club', lounge: 'club', bar: 'bar', uwanja: 'stadium', studio: 'studio', singeli: 'concert', kinyozi: 'salon', nyamachoma: 'grill' };
+export const ENTERABLE = { casino: 'casino', kendwa: 'concert', polisi: 'police', mahakama: 'court', club: 'club', lounge: 'club', bar: 'bar', uwanja: 'stadium', studio: 'studio', singeli: 'concert', kinyozi: 'salon', nyamachoma: 'grill' };
 const ACTIVITY_SCENES = {
   gesti: { lala: 'room', oga: 'room', pika: 'room' },
   mamantilie: { chipsi: 'dining', walimaharage: 'dining', ugalisamaki: 'dining', chai: 'dining' },
@@ -891,6 +1113,21 @@ const ACTIVITY_SCENES = {
   chuo: { kozi: 'classroom', maktaba: 'classroom' },
   hospitali: { matibabu: 'hospital', pima: 'hospital', 'pumzika-wodini': 'hospital' },
   airport: { zanzibar: 'flight', arusha: 'flight', mwanza: 'flight', nairobi: 'flight', dubai: 'flight' },
+  'zn-airport': { 'heli-znz': 'heli' },
+  kia: { 'heli-kili': 'heli' },
+  'zn-port': { gereza: 'dhow' },
+  forodhani: { pizza: 'grill', urojo: 'grill', miwa: 'grill', machweo: 'beach' },
+  nungwi: { ogelea: 'beach', jahazi: 'dhow', mnemba: 'dhow' },
+  kendwa: { fullmoon: 'concert', 'cocktail-kendwa': 'concert' },
+  'zn-hotel': { massage: 'spa', suite: 'spa' },
+  therock: { 'dinner-rock': 'dining' },
+  maasai: { adumu: 'ngoma' },
+  viavia: { live: 'bar' },
+  'ar-hotel': { massage: 'spa', rooftop: 'rooftop' },
+  safari: { 'game-drive': 'safari', ngorongoro: 'safari', balloon: 'safari' },
+  meru: { meru: 'hike', kili: 'hike' },
+  coffee: { 'ziara-kahawa': 'dining' },
+  jozani: { kima: 'safari' },
   waterpark: { slides: 'waterpark', wave: 'waterpark', lazy: 'waterpark' },
   makumbusho: { ngoma: 'ngoma', makabila: 'ngoma', tinga: 'ngoma' },
   golf: { golf9: 'golf', range: 'golf', dili: 'golf' },
@@ -898,11 +1135,13 @@ const ACTIVITY_SCENES = {
   karting: { race: 'karting', grandprix: 'karting' },
   serena: { massage: 'spa', suite: 'spa', rooftop: 'rooftop', dinner: 'dining' },
 };
-const JOB_SCENES = { dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', msaidizi: 'dining', cashier: 'shop', machinga: 'shop', nesi: 'hospital', daktari: 'hospital', teller: 'bank', karani: 'office', developer: 'office', mlinzi: 'stadium', mvuvi: 'beach', 'mhudumu-ndege': 'flight', rubani: 'flight' , lifeguard: 'waterpark', 'mpiga-ngoma': 'ngoma', caddie: 'golf', nahodha: 'dhow', fundi: 'karting', receptionist: 'spa' };
+const JOB_SCENES = { dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', msaidizi: 'dining', cashier: 'shop', machinga: 'shop', nesi: 'hospital', daktari: 'hospital', teller: 'bank', karani: 'office', developer: 'office', mlinzi: 'stadium', mvuvi: 'beach', 'mhudumu-ndege': 'flight', rubani: 'flight' , lifeguard: 'waterpark', 'mpiga-ngoma': 'ngoma', caddie: 'golf', nahodha: 'dhow', fundi: 'karting', receptionist: 'spa' , 'mpishi-pizza': 'grill', mwongoza: null, croupier: 'casino', 'safari-guide': 'safari', porter: 'hike', barista: 'dining' };
 
 /** Scene for a busy state ({ kind, id, placeId }), or null to stay outdoors. */
+const TRIP_SCENES = { flight: 'flight', heli: 'heli', ferry: 'ferry', bus: 'road', car: 'road' };
 export function sceneFor(busy) {
   if (!busy) return null;
+  if (busy.kind === 'trip') return TRIP_SCENES[busy.id] || null;
   if (busy.kind === 'job') return JOB_SCENES[busy.id] ?? null;
   return ENTERABLE[busy.placeId] || ACTIVITY_SCENES[busy.placeId]?.[busy.id] || null;
 }
@@ -1056,6 +1295,30 @@ export const HEALTH = {
 };
 export const HOSPITAL_ID = 'hospitali';
 export const POLICE_ID = 'polisi';
+
+// ------------------------------------------------------- city-to-city trips
+// Prices keyed by the two city ids sorted alphabetically.
+export const tripKey = (a, b) => [a, b].sort().join('-');
+export const TRIP_MODES = {
+  flight: { emoji: '✈️', name: 'Ndege', nameEn: 'Flight', secs: 60, ins: 10_000, risk: 1 / 8, price: { 'dar-znz': 95_000, 'aru-dar': 260_000, 'aru-znz': 320_000 }, note: ['Teksi hadi uwanja imejumuishwa', 'Cab to the airport included'] },
+  heli: { emoji: '🚁', name: 'Helikopta', nameEn: 'Helicopter', secs: 40, ins: 60_000, risk: 1 / 12, price: { 'dar-znz': 1_800_000, 'aru-dar': 4_500_000, 'aru-znz': 5_000_000 }, note: ['Kutoka mlangoni hadi mlangoni', 'Door to door'] },
+  ferry: { emoji: '⛴️', name: 'Boti ya Azam', nameEn: 'Azam fast ferry', secs: 70, ins: 5_000, risk: 1 / 7, price: { 'dar-znz': 40_000 }, note: ['Kivukoni hadi Bandari ya Zanzibar', 'Kivukoni to Zanzibar Port'] },
+  bus: { emoji: '🚌', name: 'Basi la abiria', nameEn: 'Coach', secs: 80, ins: 5_000, risk: 1 / 6, price: { 'aru-dar': 45_000 }, note: ['Magufuli hadi stendi kuu ya Arusha', 'Magufuli terminal to Arusha'] },
+  car: { emoji: '🚗', name: 'Endesha gari lako', nameEn: 'Drive', secs: 75, ins: 20_000, risk: 1 / 5, own: true, price: { 'aru-dar': 70_000 }, note: ['Mafuta tu, lakini utafika umechoka', "Fuel only, but you'll arrive tired"] },
+};
+// What a flight looks like on arrival in each city.
+export const CITY_ARRIVAL = { znz: { dest: 'ZANZIBAR', ground: '#0e7490', land: '#fde68a' }, aru: { dest: 'ARUSHA · KILIMANJARO', ground: '#4d7c0f', land: '#a3e635' }, dar: { dest: 'DAR ES SALAAM', ground: '#0e7490', land: '#86efac' } };
+// Where you arrive in each city, by mode.
+export const ARRIVAL_PLACE = { dar: { flight: 'airport', heli: 'airport', ferry: 'ferry', bus: 'stendi', car: 'stendi' }, znz: { flight: 'zn-airport', heli: 'zn-airport', ferry: 'zn-port' }, aru: { flight: 'kia', heli: 'kia', bus: 'ar-bus', car: 'ar-bus' } };
+
+// ---------------------------------------------------------------- casino
+// Game money only (it can never be cashed out). House edge keeps it a money sink.
+export const CASINO = {
+  minBet: 1_000,
+  maxBet: 500_000,
+  slots: { symbols: ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣'], weights: [30, 25, 18, 13, 9, 5], three: [5, 8, 12, 25, 50, 150], twoCherries: 2 },
+  roulette: { redNumbers: [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36] },
+};
 export const COURT_ID = 'mahakama';
 
 // ---------------------------------------------------------------- crime

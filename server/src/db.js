@@ -336,7 +336,7 @@ export function rowToUser(r) {
     tokenVersion: r.token_version,
     lastSeen: r.last_seen,
     homeSeeded: !!r.home_seeded,
-    carSeeded: !!r.car_seeded,
+    carSeeded: r.car_seeded || 0,
     health: r.health ?? 100,
     injuredAt: r.injured_at,
   };

@@ -14,6 +14,7 @@ import { canVisit } from '../social.js';
 import { sendMail } from '../mail.js';
 import * as election from '../election.js';
 import * as crime from '../crime.js';
+import * as casino from '../casino.js';
 import * as game from '../game.js';
 import { online, onlineCount, broadcast, emitTo } from '../presence.js';
 import { provider, providers, TOPUP_RATE } from '../payments/index.js';
@@ -91,6 +92,7 @@ api.post('/auth/login', rateLimit('login', 20, 15 * 60_000), wrap(async (req, re
     throw new GameError([`Akaunti hii imefungiwa${row.ban_reason ? ': ' + row.ban_reason : '.'}`, `This account is banned${row.ban_reason ? ': ' + row.ban_reason : '.'}`], 403, 'banned');
   if (!row.is_admin && adminNames.has(row.username.toLowerCase())) db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(row.id);
   saveFields(row.id, { lastSeen: now() });
+  game.ensureStarterCar(row.id);
   res.json({ token: signToken({ id: row.id, tokenVersion: row.token_version }), me: game.playerState(row.id) });
 }));
 
@@ -453,6 +455,19 @@ api.delete('/contacts/:username', (req, res) => {
   if (other) db.prepare('DELETE FROM contacts WHERE user_id = ? AND contact_id = ?').run(req.user.id, other.id);
   res.json(contactList(req.user.id));
 });
+
+// ---------------------------------------------------------- trips & casino
+api.post('/trip', (req, res) => {
+  const r = game.startTrip(req.user.id, str(req.body.placeId, 30), str(req.body.mode, 10), req.body.insured === true);
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
+const casinoRoute = (fn) => (req, res) => res.json({ ...fn(req), me: game.playerState(req.user.id) });
+api.post('/casino/slots', casinoRoute((req) => casino.slots(req.user.id, req.body.bet)));
+api.post('/casino/roulette', casinoRoute((req) => casino.roulette(req.user.id, req.body.bet, typeof req.body.pick === 'number' ? Math.floor(req.body.pick) : str(req.body.pick, 6))));
+api.post('/casino/blackjack/deal', casinoRoute((req) => casino.bjDeal(req.user.id, req.body.bet)));
+api.post('/casino/blackjack/hit', casinoRoute((req) => casino.bjHit(req.user.id)));
+api.post('/casino/blackjack/stand', casinoRoute((req) => casino.bjStand(req.user.id)));
+api.post('/casino/blackjack/double', casinoRoute((req) => casino.bjDouble(req.user.id)));
 
 // ---------------------------------------------------------- street life
 const targetOf = (req) => {
