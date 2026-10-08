@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import GameScene from '../three/GameScene.jsx';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store.js';
 import { api, visitorId } from '../api.js';
 import { Logo } from './Logo.jsx';
@@ -12,23 +11,40 @@ const k = (n) => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.
 export default function Landing() {
   const set = useStore((s) => s.set);
   const [stats, setStats] = useState(null);
-  const [world, setWorld] = useState(null);
+  const video = useRef(null);
 
   useEffect(() => {
     const load = () => api(`/public/stats?v=${visitorId()}`).then(setStats).catch(() => {});
     load();
-    api('/world').then((w) => { setWorld(w); useStore.setState({ ads: w.ads }); }).catch(() => {});
     const t = setInterval(load, 20_000);
     return () => clearInterval(t);
   }, []);
-  const ads = useStore((s) => s.ads);
+  // The city flyover loops behind the landing. React doesn't reliably set the muted attribute that
+  // iOS needs for autoplay, so mute in code and retry when visible / on the first tap.
+  useEffect(() => {
+    const v = video.current;
+    if (!v || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    v.muted = true;
+    const play = () => v.play().catch(() => {});
+    play();
+    const vis = () => !document.hidden && play();
+    document.addEventListener('visibilitychange', vis);
+    window.addEventListener('pointerdown', play, { once: true });
+    return () => {
+      document.removeEventListener('visibilitychange', vis);
+      window.removeEventListener('pointerdown', play);
+    };
+  }, []);
   // Both start in the creator: sign-up designs the Mbongo first, log-in pops up over it.
   const go = (tab) => set({ screen: 'creator', me: null, loginOpen: tab === 'login' });
   const faces = stats?.faces?.length ? stats.faces : [{ body: 'woman', skin: 1 }, { body: 'man', skin: 0 }, { body: 'woman', skin: 3 }, { body: 'man', skin: 2 }];
 
   return (
     <div className="app">
-      <GameScene mode="overview" world={world} ads={ads} />
+      <video ref={video} className="land-video" autoPlay muted loop playsInline preload="auto" poster="/landing-hero.jpg" aria-hidden="true" tabIndex={-1}>
+        <source src="/landing-hero.webm" type="video/webm" />
+        <source src="/landing-hero.mp4" type="video/mp4" />
+      </video>
       <div className="layer">
         <div className="land-top">
           <div className="land-bar">

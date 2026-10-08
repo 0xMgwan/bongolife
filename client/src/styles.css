@@ -1295,3 +1295,7 @@ html, body { background: #1e2a47; }
 .co-head .co-amt-in { margin: 0; width: 100%; background: rgba(255,255,255,.95); color: #111827; }
 .co-head .co-dep { background: rgba(255,255,255,.18); color: #fff; }
 .co-head .grow { flex: 1; }
+/* Landing: the city flyover video instead of the live 3D city; a soft fade keeps pills and cards crisp. */
+.land-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #0b0b0b url(/landing-hero.jpg) center / cover no-repeat; }
+.land-video + .layer::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(8,8,8,.45) 0%, rgba(8,8,8,.1) 35%, rgba(8,8,8,.1) 65%, rgba(8,8,8,.5) 100%); }
+@media (prefers-reduced-motion: reduce) { .land-video { visibility: hidden; } .land-video + .layer { background: url(/landing-hero.jpg) center / cover no-repeat; } }
