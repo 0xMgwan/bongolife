@@ -1,4 +1,6 @@
 import express from 'express';
+import crypto from 'node:crypto';
+import { sendMail, mailStatus } from '../mail.js';
 import { PLOTS, PLACES, SPAWNS, plotById, placeById, buildingById, vehicleById, NEEDS } from '../../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, audit, getSettings, setSettings, freshNeeds } from '../db.js';
 import { hashPassword } from '../auth.js';
@@ -419,6 +421,27 @@ admin.get('/online', (_req, res) => {
 
 // ---------------------------------------------------------- settings
 admin.get('/settings', (_req, res) => res.json(getSettings()));
+
+// ---- email health: is Resend configured, and what happened to recent sends?
+admin.get('/mail', (_req, res) => res.json(mailStatus()));
+admin.post('/mail/test', async (req, res, next) => {
+  try {
+    const to = str(req.body.to, 200) || getUser(req.user.id)?.email;
+    if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw new GameError('Enter a valid email address');
+    const ok = await sendMail({ kind: 'test', to, subject: 'Bongo Life test email ✅', text: 'If you can read this, password reset emails work.', html: '<p>If you can read this, <b>Bongo Life</b> password reset emails work. ✅</p>' });
+    audit(req.user.id, 'mail.test', 'mail', null, { ok });
+    res.json({ ok, status: mailStatus() });
+  } catch (e) { next(e); }
+});
+
+// One-time reset code an admin can read out to a player (e.g. no email on the account).
+admin.post('/users/:id/reset-code', (req, res) => {
+  const u = userOr404(req.params.id);
+  const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+  db.prepare('INSERT OR REPLACE INTO password_resets (user_id, code_hash, expires_at, attempts) VALUES (?, ?, ?, 0)').run(u.id, crypto.createHash('sha256').update(`${u.id}:${code}`).digest('hex'), now() + 60 * 60_000);
+  audit(req.user.id, 'user.reset_code', 'user', u.id, {});
+  res.json({ code, expiresInMin: 60, email: u.email || null });
+});
 admin.put('/settings', (req, res) => {
   const before = getSettings();
   const patch = {};

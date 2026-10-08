@@ -156,6 +156,10 @@ export function UserDetail({ id, me }) {
           ))}
           <button className="btn btn-outline" onClick={() => run('/logout', { confirm: 'Sign this player out of every device?', ok: '🚪 Signed out' })}>🚪 Force logout</button>
           <button className="btn btn-outline" onClick={() => setModal('password')}>🔑 Reset password</button>
+          <button className="btn btn-outline" onClick={async () => {
+            const r = await run('/reset-code', { ok: '🔢 Reset code created' });
+            if (r?.code) window.prompt(`Give @${u.username} this code (valid ${r.expiresInMin} min). They enter it under "Forgot password" → code + new password.`, r.code);
+          }}>🔢 Reset code</button>
           <button className="btn btn-outline" onClick={() => run('/needs', { ok: '💯 Needs restored' })}>💯 Restore needs</button>
           <button className="btn btn-outline" onClick={() => setModal('teleport')}>📍 Teleport</button>
           <button className="btn btn-outline" onClick={() => setModal('profile')}>✏️ Edit profile</button>

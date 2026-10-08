@@ -256,6 +256,41 @@ function Live() {
   );
 }
 
+/** Email health: is Resend set up, and what happened to the last sends? */
+function MailHealth() {
+  const { data, reload } = useApi('/admin/mail');
+  const [to, setTo] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (!data) return null;
+  return (
+    <div className="panel">
+      <h2>✉️ Email (password reset codes)</h2>
+      <div className="small" style={{ marginBottom: 6 }}>
+        Status: <b style={{ color: data.enabled && !data.warnings.length ? '#16a34a' : '#dc2626' }}>{data.enabled ? (data.warnings.length ? 'Sending, with problems' : 'Working') : 'OFF — no emails are sent'}</b>
+        <span className="muted"> · From: {data.from}</span>
+      </div>
+      {data.warnings.map((w) => <div key={w} className="small" style={{ background: '#fef2f2', color: '#991b1b', borderRadius: 8, padding: '8px 10px', marginBottom: 6 }}>⚠️ {w}</div>)}
+      <div className="toolbar" style={{ marginTop: 8 }}>
+        <input className="in" style={{ flex: 1, minWidth: 180 }} type="email" placeholder="Send a test email to… (blank = your email)" value={to} onChange={(e) => setTo(e.target.value)} />
+        <button className="btn btn-green" disabled={busy} onClick={async () => {
+          setBusy(true);
+          const r = await act('/mail/test', { body: { to }, ok: '✉️ Test sent — check the result below' });
+          setBusy(false);
+          if (r) reload();
+        }}>Send test</button>
+      </div>
+      <h3 style={{ marginTop: 14, fontSize: 14 }}>Recent sends</h3>
+      {!data.recent.length && <div className="small muted">Nothing sent since the server last restarted.</div>}
+      {data.recent.map((m) => (
+        <div key={m.at + m.to} className="small" style={{ padding: '6px 0', borderTop: '1px solid #eee' }}>
+          {m.ok ? '✅' : '❌'} <b>{m.kind}</b> → {m.to} <span className="muted">· {ago(m.at)}{m.status ? ` · HTTP ${m.status}` : ''}</span>
+          {m.error && <div className="muted" style={{ wordBreak: 'break-word' }}>{m.error}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Settings() {
   const { data, reload } = useApi('/admin/settings');
   const [form, setForm] = useState(null);
@@ -282,6 +317,7 @@ function Settings() {
     <>
       <div className="adm-head"><div><h1>Settings</h1><div className="sub">Live game switches. Changes apply instantly to every player.</div></div></div>
       <div className="adm-cols">
+        <MailHealth />
         <div className="panel">
           <h2>Switches</h2>
           {flag('maintenance', '🔧 Maintenance mode', 'Kicks every non-admin and blocks the game until turned off.', true)}

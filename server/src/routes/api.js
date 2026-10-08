@@ -107,6 +107,7 @@ api.post('/auth/forgot', rateLimit('forgot', 6, 15 * 60_000), wrap(async (req, r
     const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
     db.prepare('INSERT OR REPLACE INTO password_resets (user_id, code_hash, expires_at, attempts) VALUES (?, ?, ?, 0)').run(row.id, sha(`${row.id}:${code}`), now() + RESET_TTL);
     await sendMail({
+      kind: 'reset',
       to: row.email,
       subject: `Bongo Life: ${code} ni code yako / is your reset code`,
       text: `Mambo ${row.name},\n\nCode yako ya kubadilisha password ya @${row.username}: ${code}\nYour Bongo Life password reset code for @${row.username}: ${code}\n\nInaisha baada ya dakika 15 / Expires in 15 minutes. Kama hukuomba, puuza / If you didn't ask, ignore this email.`,
