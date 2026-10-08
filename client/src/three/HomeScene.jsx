@@ -1,6 +1,6 @@
 // "Kwangu" — the player's apartment: walls, rooms, furniture, the player's Sim,
 // and the buy-mode placement preview. Rendered far from the city at HOME_ORIGIN.
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { HOME, furnitureById, footprint, homeFits } from '@shared/world.js';
@@ -15,6 +15,8 @@ import { vehicleById } from '@shared/world.js';
 import { local } from '../net.js';
 import { useStore } from '../store.js';
 import { homeGuests, sendHomePos } from '../net.js';
+import { api } from '../api.js';
+import { Yard } from './Yard.jsx';
 
 export const HOME_ORIGIN = [-4000, 0, 4000];
 const WALL = '#15806b';
@@ -102,9 +104,10 @@ function Walls() {
 function Garden() {
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} material={mat('#c7dca6')}><circleGeometry args={[15, 48]} /></mesh>
+      {/* Wide enough for the yard on the east side. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[5, -0.04, 0]} material={mat('#c7dca6')}><circleGeometry args={[22, 56]} /></mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2.5, -0.03, 6.6]} material={mat('#d6d3d1')}><planeGeometry args={[1.6, 3.2]} /></mesh>
-      {[[-9, -6], [9, -7], [-10, 5], [10, 6]].map(([x, z], i) => (
+      {[[-9, -6], [9, -8], [-10, 5], [6, 8.5]].map(([x, z], i) => (
         <group key={i} position={[x, 0, z]}>
           <mesh geometry={geo('cyl', 0.15, 0.2, 1.4, 6)} material={mat('#7c5a3a')} position={[0, 0.7, 0]} />
           <mesh geometry={geo('sphere', 1, 7, 5)} material={mat('#3f9b4a')} position={[0, 1.9, 0]} />
@@ -285,6 +288,15 @@ export function HomeScene({ me }) {
   const party = livePartyAt(events, 'home', visiting ? visiting.host.id : me.id);
   const placing = useStore((s) => s.placing);
   const dragging = useRef(false);
+  // The yard beside the house: yours (kept in the store, updated by build mode) or the host's.
+  const myYard = useStore((s) => s.yard);
+  const hostYard = useStore((s) => s.visitYard);
+  const host = visiting?.host?.username;
+  useEffect(() => {
+    useStore.setState({ visitYard: null });
+    if (host) api(`/yard/${encodeURIComponent(host)}`).then((y) => useStore.setState({ visitYard: y })).catch(() => {});
+    else api('/yard').then((y) => useStore.setState({ yard: y })).catch(() => {});
+  }, [host]);
 
   const floorPoint = (e) => [e.point.x - HOME_ORIGIN[0], e.point.z - HOME_ORIGIN[2]];
   const moveGhost = (pt) => {
@@ -344,6 +356,7 @@ export function HomeScene({ me }) {
           </group>
         );
       })}
+      <Yard yard={visiting ? hostYard : myYard} mine={!visiting} origin={HOME_ORIGIN} />
       <Ghost items={items} />
       <Sim me={me} items={items} />
       <Guests />

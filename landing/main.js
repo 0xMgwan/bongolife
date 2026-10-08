@@ -67,13 +67,37 @@ function renderEvent() {
 }
 const fmt = (n) => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n || 0));
 
+// Live counts: tick from the shown value to the new one; a change after the first load bumps the pill.
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function countTo(el, to) {
+  to = Number(to) || 0;
+  const from = el.dataset.v == null ? 0 : Number(el.dataset.v);
+  const first = el.dataset.v == null;
+  el.dataset.v = to;
+  if (calm || from === to) return void (el.textContent = fmt(to));
+  if (!first) {
+    const pill = el.closest('.pill');
+    pill.classList.remove('bump');
+    void pill.offsetWidth;
+    pill.classList.add('bump');
+  }
+  const start = performance.now();
+  const dur = first ? 1400 : 700;
+  const step = (t) => {
+    const k = Math.min(1, (t - start) / dur);
+    el.textContent = fmt(Math.round(from + (to - from) * (1 - (1 - k) ** 3)));
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 async function loadStats() {
   try {
     const r = await fetch(`${GAME_URL}/api/public/stats`, { signal: AbortSignal.timeout?.(6000) });
     if (!r.ok) return;
     const s = await r.json();
-    document.getElementById('s-online').textContent = fmt(s.online);
-    document.getElementById('s-players').textContent = fmt(s.players);
+    countTo(document.getElementById('s-online'), s.online);
+    countTo(document.getElementById('s-players'), s.players);
     if (s.mayor) {
       document.getElementById('s-mayor').textContent = `@${s.mayor.username}`;
       document.getElementById('s-mayor-wrap').hidden = false;
@@ -89,4 +113,17 @@ async function loadStats() {
 document.getElementById('year').textContent = new Date().getFullYear();
 applyLang();
 loadStats();
-setInterval(loadStats, 30_000);
+// Refresh while the page is open; skip while it's in a background tab.
+setInterval(() => !document.hidden && loadStats(), 15_000);
+document.addEventListener('visibilitychange', () => !document.hidden && loadStats());
+
+// ---------------------------------------------------------------- hero video
+// Muted autoplay can still be refused (Low Power Mode, a tab opened in the background):
+// retry when the page becomes visible and on the first tap.
+const heroVideo = document.querySelector('.hero-video');
+if (heroVideo && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const play = () => heroVideo.play().catch(() => {});
+  play();
+  document.addEventListener('visibilitychange', () => !document.hidden && play());
+  window.addEventListener('pointerdown', play, { once: true });
+}

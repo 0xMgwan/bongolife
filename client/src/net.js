@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client';
+import { haptic } from './haptics.js';
 import { token } from './api.js';
 import { useStore } from './store.js';
 import { L } from './i18n.js';
@@ -105,6 +106,28 @@ export function connect() {
     bubbles.set(msg.id, { text: msg.text, until: Date.now() + 6000 });
     useStore.setState((s) => ({ publicFeed: [...s.publicFeed.slice(-40), msg] }));
   });
+  // Together interactions: someone asks you; or one plays (both sims animate and face each other).
+  socket.on('interact:ask', (req) => {
+    sfx('notify');
+    useStore.setState({ interactAsk: req });
+  });
+  socket.on('interact:play', ({ a, b, kind, ms, winner, winnerName, aName, bName }) => {
+    const until = performance.now() + ms;
+    const myId = st().myId;
+    for (const [id, other] of [[a, b], [b, a]]) {
+      const act = { kind, until, other };
+      if (id === myId) local.action = act;
+      else { const r = remotes.get(id); if (r) r.action = act; }
+      emotes.set(id, { e: TOGETHER_EMOJI[kind] || '✨', until: Date.now() + ms });
+    }
+    if (a === myId || b === myId) {
+      haptic(kind === 'fight' ? 'heavy' : 'success');
+      sfx(kind === 'fight' ? 'crash' : 'pop');
+      const them = a === myId ? bName : aName;
+      if (kind === 'fight') setTimeout(() => st().toast(winner === myId ? L(`🏆 Umeshinda pigano dhidi ya @${them}! ⭐ +2`, `🏆 You won the play-fight with @${them}! ⭐ +2`) : L(`🥊 @${winnerName} ameshinda safari hii. Mechi ijayo!`, `🥊 @${winnerName} won this round. Rematch?`)), ms - 300);
+      if (kind === 'selfie') setTimeout(() => useStore.setState({ selfie: { with: them, at: Date.now() } }), ms - 600);
+    }
+  });
   socket.on('jump', ({ id }) => {
     const r = remotes.get(id);
     if (r) r.jumpAt = performance.now();
@@ -119,8 +142,11 @@ export function connect() {
       sfx('notify');
       const reading = s.phone === 'dm' && s.phoneArg === msg.from;
       if (!reading) {
-        s.toast(`💬 @${msg.from}: ${msg.body.slice(0, 60)}`);
-        if (s.me) useStore.setState({ me: { ...s.me, unread: (s.me.unread || 0) + 1 } });
+        // Pop the conversation beside 💬 (unless you're already chatting with someone else there).
+        if (!s.dmPop || s.dmPop.from === msg.from) useStore.setState({ dmPop: { from: msg.from, at: Date.now() } });
+        else s.toast(`💬 @${msg.from}: ${msg.body.slice(0, 60)}`);
+        if (s.me && s.dmPop?.from !== msg.from) useStore.setState({ me: { ...s.me, unread: (s.me.unread || 0) + 1 } });
+        systemNotify(`💬 @${msg.from}`, msg.body.slice(0, 120), msg.from);
       }
     }
     useStore.setState((x) => ({ dmVersion: x.dmVersion + 1, lastDm: msg }));
@@ -287,6 +313,19 @@ export function sendMove(force = false) {
 export function sendChat(text) {
   socket?.emit('chat', text);
 }
+const TOGETHER_EMOJI = { highfive: '✋', fistbump: '👊', hug: '🤗', dance: '💃', treat: '🍹', selfie: '🤳', fight: '🥊' };
+/** Ask someone nearby to do a together-interaction; resolves with { ok } or { error }. */
+export function interactWith(to, kind) {
+  return new Promise((resolve) => {
+    if (!socket?.connected) return resolve({ error: L('Hakuna connection', 'No connection') });
+    socket.emit('interact', { to, kind }, (r) => resolve(r || {}));
+  });
+}
+export function answerInteract(rid, ok) {
+  socket?.emit('interact:answer', { rid, ok });
+  useStore.setState({ interactAsk: null });
+}
+
 /** Hop (on foot only); everyone nearby sees it. */
 export function jump() {
   const t = performance.now();
@@ -297,6 +336,29 @@ export function jump() {
 export function sendEmote(e) {
   socket?.emit('emote', e);
 }
+/**
+ * While the game is in the background, show the DM as a phone/desktop notification. Uses the
+ * service worker when there is one (Android only allows notifications through it).
+ */
+async function systemNotify(title, body, from) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted' || !document.hidden) return;
+  const opts = { body, tag: `dm-${from}`, renotify: true, icon: '/icon-192.png', badge: '/icon-192.png', data: { dm: from } };
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    if (reg) return void reg.showNotification(title, opts);
+    const n = new Notification(title, opts);
+    n.onclick = () => { window.focus(); useStore.setState({ dmPop: { from, at: Date.now() } }); n.close(); };
+  } catch {}
+}
+// Tapping a notification (handled by the service worker) opens that conversation here.
+navigator.serviceWorker?.addEventListener('message', (e) => {
+  if (e.data?.type === 'open-dm' && e.data.from) useStore.setState({ dmPop: { from: e.data.from, at: Date.now() } });
+});
+if (typeof location !== 'undefined') {
+  const dm = new URLSearchParams(location.search).get('dm');
+  if (dm) setTimeout(() => useStore.setState({ dmPop: { from: dm, at: Date.now() } }), 1500);
+}
+
 export function sendDm(to, text) {
   return new Promise((resolve) => {
     if (!socket?.connected) return resolve({ error: L('Hakuna connection', 'No connection') });

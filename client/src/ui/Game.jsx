@@ -10,6 +10,9 @@ import { connect, local, input, setInside, enterHome, leaveHome, jump } from '..
 import { SocialModals } from './Social.jsx';
 import { InstallBanner } from './InstallApp.jsx';
 import { PresenceAlerts } from './LiveNow.jsx';
+import { DmPop } from './DmPop.jsx';
+import { InteractAsk, SelfieCard } from './Together.jsx';
+import { BuildBar } from './BuildBar.jsx';
 import { readDeepLink } from './share.js';
 import { loadEvents } from './events.js';
 import { sfx } from '../audio.js';
@@ -167,6 +170,10 @@ export default function Game() {
       <Phone />
       <SocialModals />
       <PresenceAlerts />
+      <DmPop />
+      <InteractAsk />
+      <SelfieCard />
+      <BuildBar />
       <InstallBanner />
     </div>
   );

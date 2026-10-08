@@ -13,7 +13,13 @@ export const useStore = create((set, get) => ({
   ads: [],
   online: 0,
   presence: [],
-  loginOpen: false, // log-in pop-up over the creator // "@x is online" alerts, newest last
+  loginOpen: false, // log-in pop-up over the creator
+  interactAsk: null, // { rid, kind, from }: someone wants to high-five / dance / play-fight with you
+  selfie: null, // { with, at }: a selfie card to show
+  dmPop: null,
+  yard: null, // your yard: { blocks }
+  building: null, // build mode: { kind, erase }
+  visitYard: null, // the yard of the home you're visiting // { from, at }: a DM conversation popped up beside 💬 // "@x is online" alerts, newest last
   roster: 0, // bumps when remote players join/leave
   sheet: null, // { type: 'place'|'plot'|'player'|'ad', id }
   phone: null, // null | 'home' | app id

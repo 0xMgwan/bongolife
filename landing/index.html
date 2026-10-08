@@ -42,10 +42,16 @@
   <main>
     <!-- ------------------------------------------------------------ hero -->
     <section class="hero">
+      <!-- Silent looping flyover behind the hero; the poster shows while it loads and for reduced motion. -->
+      <video class="hero-video" autoplay muted loop playsinline preload="auto" poster="assets/hero-poster.jpg" aria-hidden="true" tabindex="-1">
+        <!-- Full-quality master on wide or high-density screens; a lighter 1280 copy otherwise. -->
+        <source src="assets/hero-1080.mp4" type="video/mp4" media="(min-width: 900px), (min-resolution: 2dppx)" />
+        <source src="assets/hero-720.mp4" type="video/mp4" />
+      </video>
       <div class="hero-copy">
         <span class="badge" data-sw="🇹🇿 Mchezo wa maisha ya Dar es Salaam" data-en="🇹🇿 The Dar es Salaam life-sim">🇹🇿 Mchezo wa maisha ya Dar es Salaam</span>
-        <h1 data-sw="Ishi maisha yako ya Dar — <em>na watu halisi.</em>" data-en="Live your Dar story — <em>with real people.</em>" data-html>Ishi maisha yako ya Dar — <em>na watu halisi.</em></h1>
-        <p class="lead" data-sw="Tafuta kazi, kula chipsi mayai, kula bata Sinza, endesha bodaboda, nunua kiwanja Kigamboni na uwe Mkuu wa Mkoa. Bure kwenye simu yako — hakuna kudownload." data-en="Get a job, grab chipsi mayai, party in Sinza, ride a bodaboda, buy a sea plot in Kigamboni and become Mayor. Free on your phone — no download.">Tafuta kazi, kula chipsi mayai, kula bata Sinza, endesha bodaboda, nunua kiwanja Kigamboni na uwe Mkuu wa Mkoa. Bure kwenye simu yako — hakuna kudownload.</p>
+        <h1 data-sw="Ishi maisha yako ya Dar <em>na watu halisi.</em>" data-en="Live your Dar story <em>with real people.</em>" data-html>Ishi maisha yako ya Dar <em>na watu halisi.</em></h1>
+        <p class="lead" data-sw="Fanya kazi, kula bata, jenga himaya yako Dar. Bure kwenye simu." data-en="Work, party and build your empire in Dar. Free on your phone.">Fanya kazi, kula bata, jenga himaya yako Dar. Bure kwenye simu.</p>
         <div class="cta">
           <a class="btn btn-green play" href="#" data-sw="Cheza bure sasa →" data-en="Play free now →">Cheza bure sasa →</a>
           <a class="btn btn-white" href="#how" data-sw="Jinsi inavyofanya kazi" data-en="How it works">Jinsi inavyofanya kazi</a>
@@ -56,12 +62,6 @@
           <span class="pill" id="s-mayor-wrap" hidden>🏛️ <span data-sw="Mkuu wa Mkoa" data-en="Mayor">Mkuu wa Mkoa</span>&nbsp;<b id="s-mayor"></b></span>
         </div>
         <p class="event" id="s-event" hidden></p>
-      </div>
-      <div class="hero-art">
-        <div class="phone phone-main"><img src="assets/shot-street.jpg" alt="Bongo Life — mtaa wa Kariakoo" loading="eager" /></div>
-        <div class="phone phone-side"><img src="assets/shot-creator.jpg" alt="Tengeneza Sim wako" loading="eager" /></div>
-        <div class="float f1">🏍️ <span data-sw="Bodaboda imenunuliwa!" data-en="Bodaboda bought!">Bodaboda imenunuliwa!</span></div>
-        <div class="float f2">💰 +TSh 24,000 <small data-sw="shifti imeisha" data-en="shift done">shifti imeisha</small></div>
       </div>
     </section>
 

@@ -16,6 +16,7 @@ import * as election from '../election.js';
 import * as crime from '../crime.js';
 import * as casino from '../casino.js';
 import * as game from '../game.js';
+import * as yard from '../yard.js';
 import { online, onlineCount, broadcast, emitTo } from '../presence.js';
 import { provider, providers, TOPUP_RATE } from '../payments/index.js';
 import * as story from '../story.js';
@@ -236,6 +237,26 @@ api.get('/visit/:username', (req, res) => {
   const vehicles = db.prepare('SELECT id, model, color FROM vehicles WHERE user_id = ?').all(host.id);
   res.json({ host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance, vehicles }, items: game.homeItems(host.id) });
 });
+// ---- build mode: your yard of blocks
+const intOf = (v) => (Number.isInteger(v) ? v : Number.parseInt(v, 10));
+const blockAt = (b) => ({ x: intOf(b.x), y: intOf(b.y), z: intOf(b.z) });
+api.get('/yard', (req, res) => res.json(yard.yardOf(req.user.id)));
+api.get('/yard/:username', (req, res) => {
+  const host = getUserByUsername(req.params.username);
+  if (!host) throw new GameError(['Mtumiaji hayupo', 'User not found'], 404);
+  if (host.id !== req.user.id && !canVisit(req.user.id, host.id)) throw new GameError(['Hujaalikwa kwa mtu huyu.', "You haven't been invited."], 403, 'not_invited');
+  res.json(yard.yardOf(host.id));
+});
+api.post('/yard/blocks', rateLimit('yard', 240, 60_000), (req, res) => {
+  yard.placeBlock(req.user.id, { ...blockAt(req.body), kind: str(req.body.kind, 16) });
+  res.json({ ...yard.yardOf(req.user.id), me: game.playerState(req.user.id) });
+});
+api.delete('/yard/blocks', rateLimit('yard', 240, 60_000), (req, res) => {
+  const r = yard.removeBlock(req.user.id, blockAt(req.body));
+  res.json({ ...yard.yardOf(req.user.id), refund: r.refund, me: game.playerState(req.user.id) });
+});
+
+
 api.post('/home/items', (req, res) => {
   game.buyFurniture(req.user.id, { item: str(req.body.item, 30), x: req.body.x, z: req.body.z, rot: req.body.rot });
   res.json({ items: game.homeItems(req.user.id), me: game.playerState(req.user.id) });

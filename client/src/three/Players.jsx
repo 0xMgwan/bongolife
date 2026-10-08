@@ -5,6 +5,7 @@ import { Avatar } from './Avatar.jsx';
 import { Vehicle, riderOffset } from './Vehicle.jsx';
 import { labelTexture, bubbleTexture, emojiTexture } from './textures.js';
 import { local, input, remotes, bubbles, emotes, sendMove, view, trafficCars } from '../net.js';
+import { TOGETHER_ANIM } from '../ui/together.js';
 import { api } from '../api.js';
 import { sfx } from '../audio.js';
 import { useStore } from '../store.js';
@@ -13,6 +14,18 @@ const WALK_SPEED = 7.5;
 const RUN_SPEED = 13;
 const JUMP_MS = 560;
 const JUMP_H = 1.4;
+/**
+ * A together-interaction in progress ({ kind, until, other }): the animation to play and the
+ * direction to face (toward the other sim), or null once it's over.
+ */
+function togetherPose(action, x, z) {
+  if (!action || performance.now() > action.until) return null;
+  const o = action.other === useStore.getState().myId ? local : remotes.get(action.other);
+  const ox = o ? o.tx ?? o.x : x;
+  const oz = o ? o.tz ?? o.z : z;
+  return { mode: TOGETHER_ANIM[action.kind] || 'cheer', face: Math.hypot(ox - x, oz - z) > 0.2 ? Math.atan2(ox - x, oz - z) : null };
+}
+
 /** Height above the ground for a hop started at `at` (performance.now()), 0 once landed. */
 function jumpHeight(at) {
   const t = (performance.now() - (at || 0)) / JUMP_MS;
@@ -291,7 +304,13 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
     motion.current.moving = moving;
     motion.current.speed = Math.min(1.6, speedMult);
     const hop = vehicle ? 0 : jumpHeight(local.jumpAt);
-    motion.current.mode = busy ? busyMode(busy) : hop > 0 ? 'jump' : running ? 'run' : moving ? 'walk' : 'idle';
+    const pose = !moving && !vehicle ? togetherPose(local.action, local.x, local.z) : null;
+    if (pose?.face != null) {
+      let df = pose.face - local.ry;
+      df = Math.atan2(Math.sin(df), Math.cos(df));
+      local.ry += df * Math.min(1, dt * 10);
+    }
+    motion.current.mode = busy ? busyMode(busy) : hop > 0 ? 'jump' : pose ? pose.mode : running ? 'run' : moving ? 'walk' : 'idle';
     g.position.set(local.x, 0.1 + hop, local.z);
     g.rotation.y = local.ry;
     sendMove();
@@ -326,13 +345,19 @@ function RemotePlayer({ r, onClick }) {
     p.ry += diff * Math.min(1, dt * 10);
     const g = group.current;
     const hop = r.v ? 0 : jumpHeight(r.jumpAt);
+    const pose = r.v ? null : togetherPose(r.action, p.x, p.z);
+    if (pose?.face != null) {
+      let df = pose.face - p.ry;
+      df = Math.atan2(Math.sin(df), Math.cos(df));
+      p.ry += df * Math.min(1, dt * 10);
+    }
     g.position.set(p.x, 0.1 + hop, p.z);
     g.rotation.y = p.ry;
     // Cheap LOD: hide players far from the camera focus.
     g.visible = !r.inside && Math.hypot(camera.position.x - p.x, camera.position.z - p.z) < 140;
     const busy = r.busy && r.busy.endsAt > Date.now() ? r.busy : null;
     motion.current.moving = !!r.m || dist > 0.3;
-    motion.current.mode = busy ? busyMode(busy) : hop > 0 ? 'jump' : r.m === 2 ? 'run' : motion.current.moving ? 'walk' : 'idle';
+    motion.current.mode = busy ? busyMode(busy) : hop > 0 ? 'jump' : pose ? pose.mode : r.m === 2 ? 'run' : motion.current.moving ? 'walk' : 'idle';
     motion.current.speed = r.v ? 1.5 : 1;
   });
   const click = (e) => {

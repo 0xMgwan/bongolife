@@ -1295,3 +1295,112 @@ html, body { background: #1e2a47; }
 .co-head .co-amt-in { margin: 0; width: 100%; background: rgba(255,255,255,.95); color: #111827; }
 .co-head .co-dep { background: rgba(255,255,255,.18); color: #fff; }
 .co-head .grow { flex: 1; }
+/* Landing: the city flyover video instead of the live 3D city; a soft fade keeps pills and cards crisp. */
+.land-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #0b0b0b url(/landing-hero.jpg) center / cover no-repeat; }
+.land-video + .layer::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(8,8,8,.45) 0%, rgba(8,8,8,.1) 35%, rgba(8,8,8,.1) 65%, rgba(8,8,8,.5) 100%); }
+@media (prefers-reduced-motion: reduce) { .land-video { visibility: hidden; } .land-video + .layer { background: url(/landing-hero.jpg) center / cover no-repeat; } }
+
+/* Chat dock stays mounted so the input can be focused inside the tap (phones raise the keyboard). */
+.chat-dock { transition: opacity .18s, transform .18s; }
+.chat-dock.closed { opacity: 0; transform: translateY(16px); pointer-events: none; }
+/* 16px: iOS zooms the page into any focused input smaller than that. */
+.chat-dock input { font-size: 16px; }
+
+/* DM pop-up beside 💬: no card — message bubbles (theirs white, yours gold) and a reply pill. */
+.dm-pop { position: absolute; right: 64px; top: calc(46% - 70px); z-index: 25; width: min(270px, calc(100vw - 84px)); display: flex; flex-direction: column; gap: 6px; transform-origin: right center; animation: dm-in .4s cubic-bezier(.2,1.3,.4,1) both; }
+.dm-pop.leaving { animation: dm-out .22s ease-in forwards; }
+@keyframes dm-in { from { opacity: 0; transform: translateX(24px) scale(.85); } }
+@keyframes dm-out { to { opacity: 0; transform: translateX(24px) scale(.9); } }
+.dm-head { display: flex; align-items: center; gap: 8px; color: #fff; text-shadow: var(--float-text); }
+.dm-head b { flex: 1; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-open { font-size: 12px; font-weight: 800; color: #ffd23f; text-shadow: var(--float-text); }
+.dm-x { color: #fff; font-size: 15px; text-shadow: var(--float-text); }
+.dm-lines { display: flex; flex-direction: column; gap: 4px; max-height: 150px; overflow-y: auto; }
+.dm-line { max-width: 85%; padding: 7px 11px; border-radius: 16px; font-size: 13.5px; line-height: 1.3; box-shadow: 0 4px 12px rgba(0,0,0,.22); word-wrap: break-word; animation: item-pop .3s cubic-bezier(.2,1.35,.4,1) both; }
+.dm-line.theirs { align-self: flex-start; background: #fff; color: var(--ink); border-bottom-left-radius: 5px; }
+.dm-line.mine { align-self: flex-end; background: var(--gold); color: var(--on-gold); border-bottom-right-radius: 5px; }
+.dm-reply { display: flex; gap: 6px; align-items: center; }
+.dm-reply input { flex: 1; min-width: 0; border: 0; outline: 0; border-radius: 999px; padding: 9px 14px; font-size: 16px; background: rgba(255,255,255,.95); box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+.dm-send { width: 38px; height: 38px; flex: none; border-radius: 50%; background: var(--gold); color: var(--on-gold); font-size: 16px; display: grid; place-items: center; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+.dm-send:disabled { opacity: .55; }
+.dm-alerts { align-self: flex-start; font-size: 12px; font-weight: 700; color: #fff; text-shadow: var(--float-text); padding: 2px 0; }
+.side button .badge { top: -2px; right: -4px; font-size: 10px; min-width: 17px; height: 17px; text-shadow: none; filter: none; }
+.side button.has-unread { animation: chat-wiggle .8s cubic-bezier(.3,1.6,.5,1) 2; }
+@keyframes chat-wiggle { 25% { transform: rotate(-14deg) scale(1.15); } 50% { transform: rotate(12deg) scale(1.15); } 75% { transform: rotate(-6deg); } }
+@media (prefers-reduced-motion: reduce) { .dm-pop, .dm-line, .side button.has-unread { animation: none; } }
+.app:has(.dm-pop) .drive-btn, .app:has(.dm-pop) .jump-btn, .app:has(.dm-pop) .side-pop, .app:has(.dm-pop) .side-tab { opacity: 0; pointer-events: none; }
+
+/* Together interactions: buttons on the player card, the accept prompt, the selfie card. */
+.together-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.together-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border-radius: 16px; background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); color: #fff; text-align: center; }
+.together-btn .tg-em { font-size: 28px; filter: var(--float-emoji); }
+.together-btn b { font-size: 12.5px; }
+.together-btn small { font-size: 10.5px; color: rgba(255,255,255,.75); }
+.together-btn:disabled { opacity: .4; }
+.interact-ask { position: absolute; left: 50%; top: 26%; transform: translateX(-50%); z-index: 40; width: min(320px, calc(100vw - 24px)); display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; color: #fff; text-shadow: var(--float-text); animation: center-pop .4s cubic-bezier(.2,1.3,.4,1) both; }
+.ia-who { position: relative; font-size: 54px; filter: var(--float-emoji); }
+.ia-em { position: absolute; right: -22px; bottom: -6px; font-size: 32px; animation: chat-wiggle .8s cubic-bezier(.3,1.6,.5,1) infinite; }
+.interact-ask b { font-size: 17px; }
+.interact-ask small { font-size: 12.5px; color: rgba(255,255,255,.88); }
+.ia-acts { display: flex; gap: 8px; margin-top: 6px; }
+.ia-acts .btn { text-shadow: none; padding: 11px 18px; font-size: 15px; }
+.selfie-card { width: min(300px, 100%); display: flex; flex-direction: column; align-items: center; gap: 6px; color: #fff; text-shadow: var(--float-text); animation: center-pop .45s cubic-bezier(.2,1.3,.4,1) both; }
+.selfie-card b { margin-top: 8px; font-size: 16px; }
+.selfie-card small { color: rgba(255,255,255,.85); }
+@media (prefers-reduced-motion: reduce) { .interact-ask, .ia-em, .selfie-card { animation: none; } }
+
+.selfie-card { width: min(340px, 100%); gap: 12px; }
+.sf-img { display: block; width: 100%; aspect-ratio: 4 / 5; border-radius: 18px; box-shadow: 0 24px 60px rgba(0,0,0,.5); background: #0F172A; }
+.sf-wait { display: grid; place-items: center; font-size: 64px; }
+.selfie-card .ia-acts a.btn { text-decoration: none; }
+
+/* Build mode: a floating palette at the bottom; the HUD steps aside so the yard is in view. */
+.me-acts { grid-template-columns: repeat(5, 1fr); }
+.build-bar { position: absolute; left: 8px; right: 8px; bottom: calc(10px + var(--safe-bottom)); z-index: 30; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; color: #fff; text-shadow: var(--float-text); animation: center-pop .35s cubic-bezier(.2,1.3,.4,1) both; }
+.bb-head { display: flex; align-items: center; gap: 8px; }
+.bb-head b { font-size: 16px; }
+.bb-head span { flex: 1; font-size: 12px; color: rgba(255,255,255,.85); }
+.bb-tool, .bb-done { padding: 7px 12px; border-radius: 999px; font-size: 13px; font-weight: 800; text-shadow: none; }
+.bb-tool { background: rgba(255,255,255,.92); color: var(--ink); }
+.bb-tool.on { background: #ef4444; color: #fff; }
+.bb-done { background: var(--gold); color: var(--on-gold); }
+.bb-palette { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 6px; scrollbar-width: none; }
+.bb-palette::-webkit-scrollbar { display: none; }
+.bb-block { flex: none; width: 66px; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border-radius: 16px; color: #fff; transition: transform .15s cubic-bezier(.2,1.5,.4,1); }
+.bb-block span { font-size: 28px; filter: var(--float-emoji); }
+.bb-block b { font-size: 10.5px; line-height: 1.1; text-align: center; }
+.bb-block small { font-size: 10px; color: #ffd23f; }
+.bb-block.on { transform: translateY(-4px) scale(1.08); background: rgba(245,184,0,.28); box-shadow: inset 0 0 0 2px var(--gold); }
+.bb-hint { font-size: 12px; color: rgba(255,255,255,.85); }
+.app:has(.build-bar) .bottom-nav, .app:has(.build-bar) .loc-pill, .app:has(.build-bar) .needs-panel, .app:has(.build-bar) .hud-left, .app:has(.build-bar) .side-pop, .app:has(.build-bar) .side-tab { opacity: 0; pointer-events: none; }
+/* A soft dark fade behind the build bar keeps white labels readable over the light yard. */
+.build-bar::before { content: ''; position: absolute; left: -8px; right: -8px; bottom: calc(-10px - var(--safe-bottom)); top: -28px; z-index: -1; background: linear-gradient(180deg, rgba(15,23,42,0) 0%, rgba(15,23,42,.62) 38%, rgba(15,23,42,.78) 100%); pointer-events: none; }
+/* Sheets, the phone and pop-ups sit above build mode: tuck the build bar away while one is open. */
+.app:has(> .sheet-wrap) .build-bar, .app:has(.phone-wrap) .build-bar, .app:has(.interact-ask) .build-bar { opacity: 0; pointer-events: none; }
+
+/* Picker: our own dropdown. A pill showing the choice; the list pops from the centre. */
+.picker { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 16px 11px 14px; border-radius: 22px; background: var(--chip); border: 2px solid transparent; text-align: left; transition: border-color .15s, transform .12s; }
+.picker:active { transform: scale(.98); }
+.picker:focus-visible { border-color: var(--gold); outline: none; }
+.pk-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pk-ic { font-size: 22px; flex: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,.2)); }
+.pk-txt { min-width: 0; display: flex; flex-direction: column; }
+.pk-txt b { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk-txt small { font-size: 12px; color: var(--gold-d); font-weight: 700; }
+.pk-caret { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--gold); color: var(--on-gold); display: grid; place-items: center; font-size: 13px; }
+.picker-wrap { position: absolute; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 20px 14px; background: rgba(8,12,22,.66); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); animation: fadein .15s; }
+.picker-pop { width: min(420px, 100%); max-height: 80%; display: flex; flex-direction: column; gap: 10px; color: #fff; text-shadow: var(--float-text); animation: center-pop .36s cubic-bezier(.2,1.3,.4,1) both; }
+.pk-head { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+.pk-head b { font-size: 19px; }
+.pk-head button { color: #fff; font-size: 18px; }
+.pk-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px; }
+.pk-opt { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 18px; background: rgba(255,255,255,.1); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); color: #fff; text-align: left; animation: item-pop .35s cubic-bezier(.2,1.35,.4,1) both; animation-delay: calc(.05s + var(--i, 0) * 28ms); }
+.pk-opt .pk-txt small { color: #ffd23f; }
+.pk-opt.warn .pk-txt small { color: #fca5a5; }
+.pk-opt.on { background: rgba(245,184,0,.22); box-shadow: inset 0 0 0 2px var(--gold); }
+.pk-opt:active { transform: scale(.98); }
+.pk-badge { flex: none; margin-left: auto; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.16); font-size: 12px; font-weight: 800; text-shadow: none; }
+.pk-right { flex: none; margin-left: auto; font-weight: 800; color: #ffd23f; }
+.pk-check { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--gold); color: var(--on-gold); display: grid; place-items: center; font-size: 13px; font-weight: 900; text-shadow: none; }
+.pk-opt .pk-badge + .pk-check { margin-left: 0; }
+@media (prefers-reduced-motion: reduce) { .picker-pop, .pk-opt { animation: none; } }

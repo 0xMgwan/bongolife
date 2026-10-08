@@ -8,6 +8,7 @@ import { bumpStats } from './story.js';
 import { NEED_TICK_SECONDS, isWater, moodOf, placeById, EVENT_LIMITS, HANGOUT_PLACES } from '../../shared/world.js';
 import { db, getUser, saveFields, now, UPLOAD_DIR, getSettings } from './db.js';
 import { verifyToken } from './auth.js';
+import { registerInteractions } from './interact.js';
 import { api, settleTopup, applyTopupStatus } from './routes/api.js';
 import { verifyNtzsWebhook } from './payments/index.js';
 import { online, setIO, publicPlayer, broadcast, emitTo } from './presence.js';
@@ -273,6 +274,8 @@ io.on('connection', (socket) => {
     p.lastJump = t;
     socket.broadcast.emit('jump', { id: uid });
   });
+
+  registerInteractions(socket, uid);
 
   socket.on('emote', (e) => {
     if (typeof e === 'string' && e.length <= 8) broadcast('emote', { id: uid, e });
