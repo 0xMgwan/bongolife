@@ -3,7 +3,7 @@ import { gameClock } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { sfx } from '../audio.js';
 import { L, loc } from '../i18n.js';
-import { Threads, Dm, Mtaa } from './apps/Messages.jsx';
+import { Threads, Dm, Mtaa, GroupChat } from './apps/Messages.jsx';
 import { Pesa } from './apps/Pesa.jsx';
 import { Mali } from './apps/Mali.jsx';
 import { Kazi } from './apps/Kazi.jsx';
@@ -23,6 +23,7 @@ import { Polisi } from './apps/Polisi.jsx';
 import { Majirani } from './apps/Majirani.jsx';
 import { Kampuni } from './apps/Kampuni.jsx';
 import { Maduka } from './apps/Maduka.jsx';
+import { Penzi } from './apps/Penzi.jsx';
 import { api } from '../api.js';
 
 // Built-in apps. `g` is the icon gradient.
@@ -36,6 +37,7 @@ export const APPS = [
   { id: 'watu', name: 'Watu', nameEn: 'People', icon: '🤝', g: ['#f472b6', '#db2777'], C: Watu },
   { id: 'safari', name: 'Safari', nameEn: 'Travel', icon: '✈️', g: ['#38bdf8', '#1d4ed8'], C: Safari },
   { id: 'matukio', name: 'Matukio', nameEn: 'Events', icon: '🎉', g: ['#c084fc', '#7c3aed'], C: Matukio },
+  { id: 'penzi', name: 'Penzi', nameEn: 'Dating', icon: '💘', g: ['#fb7185', '#be123c'], C: Penzi },
   { id: 'majirani', name: 'Majirani', nameEn: 'Neighbours', icon: '🏘️', g: ['#f9a8d4', '#be185d'], C: Majirani },
   { id: 'polisi', name: 'Polisi', nameEn: 'Police', icon: '🚓', g: ['#60a5fa', '#1e3a8a'], C: Polisi },
   { id: 'anwani', name: 'Anwani', nameEn: 'Contacts', icon: '📞', g: ['#4ade80', '#16a34a'], C: Contacts },
@@ -51,6 +53,7 @@ export const APPS = [
 ];
 const byId = Object.fromEntries(APPS.map((a) => [a.id, a]));
 byId.dm = { id: 'dm', name: 'Ujumbe', C: Dm, back: 'ujumbe' };
+byId.group = { id: 'group', name: 'Kikundi', C: GroupChat, back: 'ujumbe' };
 byId.web = { id: 'web', name: 'Web', C: Browser };
 
 function useClock() {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fmtTsh, fmtShort } from '@shared/world.js';
+import { fmtTsh, fmtShort, MUSIC_VENUES } from '@shared/world.js';
 import { api, token } from '../api.js';
 import { useStore } from '../store.js';
 import { Logo } from '../ui/Logo.jsx';
@@ -141,6 +141,7 @@ const SECTIONS = [
   ['reports', '⚑', 'Reports'],
   ['property', '🏘️', 'Property'],
   ['apps', '📱', 'Phone apps'],
+  ['music', '🎵', 'Music'],
   ['settings', '⚙️', 'Settings'],
   ['audit', '🧾', 'Audit log'],
 ];
@@ -288,6 +289,71 @@ function MailHealth() {
         </div>
       ))}
     </div>
+  );
+}
+
+/** Licensed tracks that play at venues (1245, Singeli, Stone Town…), replacing the synth there. */
+function MusicAdmin() {
+  const { data, reload } = useApi('/admin/music');
+  const [f, setF] = useState({ title: '', artist: '', venues: ['club'], rights: '' });
+  const [file, setFile] = useState(null);
+  const [agree, setAgree] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const toggleVenue = (v) => setF({ ...f, venues: f.venues.includes(v) ? f.venues.filter((x) => x !== v) : [...f.venues, v] });
+  const upload = async () => {
+    const form = new FormData();
+    form.append('audio', file);
+    form.append('title', f.title);
+    form.append('artist', f.artist);
+    form.append('venues', f.venues.join(','));
+    form.append('rights', f.rights);
+    setBusy(true);
+    try {
+      await api('/admin/music', { method: 'POST', form });
+      useStore.getState().toast('🎵 Track added');
+      setF({ ...f, title: '', artist: '', rights: '' });
+      setFile(null);
+      setAgree(false);
+      reload();
+    } catch (e) { useStore.getState().toast(e.message, 'err'); }
+    setBusy(false);
+  };
+  return (
+    <>
+      <div className="adm-head"><div><h1>Music</h1><div className="sub">Real tracks for venues. Where a venue has tracks, they play instead of the built-in synth (with a "Now playing" label).</div></div></div>
+      <div className="adm-cols">
+        <div className="panel">
+          <h2>Add a track</h2>
+          <div className="small" style={{ background: '#fef9c3', borderRadius: 8, padding: '8px 10px', marginBottom: 10 }}>⚖️ Only upload music you have the right to play publicly — your own, licensed (e.g. via COSOTA or the label), or with the artist's written permission. Commercial hits without a licence can get the game taken down.</div>
+          <input className="in" style={{ width: '100%', marginBottom: 8 }} placeholder="Title" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} maxLength={80} />
+          <input className="in" style={{ width: '100%', marginBottom: 8 }} placeholder="Artist" value={f.artist} onChange={(e) => setF({ ...f, artist: e.target.value })} maxLength={80} />
+          <input type="file" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/ogg,.mp3,.m4a,.ogg" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          <div className="small muted" style={{ margin: '10px 0 6px' }}>Plays at:</div>
+          <div className="toolbar" style={{ flexWrap: 'wrap' }}>
+            {MUSIC_VENUES.map((v) => <button key={v.id} className={`btn ${f.venues.includes(v.id) ? 'btn-green' : 'btn-outline'}`} onClick={() => toggleVenue(v.id)}>{v.name} <span className="muted small">· {v.style}</span></button>)}
+          </div>
+          <input className="in" style={{ width: '100%', margin: '10px 0 8px' }} placeholder="Rights / licence (e.g. 'Own release', 'Permission from artist, 12 Oct 2026')" value={f.rights} onChange={(e) => setF({ ...f, rights: e.target.value })} maxLength={200} />
+          <label className="small" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /> I confirm Bongo Life has the right to play this track publicly.</label>
+          <button className="btn btn-green" style={{ marginTop: 10 }} disabled={busy || !file || !f.title || !f.artist || !f.venues.length || !f.rights || !agree} onClick={upload}>{busy ? 'Uploading…' : 'Upload track'}</button>
+        </div>
+        <div className="panel">
+          <h2>Library ({data?.length || 0})</h2>
+          {!data?.length && <div className="empty">No tracks yet — venues use the built-in Bongo Flava / Singeli / Taarab synth.</div>}
+          {data?.map((t) => (
+            <div key={t.id} style={{ padding: '8px 0', borderTop: '1px solid #eee' }}>
+              <div className="row between" style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                <div><b>{t.title}</b> <span className="muted">— {t.artist}</span><div className="small muted">{t.venues.map((v) => MUSIC_VENUES.find((x) => x.id === v)?.name || v).join(', ')} · {t.plays} plays · {t.rights}</div></div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <audio controls preload="none" src={`/uploads/${t.file}`} style={{ height: 32, width: 180 }} />
+                  <Switch on={!!t.active} onChange={(v) => act(`/music/${t.id}`, { body: { active: v }, ok: v ? 'Enabled' : 'Disabled' }).then(() => reload())} />
+                  <button className="btn btn-outline" onClick={() => act(`/music/${t.id}`, { method: 'DELETE', confirm: `Delete "${t.title}"?`, ok: 'Deleted' }).then(() => reload())}>🗑️</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -479,6 +545,7 @@ export default function Admin() {
         {section === 'reports' && <Reports />}
         {section === 'property' && <Property />}
         {section === 'apps' && <PhoneApps />}
+        {section === 'music' && <MusicAdmin />}
         {section === 'settings' && <Settings />}
         {section === 'audit' && <Audit />}
       </main>

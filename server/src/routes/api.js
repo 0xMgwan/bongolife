@@ -22,6 +22,9 @@ import { provider, providers, TOPUP_RATE } from '../payments/index.js';
 import * as story from '../story.js';
 import * as invest from '../invest.js';
 import * as company from '../company.js';
+import * as chat from '../chat.js';
+import * as love from '../love.js';
+import * as music from '../music.js';
 
 export const api = express.Router();
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -427,7 +430,7 @@ api.post('/wallet/send', (req, res) => {
 const userBrief = db.prepare('SELECT id, username, name, appearance FROM users WHERE id = ?');
 api.get('/messages/public', (_req, res) => {
   const rows = db.prepare(
-    'SELECT m.id, m.body, m.created_at, u.username, u.name FROM messages m JOIN users u ON u.id = m.from_id WHERE m.to_id IS NULL AND m.deleted_at IS NULL ORDER BY m.id DESC LIMIT 60',
+    'SELECT m.id, m.body, m.created_at, u.username, u.name FROM messages m JOIN users u ON u.id = m.from_id WHERE m.to_id IS NULL AND m.group_id IS NULL AND m.deleted_at IS NULL ORDER BY m.id DESC LIMIT 60',
   ).all();
   res.json(rows.reverse());
 });
@@ -436,25 +439,38 @@ api.get('/messages/threads', (req, res) => {
   const rows = db.prepare(`
     SELECT CASE WHEN from_id = @me THEN to_id ELSE from_id END AS other, MAX(id) AS last_id,
            SUM(CASE WHEN to_id = @me AND read_at IS NULL THEN 1 ELSE 0 END) AS unread
-    FROM messages WHERE to_id IS NOT NULL AND (from_id = @me OR to_id = @me)
+    FROM messages WHERE to_id IS NOT NULL AND group_id IS NULL AND (from_id = @me OR to_id = @me)
     GROUP BY other ORDER BY last_id DESC LIMIT 50`).all({ me });
-  const getMsg = db.prepare('SELECT body, created_at, from_id FROM messages WHERE id = ?');
+  const getMsg = db.prepare('SELECT body, created_at, from_id, kind, deleted_at FROM messages WHERE id = ?');
   res.json(rows.map((r) => {
     const u = userBrief.get(r.other);
     const m = getMsg.get(r.last_id);
-    return { user: { ...u, appearance: JSON.parse(u.appearance || 'null'), online: online.has(u.id) }, last: m.body, mine: m.from_id === me, at: m.created_at, unread: r.unread };
+    return { user: { ...u, appearance: JSON.parse(u.appearance || 'null'), online: online.has(u.id) }, last: chat.messagePreview(m), mine: m.from_id === me, at: m.created_at, unread: r.unread };
   }));
 });
 api.get('/messages/dm/:username', (req, res) => {
   const other = getUserByUsername(req.params.username);
   if (!other) throw new GameError(['Mtumiaji hayupo', 'User not found'], 404);
-  const me = req.user.id;
-  const rows = db.prepare(
-    'SELECT id, from_id, body, created_at FROM messages WHERE (from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?) ORDER BY id DESC LIMIT 100',
-  ).all(me, other.id, other.id, me);
-  db.prepare('UPDATE messages SET read_at = ? WHERE from_id = ? AND to_id = ? AND read_at IS NULL').run(now(), other.id, me);
-  res.json({ user: { id: other.id, username: other.username, name: other.name, appearance: other.appearance, online: online.has(other.id) }, messages: rows.reverse() });
+  res.json({ user: { id: other.id, username: other.username, name: other.name, appearance: other.appearance, online: online.has(other.id) }, messages: chat.dmHistory(req.user.id, other.id) });
 });
+// Voice notes, reactions, edit/delete for everyone, forwarding, groups.
+const voiceUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1_600_000, files: 1 } });
+api.post('/messages/voice', rateLimit('voice', 30, 60_000), voiceUpload.single('audio'), (req, res) => {
+  const body = { to: req.body.to || undefined, groupId: req.body.groupId || undefined, replyTo: req.body.replyTo || undefined, duration: req.body.duration };
+  res.status(201).json({ msg: chat.sendVoice(req.user.id, body, req.file) });
+});
+api.post('/messages/:id/react', rateLimit('react', 60, 60_000), (req, res) => res.json({ msg: chat.react(req.user.id, req.params.id, str(req.body.emoji, 8)) }));
+api.post('/messages/:id/edit', (req, res) => res.json({ msg: chat.edit(req.user.id, req.params.id, req.body.text) }));
+api.delete('/messages/:id', (req, res) => res.json({ msg: chat.remove(req.user.id, req.params.id) }));
+api.post('/messages/:id/forward', rateLimit('fwd', 30, 60_000), (req, res) => res.json({ msg: chat.forward(req.user.id, req.params.id, { to: req.body.to || undefined, groupId: req.body.groupId || undefined }) }));
+api.get('/groups', (req, res) => res.json(chat.myGroups(req.user.id)));
+api.post('/groups', rateLimit('groups', 10, 60 * 60_000), (req, res) => {
+  const id = chat.createGroup(req.user.id, { name: req.body.name, emoji: req.body.emoji, members: req.body.members });
+  res.status(201).json({ id, groups: chat.myGroups(req.user.id) });
+});
+api.get('/groups/:id', (req, res) => res.json(chat.groupView(req.user.id, req.params.id)));
+api.post('/groups/:id/members', (req, res) => res.json({ added: chat.addMembers(req.user.id, req.params.id, req.body.members) }));
+api.post('/groups/:id/leave', (req, res) => { chat.leaveGroup(req.user.id, req.params.id); res.json({ groups: chat.myGroups(req.user.id) }); });
 
 // ---------------------------------------------------------- phone
 api.get('/phone/apps', (_req, res) => {
@@ -668,6 +684,7 @@ api.get('/players/:username', (req, res) => {
   res.json({
     id: u.id, username: u.username, name: u.name, appearance: u.appearance, trait: u.trait, fame: u.fame, elimu: u.elimu,
     since: u.createdAt, online: online.has(u.id), plots, businesses: biz, vehicles, netWorth: game.netWorth(u.id), jobXp: u.jobXp,
+    love: love.publicStatus(u.id),
   });
 });
 api.get('/leaderboard', (_req, res) => res.json(game.leaderboard()));
@@ -702,6 +719,34 @@ api.post('/invest/trucks', (req, res) => {
   investDone(req, res);
 });
 api.post('/invest/trucks/:id/sell', (req, res) => investDone(req, res, invest.sellTruck(req.user.id, Number(req.params.id))));
+
+// ------------------------------------------------------------------------ music
+api.get('/music', (req, res) => res.json(music.tracksFor(str(req.query.venue, 20))));
+const playCounted = new Map();
+api.post('/music/:id/play', (req, res) => {
+  const key = `${req.user.id}:${req.params.id}`;
+  if (now() - (playCounted.get(key) || 0) > 10 * 60_000) { playCounted.set(key, now()); music.countPlay(req.params.id); }
+  res.json({ ok: true });
+});
+
+// ---------------------------------------------------------------------- dating
+api.get('/love', (req, res) => res.json({ ...love.loveState(req.user.id), discover: love.discover(req.user.id) }));
+api.post('/love/profile', (req, res) => {
+  love.saveProfile(req.user.id, { open: !!req.body.open, adult: !!req.body.adult, bio: req.body.bio, looking: str(req.body.looking, 8) });
+  res.json({ ...love.loveState(req.user.id), discover: love.discover(req.user.id) });
+});
+api.post('/love/swipe', rateLimit('swipe', 120, 60 * 60_000), (req, res) => res.json(love.swipe(req.user.id, str(req.body.username, 30), str(req.body.kind, 6))));
+api.post('/love/:rid/date-invite', rateLimit('loveask', 30, 60 * 60_000), (req, res) => res.json(love.inviteDate(req.user.id, req.params.rid, str(req.body.spot, 20))));
+api.post('/love/:rid/ask-partner', rateLimit('loveask', 30, 60 * 60_000), (req, res) => res.json(love.askPartner(req.user.id, req.params.rid)));
+api.post('/love/:rid/propose', rateLimit('loveask', 30, 60 * 60_000), (req, res) => res.json(love.propose(req.user.id, req.params.rid)));
+api.post('/love/answer/:askId', (req, res) => res.json({ ...love.answer(req.user.id, str(req.params.askId, 40), !!req.body.accept), me: game.playerState(req.user.id) }));
+api.post('/love/:rid/date', (req, res) => {
+  crime.assertFree(getUser(req.user.id));
+  res.json({ ...love.startDate(req.user.id, req.params.rid, str(req.body.spot, 20)), me: game.playerState(req.user.id) });
+});
+api.post('/love/:rid/gift', (req, res) => res.json({ ...love.gift(req.user.id, req.params.rid, str(req.body.gift, 12)), me: game.playerState(req.user.id) }));
+api.post('/love/:rid/wedding', (req, res) => res.json({ ...love.wedding(req.user.id, req.params.rid), me: game.playerState(req.user.id) }));
+api.post('/love/:rid/end', (req, res) => { love.endRelationship(req.user.id, req.params.rid); res.json(love.loveState(req.user.id)); });
 
 // ------------------------------------------------------------------- companies
 api.get('/companies', (req, res) => res.json(company.myCompanies(req.user.id)));

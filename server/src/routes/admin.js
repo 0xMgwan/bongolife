@@ -8,6 +8,8 @@ import * as game from '../game.js';
 import { online, broadcast, emitTo, kick } from '../presence.js';
 import { providers, provider, TOPUP_RATE } from '../payments/index.js';
 import { settleTopup, liveAds, publicAnnouncement } from './api.js';
+import multer from 'multer';
+import * as music from '../music.js';
 
 export const admin = express.Router();
 const DAY = 86400_000;
@@ -122,7 +124,7 @@ admin.get('/users/:id', (req, res) => {
     transactions: db.prepare('SELECT * FROM transactions WHERE user_id = ? ORDER BY id DESC LIMIT 100').all(id),
     topups: db.prepare('SELECT * FROM topups WHERE user_id = ? ORDER BY id DESC LIMIT 50').all(id),
     ads: db.prepare('SELECT * FROM ads WHERE user_id = ? ORDER BY id DESC LIMIT 30').all(id),
-    messages: db.prepare('SELECT id, body, created_at, deleted_at FROM messages WHERE from_id = ? AND to_id IS NULL ORDER BY id DESC LIMIT 50').all(id),
+    messages: db.prepare('SELECT id, body, created_at, deleted_at FROM messages WHERE from_id = ? AND to_id IS NULL AND group_id IS NULL ORDER BY id DESC LIMIT 50').all(id),
     dmStats: db.prepare('SELECT COUNT(*) sent, COUNT(DISTINCT to_id) contacts FROM messages WHERE from_id = ? AND to_id IS NOT NULL').get(id),
     totals: db.prepare('SELECT kind, SUM(amount) total, COUNT(*) n FROM transactions WHERE user_id = ? GROUP BY kind').all(id),
     audit: db.prepare("SELECT a.*, u.username admin FROM audit a JOIN users u ON u.id = a.admin_id WHERE a.target_type = 'user' AND a.target_id = ? ORDER BY a.id DESC LIMIT 50").all(String(id))
@@ -350,7 +352,7 @@ admin.post('/reports/:id/close', (req, res) => {
 
 admin.get('/messages', (req, res) => {
   const { limit, offset, page: p } = page(req, 80);
-  const where = ['m.to_id IS NULL'];
+  const where = ['m.to_id IS NULL', 'm.group_id IS NULL'];
   const params = {};
   if (req.query.q) { where.push('m.body LIKE @q'); params.q = `%${str(req.query.q, 60)}%`; }
   if (req.query.user) { where.push('u.username = @user'); params.user = str(req.query.user, 30).replace(/^@/, ''); }
@@ -368,8 +370,8 @@ admin.delete('/messages/:id', (req, res) => {
 });
 admin.post('/users/:id/purge-messages', (req, res) => {
   const u = userOr404(req.params.id);
-  const ids = db.prepare('SELECT id FROM messages WHERE from_id = ? AND to_id IS NULL AND deleted_at IS NULL').all(u.id).map((r) => r.id);
-  db.prepare('UPDATE messages SET deleted_at = ? WHERE from_id = ? AND to_id IS NULL AND deleted_at IS NULL').run(now(), u.id);
+  const ids = db.prepare('SELECT id FROM messages WHERE from_id = ? AND to_id IS NULL AND group_id IS NULL AND deleted_at IS NULL').all(u.id).map((r) => r.id);
+  db.prepare('UPDATE messages SET deleted_at = ? WHERE from_id = ? AND to_id IS NULL AND group_id IS NULL AND deleted_at IS NULL').run(now(), u.id);
   broadcast('chat:delete', { ids });
   audit(req.user.id, 'user.purge_messages', 'user', u.id, { count: ids.length });
   res.json({ ok: true, count: ids.length });
@@ -421,6 +423,27 @@ admin.get('/online', (_req, res) => {
 
 // ---------------------------------------------------------- settings
 admin.get('/settings', (_req, res) => res.json(getSettings()));
+
+// ---- music library (licensed tracks for venues)
+const musicUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15_000_000, files: 1 } });
+admin.get('/music', (_req, res) => res.json(music.listTracks()));
+admin.post('/music', musicUpload.single('audio'), (req, res, next) => {
+  try {
+    const id = music.addTrack(req.user.id, { title: req.body.title, artist: req.body.artist, venues: req.body.venues, rights: req.body.rights }, req.file);
+    audit(req.user.id, 'music.add', 'music', id, { title: req.body.title, artist: req.body.artist });
+    res.status(201).json(music.listTracks());
+  } catch (e) { next(e); }
+});
+admin.post('/music/:id', (req, res) => {
+  music.updateTrack(req.params.id, { active: req.body.active, venues: req.body.venues });
+  audit(req.user.id, 'music.update', 'music', Number(req.params.id), req.body);
+  res.json(music.listTracks());
+});
+admin.delete('/music/:id', (req, res) => {
+  music.deleteTrack(req.params.id);
+  audit(req.user.id, 'music.delete', 'music', Number(req.params.id), {});
+  res.json(music.listTracks());
+});
 
 // ---- email health: is Resend configured, and what happened to recent sends?
 admin.get('/mail', (_req, res) => res.json(mailStatus()));

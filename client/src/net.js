@@ -151,6 +151,39 @@ export function connect() {
     }
     useStore.setState((x) => ({ dmVersion: x.dmVersion + 1, lastDm: msg }));
   });
+  // Group messages, and edits / deletes / reactions on any message you can see.
+  socket.on('gm', (msg) => {
+    const s = st();
+    if (msg.from_id !== s.myId) {
+      const reading = s.phone === 'group' && String(s.phoneArg) === String(msg.group_id);
+      if (!reading) {
+        sfx('notify');
+        s.toast(`👥 @${msg.from}: ${(msg.body || '').slice(0, 60)}`);
+        systemNotify(`👥 @${msg.from}`, (msg.body || '').slice(0, 120));
+      }
+    }
+    useStore.setState((x) => ({ dmVersion: x.dmVersion + 1, lastGm: msg }));
+  });
+  socket.on('msg:update', (msg) => useStore.setState({ msgUpdate: { ...msg, at: Date.now() } }));
+  // Dating: matches, asks (date / partner / proposal) and their answers.
+  socket.on('love:match', (m) => { sfx('levelup'); useStore.setState({ loveMatch: m }); });
+  socket.on('love:ask', (a) => { sfx('notify'); useStore.setState({ loveAsk: { ...a, at: Date.now() } }); });
+  socket.on('love:answer', (a) => {
+    sfx(a.accept ? 'levelup' : 'notify');
+    st().toast(L(a.text[0], a.text[1]));
+    if (a.accept && a.kind === 'date' && a.spot) import('./ui/LoveModals.jsx').then((m) => m.goToDate(a.spot, a.by));
+    st().refreshMe().catch(() => {});
+  });
+  socket.on('love:date', ({ with: w }) => {
+    sfx('levelup');
+    st().toast(L(`💕 Deti na @${w} imeanza!`, `💕 Your date with @${w} has started!`));
+    st().refreshMe().catch(() => {});
+  });
+  socket.on('group:new', (g) => {
+    sfx('notify');
+    st().toast(L(`👥 Umeongezwa kwenye kikundi ${g.emoji} ${g.name}`, `👥 You were added to ${g.emoji} ${g.name}`));
+    useStore.setState((x) => ({ dmVersion: x.dmVersion + 1 }));
+  });
   socket.on('needs', ({ needs, mood, health }) => {
     const me = st().me;
     if (me) useStore.setState({ me: { ...me, needs, mood, ...(health != null ? { health } : {}) } });
@@ -359,9 +392,15 @@ if (typeof location !== 'undefined') {
   if (dm) setTimeout(() => useStore.setState({ dmPop: { from: dm, at: Date.now() } }), 1500);
 }
 
-export function sendDm(to, text) {
+export function sendDm(to, text, extra = {}) {
   return new Promise((resolve) => {
     if (!socket?.connected) return resolve({ error: L('Hakuna connection', 'No connection') });
-    socket.emit('dm', { to, text }, resolve);
+    socket.emit('dm', { to, text, ...extra }, resolve);
+  });
+}
+export function sendGroup(groupId, text, extra = {}) {
+  return new Promise((resolve) => {
+    if (!socket?.connected) return resolve({ error: L('Hakuna connection', 'No connection') });
+    socket.emit('gm', { groupId, text, ...extra }, resolve);
   });
 }

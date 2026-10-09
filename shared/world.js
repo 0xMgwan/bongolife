@@ -1627,3 +1627,51 @@ export const SHOP_ITEMS = {
   ],
 };
 export const SHOP = { stockCost: 0.55, markups: [1, 1.2, 1.5, 2], buyCooldownMs: 3000 };
+
+// ============================================================ dating (opt-in, 18+)
+export const LOVE = {
+  bioMax: 120,
+  decayPerDay: 2, // affection fades without dates or gifts
+  coupleAt: 40, // can ask "be my partner?"
+  proposeAt: 75, // can propose (needs a ring)
+  ringPrice: 5_000_000,
+  weddingPrice: 3_000_000,
+  dateCooldownMs: 30 * 60_000,
+  askTtlMs: 15 * 60_000,
+};
+// Where you can take a date. Both of you must be there to start it; the inviter pays.
+export const DATE_SPOTS = [
+  { id: 'dinner', placeId: 'serena', emoji: '🍷', name: ['Chakula cha jioni Serena', 'Dinner at the Serena'], cost: 180_000, affection: 12, effects: { hunger: 40, social: 20, fun: 15 } },
+  { id: 'sunset', placeId: 'coco', emoji: '🌅', name: ['Machweo Coco Beach', 'Sunset at Coco Beach'], cost: 20_000, affection: 8, effects: { fun: 20, social: 20 } },
+  { id: 'cinema', placeId: 'mall', emoji: '🎬', name: ['Sinema Mlimani City', 'Movie at Mlimani City'], cost: 50_000, affection: 9, effects: { fun: 30, social: 15 } },
+  { id: 'dhow', placeId: 'slipway', emoji: '⛵', name: ['Safari ya ngalawa Slipway', 'Dhow cruise from the Slipway'], cost: 120_000, affection: 11, effects: { fun: 30, social: 20 } },
+  { id: 'dance', placeId: 'club', emoji: '💃', name: ['Usiku wa kucheza 1245', 'Dancing at 1245'], cost: 80_000, affection: 9, effects: { fun: 35, social: 25, energy: -10 } },
+  { id: 'coffee', placeId: 'masakigrill', emoji: '☕', name: ['Kahawa Karambezi', 'Coffee at Karambezi'], cost: 25_000, affection: 6, effects: { social: 20, energy: 10 } },
+  { id: 'nyama', placeId: 'nyamachoma', emoji: '🍖', name: ['Nyama choma Ubungo', 'Nyama choma at Ubungo'], cost: 40_000, affection: 7, effects: { hunger: 45, social: 15 } },
+  { id: 'getaway', placeId: 'kendwa', emoji: '🏝️', name: ['Mapumziko Kendwa, Zanzibar', 'Kendwa getaway, Zanzibar'], cost: 600_000, affection: 20, effects: { fun: 45, social: 30, energy: 15 } },
+];
+export const dateSpotById = Object.fromEntries(DATE_SPOTS.map((d) => [d.id, d]));
+export const LOVE_GIFTS = [
+  { id: 'rose', emoji: '🌹', name: ['Waridi', 'A rose'], price: 20_000, affection: 4 },
+  { id: 'choc', emoji: '🍫', name: ['Chokoleti', 'Chocolates'], price: 35_000, affection: 6 },
+  { id: 'teddy', emoji: '🧸', name: ['Dubu la kuchezea', 'Teddy bear'], price: 60_000, affection: 9 },
+  { id: 'bouquet', emoji: '💐', name: ['Shada la maua', 'Bouquet'], price: 120_000, affection: 13 },
+  { id: 'perfume', emoji: '🌸', name: ['Manukato', 'Perfume'], price: 400_000, affection: 20 },
+  { id: 'watch', emoji: '⌚', name: ['Saa ya kifahari', 'Luxury watch'], price: 1_500_000, affection: 30 },
+];
+export const loveGiftById = Object.fromEntries(LOVE_GIFTS.map((g) => [g.id, g]));
+export const LOVE_STATUS = { match: ['Mmeendana', 'Matched'], couple: ['Wapenzi', 'Partners'], engaged: ['Wachumba', 'Engaged'], married: ['Wameoana', 'Married'] };
+
+// ============================================================ music (real tracks)
+// Venues that can play uploaded tracks (admin tags each track with where it plays).
+export const MUSIC_VENUES = [
+  { id: 'club', name: '1245 Club', style: 'Bongo Flava' },
+  { id: 'lounge', name: 'Elements', style: 'Amapiano' },
+  { id: 'bar', name: 'Bar', style: 'Bongo Flava' },
+  { id: 'studio', name: 'Bongo Flava Studio', style: 'Bongo Flava' },
+  { id: 'singeli', name: 'Mbagala Singeli', style: 'Singeli' },
+  { id: 'kendwa', name: 'Kendwa Rocks', style: 'Amapiano' },
+  { id: 'stonetown', name: 'Stone Town', style: 'Taarab' },
+  { id: 'forodhani', name: 'Forodhani', style: 'Taarab' },
+  { id: 'home', name: 'Home radio', style: 'Any' },
+];

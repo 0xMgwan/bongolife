@@ -5,12 +5,19 @@ import { local } from '../net.js';
 import { setVenueMusic, setAmbience } from '../audio.js';
 
 // Venues that play music, with how far it carries (world units).
+// Tanzanian sound: 1245 & bars play Bongo Flava, Mbagala plays Singeli, Stone Town plays Taarab.
 const VENUES = [
-  { id: 'club', style: 'amapiano', radius: 48 },
-  { id: 'lounge', style: 'chill', radius: 32 },
-  { id: 'bar', style: 'bongo', radius: 30 },
-  { id: 'studio', style: 'bongo', radius: 22 },
+  { id: 'club', style: 'bongoflava', radius: 48 },
+  { id: 'lounge', style: 'amapiano', radius: 32 },
+  { id: 'bar', style: 'bongoflava', radius: 30 },
+  { id: 'studio', style: 'bongoflava', radius: 22 },
+  { id: 'singeli', style: 'singeli', radius: 50 },
+  { id: 'stonetown', style: 'taarab', radius: 26 },
+  { id: 'forodhani', style: 'taarab', radius: 24 },
+  { id: 'kendwa', style: 'amapiano', radius: 40 },
 ];
+// Places whose interior plays a different style than its scene's default.
+const PLACE_MUSIC = { club: 'bongoflava', lounge: 'amapiano', singeli: 'singeli', kendwa: 'amapiano', stonetown: 'taarab', forodhani: 'taarab', 'zn-hotel': 'taarab', bar: 'bongoflava', studio: 'bongoflava' };
 const DANCING = new Set(['cheza', 'vip', 'mzunguko', 'sundowner']);
 
 function rectDist(r, x, z) {
@@ -26,12 +33,12 @@ function placeDist(p, x, z) {
 
 /** Maps the player's surroundings to music + ambience, a few times per second. */
 const SCENE_MUSIC = {
-  club: ['amapiano', 1], lounge: ['chill', 1], bar: ['bongo', 0.45], studio: ['bongo', 1], cinema: ['chill', 0.25],
-  concert: ['amapiano', 1], grill: ['bongo', 0.55], rooftop: ['amapiano', 0.9], ngoma: ['bongo', 0.7], waterpark: ['bongo', 0.4],
+  club: ['bongoflava', 1], lounge: ['chill', 1], bar: ['bongoflava', 0.5], studio: ['bongoflava', 1], cinema: ['chill', 0.25],
+  concert: ['bongoflava', 1], grill: ['bongoflava', 0.55], rooftop: ['amapiano', 0.9], ngoma: ['bongo', 0.7], waterpark: ['bongo', 0.4],
   dhow: ['chill', 0.5], salon: ['bongo', 0.4], spa: ['chill', 0.35],
 };
 
-export function AudioDriver({ me, scene, party }) {
+export function AudioDriver({ me, scene, placeId, party }) {
   const acc = useRef(0);
   const vehicle = me.vehicles?.find((v) => v.id === me.activeVehicle);
   const speed = vehicle ? vehicleById[vehicle.model]?.speed || 1 : 0;
@@ -43,8 +50,9 @@ export function AudioDriver({ me, scene, party }) {
     const { x, z } = local;
     if (scene) {
       const radio = scene === 'home' && busy?.id === 'burudika';
-      const [style, level] = party ? ['amapiano', 1] : radio ? ['bongo', 0.8] : SCENE_MUSIC[scene] || [null, 0];
-      setVenueMusic(style, level);
+      let [style, level] = party ? ['amapiano', 1] : radio ? ['bongoflava', 0.8] : SCENE_MUSIC[scene] || [null, 0];
+      if (placeId && PLACE_MUSIC[placeId] && style) style = PLACE_MUSIC[placeId];
+      setVenueMusic(style, level, placeId || scene);
       setAmbience({ city: 0, waves: scene === 'beach' ? 1 : 0, engine: 0 });
       return;
     }
@@ -55,10 +63,10 @@ export function AudioDriver({ me, scene, party }) {
       const d = placeDist(placeById[v.id], x, z);
       let level = Math.max(0, 1 - d / v.radius) ** 1.6;
       if (busy && busy.placeId === v.id) level = DANCING.has(busy.id) ? 1 : Math.max(level, 0.75);
-      if (level > best.level) best = { style: v.style, level };
+      if (level > best.level) best = { style: v.style, level, venue: v.id };
     }
-    if (busy?.placeId === 'studio' && busy.id === 'rekodi') best = { style: 'bongo', level: 1 };
-    setVenueMusic(best.style, best.level);
+    if (busy?.placeId === 'studio' && busy.id === 'rekodi') best = { style: 'bongoflava', level: 1, venue: 'studio' };
+    setVenueMusic(best.style, best.level, best.venue);
 
     const water = Math.min(...WATER.map((r) => rectDist(r, x, z)), ...BEACHES.map((r) => rectDist(r, x, z) + 4));
     const waves = Math.max(0, 1 - water / 40);

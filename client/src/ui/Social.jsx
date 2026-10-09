@@ -13,6 +13,7 @@ import { replyHangout } from '../net.js';
 import { loc } from '../i18n.js';
 import { ConfirmModal } from './Confirm.jsx';
 import { KnockModals, TogetherBar } from './Neighbours.jsx';
+import { LoveModals } from './LoveModals.jsx';
 
 /** Incoming "come to my place" invite. */
 function InviteModal() {
@@ -201,6 +202,7 @@ export function SocialModals() {
       <CasinoModal />
       <ConfirmModal />
       <KnockModals />
+      <LoveModals />
       <TogetherBar />
       <AccidentModal />
     </>

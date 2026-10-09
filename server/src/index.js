@@ -16,6 +16,7 @@ import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef } from 
 import { settleElection, currentMayor } from './election.js';
 import { isBlocked } from './crime.js';
 import { addInvite, canVisit } from './social.js';
+import * as chat from './chat.js';
 
 const PORT = Number(process.env.PORT) || 8787;
 const app = express();
@@ -149,22 +150,20 @@ io.on('connection', (socket) => {
     saveFields(uid, { needs: { ...u.needs, social: Math.min(100, (u.needs.social ?? 50) + 2) } });
   });
 
-  socket.on('dm', ({ to, text } = {}, ack) => {
-    text = cleanText(text);
-    const target = typeof to === 'string' && db.prepare('SELECT id, username FROM users WHERE username = ?').get(to.replace(/^@/, ''));
-    if (!text || !target || target.id === uid) return ack?.({ error: 'Ujumbe haukutumwa' });
-    if (isBlocked(uid, target.id)) return ack?.({ error: 'blocked' });
+  // Private messages (DMs and groups): replies, forwards, edits, reactions live in chat.js.
+  const chatSend = (payload, ack) => {
     const t = now();
-    const muted = getUser(uid).mutedUntil;
-    if (muted && muted > t) return ack?.({ error: 'muted' });
     if (t - (p.lastDm || 0) < 400) return ack?.({ error: 'Pole pole' });
     p.lastDm = t;
-    const info = insertMsg.run(uid, target.id, text, t);
-    const msg = { id: info.lastInsertRowid, from_id: uid, to_id: target.id, from: p.username, fromName: p.name, body: text, created_at: t };
-    emitTo(target.id, 'dm', msg);
-    for (const sid of p.sockets) if (sid !== socket.id) io.to(sid).emit('dm', msg);
-    ack?.({ ok: true, msg });
-  });
+    try {
+      const msg = chat.sendMessage(uid, payload || {});
+      ack?.({ ok: true, msg: { ...msg, fromName: p.name } });
+    } catch (e) {
+      ack?.({ error: e.code === 'muted' ? 'muted' : e.status === 403 ? 'blocked' : e.message, errorText: [e.message, e.en || e.message] });
+    }
+  };
+  socket.on('dm', ({ to, text, replyTo, fwd } = {}, ack) => chatSend({ to, text, replyTo, fwd }, ack));
+  socket.on('gm', ({ groupId, text, replyTo } = {}, ack) => chatSend({ groupId, text, replyTo }, ack));
 
   // Walk into / out of a venue. Must be standing near it.
   socket.on('inside', (placeId) => {

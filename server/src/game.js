@@ -13,6 +13,7 @@ export function liveEvent() {
 }
 import { online, positionOf, broadcast, emitTo } from './presence.js';
 import { bumpStats, storySummary } from './story.js';
+import { partnersOf } from './love.js';
 import { plotValue, truckPending, collectTrucks } from './invest.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -108,6 +109,7 @@ export function playerState(userId) {
     unread: q.unread.get(userId).n,
     netWorth: netWorth(userId),
     story: storySummary(u),
+    partners: partnersOf(userId),
     blocked: db.prepare('SELECT u.username FROM blocks b JOIN users u ON u.id = b.blocked_id WHERE b.user_id = ?').all(userId).map((r) => r.username),
   };
 }

@@ -5,7 +5,7 @@ import { useStore } from '../store.js';
 import { input, sendChat, sendEmote, setInside, remotes, local, view, jump } from '../net.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
 import { setZoom, getZoom } from '../three/GameScene.jsx';
-import { setAudioSettings, sfx } from '../audio.js';
+import { setAudioSettings, sfx, onNowPlaying } from '../audio.js';
 import { useAudioSettings } from './useAudioSettings.js';
 import { activeScene } from '../scene.js';
 import { goToPlace, skipRide, skipTrip, enterPlace, stillAt } from '../nav.js';
@@ -678,6 +678,14 @@ function BottomNav({ me }) {
 
 /** Town chips: jump the map to ads, plots, the sea or people — or walk again. */
 /** Map view: jump between Dar es Salaam, Zanzibar and Arusha (like Lagos / PH / Abuja). */
+/** Real track playing at this venue: a small "Now playing" pill. */
+function NowPlaying() {
+  const [t, setT] = useState(null);
+  useEffect(() => onNowPlaying(setT), []);
+  if (!t) return null;
+  return <div className="now-playing">🎵 <b>{t.title}</b> · {t.artist}</div>;
+}
+
 /** Lagos-style quest card: your ambition's current goal, street news, or a nudge to pick a dream. */
 function QuestCard({ me }) {
   const s = me.story;
@@ -902,6 +910,7 @@ export function HUD() {
       <Busy me={me} />
       {scene && scene.key === 'flight' && <FlightBar me={me} />}
       {!shop && !riding && <Dock me={me} scene={scene} />}
+      {!shop && <NowPlaying />}
       {town && !riding && <HeadingBanner me={me} />}
       {!shop && (
         <div className="side">

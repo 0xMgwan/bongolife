@@ -378,6 +378,7 @@ function PlayerSheet({ username, onClose }) {
       </div>
       <div className="row" style={{ gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
         <span className="pill">💰 {fmtShort(p.netWorth)}</span>
+        {p.love && <span className="pill love-pill">{p.love.status === 'married' ? '💍' : p.love.status === 'engaged' ? '💎' : '❤️'} {L(`${p.love.status === 'married' ? 'Ameoa/olewa na' : p.love.status === 'engaged' ? 'Mchumba wa' : 'Mpenzi wa'} @${p.love.with}`, `${p.love.status === 'married' ? 'Married to' : p.love.status === 'engaged' ? 'Engaged to' : 'Partners with'} @${p.love.with}`)}</span>}
         <span className="pill">⭐ {p.fame}</span>
         <span className="pill">🎓 {p.elimu}</span>
         {trait && <span className="pill">{trait.emoji} {loc(trait)}</span>}

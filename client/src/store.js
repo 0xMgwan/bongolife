@@ -69,6 +69,10 @@ export const useStore = create((set, get) => ({
   cleanScreen: (() => { try { return localStorage.getItem('bl_clean') === '1'; } catch { return false; } })(),
   quality: (() => { try { return localStorage.getItem('bl_q') || 'auto'; } catch { return 'auto'; } })(),
   dmVersion: 0,
+  lastGm: null, // newest group message
+  loveMatch: null, // { with, rid } — it's a match!
+  loveAsk: null, // incoming date / partner / proposal ask
+  msgUpdate: null, // an edited / deleted / reacted message
   publicFeed: [],
 
   set: (patch) => set(patch),

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { placeById, fmtShort, fmtTsh, NEEDS, findJob } from '@shared/world.js';
+import { placeById, fmtShort, fmtTsh, NEEDS, findJob, DATE_SPOTS } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { local, remotes, sendChat, setInside } from '../net.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
@@ -48,6 +48,14 @@ export function PlaceDock({ me, placeId, onHome, onMap }) {
   };
   const isIn = useStore.getState().inside === placeId;
   const canEnter = !isIn && near;
+  // A date you can start right here: a date spot, and your match/partner is here too.
+  const dates = near ? DATE_SPOTS.filter((d) => d.placeId === placeId).flatMap((d) => (me.partners || [])
+    .filter((pt) => [...remotes.values()].some((r) => r.username === pt.username && (r.inside === placeId || Math.hypot(r.tx - p.pos[0], r.tz - p.pos[1]) < Math.max(...p.size) / 2 + 14)))
+    .map((pt) => ({ spot: d, pt }))) : [];
+  const startDate = async ({ spot, pt }) => {
+    const r = await run(`/love/${pt.rid}/date`, { method: 'POST', body: { spot: spot.id } });
+    if (r) { sfx('levelup'); useStore.getState().toast(L(`💕 Deti na @${pt.username} — mapenzi ${r.affection}/100`, `💕 Date with @${pt.username} — affection ${r.affection}/100`)); }
+  };
   const busyLabel = me.busy && me.busy.placeId === placeId && me.busy.endsAt > Date.now() ? `${me.busy.emoji} ${loc(me.busy, 'label')}` : null;
   if (min) {
     return (
@@ -77,7 +85,7 @@ export function PlaceDock({ me, placeId, onHome, onMap }) {
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder={L(`Sema kitu kwa watu ${here} walioko hapa…`, `Say something to the ${here} players here…`)} maxLength={200} enterKeyHint="send" />
         <button className="pd-send" disabled={!text.trim()} aria-label={L('Tuma', 'Send')}>➤</button>
       </form>
-      {(cats.length > 0 || canEnter) && (
+      {(cats.length > 0 || canEnter || dates.length > 0) && (
         <div className="pd-chips">
           {cats.length > 0 && <button className={`pd-up ${openCat ? 'on' : ''}`} onClick={() => setOpen(openCat ? false : cats[0].key)} aria-label={L('Zaidi', 'More')}>{openCat ? '⌄' : '˄'}</button>}
           {cats.map((c) => (
@@ -85,6 +93,7 @@ export function PlaceDock({ me, placeId, onHome, onMap }) {
               <span>{c.emoji}</span>{c.name}
             </button>
           ))}
+          {dates.map((d) => <button key={`${d.spot.id}-${d.pt.rid}`} className="sel" onClick={() => startDate(d)}><span>💘</span>{L(`Deti na @${d.pt.username}`, `Date with @${d.pt.username}`)}</button>)}
           {canEnter && <button onClick={() => setInside(placeId)}><span>🚪</span>{L('Ingia ndani', 'Go inside')}</button>}
         </div>
       )}

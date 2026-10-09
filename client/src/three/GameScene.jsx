@@ -296,7 +296,7 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
           <>
             <LocalPlayer me={me} frozen={!!sceneCfg || home} />
             {!sceneCfg && !home && <ParkedCar me={me} />}
-            <AudioDriver me={me} scene={home ? 'home' : sceneCfg ? scene.key : null} party={!!party} />
+            <AudioDriver me={me} scene={home ? 'home' : sceneCfg ? scene.key : null} placeId={!home && sceneCfg ? scene.placeId : null} party={!!party} />
             {sceneCfg && <ActivityScene scene={scene.key} placeId={scene.placeId} me={me} myBusy={scene.busy} />}
             <RemotePlayers onPlayer={onPlayer} />
           </>
