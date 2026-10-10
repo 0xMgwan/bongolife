@@ -6,7 +6,7 @@ import {
   isWater, onRoad, buildingById, fmtShort, randomAppearance, AD_ROTATE_SECONDS, CITIES,
   cityAt,
 } from '@shared/world.js';
-import { mat, geo, emojiTexture, labelTexture, windowTexture, adTexture, mapLabelTexture } from './textures.js';
+import { mat, geo, emojiTexture, labelTexture, bubbleTexture, windowTexture, adTexture, mapLabelTexture } from './textures.js';
 import { Vehicle, Boat, Plane, Car } from './Vehicle.jsx';
 import { Avatar } from './Avatar.jsx';
 import { houseMat, towerGlowMat, fluffyCrown, Streets, RoofTanks, LedScreens, StreetNames, shopGlassMat, neonMat } from './CityDecor.jsx';
@@ -829,23 +829,30 @@ const Billboards = memo(function Billboards({ ads, onBillboard, big }) {
 });
 
 // -------------------------------------------------------------- traffic
+// Dar traffic is mostly bodaboda, bajaji and daladala, with private cars in between.
 const TRAFFIC_KINDS = [
-  ['bajaji', '#facc15'], ['bus', '#f8fafc'], ['moto', '#dc2626'], ['car', '#e5e7eb'], ['bajaji', '#16a34a'],
-  ['suv', '#111827'], ['bus', '#fde047'], ['car', '#1d4ed8'], ['moto', '#111827'], ['van', '#f8fafc'],
-  ['car', '#7f1d1d'], ['bajaji', '#2563eb'], ['bus', '#e2e8f0'], ['moto', '#16a34a'], ['car', '#e5e7eb'], ['suv', '#f8fafc'],
+  ['moto', '#dc2626'], ['bus', '#fde047'], ['bajaji', '#facc15'], ['car', '#e5e7eb'], ['moto', '#111827'],
+  ['bajaji', '#16a34a'], ['suv', '#111827'], ['moto', '#2563eb'], ['bus', '#f8fafc'], ['car', '#1d4ed8'],
+  ['moto', '#16a34a'], ['van', '#f8fafc'], ['bajaji', '#2563eb'], ['car', '#7f1d1d'], ['moto', '#f97316'],
+  ['bus', '#fde047'], ['suv', '#f8fafc'], ['moto', '#7c3aed'], ['car', '#94a3b8'], ['bajaji', '#dc2626'],
 ];
+const roadCity = ([x1, z1, x2, z2]) => cityAt((x1 + x2) / 2, (z1 + z2) / 2)?.id || 'dar';
 
-function Traffic() {
+/** Vehicles going up and down the roads of the city you're in. */
+function Traffic({ cityId = 'dar', lowEnd = false }) {
   const refs = useRef([]);
   const state = useMemo(() => {
-    const r = rng(7);
-    const n = Math.max(TRAFFIC_KINDS.length, Math.round(ROADS.length * 1.3));
+    const r = rng(7 + cityId.length);
+    const roads = ROADS.filter((rd) => roadCity(rd) === cityId);
+    const n = Math.round(roads.length * (lowEnd ? 2.5 : cityId === 'dar' ? 4.5 : 3));
     return Array.from({ length: n }, (_, i) => {
       const [kind, color] = TRAFFIC_KINDS[i % TRAFFIC_KINDS.length];
-      const road = ROADS[i % ROADS.length];
-      return { kind, color, road, t: r(), dir: r() < 0.5 ? 1 : -1, speed: kind === 'bus' ? 7 : kind === 'moto' ? 13 : 10 };
+      const road = roads[i % roads.length];
+      const base = kind === 'bus' ? 7 : kind === 'moto' ? 13 : kind === 'bajaji' ? 9 : 10;
+      return { kind, color, road, t: r(), dir: r() < 0.5 ? 1 : -1, speed: base * (0.75 + r() * 0.5) };
     });
-  }, []);
+  }, [cityId, lowEnd]);
+  useEffect(() => { trafficCars.length = 0; }, [state]);
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.1);
     state.forEach((s, i) => {
@@ -857,7 +864,8 @@ function Traffic() {
       if (s.t > 1) { s.t = 1; s.dir = -1; }
       if (s.t < 0) { s.t = 0; s.dir = 1; }
       const horiz = z1 === z2;
-      const lane = s.dir * 1.6;
+      // Bodas weave closer to the kerb than cars do.
+      const lane = s.dir * (s.kind === 'moto' ? 2.3 : 1.6);
       const x = x1 + (x2 - x1) * s.t + (horiz ? 0 : lane);
       const z = z1 + (z2 - z1) * s.t + (horiz ? -lane : 0);
       g.position.set(x, 0.1, z);
@@ -871,7 +879,7 @@ function Traffic() {
   });
   useEffect(() => () => { trafficCars.length = 0; }, []);
   return state.map((s, i) => (
-    <group key={i} ref={(el) => (refs.current[i] = el)}>
+    <group key={`${cityId}-${i}`} ref={(el) => (refs.current[i] = el)}>
       <Vehicle kind={s.kind} color={s.color} body={s.kind === 'car' ? (i % 3 === 0 ? 'sedan' : 'hatch') : s.kind === 'suv' && i % 2 ? 'suv-big' : undefined} />
     </group>
   ));
@@ -997,6 +1005,189 @@ function Walkers({ count = 10, cityId = 'dar' }) {
   ));
 }
 
+// ------------------------------------------------------------ street life
+// Roadside Dar: mama ntilie stalls, machinga, fruit carts, kahawa sellers, people waiting for the
+// daladala, boda stands, friends chatting and people asking for help. Only the spots near you are drawn.
+const STREET_KINDS = [
+  ['mamantilie', 22], ['machinga', 14], ['matunda', 13], ['kahawa', 10], ['omba', 9], ['stendi', 10], ['stori', 12], ['boda', 10],
+];
+const STREET_LINES = {
+  mamantilie: [['Wali maharage 2,000! 🍛', 'Rice & beans, 2,000! 🍛'], ['Chipsi mayai moto moto! 🍳', 'Hot chipsi mayai! 🍳'], ['Karibu ule, mwanangu 🍲', 'Come and eat, my child 🍲']],
+  machinga: [['Viatu bei poa! 👟', 'Shoes, good price! 👟'], ['Mia tano mia tano! 🧢', 'Five hundred each! 🧢'], ['Chagua chagua! 👕', 'Pick, pick! 👕']],
+  matunda: [['Embe, nanasi, tikiti! 🍍', 'Mango, pineapple, melon! 🍍'], ['Machungwa matamu! 🍊', 'Sweet oranges! 🍊']],
+  kahawa: [['Kahawa chungu, kashata! ☕', 'Bitter coffee, kashata! ☕'], ['Kikombe mia mbili ☕', 'Two hundred a cup ☕']],
+  omba: [['Saidia chochote, Mungu akubariki 🙏🏾', 'Anything helps, God bless 🙏🏾'], ['Asante kwa moyo wako 🙏🏾', 'Thank you for your kindness 🙏🏾']],
+  stendi: [['Posta! Posta! Kariakoo! 🚌', 'Posta! Posta! Kariakoo! 🚌'], ['Gari imejaa, subiri inayofuata 😅', "Bus is full, wait for the next 😅"]],
+  stori: [['Mambo vipi? Poa kichizi! 😂', "What's up? All good! 😂"], ['Simba au Yanga leo? ⚽', 'Simba or Yanga today? ⚽'], ['Umesikia ngoma mpya? 🎶', 'Heard the new song? 🎶']],
+  boda: [['Boda boda? Twende! 🏍️', 'Bodaboda? Let\'s go! 🏍️'], ['Buku tu mpaka Sinza 🏍️', 'Just a thousand to Sinza 🏍️']],
+};
+const look = (body, outfits, extra = {}) => ({ ...randomAppearance(), body, outfit: outfits[Math.floor(Math.random() * outfits.length)], ...extra });
+const SIT = { current: { mode: 'sit' } };
+const EAT = { current: { mode: 'eat' } };
+const COOK = { current: { mode: 'type' } };
+const STAND = { current: { moving: false } };
+
+function streetSpots(cityId) {
+  const r = rng(99 + cityId.length * 13);
+  const total = STREET_KINDS.reduce((n, [, w]) => n + w, 0);
+  const pick = () => { let x = r() * total; for (const [k, w] of STREET_KINDS) if ((x -= w) < 0) return k; return 'stori'; };
+  const out = [];
+  for (const [x1, z1, x2, z2, w] of ROADS.filter((rd) => roadCity(rd) === cityId)) {
+    const horiz = z1 === z2;
+    const len = Math.hypot(x2 - x1, z2 - z1);
+    for (let d = 8; d < len - 8; d += 11) {
+      if (r() > 0.55) continue;
+      const side = r() < 0.5 ? -1 : 1;
+      const off = w / 2 + 2.6;
+      const t = d / len;
+      const x = x1 + (x2 - x1) * t + (horiz ? 0 : side * off);
+      const z = z1 + (z2 - z1) * t + (horiz ? side * off : 0);
+      if (isReserved(x, z, 1) || isWater(x, z) || onRoad(x, z, 0.5)) continue;
+      // Face the road.
+      const rot = horiz ? (side > 0 ? Math.PI : 0) : -side * Math.PI / 2;
+      out.push({ id: out.length, kind: pick(), x, z, rot, seed: r() });
+    }
+  }
+  return out;
+}
+
+function StreetSpot({ spot, talking, onTap }) {
+  const { kind } = spot;
+  const people = useMemo(() => {
+    const W = ['kitenge', 'kanga', 'sketi-kitenge', 'buibui', 'maxi'];
+    const M = ['shati', 'tshirt', 'kikoi', 'shati-check', 'jezi-simba', 'jezi-yanga', 'polo'];
+    switch (kind) {
+      case 'mamantilie': return [look('woman', ['kitenge', 'kanga', 'sketi-kitenge']), look(spot.seed < 0.5 ? 'man' : 'woman', spot.seed < 0.5 ? M : W)];
+      case 'kahawa': return [look('man', ['kanzu'], { hair: 'kofia' }), look('man', M)];
+      case 'omba': return [look(spot.seed < 0.5 ? 'man' : 'woman', spot.seed < 0.5 ? ['kikoi', 'tshirt'] : ['kanga'])];
+      case 'stendi': return [look('man', M), look('woman', W), look('man', ['shati', 'suti'])];
+      case 'stori': return [look('man', M), look('man', M), look('woman', W)];
+      case 'boda': return [look('man', ['reflekta']), look('man', ['reflekta'])];
+      default: return [look(spot.seed < 0.6 ? 'man' : 'woman', spot.seed < 0.6 ? M : W)];
+    }
+  }, [kind, spot.seed]);
+  const line = useMemo(() => { const ls = STREET_LINES[kind]; return ls[Math.floor(spot.seed * ls.length)]; }, [kind, spot.seed]);
+  const bubble = useMemo(() => (talking ? bubbleTexture(L(line[0], line[1])) : null), [talking, line]);
+  const tap = (e) => { e.stopPropagation(); onTap(spot.id); };
+  const P = (i, pos, rot = 0, motion = STAND) => (
+    <group key={i} position={pos} rotation-y={rot}><Avatar appearance={people[i]} motion={motion} /></group>
+  );
+  let body = null;
+  switch (kind) {
+    case 'mamantilie':
+      body = (<>
+        <Umbrella x={-1.6} z={-0.4} c={spot.seed < 0.5 ? '#f97316' : '#16a34a'} />
+        <Box w={2.2} h={0.85} d={0.9} color="#92400e" z={0.2} />
+        <mesh geometry={geo('cyl', 0.32, 0.28, 0.4, 10)} material={mat('#9ca3af')} position={[-0.5, 1.05, 0.2]} />
+        <mesh geometry={geo('cyl', 0.28, 0.24, 0.35, 10)} material={mat('#6b7280')} position={[0.4, 1.02, 0.2]} />
+        <mesh geometry={geo('cyl', 0.22, 0.22, 0.1, 10)} material={mat('#fde68a')} position={[0.4, 1.22, 0.2]} />
+        <Box w={2} h={0.45} d={0.4} color="#a16207" z={1.7} />
+        {P(0, [0, 0, -0.6], 0, COOK)}
+        {P(1, [0.3, 0, 1.55], Math.PI, EAT)}
+      </>);
+      break;
+    case 'machinga':
+      body = (<>
+        <Box w={2.6} h={0.04} d={1.5} color={spot.seed < 0.5 ? '#1d4ed8' : '#b91c1c'} z={0.6} />
+        {[-0.9, -0.3, 0.3, 0.9].map((x, i) => <Box key={x} w={0.4} h={0.18} d={0.55} color={['#f8fafc', '#111827', '#f59e0b', '#16a34a'][i]} x={x} y={0.04} z={0.5} />)}
+        {[-0.6, 0, 0.6].map((x, i) => <Box key={x} w={0.45} h={0.08} d={0.5} color={['#ec4899', '#38bdf8', '#facc15'][i]} x={x} y={0.04} z={1.05} />)}
+        {P(0, [0, 0, -0.5])}
+      </>);
+      break;
+    case 'matunda':
+      body = (<>
+        <Box w={1.8} h={0.25} d={1.1} color="#78350f" y={0.75} z={0.4} />
+        <mesh geometry={geo('cyl', 0.35, 0.35, 0.12, 12)} material={mat('#111827')} rotation-z={Math.PI / 2} position={[0.95, 0.35, 0.4]} />
+        <mesh geometry={geo('cyl', 0.35, 0.35, 0.12, 12)} material={mat('#111827')} rotation-z={Math.PI / 2} position={[-0.95, 0.35, 0.4]} />
+        {Array.from({ length: 12 }, (_, i) => (
+          <mesh key={i} geometry={geo('sphere', 0.17, 8, 6)} material={mat(['#f97316', '#facc15', '#65a30d', '#ef4444'][i % 4])} position={[-0.65 + (i % 4) * 0.43, 1.12 + Math.floor(i / 8) * 0.18, 0.1 + Math.floor((i % 8) / 4) * 0.5]} />
+        ))}
+        {P(0, [0, 0, -0.7])}
+      </>);
+      break;
+    case 'kahawa':
+      body = (<>
+        <mesh geometry={geo('cyl', 0.18, 0.28, 0.9, 10)} material={mat('#b45309')} position={[0.6, 0.45, 0.3]} />
+        <mesh geometry={geo('cone', 0.18, 0.3, 10)} material={mat('#92400e')} position={[0.6, 1.05, 0.3]} />
+        <mesh geometry={geo('cyl', 0.5, 0.5, 0.1, 6)} material={mat('#1f2937')} position={[0.6, 0.05, 0.3]} />
+        <Box w={0.5} h={0.4} d={0.5} color="#a16207" x={-0.6} z={1.2} />
+        {P(0, [0, 0, -0.2])}
+        {P(1, [-0.6, 0, 1.35], Math.PI, SIT)}
+      </>);
+      break;
+    case 'omba':
+      body = (<>
+        <Box w={1.4} h={0.03} d={1} color="#a8a29e" z={0} />
+        <mesh geometry={geo('cyl', 0.22, 0.15, 0.14, 10)} material={mat('#9ca3af')} position={[0, 0.07, 0.75]} />
+        {P(0, [0, 0, 0], 0, SIT)}
+      </>);
+      break;
+    case 'stendi':
+      body = (<>
+        <Box w={0.12} h={2.6} d={0.12} color="#374151" x={-1.6} z={-0.6} />
+        <Box w={0.12} h={2.6} d={0.12} color="#374151" x={1.6} z={-0.6} />
+        <Box w={3.6} h={0.12} d={1.6} color="#facc15" y={2.6} z={-0.1} />
+        <Box w={3} h={0.35} d={0.4} color="#a8a29e" z={-0.6} />
+        {P(0, [-1, 0, -0.55], 0, SIT)}
+        {P(1, [0.2, 0, 0.4])}
+        {P(2, [1.2, 0, 0.6], -0.4)}
+      </>);
+      break;
+    case 'stori':
+      body = (<>
+        {P(0, [-0.7, 0, 0], Math.PI / 2)}
+        {P(1, [0.7, 0, 0], -Math.PI / 2)}
+        {P(2, [0, 0, 0.75], Math.PI)}
+      </>);
+      break;
+    case 'boda':
+      body = (<>
+        <group position={[-1.2, 0, 0.6]} rotation-y={0.3}><Vehicle kind="moto" color="#dc2626" /></group>
+        <group position={[0.4, 0, 0.7]} rotation-y={0.2}><Vehicle kind="moto" color="#111827" /></group>
+        {P(0, [-0.4, 0, -0.6])}
+        {P(1, [1.4, 0, -0.3], -0.5)}
+      </>);
+      break;
+  }
+  return (
+    <group position={[spot.x, 0.1, spot.z]} rotation-y={spot.rot} onClick={tap}>
+      {body}
+      {bubble && (
+        <sprite position={[0, 3.4, 0]} scale={[1.3 * bubble.aspect, 1.3, 1]} renderOrder={7}>
+          <spriteMaterial map={bubble.texture} depthWrite={false} depthTest={false} />
+        </sprite>
+      )}
+    </group>
+  );
+}
+
+function StreetLife({ cityId = 'dar', max = 14 }) {
+  const spots = useMemo(() => streetSpots(cityId), [cityId]);
+  const [near, setNear] = useState([]);
+  const [talking, setTalking] = useState(null);
+  useEffect(() => {
+    const pickNear = () => {
+      const ids = spots
+        .map((s) => [s, Math.hypot(s.x - local.x, s.z - local.z)])
+        .filter(([, d]) => d < 80)
+        .sort((a, b) => a[1] - b[1])
+        .slice(0, max)
+        .map(([s]) => s.id)
+        .sort((a, b) => a - b);
+      setNear((prev) => (prev.join() === ids.join() ? prev : ids));
+    };
+    pickNear();
+    const t = setInterval(pickNear, 1500);
+    return () => clearInterval(t);
+  }, [spots, max]);
+  useEffect(() => {
+    if (talking == null) return;
+    const t = setTimeout(() => setTalking(null), 4000);
+    return () => clearTimeout(t);
+  }, [talking]);
+  return near.map((id) => <StreetSpot key={`${cityId}-${id}`} spot={spots[id]} talking={talking === id} onTap={setTalking} />);
+}
+
 function Districts() {
   return DISTRICTS.map((d) => <FlatText key={d.id} text={d.name.toUpperCase()} pos={[d.pos[0], d.pos[1] + 12]} size={3.2} color="rgba(55,65,81,.35)" />);
 }
@@ -1015,7 +1206,8 @@ export function City({ world, ads, onPlace, onPlot, onBillboard, onGround, myUse
       <Places onPlace={onPlace} businesses={world?.businesses} showLabels={showLabels} mapMode={mapMode} />
       <Plots plots={world?.plots} onPlot={onPlot} myUsername={myUsername} />
       <Billboards ads={ads} onBillboard={onBillboard} big={mapMode} />
-      <Traffic />
+      <Traffic cityId={cityId} lowEnd={lowEnd} />
+      {!mapMode && <StreetLife cityId={cityId} max={lowEnd ? 7 : 14} />}
       {walkers > 0 && <Walkers key={cityId} count={walkers} cityId={cityId} />}
     </group>
   );

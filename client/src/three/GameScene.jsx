@@ -290,7 +290,7 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
           onBillboard={onBillboard}
           onGround={onGround}
           myUsername={me?.username}
-          walkers={lowEnd ? 8 : 18}
+          walkers={lowEnd ? 12 : 28}
           showLabels={mode === 'play'}
           mapMode={mode === 'map'}
           lowEnd={lowEnd}

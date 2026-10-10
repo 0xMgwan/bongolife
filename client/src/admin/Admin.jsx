@@ -33,7 +33,7 @@ export async function act(path, { method = 'POST', body, confirm: ask, ok } = {}
   if (ask && !window.confirm(ask)) return null;
   try {
     const r = await api(`/admin${path}`, { method, body: body ?? {} });
-    useStore.getState().toast(ok || '✅ Done');
+    if (ok !== false) useStore.getState().toast(ok || '✅ Done');
     return r;
   } catch (e) {
     useStore.getState().toast(e.message, 'err');
@@ -259,15 +259,37 @@ function Live() {
 
 /** Email health: is Resend set up, and what happened to the last sends? */
 function MailHealth() {
+  const toast = (t, k) => useStore.getState().toast(t, k);
   const { data, reload } = useApi('/admin/mail');
   const [to, setTo] = useState('');
   const [busy, setBusy] = useState(false);
+  const [u, setU] = useState({ title: '', titleEn: '', body: '', bodyEn: '', cta: '', ctaUrl: '' });
+  const running = data?.campaign?.running;
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(reload, 3000);
+    return () => clearInterval(t);
+  }, [running]);
   if (!data) return null;
+  const status = !data.enabled ? ['OFF — no emails are sent', '#dc2626']
+    : data.lastOk === false ? [`Last send FAILED (${data.transport})`, '#dc2626']
+    : data.lastOk ? [`Working (${data.transport})`, '#16a34a']
+    : [`Configured (${data.transports.join(' → ')}) — send a test to confirm`, '#b45309'];
+  const sendUpdate = async (test) => {
+    if (!test && !confirm(`Email "${u.title}" to every player with updates switched on?`)) return;
+    setBusy(true);
+    const r = await act('/mail/update', { body: { ...u, test }, ok: false });
+    setBusy(false);
+    if (r) {
+      toast(test ? (r.ok ? '✉️ Preview sent to your email' : '❌ Preview failed — see Recent sends') : `📣 Sending to ${r.queued} players…`, r.ok === false ? 'err' : undefined);
+      reload();
+    }
+  };
   return (
     <div className="panel">
-      <h2>✉️ Email (welcome + password resets)</h2>
+      <h2>✉️ Email (welcome, password resets, updates)</h2>
       <div className="small" style={{ marginBottom: 6 }}>
-        Status: <b style={{ color: data.enabled && !data.warnings.length ? '#16a34a' : '#dc2626' }}>{data.enabled ? (data.warnings.length ? 'Sending, with problems' : `Working (${data.transport})`) : 'OFF — no emails are sent'}</b>
+        Status: <b style={{ color: status[1] }}>{status[0]}</b>
         <span className="muted"> · From: {data.from}</span>
       </div>
       {data.warnings.map((w) => <div key={w} className="small" style={{ background: '#fef2f2', color: '#991b1b', borderRadius: 8, padding: '8px 10px', marginBottom: 6 }}>⚠️ {w}</div>)}
@@ -275,16 +297,37 @@ function MailHealth() {
         <input className="in" style={{ flex: 1, minWidth: 180 }} type="email" placeholder="Send the welcome email to… (blank = your email)" value={to} onChange={(e) => setTo(e.target.value)} />
         <button className="btn btn-green" disabled={busy} onClick={async () => {
           setBusy(true);
-          const r = await act('/mail/test', { body: { to }, ok: '✉️ Test sent — check the result below' });
+          const r = await act('/mail/test', { body: { to }, ok: false });
           setBusy(false);
-          if (r) reload();
+          if (r) { toast(r.ok ? '✉️ Test sent' : '❌ Test failed — see Recent sends below', r.ok ? undefined : 'err'); reload(); }
         }}>Send test</button>
       </div>
+
+      <h3 style={{ marginTop: 18, fontSize: 14 }}>📣 Update email to all players</h3>
+      <div className="small muted" style={{ marginBottom: 6 }}>Goes to every player with an email who hasn't unsubscribed. Leave a blank line between paragraphs.</div>
+      <input className="in" style={{ width: '100%', marginBottom: 6 }} placeholder="Kichwa (Kiswahili) — e.g. Mama Ntilie wako barabarani!" value={u.title} maxLength={120} onChange={(e) => setU({ ...u, title: e.target.value })} />
+      <input className="in" style={{ width: '100%', marginBottom: 6 }} placeholder="Title (English, optional)" value={u.titleEn} maxLength={120} onChange={(e) => setU({ ...u, titleEn: e.target.value })} />
+      <textarea className="in" rows={5} style={{ width: '100%', marginBottom: 6 }} placeholder="Ujumbe (Kiswahili)" value={u.body} maxLength={4000} onChange={(e) => setU({ ...u, body: e.target.value })} />
+      <textarea className="in" rows={4} style={{ width: '100%', marginBottom: 6 }} placeholder="Message (English, optional)" value={u.bodyEn} maxLength={4000} onChange={(e) => setU({ ...u, bodyEn: e.target.value })} />
+      <div className="toolbar">
+        <input className="in" style={{ flex: 1, minWidth: 140 }} placeholder="Button text (optional)" value={u.cta} maxLength={40} onChange={(e) => setU({ ...u, cta: e.target.value })} />
+        <input className="in" style={{ flex: 2, minWidth: 180 }} placeholder="Button link https://… (default: the game)" value={u.ctaUrl} onChange={(e) => setU({ ...u, ctaUrl: e.target.value })} />
+      </div>
+      <div className="toolbar" style={{ marginTop: 6 }}>
+        <button className="btn btn-outline" disabled={busy || !u.title || !u.body} onClick={() => sendUpdate(true)}>Send preview to me</button>
+        <button className="btn btn-green" disabled={busy || running || !u.title || !u.body || !data.enabled} onClick={() => sendUpdate(false)}>Send to all players</button>
+      </div>
+      {data.campaign && (
+        <div className="small" style={{ marginTop: 8 }}>
+          {data.campaign.running ? '⏳ Sending' : '✅ Finished'} “{data.campaign.subject}” — {data.campaign.sent} sent, {data.campaign.failed} failed of {data.campaign.total}
+        </div>
+      )}
+
       <h3 style={{ marginTop: 14, fontSize: 14 }}>Recent sends</h3>
       {!data.recent.length && <div className="small muted">Nothing sent since the server last restarted.</div>}
       {data.recent.map((m) => (
-        <div key={m.at + m.to} className="small" style={{ padding: '6px 0', borderTop: '1px solid #eee' }}>
-          {m.ok ? '✅' : '❌'} <b>{m.kind}</b> → {m.to} <span className="muted">· {ago(m.at)}{m.status ? ` · HTTP ${m.status}` : ''}</span>
+        <div key={m.at + m.to + (m.via || '')} className="small" style={{ padding: '6px 0', borderTop: '1px solid #eee' }}>
+          {m.ok ? '✅' : '❌'} <b>{m.kind}</b> → {m.to} <span className="muted">· {ago(m.at)}{m.via ? ` · ${m.via}` : ''}{m.status ? ` · ${m.status}` : ''}</span>
           {m.error && <div className="muted" style={{ wordBreak: 'break-word' }}>{m.error}</div>}
         </div>
       ))}

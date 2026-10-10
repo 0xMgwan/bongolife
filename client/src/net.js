@@ -68,9 +68,9 @@ export function connect() {
     remotes.delete(id);
     bump();
   });
-  socket.on('player:look', ({ id, appearance }) => {
+  socket.on('player:look', ({ id, appearance, name }) => {
     const r = remotes.get(id);
-    if (r) { r.appearance = appearance; bump(); }
+    if (r) { if (appearance) r.appearance = appearance; if (name) r.name = name; bump(); }
   });
   socket.on('player:vehicle', ({ id, v }) => {
     const r = remotes.get(id);

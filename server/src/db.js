@@ -156,6 +156,9 @@ CREATE TABLE IF NOT EXISTS arrests (
 CREATE INDEX IF NOT EXISTS arrests_user ON arrests(user_id);
 `);
 addColumn('users', 'jail', 'TEXT');
+// Players can opt out of "what's new" emails (Settings, or the unsubscribe link in each email).
+addColumn('users', 'email_updates', 'INTEGER NOT NULL DEFAULT 1');
+addColumn('users', 'name_changed_at', 'INTEGER');
 // The starter car changed from a Vitz to a Toyota IST.
 db.prepare("UPDATE vehicles SET model = 'ist' WHERE model = 'vitz'").run();
 addColumn('users', 'referral_paid', 'INTEGER NOT NULL DEFAULT 0');
@@ -346,6 +349,8 @@ export function rowToUser(r) {
     username: r.username,
     name: r.name,
     email: r.email,
+    emailUpdates: r.email_updates !== 0,
+    nameChangedAt: r.name_changed_at || null,
     phone: r.phone,
     createdAt: r.created_at,
     onboarded: !!r.onboarded,

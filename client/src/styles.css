@@ -1524,3 +1524,89 @@ html, body { background: #1e2a47; }
 .social-ic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex: none; }
 .social-t { display: flex; flex-direction: column; }
 .social-t small { color: var(--mute); font-size: 12px; }
+
+/* =====================================================================
+   Bongo design system — matches www.bongolife.app: Archivo condensed
+   display type, cream paper panels, ink outlines and hard offset shadows.
+   Kept last so it reskins the primitives above without touching layout.
+   ===================================================================== */
+:root {
+  --paper: #fffdf8;
+  --cream: #f6f1e6;
+  --ink-hard: #141414;
+  --hard: 3px 3px 0 var(--ink-hard);
+  --hard-lg: 5px 5px 0 var(--ink-hard);
+  --display: 'Archivo Variable', 'Archivo', 'Arial Narrow', system-ui, sans-serif;
+  --chip: #efe8d8;
+  --line: #e7dfcd;
+  --card: var(--paper);
+}
+.display, .sheet-head h2, .app-head h3, .auth h1, .creator-title, .bal .n, .home-time {
+  font-family: var(--display); font-stretch: 75%; font-weight: 900; letter-spacing: 0;
+}
+.sheet-head h2, .app-head h3, .creator-title { text-transform: uppercase; line-height: .95; }
+.sheet-head h2 { font-size: 26px; }
+.app-head h3 { font-size: 24px; }
+.auth h1 { font-size: 48px; text-transform: uppercase; }
+.bal .n { font-size: 36px; }
+.home-time { font-weight: 800; font-size: 64px; }
+.logo { font-family: var(--display); font-stretch: 78%; font-weight: 900; text-transform: uppercase; letter-spacing: .01em; }
+
+/* buttons */
+.btn { border: 2.5px solid var(--ink-hard); box-shadow: var(--hard); font-weight: 800; transition: transform .08s ease, box-shadow .08s ease, background .15s, opacity .15s; }
+.btn:active { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink-hard); }
+.btn-green, .btn-green:hover { background: var(--gold); color: var(--ink-hard); box-shadow: var(--hard); }
+.btn-green:hover { background: #ffc61a; }
+.btn-white { background: var(--paper); color: var(--ink-hard); box-shadow: var(--hard); }
+.btn-dark { background: var(--ink-hard); color: #fff; }
+.btn-ghost { background: var(--paper); color: var(--ink-hard); box-shadow: 2px 2px 0 var(--ink-hard); }
+.btn-red { background: var(--red); color: #fff; box-shadow: var(--hard); }
+.btn-xs, .btn-sm { border-width: 2px; box-shadow: 2px 2px 0 var(--ink-hard); }
+.btn:disabled { opacity: .45; box-shadow: none; }
+
+/* chips, tabs, fields */
+.chip { background: var(--paper); border: 2px solid var(--ink-hard); font-weight: 700; }
+.chip.on { background: var(--ink-hard); color: #fff; }
+.tabs, .seg { background: var(--paper); border: 2px solid var(--ink-hard); }
+.tabs button.on, .seg button.on { background: var(--ink-hard); color: #fff; box-shadow: none; }
+.field { background: var(--paper); border: 2px solid var(--ink-hard); }
+.field:focus { border-color: var(--ink-hard); background: #fff; box-shadow: var(--hard); }
+.agree { background: var(--paper); border: 2px solid var(--ink-hard); }
+.opt-card { background: var(--paper); border: 2px solid var(--ink-hard); }
+.opt-card.on { background: #fff4cc; box-shadow: var(--hard); }
+.namebox { background: var(--paper); border: 2px solid var(--ink-hard); }
+
+/* surfaces */
+.card { background: var(--paper); border: 2.5px solid var(--ink-hard); box-shadow: var(--hard-lg); }
+.pill { background: var(--paper); border: 2px solid var(--ink-hard); box-shadow: 2px 2px 0 var(--ink-hard); font-weight: 700; }
+.sheet { background: var(--cream); border: 3px solid var(--ink-hard); box-shadow: 8px 8px 0 var(--ink-hard), 0 24px 60px rgba(17,24,39,.3); }
+.sheet-head .x { background: var(--paper); border: 2px solid var(--ink-hard); font-weight: 900; }
+.sheet-body .item.picked { background: #fff4cc; box-shadow: var(--hard); }
+.box { background: var(--paper); border: 2px solid var(--ink-hard); box-shadow: 3px 3px 0 var(--ink-hard); }
+.bal { background: var(--ink-hard); border: 2.5px solid var(--ink-hard); box-shadow: 4px 4px 0 var(--gold); }
+.bal .n { color: var(--gold); }
+.app-view, .screen { background: var(--cream); }
+.wardrobe-preview { background: linear-gradient(180deg, var(--cream) 85%, rgba(246,241,230,0)); }
+.wp-stage { border: 2px solid var(--ink-hard); box-shadow: var(--hard); }
+.app-ic .ic { border: 2px solid var(--ink-hard); box-shadow: 2px 3px 0 rgba(0,0,0,.55); }
+.phone-close { background: var(--paper); border: 2.5px solid var(--ink-hard); box-shadow: var(--hard); font-weight: 800; }
+.round { background: var(--paper); border: 2px solid var(--ink-hard); box-shadow: 2px 2px 0 var(--ink-hard); }
+.creator-panel { background: var(--cream); border-top: 3px solid var(--ink-hard); }
+.auth { background: linear-gradient(180deg, #f5b800 0, #f5b800 120px, var(--cream) 320px); }
+.banner { background: var(--gold); color: var(--ink-hard); border: 2.5px solid var(--ink-hard); box-shadow: var(--hard); }
+
+/* HUD over the 3D city */
+.hud-bar, .land-bar { background: var(--paper); border: 2.5px solid var(--ink-hard); box-shadow: var(--hard); }
+.hud-name { font-family: var(--display); font-stretch: 80%; font-weight: 900; font-size: 16px; text-transform: uppercase; letter-spacing: .01em; }
+.chips-toggle { background: var(--paper); border: 2px solid var(--ink-hard); box-shadow: 2px 2px 0 var(--ink-hard); }
+.topbar, .loc-pill, .drive-btn { background: var(--paper); border: 2.5px solid var(--ink-hard); box-shadow: var(--hard); }
+.drive-btn.on { background: var(--ink-hard); color: #fff; }
+.tb-money { background: #fff4cc; border: 2px solid var(--ink-hard); font-family: var(--display); font-stretch: 85%; font-weight: 900; font-size: 15px; }
+.tb-money i { background: var(--gold); color: var(--ink-hard); border: 2px solid var(--ink-hard); }
+.live-stats { background: var(--ink-hard); border: 2px solid var(--ink-hard); box-shadow: 2px 2px 0 var(--gold); color: #fff; }
+.toast { background: var(--ink-hard); border: 2px solid var(--gold); box-shadow: 3px 3px 0 var(--gold); font-weight: 700; }
+.toast.err { background: #b91c1c; border-color: var(--ink-hard); box-shadow: var(--hard); }
+.quest-card { background: var(--paper); border: 2px solid var(--ink-hard); box-shadow: 2px 2px 0 var(--ink-hard); }
+.quest-card.ready { background: var(--gold); }
+.event { background: var(--gold); color: var(--ink-hard); border: 2px solid var(--ink-hard); box-shadow: 2px 2px 0 var(--ink-hard); }
+.side-pop { border: 2.5px solid var(--ink-hard); border-right: 0; box-shadow: -4px 4px 0 var(--ink-hard); }

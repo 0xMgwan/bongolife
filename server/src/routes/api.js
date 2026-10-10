@@ -11,7 +11,7 @@ import { db, getUser, getUserByUsername, createUser, saveFields, addMoney, GameE
 import { hashPassword, checkPassword, signToken, requireAuth, requireAdmin, rateLimit, USERNAME_RE, normalizePhone } from '../auth.js';
 import { admin } from './admin.js';
 import { canVisit } from '../social.js';
-import { sendMail, welcomeEmail, resetEmail } from '../mail.js';
+import { sendMail, welcomeEmail, resetEmail, checkUnsubToken } from '../mail.js';
 import * as election from '../election.js';
 import * as crime from '../crime.js';
 import * as casino from '../casino.js';
@@ -141,6 +141,23 @@ api.post('/auth/reset', rateLimit('reset', 15, 15 * 60_000), wrap(async (req, re
   res.json({ token: signToken({ id: row.id, tokenVersion: tv }), me: game.playerState(row.id) });
 }));
 
+// One-click unsubscribe from update emails (link in every update email; also accepts the RFC 8058 POST).
+const unsubscribe = (req, res) => {
+  const id = Math.trunc(Number(req.query.u));
+  const ok = Number.isFinite(id) && checkUnsubToken(id, req.query.t);
+  if (ok) db.prepare('UPDATE users SET email_updates = 0 WHERE id = ?').run(id);
+  if (req.method === 'POST') return res.status(ok ? 200 : 400).end();
+  res.status(ok ? 200 : 400).type('html').send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bongo Life</title>
+<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#f6f1e6;font-family:system-ui,sans-serif;color:#141414;text-align:center;padding:24px">
+<div style="background:#fffdf8;border:2.5px solid #141414;border-radius:22px;box-shadow:5px 5px 0 #141414;padding:28px;max-width:420px">
+<div style="font-size:44px">${ok ? '✉️' : '⚠️'}</div>
+<h1 style="font-size:24px;margin:8px 0">${ok ? 'Umejiondoa · Unsubscribed' : 'Link si sahihi · Invalid link'}</h1>
+<p style="color:#555;line-height:1.5">${ok ? 'Hutapokea tena habari mpya kwa email. Unaweza kuwasha tena kwenye Simu → Mipangilio.<br>You won\'t get update emails any more. Turn them back on in Phone → Settings.' : 'Fungua Simu → Mipangilio kubadilisha email zako.<br>Open Phone → Settings to change your email preferences.'}</p>
+<a href="https://play.bongolife.app" style="display:inline-block;margin-top:8px;background:#f5b800;color:#141414;font-weight:800;text-decoration:none;padding:12px 20px;border-radius:999px;border:2px solid #141414">Bongo Life →</a></div></body>`);
+};
+api.get('/unsubscribe', unsubscribe);
+api.post('/unsubscribe', unsubscribe);
+
 // ------------------------------------------------------------- me
 api.use(requireAuth);
 
@@ -160,6 +177,24 @@ api.post('/me/email', (req, res) => {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new GameError(['Email si sahihi.', 'Invalid email.']);
   db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email || null, req.user.id);
   res.json({ ok: true, me: game.playerState(req.user.id) });
+});
+api.post('/me/email-updates', (req, res) => {
+  db.prepare('UPDATE users SET email_updates = ? WHERE id = ?').run(req.body.on ? 1 : 0, req.user.id);
+  res.json({ ok: true, me: game.playerState(req.user.id) });
+});
+// Display name (the @username stays fixed). Once a day, so people can't impersonate on the fly.
+api.post('/me/name', rateLimit('rename', 5, 60 * 60_000), (req, res) => {
+  const name = str(req.body.name, 40).replace(/\s+/g, ' ');
+  if (name.length < 2) throw new GameError(['Jina liwe na herufi angalau 2.', 'Name must be at least 2 characters.']);
+  if (/[<>]|https?:|www\./i.test(name)) throw new GameError(['Jina lisiwe na link wala alama < >.', 'No links or < > in names.']);
+  const u = getUser(req.user.id);
+  if (name === u.name) return res.json({ ok: true, me: game.playerState(u.id) });
+  const wait = (u.nameChangedAt || 0) + 24 * 3600_000 - now();
+  if (wait > 0 && !u.isAdmin) throw new GameError([`Unaweza kubadilisha jina tena baada ya saa ${Math.ceil(wait / 3600_000)}.`, `You can change your name again in ${Math.ceil(wait / 3600_000)}h.`], 429);
+  db.prepare('UPDATE users SET name = ?, name_changed_at = ? WHERE id = ?').run(name, now(), u.id);
+  const o = online.get(u.id);
+  if (o) { o.name = name; broadcast('player:look', { id: u.id, name }); }
+  res.json({ ok: true, me: game.playerState(u.id) });
 });
 
 // Maintenance mode locks the game for everyone except admins.

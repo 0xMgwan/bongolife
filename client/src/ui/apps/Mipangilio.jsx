@@ -56,7 +56,8 @@ function Security() {
   const me = useStore((s) => s.me);
   const run = useStore((s) => s.run);
   const toast = useStore((s) => s.toast);
-  const [open, setOpen] = useState(null); // 'pw' | 'email'
+  const [open, setOpen] = useState(null); // 'pw' | 'email' | 'name'
+  const [name, setName] = useState(me.name || '');
   const [pw, setPw] = useState({ current: '', password: '', confirm: '' });
   const [email, setEmail] = useState(me.email || '');
   const [busy, setBusy] = useState(false);
@@ -72,6 +73,15 @@ function Security() {
     setOpen(null);
     toast(L('🔒 Password imebadilishwa. Vifaa vingine vimetolewa.', '🔒 Password changed. Other devices were signed out.'));
   };
+  const saveName = async (e) => {
+    e.preventDefault();
+    const r = await run('/me/name', { method: 'POST', body: { name } });
+    if (r) {
+      setOpen(null);
+      toast(L('✏️ Jina limebadilishwa.', '✏️ Name updated.'));
+    }
+  };
+  const toggleUpdates = () => run('/me/email-updates', { method: 'POST', body: { on: !me.emailUpdates } });
   const saveEmail = async (e) => {
     e.preventDefault();
     const r = await run('/me/email', { method: 'POST', body: { email } });
@@ -84,6 +94,17 @@ function Security() {
     <div className="box">
       <div className="bold" style={{ marginBottom: 6 }}>🔐 {L('Akaunti & usalama', 'Account & security')}</div>
       <div className="row between" style={{ marginTop: 8 }}>
+        <span className="muted">{L('Jina', 'Name')}</span>
+        <button className="btn btn-ghost btn-xs" onClick={() => { setName(me.name || ''); setOpen(open === 'name' ? null : 'name'); }}>{me.name} ✎</button>
+      </div>
+      {open === 'name' && (
+        <form className="sec-form" onSubmit={saveName}>
+          <input className="field" maxLength={40} placeholder={L('Jina lako', 'Your name')} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+          <div className="hint">{L('@' + me.username + ' haibadiliki. Jina linaweza kubadilishwa mara moja kwa siku.', '@' + me.username + " stays the same. You can change your name once a day.")}</div>
+          <button className="btn btn-green btn-sm" disabled={name.trim().length < 2 || name.trim() === me.name}>{L('Hifadhi', 'Save')}</button>
+        </form>
+      )}
+      <div className="row between" style={{ marginTop: 10 }}>
         <span className="muted">{L('Email ya kurejesha', 'Recovery email')}</span>
         <button className="btn btn-ghost btn-xs" onClick={() => setOpen(open === 'email' ? null : 'email')}>{me.email ? me.email : L('Ongeza', 'Add')} ✎</button>
       </div>
@@ -93,6 +114,12 @@ function Security() {
           <input className="field" type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
           <button className="btn btn-green btn-sm">{L('Hifadhi', 'Save')}</button>
         </form>
+      )}
+      {me.email && (
+        <div className="row between" style={{ marginTop: 10 }}>
+          <span className="muted">{L('Habari mpya kwa email', 'Update emails')}</span>
+          <button className={`btn btn-xs ${me.emailUpdates ? 'btn-green' : 'btn-ghost'}`} onClick={toggleUpdates}>{me.emailUpdates ? L('Imewashwa ✓', 'On ✓') : L('Imezimwa', 'Off')}</button>
+        </div>
       )}
       <div className="row between" style={{ marginTop: 10 }}>
         <span className="muted">Password</span>

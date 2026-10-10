@@ -1,6 +1,6 @@
 import express from 'express';
 import crypto from 'node:crypto';
-import { sendMail, mailStatus, welcomeEmail } from '../mail.js';
+import { sendMail, mailStatus, welcomeEmail, updateEmail, startCampaign } from '../mail.js';
 import { PLOTS, PLACES, SPAWNS, plotById, placeById, buildingById, vehicleById, NEEDS } from '../../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, audit, getSettings, setSettings, freshNeeds } from '../db.js';
 import { hashPassword } from '../auth.js';
@@ -455,6 +455,29 @@ admin.post('/mail/test', async (req, res, next) => {
     const ok = await sendMail({ kind: 'test', to, ...welcomeEmail({ name: me.name, username: me.username, startMoney: 1_000_000 }) });
     audit(req.user.id, 'mail.test', 'mail', null, { ok });
     res.json({ ok, status: mailStatus() });
+  } catch (e) { next(e); }
+});
+
+// "What's new" email to every player who has an email and hasn't opted out. `test: true` sends only to you.
+admin.post('/mail/update', async (req, res, next) => {
+  try {
+    const content = {
+      title: str(req.body.title, 120), titleEn: str(req.body.titleEn, 120),
+      body: str(req.body.body, 4000), bodyEn: str(req.body.bodyEn, 4000),
+      cta: str(req.body.cta, 40), ctaUrl: str(req.body.ctaUrl, 300),
+    };
+    if (!content.title || !content.body) throw new GameError('A title and a message are required');
+    if (req.body.test) {
+      const me = getUser(req.user.id);
+      if (!me.email) throw new GameError('Add an email to your own account first (Phone → Settings)');
+      const ok = await sendMail({ kind: 'update-test', to: me.email, ...updateEmail({ user: me, ...content }) });
+      return res.json({ ok, sent: ok ? 1 : 0, status: mailStatus() });
+    }
+    const recipients = db.prepare("SELECT id, name, username, email FROM users WHERE email IS NOT NULL AND email != '' AND email_updates = 1 AND banned_at IS NULL").all();
+    if (!recipients.length) throw new GameError('No players have an email with updates switched on');
+    if (!startCampaign({ recipients, build: (u) => updateEmail({ user: u, ...content }) })) throw new GameError('An update email is already being sent — wait for it to finish');
+    audit(req.user.id, 'mail.update', 'mail', null, { title: content.title, recipients: recipients.length });
+    res.json({ ok: true, queued: recipients.length, status: mailStatus() });
   } catch (e) { next(e); }
 });
 

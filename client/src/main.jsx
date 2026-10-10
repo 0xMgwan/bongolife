@@ -7,6 +7,7 @@ import '@fontsource/plus-jakarta-sans/latin-600.css';
 import '@fontsource/plus-jakarta-sans/latin-700.css';
 import '@fontsource/plus-jakarta-sans/latin-800.css';
 // Archivo (Brand Kit display face) for the branded selfie card.
+import '@fontsource-variable/archivo/wdth.css';
 import '@fontsource/archivo/latin-400.css';
 import '@fontsource/archivo/latin-600.css';
 import '@fontsource/archivo/latin-800.css';
