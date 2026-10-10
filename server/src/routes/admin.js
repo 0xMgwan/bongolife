@@ -1,6 +1,6 @@
 import express from 'express';
 import crypto from 'node:crypto';
-import { sendMail, mailStatus } from '../mail.js';
+import { sendMail, mailStatus, welcomeEmail } from '../mail.js';
 import { PLOTS, PLACES, SPAWNS, plotById, placeById, buildingById, vehicleById, NEEDS } from '../../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, audit, getSettings, setSettings, freshNeeds } from '../db.js';
 import { hashPassword } from '../auth.js';
@@ -451,7 +451,8 @@ admin.post('/mail/test', async (req, res, next) => {
   try {
     const to = str(req.body.to, 200) || getUser(req.user.id)?.email;
     if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw new GameError('Enter a valid email address');
-    const ok = await sendMail({ kind: 'test', to, subject: 'Bongo Life test email ✅', text: 'If you can read this, password reset emails work.', html: '<p>If you can read this, <b>Bongo Life</b> password reset emails work. ✅</p>' });
+    const me = getUser(req.user.id);
+    const ok = await sendMail({ kind: 'test', to, ...welcomeEmail({ name: me.name, username: me.username, startMoney: 1_000_000 }) });
     audit(req.user.id, 'mail.test', 'mail', null, { ok });
     res.json({ ok, status: mailStatus() });
   } catch (e) { next(e); }

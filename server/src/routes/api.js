@@ -11,7 +11,7 @@ import { db, getUser, getUserByUsername, createUser, saveFields, addMoney, GameE
 import { hashPassword, checkPassword, signToken, requireAuth, requireAdmin, rateLimit, USERNAME_RE, normalizePhone } from '../auth.js';
 import { admin } from './admin.js';
 import { canVisit } from '../social.js';
-import { sendMail } from '../mail.js';
+import { sendMail, welcomeEmail, resetEmail } from '../mail.js';
 import * as election from '../election.js';
 import * as crime from '../crime.js';
 import * as casino from '../casino.js';
@@ -89,6 +89,8 @@ api.post('/auth/signup', rateLimit('signup', 8, 15 * 60_000), wrap(async (req, r
   })();
   if (referrer) emitTo(referrer.id, 'toast', { text: [`🎉 @${username} amejiunga kupitia link yako! Utapata ${REFERRAL.referrer.toLocaleString()} akimaliza shifti ya kwanza.`, `🎉 @${username} joined with your link! You get TSh ${REFERRAL.referrer.toLocaleString()} when they finish their first shift.`] });
   game.ensureStarterCar(user.id);
+  // Welcome email (doesn't hold up sign-up).
+  if (user.email) sendMail({ kind: 'welcome', to: user.email, ...welcomeEmail({ name: user.name, username: user.username, startMoney: getUser(user.id).money }) }).catch(() => {});
   res.status(201).json({ token: signToken(user), me: game.playerState(user.id) });
 }));
 
@@ -115,13 +117,7 @@ api.post('/auth/forgot', rateLimit('forgot', 6, 15 * 60_000), wrap(async (req, r
   if (row?.email) {
     const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
     db.prepare('INSERT OR REPLACE INTO password_resets (user_id, code_hash, expires_at, attempts) VALUES (?, ?, ?, 0)').run(row.id, sha(`${row.id}:${code}`), now() + RESET_TTL);
-    await sendMail({
-      kind: 'reset',
-      to: row.email,
-      subject: `Bongo Life: ${code} ni code yako / is your reset code`,
-      text: `Mambo ${row.name},\n\nCode yako ya kubadilisha password ya @${row.username}: ${code}\nYour Bongo Life password reset code for @${row.username}: ${code}\n\nInaisha baada ya dakika 15 / Expires in 15 minutes. Kama hukuomba, puuza / If you didn't ask, ignore this email.`,
-      html: `<div style="font-family:system-ui,sans-serif;max-width:420px"><h2>Bongo Life 🇹🇿</h2><p>Mambo ${row.name}, code yako ya kubadilisha password ya <b>@${row.username}</b>:<br/>Your password reset code for <b>@${row.username}</b>:</p><p style="font-size:34px;font-weight:800;letter-spacing:6px">${code}</p><p style="color:#666">Inaisha baada ya dakika 15 · Expires in 15 minutes.<br/>Kama hukuomba, puuza email hii · If you didn't ask, ignore this email.</p></div>`,
-    }).catch(() => {});
+    await sendMail({ kind: 'reset', to: row.email, ...resetEmail({ name: row.name, username: row.username, code }) }).catch(() => {});
   }
   res.json({ ok: true });
 }));

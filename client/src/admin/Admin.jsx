@@ -265,14 +265,14 @@ function MailHealth() {
   if (!data) return null;
   return (
     <div className="panel">
-      <h2>✉️ Email (password reset codes)</h2>
+      <h2>✉️ Email (welcome + password resets)</h2>
       <div className="small" style={{ marginBottom: 6 }}>
-        Status: <b style={{ color: data.enabled && !data.warnings.length ? '#16a34a' : '#dc2626' }}>{data.enabled ? (data.warnings.length ? 'Sending, with problems' : 'Working') : 'OFF — no emails are sent'}</b>
+        Status: <b style={{ color: data.enabled && !data.warnings.length ? '#16a34a' : '#dc2626' }}>{data.enabled ? (data.warnings.length ? 'Sending, with problems' : `Working (${data.transport})`) : 'OFF — no emails are sent'}</b>
         <span className="muted"> · From: {data.from}</span>
       </div>
       {data.warnings.map((w) => <div key={w} className="small" style={{ background: '#fef2f2', color: '#991b1b', borderRadius: 8, padding: '8px 10px', marginBottom: 6 }}>⚠️ {w}</div>)}
       <div className="toolbar" style={{ marginTop: 8 }}>
-        <input className="in" style={{ flex: 1, minWidth: 180 }} type="email" placeholder="Send a test email to… (blank = your email)" value={to} onChange={(e) => setTo(e.target.value)} />
+        <input className="in" style={{ flex: 1, minWidth: 180 }} type="email" placeholder="Send the welcome email to… (blank = your email)" value={to} onChange={(e) => setTo(e.target.value)} />
         <button className="btn btn-green" disabled={busy} onClick={async () => {
           setBusy(true);
           const r = await act('/mail/test', { body: { to }, ok: '✉️ Test sent — check the result below' });

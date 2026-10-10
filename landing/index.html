@@ -12,6 +12,7 @@
   <link rel="alternate" hreflang="en" href="https://www.bongolife.app/" />
   <link rel="alternate" hreflang="x-default" href="https://www.bongolife.app/" />
   <meta name="theme-color" content="#111111" />
+  <script>try{const t=localStorage.getItem("bl_theme");if(t)document.documentElement.dataset.theme=t}catch{}</script>
   <meta name="application-name" content="Bongo Life" />
   <meta name="apple-mobile-web-app-title" content="Bongo Life" />
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
@@ -31,7 +32,7 @@
   <meta name="twitter:image" content="https://www.bongolife.app/assets/og.jpg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <script type="application/ld+json">
   {"@context":"https://schema.org","@graph":[
@@ -42,140 +43,281 @@
   </script>
 </head>
 <body>
-  <header class="nav">
+  <header class="nav" id="top">
     <a href="#" class="brand" aria-label="Bongo Life">
-      <img src="assets/icon.svg" alt="" width="34" height="34" />
-      <span>Bongo Life</span>
+      <img src="assets/icon.svg" alt="" width="32" height="32" />
+      <span>BONGO LIFE</span>
     </a>
-    <nav class="nav-links">
-      <a href="#features" data-sw="Vipengele" data-en="Features">Vipengele</a>
-      <a href="#how" data-sw="Jinsi ya kuanza" data-en="How it works">Jinsi ya kuanza</a>
-      <a href="#brands" data-sw="Matangazo" data-en="Advertise">Matangazo</a>
-      <a href="#faq" data-sw="Maswali" data-en="FAQ">Maswali</a>
-    </nav>
+    <div class="seg" role="tablist" aria-label="Mode">
+      <button class="on" data-mode="play" role="tab" aria-selected="true" data-sw="Cheza" data-en="Play">Cheza</button>
+      <button data-mode="ads" role="tab" aria-selected="false" data-sw="Tangaza" data-en="Advertise">Tangaza</button>
+    </div>
     <div class="nav-right">
-      <button class="lang" id="lang" aria-label="Lugha / Language">🇬🇧 EN</button>
-      <a class="btn btn-green btn-sm play" href="#" data-sw="Cheza" data-en="Play">Cheza</a>
+      <button class="icon-btn" id="theme" aria-label="Theme">🌙</button>
+      <button class="icon-btn lang" id="lang" aria-label="Lugha / Language">🇬🇧 EN</button>
+      <a class="btn btn-gold btn-sm play" href="#" data-sw="Cheza bure →" data-en="Play free →">Cheza bure →</a>
+    </div>
+    <!-- Route bar: a daladala drives along the page as you scroll. -->
+    <div class="route" aria-hidden="true">
+      <div class="route-line"><i class="route-fill" id="route-fill"></i></div>
+      <div class="route-stops" id="route-stops"></div>
+      <span class="route-bus" id="route-bus">🚌</span>
+      <span class="route-label" id="route-label">Stendi</span>
     </div>
   </header>
 
   <main>
     <!-- ------------------------------------------------------------ hero -->
-    <section class="hero">
+    <section class="hero" data-stop="Mjini" data-stop-en="Town">
       <!-- Silent looping flyover behind the hero; the poster shows while it loads and for reduced motion. -->
       <video class="hero-video" autoplay muted loop playsinline preload="auto" poster="assets/hero-poster.jpg" aria-hidden="true" tabindex="-1">
-        <!-- Full-quality master on wide or high-density screens; a lighter 1280 copy otherwise. -->
         <source src="assets/hero-1080.mp4" type="video/mp4" media="(min-width: 900px), (min-resolution: 2dppx)" />
         <source src="assets/hero-720.mp4" type="video/mp4" />
       </video>
+      <div class="hero-shade"></div>
+
+      <!-- Place callouts pinned over the flyover; tap to open. -->
+      <button class="callout c1" data-callout><b>🪩 1245</b><span data-sw="Sinza · club ya usiku" data-en="Sinza · night club">Sinza · club ya usiku</span><em data-sw="Nunua meza ya VIP, rusha pesa, wengine waokote 💸" data-en="Book a VIP table, make it rain, others pick it up 💸">Nunua meza ya VIP, rusha pesa, wengine waokote 💸</em></button>
+      <button class="callout c2" data-callout><b>🧺 Kariakoo</b><span data-sw="Soko kuu · kazi ya machinga" data-en="Main market · hawker job">Soko kuu · kazi ya machinga</span><em data-sw="Shifti ya kwanza TSh 20,000 — anzia hapa, maliza Masaki." data-en="First shift pays TSh 20,000 — start here, finish in Masaki.">Shifti ya kwanza TSh 20,000 — anzia hapa, maliza Masaki.</em></button>
+      <button class="callout c3" data-callout><b>🏛️ Stone Town</b><span data-sw="Zanzibar · boti TSh 40k" data-en="Zanzibar · ferry TSh 40k">Zanzibar · boti TSh 40k</span><em data-sw="Panda Azam, kula pizza Forodhani, kesha Kendwa 🌕" data-en="Ride the Azam ferry, eat pizza at Forodhani, party at Kendwa 🌕">Panda Azam, kula pizza Forodhani, kesha Kendwa 🌕</em></button>
+
       <div class="hero-copy">
-        <span class="badge" data-sw="🇹🇿 Mchezo wa maisha ya Dar es Salaam" data-en="🇹🇿 The Dar es Salaam life-sim">🇹🇿 Mchezo wa maisha ya Dar es Salaam</span>
-        <h1 data-sw="Ishi maisha yako ya Dar <em>na watu halisi.</em>" data-en="Live your Dar story <em>with real people.</em>" data-html>Ishi maisha yako ya Dar <em>na watu halisi.</em></h1>
-        <p class="lead" data-sw="Fanya kazi, kula bata, jenga himaya yako Dar. Bure kwenye simu." data-en="Work, party and build your empire in Dar. Free on your phone.">Fanya kazi, kula bata, jenga himaya yako Dar. Bure kwenye simu.</p>
+        <span class="tag" data-sw="🇹🇿 METAVERSE YA TANZANIA · BURE" data-en="🇹🇿 TANZANIA'S METAVERSE · FREE">🇹🇿 METAVERSE YA TANZANIA · BURE</span>
+        <h1 data-sw="ISHI MAISHA YAKO YA <em>BONGO.</em>" data-en="LIVE YOUR <em>BONGO</em> LIFE." data-html>ISHI MAISHA YAKO YA <em>BONGO.</em></h1>
+        <p class="lead" data-sw="Dar, Zanzibar na Arusha — na watu halisi. Chakarika Kariakoo, kula bata 1245, anzisha kampuni Posta, tafuta penzi Coco Beach." data-en="Dar, Zanzibar and Arusha — with real people. Hustle in Kariakoo, party at 1245, start a company in Posta, find love on Coco Beach.">Dar, Zanzibar na Arusha — na watu halisi. Chakarika Kariakoo, kula bata 1245, anzisha kampuni Posta, tafuta penzi Coco Beach.</p>
         <div class="cta">
-          <a class="btn btn-green play" href="#" data-sw="Cheza bure sasa →" data-en="Play free now →">Cheza bure sasa →</a>
-          <a class="btn btn-white" href="#how" data-sw="Jinsi inavyofanya kazi" data-en="How it works">Jinsi inavyofanya kazi</a>
+          <a class="btn btn-gold play" href="#" data-sw="Cheza bure sasa →" data-en="Play free now →">Cheza bure sasa →</a>
+          <a class="btn btn-ghost" href="#luku" data-sw="🎟️ Pata tiketi ya kuzaliwa" data-en="🎟️ Get your birth ticket">🎟️ Pata tiketi ya kuzaliwa</a>
         </div>
-        <div class="stats" id="stats" hidden>
-          <span class="pill"><i class="dot"></i> <b id="s-online">0</b>&nbsp;<span data-sw="online sasa" data-en="online now">online sasa</span></span>
-          <span class="pill">👥 <b id="s-players">0</b>&nbsp;<span data-sw="Wabongo" data-en="players">Wabongo</span></span>
-          <span class="pill" id="s-mayor-wrap" hidden>🏛️ <span data-sw="Mkuu wa Mkoa" data-en="Mayor">Mkuu wa Mkoa</span>&nbsp;<b id="s-mayor"></b></span>
+        <div class="stat-row" id="stats">
+          <div class="stat"><b id="s-online">–</b><span><i class="dot"></i> <span data-sw="online sasa" data-en="online now">online sasa</span></span></div>
+          <div class="stat"><b id="s-players">–</b><span data-sw="Wabongo" data-en="players">Wabongo</span></div>
+          <div class="stat"><b id="s-plots">–</b><span data-sw="viwanja vimeuzwa" data-en="plots sold">viwanja vimeuzwa</span></div>
+          <div class="stat"><b>57</b><span data-sw="sehemu halisi" data-en="real places">sehemu halisi</span></div>
         </div>
         <p class="event" id="s-event" hidden></p>
       </div>
+      <a class="scroll-cue" href="#luku" aria-label="Scroll">↓</a>
     </section>
 
-    <!-- ------------------------------------------------------------ places -->
-    <section class="places" aria-label="Places">
-      <div class="marquee">
-        <div class="track">
-          <span>🧺 Kariakoo</span><span>🏢 Posta</span><span>🪩 Sinza</span><span>🦞 Masaki</span><span>🏖️ Coco Beach</span><span>🌴 Kigamboni</span><span>⛴️ Kivukoni Feri</span><span>🛒 Mlimani City</span><span>🏟️ Uwanja wa Mkapa</span><span>🚌 Ubungo</span><span>🎓 UDSM</span><span>✈️ JNIA</span>
-          <span aria-hidden="true">🧺 Kariakoo</span><span aria-hidden="true">🏢 Posta</span><span aria-hidden="true">🪩 Sinza</span><span aria-hidden="true">🦞 Masaki</span><span aria-hidden="true">🏖️ Coco Beach</span><span aria-hidden="true">🌴 Kigamboni</span><span aria-hidden="true">⛴️ Kivukoni Feri</span><span aria-hidden="true">🛒 Mlimani City</span><span aria-hidden="true">🏟️ Uwanja wa Mkapa</span><span aria-hidden="true">🚌 Ubungo</span><span aria-hidden="true">🎓 UDSM</span><span aria-hidden="true">✈️ JNIA</span>
+    <div class="marquee" aria-hidden="true"><div class="track" id="marquee"></div></div>
+
+    <!-- ------------------------------------------------------------ LUKU quiz -->
+    <section class="section luku-sec" id="luku" data-stop="Tiketi" data-stop-en="Ticket">
+      <div class="sec-head reveal">
+        <span class="kicker" data-sw="01 · TIKETI YA KUZALIWA" data-en="01 · BIRTH TICKET">01 · TIKETI YA KUZALIWA</span>
+        <h2 class="display" data-sw="Umezaliwa <span class='hl'>USHUANI</span> au <span class='hl alt'>USWAZI?</span>" data-en="Born <span class='hl'>USHUANI</span> or <span class='hl alt'>USWAZI?</span>" data-html>Umezaliwa <span class='hl'>USHUANI</span> au <span class='hl alt'>USWAZI?</span></h2>
+        <p class="sub" data-sw="Maswali 6. Kila jibu linaongeza au kupunguza units kwenye mita yako ya LUKU. Ukimaliza, bonyeza PRINT upate tiketi yako." data-en="6 questions. Every answer moves units on your LUKU meter. When you're done, hit PRINT for your ticket.">Maswali 6. Kila jibu linaongeza au kupunguza units kwenye mita yako ya LUKU. Ukimaliza, bonyeza PRINT upate tiketi yako.</p>
+      </div>
+      <div class="luku-grid">
+        <div class="quiz card reveal" id="quiz" aria-live="polite"></div>
+        <div class="meter reveal" id="meter">
+          <div class="meter-top"><span>TANESCO</span><b>LUKU</b><i class="led" id="led"></i></div>
+          <div class="meter-screen">
+            <div class="ms-row"><span id="ms-name">MTEJA: —</span><span id="ms-q">0/6</span></div>
+            <div class="ms-units"><b id="ms-units">50.0</b><small>kWh</small></div>
+            <div class="ms-gauge"><span>◀ USWAZI</span><div class="ms-bar"><i id="ms-needle"></i></div><span>USHUANI ▶</span></div>
+            <div class="ms-token" id="ms-token">TOKEN: ____ ____ ____</div>
+          </div>
+          <div class="keypad" id="keypad">
+            <button>1</button><button>2</button><button>3</button>
+            <button>4</button><button>5</button><button>6</button>
+            <button>7</button><button>8</button><button>9</button>
+            <button data-k="del">⌫</button><button>0</button><button data-k="ok" class="ok">↵</button>
+          </div>
+          <button class="print" id="print" disabled data-sw="🖨️ PRINT TIKETI" data-en="🖨️ PRINT TICKET">🖨️ PRINT TIKETI</button>
+          <div class="ticket-slot"><div class="ticket" id="ticket" hidden></div></div>
         </div>
       </div>
     </section>
 
-    <!-- ------------------------------------------------------------ features -->
-    <section class="section" id="features">
-      <h2 data-sw="Kila kitu cha mtaani, kiganjani mwako" data-en="Everything about the streets, in your pocket">Kila kitu cha mtaani, kiganjani mwako</h2>
-      <p class="sub" data-sw="Dar es Salaam nzima imejengwa upya — kuanzia Kariakoo mpaka fukwe za Kigamboni." data-en="All of Dar es Salaam rebuilt — from Kariakoo to the beaches of Kigamboni.">Dar es Salaam nzima imejengwa upya — kuanzia Kariakoo mpaka fukwe za Kigamboni.</p>
-      <div class="grid">
-        <article class="card"><div class="ic">💼</div><h3 data-sw="Chakarika" data-en="Hustle">Chakarika</h3><p data-sw="Kazi 16 — machinga Kariakoo, konda wa daladala, DJ, mvuvi, teller wa benki mpaka developer. Fanya shifti, pandishwa cheo, mshahara upande." data-en="16 jobs — Kariakoo hawker, daladala conductor, DJ, fisherman, bank teller, all the way to developer. Work shifts, get promoted, earn more.">Kazi 16 — machinga Kariakoo, konda wa daladala, DJ, mvuvi, teller wa benki mpaka developer. Fanya shifti, pandishwa cheo, mshahara upande.</p></article>
-        <article class="card"><div class="ic">🍛</div><h3 data-sw="Ishi" data-en="Live">Ishi</h3><p data-sw="Njaa, nguvu, raha, usafi na jamii. Kula kwa Mama Ntilie, ogelea Coco Beach, lala chumbani kwako Manzese." data-en="Hunger, energy, fun, hygiene and social. Eat at Mama Ntilie's, swim at Coco Beach, sleep in your Manzese room.">Njaa, nguvu, raha, usafi na jamii. Kula kwa Mama Ntilie, ogelea Coco Beach, lala chumbani kwako Manzese.</p></article>
-        <article class="card"><div class="ic">🪩</div><h3 data-sw="Kula bata" data-en="Party">Kula bata</h3><p data-sw="Cheza Elements na 1245, nunua mzunguko kwa washkaji, tazama dabi ya Simba vs Yanga na rekodi ngoma yako studio." data-en="Dance at Elements and 1245, buy a round for the crew, watch the Simba vs Yanga derby and record your track in the studio.">Cheza Elements na 1245, nunua mzunguko kwa washkaji, tazama dabi ya Simba vs Yanga na rekodi ngoma yako studio.</p></article>
-        <article class="card"><div class="ic">🏍️</div><h3 data-sw="Endesha" data-en="Drive">Endesha</h3><p data-sw="Baiskeli, bodaboda, bajaji, IST, Noah, Harrier mpaka V8. Au panda daladala na bajaji kuzunguka mji." data-en="Bicycle, bodaboda, bajaji, IST, Noah, Harrier up to a V8. Or hop on a daladala or bajaji across town.">Baiskeli, bodaboda, bajaji, IST, Noah, Harrier mpaka V8. Au panda daladala na bajaji kuzunguka mji.</p></article>
-        <article class="card"><div class="ic">🏡</div><h3 data-sw="Miliki" data-en="Own">Miliki</h3><p data-sw="Nunua viwanja Kigamboni, Masaki na Mbezi. Jenga villa au ghorofa la kupangisha. Miliki bar, genge au club upate mapato kila saa." data-en="Buy plots in Kigamboni, Masaki and Mbezi. Build a villa or an apartment block. Own a bar, food stall or club that earns every hour.">Nunua viwanja Kigamboni, Masaki na Mbezi. Jenga villa au ghorofa la kupangisha. Miliki bar, genge au club upate mapato kila saa.</p></article>
-        <article class="card"><div class="ic">📱</div><h3 data-sw="Simu yako" data-en="Your phone">Simu yako</h3><p data-sw="Chat ya mtaa, meseji za faragha, Bongo Pesa, ramani ya Dar na matangazo — vyote ndani ya simu ya mchezo." data-en="Street chat, private messages, Bongo Pesa wallet, a map of Dar and ads — all inside your in-game phone.">Chat ya mtaa, meseji za faragha, Bongo Pesa, ramani ya Dar na matangazo — vyote ndani ya simu ya mchezo.</p></article>
-        <article class="card"><div class="ic">👗</div><h3 data-sw="Pendeza" data-en="Style">Pendeza</h3><p data-sw="Kitenge, kanga, buibui, kanzu, shuka la Kimasai, suti ya Kaunda na jezi za Simba na Yanga." data-en="Kitenge, kanga, buibui, kanzu, Maasai shuka, Kaunda suit and Simba or Yanga jerseys.">Kitenge, kanga, buibui, kanzu, shuka la Kimasai, suti ya Kaunda na jezi za Simba na Yanga.</p></article>
-        <article class="card"><div class="ic">👑</div><h3 data-sw="Tawala" data-en="Rule">Tawala</h3><p data-sw="Tajiri namba moja wa Dar anakuwa Mkuu wa Mkoa — jina lake linaonekana kwa kila mtu anayeingia." data-en="The richest player in Dar becomes Mayor — their name is shown to everyone who opens the game.">Tajiri namba moja wa Dar anakuwa Mkuu wa Mkoa — jina lake linaonekana kwa kila mtu anayeingia.</p></article>
+    <!-- ------------------------------------------------------------ spots -->
+    <section class="section spots-sec" id="spots" data-stop="Mitaa" data-stop-en="Spots">
+      <div class="sec-head reveal">
+        <span class="kicker" data-sw="02 · RAMANI" data-en="02 · THE MAP">02 · RAMANI</span>
+        <h2 class="display"><span class="big-n" id="spot-count">57</span> <span data-sw="SEHEMU HALISI ZA BONGO" data-en="REAL BONGO SPOTS">SEHEMU HALISI ZA BONGO</span></h2>
+        <p class="sub" data-sw="Gusa mtaa uone kila sehemu unayoweza kuingia — na kazi inayolipa hapo." data-en="Tap an area to see every place you can walk into — and the job that pays there.">Gusa mtaa uone kila sehemu unayoweza kuingia — na kazi inayolipa hapo.</p>
+      </div>
+      <div class="areas" id="areas"></div>
+    </section>
+
+    <!-- ------------------------------------------------------------ ladder -->
+    <section class="section ladder-sec" id="ladder" data-stop="Ngazi" data-stop-en="Ladder">
+      <div class="sec-head reveal">
+        <span class="kicker" data-sw="03 · PANDA NGAZI" data-en="03 · CLIMB THE LADDER">03 · PANDA NGAZI</span>
+        <h2 class="display">MANZESE <span class="arrow">→</span> MASAKI</h2>
+        <p class="sub" data-sw="Unaanza na TSh 50,000 na chumba cha kupanga Manzese. Chagua kazi, chagua ndoto — tunakuhesabia shifti." data-en="You start with TSh 50,000 and a rented room in Manzese. Pick a job, pick a dream — we'll count the shifts.">Unaanza na TSh 50,000 na chumba cha kupanga Manzese. Chagua kazi, chagua ndoto — tunakuhesabia shifti.</p>
+      </div>
+      <div class="ladder-grid">
+        <div class="tower reveal" id="tower"></div>
+        <div class="ladder-side reveal">
+          <div class="jobcar card">
+            <div class="jc-head"><span data-sw="KAZI YAKO" data-en="YOUR JOB">KAZI YAKO</span><span id="jc-idx">1/30</span></div>
+            <div class="jc-body">
+              <button class="jc-nav" id="jc-prev" aria-label="Previous">‹</button>
+              <div class="jc-job" id="jc-job"></div>
+              <button class="jc-nav" id="jc-next" aria-label="Next">›</button>
+            </div>
+          </div>
+          <div class="calc card" id="calc"></div>
+          <div class="calc card billion" id="billion"></div>
+        </div>
       </div>
     </section>
 
-    <!-- ------------------------------------------------------------ showcase -->
-    <section class="section showcase">
-      <div class="show-row">
-        <div class="phone"><img src="assets/shot-place.jpg" alt="Elements club" loading="lazy" /></div>
-        <div class="show-copy">
-          <h2 data-sw="Gusa jengo, ishi maisha" data-en="Tap a building, live your life">Gusa jengo, ishi maisha</h2>
-          <p data-sw="Kila sehemu ina shughuli zake: ingia club ucheze, nunua meza ya VIP, au anza shifti kama DJ. Kila kitu kinabadilisha njaa, nguvu na raha yako — na mfuko wako." data-en="Every place has its own activities: hit the dance floor, get a VIP table, or start a shift as the DJ. Everything changes your hunger, energy and fun — and your wallet.">Kila sehemu ina shughuli zake: ingia club ucheze, nunua meza ya VIP, au anza shifti kama DJ. Kila kitu kinabadilisha njaa, nguvu na raha yako — na mfuko wako.</p>
+    <!-- ------------------------------------------------------------ phone -->
+    <section class="section phone-sec" id="phone" data-stop="Simu" data-stop-en="Phone">
+      <div class="phone-grid">
+        <div class="sec-head reveal left">
+          <span class="kicker" data-sw="04 · SIMU" data-en="04 · THE PHONE">04 · SIMU</span>
+          <h2 class="display" data-sw="SIMU YAKO NDIO <span class='hl'>MAISHA YAKO.</span>" data-en="YOUR PHONE <span class='hl'>RUNS YOUR LIFE.</span>" data-html>SIMU YAKO NDIO <span class='hl'>MAISHA YAKO.</span></h2>
+          <p class="sub" data-sw="Kila kitu kiko ndani ya simu ya mchezo. Gusa app ujaribu." data-en="Everything lives in your in-game phone. Tap an app to try it.">Kila kitu kiko ndani ya simu ya mchezo. Gusa app ujaribu.</p>
+          <div class="app-note card" id="app-note"></div>
         </div>
-      </div>
-      <div class="show-row rev">
-        <div class="phone"><img src="assets/shot-phone.jpg" alt="Simu ya mchezo" loading="lazy" /></div>
-        <div class="show-copy">
-          <h2 data-sw="Washkaji halisi, kila mahali" data-en="Real people, everywhere">Washkaji halisi, kila mahali</h2>
-          <p data-sw="Kila mtu unayemwona mtaani ni mchezaji halisi. Piga stori kwenye chat ya mtaa, tuma DM, mtumie mshkaji pesa, au tangaza biashara yako kwenye mabango ya mji." data-en="Everyone you see on the street is a real player. Chat on the street, send DMs, send a friend money, or advertise your business on the city's billboards.">Kila mtu unayemwona mtaani ni mchezaji halisi. Piga stori kwenye chat ya mtaa, tuma DM, mtumie mshkaji pesa, au tangaza biashara yako kwenye mabango ya mji.</p>
+        <div class="phone-wrap reveal">
+          <div class="device" id="device">
+            <div class="notch"></div>
+            <div class="statusbar"><span id="clock">12:45</span><span>📶 🔋</span></div>
+            <div class="screen" id="screen"></div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- ------------------------------------------------------------ how -->
-    <section class="section" id="how">
-      <h2 data-sw="Anza ndani ya dakika moja" data-en="Start in under a minute">Anza ndani ya dakika moja</h2>
-      <ol class="steps">
-        <li><b>1</b><h3 data-sw="Jisajili bure" data-en="Sign up free">Jisajili bure</h3><p data-sw="Jina, username na password tu. Lazima uwe na miaka 18+." data-en="Just a name, username and password. You must be 18+.">Jina, username na password tu. Lazima uwe na miaka 18+.</p></li>
-        <li><b>2</b><h3 data-sw="Tengeneza Sim wako" data-en="Create your Sim">Tengeneza Sim wako</h3><p data-sw="Chagua mwili, nywele, mavazi, tabia na mtaa unaoanzia." data-en="Choose your body, hair, outfit, personality and starting neighbourhood.">Chagua mwili, nywele, mavazi, tabia na mtaa unaoanzia.</p></li>
-        <li><b>3</b><h3 data-sw="Ingia mtaani" data-en="Hit the streets">Ingia mtaani</h3><p data-sw="Unaanza na TSh 50,000 mfukoni na chumba Manzese. Mengine ni juu yako." data-en="You start with TSh 50,000 and a room in Manzese. The rest is up to you.">Unaanza na TSh 50,000 mfukoni na chumba Manzese. Mengine ni juu yako.</p></li>
-      </ol>
-      <div class="center"><a class="btn btn-green play" href="#" data-sw="Cheza bure sasa →" data-en="Play free now →">Cheza bure sasa →</a></div>
+    <!-- ------------------------------------------------------------ election -->
+    <section class="section vote-sec" id="vote" data-stop="Kura" data-stop-en="Vote">
+      <div class="sec-head reveal">
+        <span class="kicker" data-sw="05 · UCHAGUZI WA KILA WIKI" data-en="05 · WEEKLY ELECTION">05 · UCHAGUZI WA KILA WIKI</span>
+        <h2 class="display" data-sw="MKUU WA <span class='hl'>MKOA</span> WA DAR" data-en="MAYOR OF <span class='hl'>DAR</span>" data-html>MKUU WA <span class='hl'>MKOA</span> WA DAR</h2>
+        <p class="sub" data-sw="Jiandikishe kwa TSh 50,000, bandika bango, omba kura. Mshindi analipwa TSh 500,000 kila wiki na jina lake linaonekana kwa kila mtu." data-en="Register for TSh 50,000, put up your poster, campaign. The winner earns TSh 500,000 a week and their name is shown to everyone.">Jiandikishe kwa TSh 50,000, bandika bango, omba kura. Mshindi analipwa TSh 500,000 kila wiki na jina lake linaonekana kwa kila mtu.</p>
+      </div>
+      <div class="countdown reveal"><span data-sw="Kura zinafungwa baada ya" data-en="Polls close in">Kura zinafungwa baada ya</span> <b id="cd">—</b></div>
+      <div class="wall" id="wall">
+        <div class="poster p-mayor reveal" data-tilt>
+          <span class="p-badge" data-sw="ANAYETAWALA" data-en="IN OFFICE">ANAYETAWALA</span>
+          <div class="p-face">👑</div>
+          <b class="p-name" id="p-mayor">@—</b>
+          <span class="p-slogan" data-sw="Mkuu wa Mkoa wa sasa" data-en="Current Mayor">Mkuu wa Mkoa wa sasa</span>
+        </div>
+        <div class="poster p-green reveal" data-tilt>
+          <div class="p-face">🛺</div>
+          <b class="p-name">MAMA BAJAJI</b>
+          <span class="p-slogan" data-sw="“Bajaji kila kona, foleni hakuna!”" data-en="“A bajaji on every corner, no traffic!”">“Bajaji kila kona, foleni hakuna!”</span>
+          <button class="vote-btn" data-sw="🗳️ Piga kura" data-en="🗳️ Vote">🗳️ Piga kura</button>
+        </div>
+        <div class="poster p-red reveal" data-tilt>
+          <div class="p-face">⚽</div>
+          <b class="p-name">KAKA DABI</b>
+          <span class="p-slogan" data-sw="“Dabi kila Jumamosi, bure uwanjani!”" data-en="“A derby every Saturday, free entry!”">“Dabi kila Jumamosi, bure uwanjani!”</span>
+          <button class="vote-btn" data-sw="🗳️ Piga kura" data-en="🗳️ Vote">🗳️ Piga kura</button>
+        </div>
+        <div class="poster p-blue reveal" data-tilt>
+          <div class="p-face">🦞</div>
+          <b class="p-name">SHANGAZI MASAKI</b>
+          <span class="p-slogan" data-sw="“LUKU ya bure kwa kila nyumba!”" data-en="“Free LUKU for every home!”">“LUKU ya bure kwa kila nyumba!”</span>
+          <button class="vote-btn" data-sw="🗳️ Piga kura" data-en="🗳️ Vote">🗳️ Piga kura</button>
+        </div>
+        <a class="poster p-you play reveal" href="#" data-tilt>
+          <div class="p-face">🫵🏾</div>
+          <b class="p-name" data-sw="WEWE?" data-en="YOU?">WEWE?</b>
+          <span class="p-slogan" data-sw="Gombea wiki hii →" data-en="Run this week →">Gombea wiki hii →</span>
+        </a>
+      </div>
     </section>
 
-    <!-- ------------------------------------------------------------ wallet -->
-    <section class="section wallet">
-      <div class="wallet-card">
-        <div>
-          <h2 data-sw="Ongeza salio kwa M-Pesa" data-en="Top up with M-Pesa">Ongeza salio kwa M-Pesa</h2>
-          <p data-sw="Unataka kununua V8 haraka? Ongeza salio la mchezo kwa M-Pesa, Mixx by Yas au Airtel Money — sekunde chache tu. Si lazima: unaweza kufika juu kwa kuchakarika tu." data-en="Want that V8 sooner? Top up your in-game wallet with M-Pesa, Mixx by Yas or Airtel Money in seconds. It's optional — you can reach the top just by hustling.">Unataka kununua V8 haraka? Ongeza salio la mchezo kwa M-Pesa, Mixx by Yas au Airtel Money — sekunde chache tu. Si lazima: unaweza kufika juu kwa kuchakarika tu.</p>
-          <p class="fine" data-sw="Pesa ya mchezo ni ya burudani tu: haiwezi kutolewa wala kubadilishwa kuwa pesa taslimu." data-en="In-game money is for fun only: it can't be withdrawn or converted back into cash.">Pesa ya mchezo ni ya burudani tu: haiwezi kutolewa wala kubadilishwa kuwa pesa taslimu.</p>
+    <!-- ------------------------------------------------------------ sherehe -->
+    <section class="section party-sec" id="sherehe" data-stop="Sherehe" data-stop-en="Party">
+      <div class="sec-head reveal">
+        <span class="kicker" data-sw="06 · MAISHA" data-en="06 · LIFE">06 · MAISHA</span>
+        <h2 class="display" data-sw="PENZI, BATA <span class='amp'>&amp;</span> WAHALA" data-en="LOVE, BATA <span class='amp'>&amp;</span> WAHALA" data-html>PENZI, BATA <span class='amp'>&amp;</span> WAHALA</h2>
+        <p class="sub" data-sw="Gusa kadi uone upande wa pili." data-en="Tap a card to flip it.">Gusa kadi uone upande wa pili.</p>
+      </div>
+      <div class="flips">
+        <div class="flip reveal" tabindex="0">
+          <div class="flip-in">
+            <div class="face front f-love"><span class="f-emoji">💞</span><h3>PENZI</h3><p data-sw="Swipe, date, uchumba, harusi." data-en="Swipe, date, engage, marry.">Swipe, date, uchumba, harusi.</p><small data-sw="Gusa ↻" data-en="Tap ↻">Gusa ↻</small></div>
+            <div class="face back"><ul>
+              <li data-sw="💌 Tuma ombi kwenye app ya Penzi" data-en="💌 Send a request in the Penzi app">💌 Tuma ombi kwenye app ya Penzi</li>
+              <li data-sw="🍽️ Date Masaki, matembezi Coco Beach" data-en="🍽️ Dinner in Masaki, a walk on Coco Beach">🍽️ Date Masaki, matembezi Coco Beach</li>
+              <li data-sw="💍 Pete, kisha harusi mbele ya washkaji" data-en="💍 A ring, then a wedding in front of the crew">💍 Pete, kisha harusi mbele ya washkaji</li>
+              <li data-sw="🏡 Hamia pamoja kwenye nyumba yenu" data-en="🏡 Move in together">🏡 Hamia pamoja kwenye nyumba yenu</li>
+            </ul></div>
+          </div>
         </div>
-        <div class="networks"><span>M-Pesa</span><span>Mixx by Yas</span><span>Airtel Money</span><span>HaloPesa</span></div>
+        <div class="flip reveal" tabindex="0" id="rain-card">
+          <div class="flip-in">
+            <div class="face front f-bata"><span class="f-emoji">🍾</span><h3>BATA</h3><p data-sw="VIP 1245, tip DJ, rusha pesa." data-en="VIP at 1245, tip the DJ, make it rain.">VIP 1245, tip DJ, rusha pesa.</p><button class="rain-btn" id="rain-btn" data-sw="💸 Rusha pesa" data-en="💸 Make it rain">💸 Rusha pesa</button></div>
+            <div class="face back"><ul>
+              <li data-sw="🛋️ Meza ya VIP — kila mtu anaona uko VIP" data-en="🛋️ VIP table — everyone sees you in the section">🛋️ Meza ya VIP — kila mtu anaona uko VIP</li>
+              <li data-sw="🎧 Tip DJ — DJ halisi anayefanya shifti anapokea" data-en="🎧 Tip the DJ — the real player on shift gets it">🎧 Tip DJ — DJ halisi anayefanya shifti anapokea</li>
+              <li data-sw="💸 Rusha TSh 500k — wengine waokote sakafuni" data-en="💸 Throw TSh 500k — others grab it off the floor">💸 Rusha TSh 500k — wengine waokote sakafuni</li>
+              <li data-sw="🎶 Bongo Flava halisi kwenye spika" data-en="🎶 Real Bongo Flava on the speakers">🎶 Bongo Flava halisi kwenye spika</li>
+            </ul></div>
+          </div>
+        </div>
+        <div class="flip reveal" tabindex="0">
+          <div class="flip-in">
+            <div class="face front f-wahala"><span class="f-emoji">🚓</span><h3>WAHALA</h3><p data-sw="Polisi Oysterbay, dhamana, Mahakama Kisutu." data-en="Oysterbay police, bail, Kisutu court.">Polisi Oysterbay, dhamana, Mahakama Kisutu.</p><small data-sw="Gusa ↻" data-en="Tap ↻">Gusa ↻</small></div>
+            <div class="face back"><ul>
+              <li data-sw="🚨 Umeibiwa? Ripoti Polisi ndani ya simu" data-en="🚨 Robbed? Report it to the police from your phone">🚨 Umeibiwa? Ripoti Polisi ndani ya simu</li>
+              <li data-sw="⚖️ Fungua kesi — hakimu ni mchezaji au Hakimu wa mfumo" data-en="⚖️ Open a case — a player judge or the system judge">⚖️ Fungua kesi — hakimu ni mchezaji au Hakimu wa mfumo</li>
+              <li data-sw="🎙️ Toa ushahidi kwa voice note" data-en="🎙️ Give evidence by voice note">🎙️ Toa ushahidi kwa voice note</li>
+              <li data-sw="💰 Lipa dhamana au kaa ndani" data-en="💰 Pay bail or stay locked up">💰 Lipa dhamana au kaa ndani</li>
+            </ul></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ travel -->
+    <section class="section trip-sec" id="safari" data-stop="Safari" data-stop-en="Travel">
+      <div class="sec-head reveal">
+        <span class="kicker" data-sw="07 · NJE YA DAR" data-en="07 · OUT OF DAR">07 · NJE YA DAR</span>
+        <h2 class="display" data-sw="MIJI 3. <span class='hl'>RAMANI 1.</span>" data-en="3 CITIES. <span class='hl'>1 MAP.</span>" data-html>MIJI 3. <span class='hl'>RAMANI 1.</span></h2>
+        <p class="sub" data-sw="Chagua unakoenda na usafiri — bodi ya kuondoka inajibadilisha." data-en="Pick a destination and a ride — the departures board flips.">Chagua unakoenda na usafiri — bodi ya kuondoka inajibadilisha.</p>
+      </div>
+      <div class="trip reveal">
+        <div class="trip-pick">
+          <div class="dest" id="dest">
+            <button class="on" data-dest="znz">🏝️ Zanzibar</button>
+            <button data-dest="aru">⛰️ Arusha</button>
+          </div>
+          <div class="modes" id="modes"></div>
+        </div>
+        <div class="board" aria-live="polite">
+          <div class="board-head"><span data-sw="MAONDOKO · DEPARTURES" data-en="DEPARTURES · MAONDOKO">MAONDOKO · DEPARTURES</span><span id="board-clock">12:45</span></div>
+          <div class="board-row lbl"><span data-sw="KWENDA" data-en="TO">KWENDA</span><span data-sw="USAFIRI" data-en="VIA">USAFIRI</span><span data-sw="NAULI" data-en="FARE">NAULI</span></div>
+          <div class="board-row" id="board-row"><span class="flap" id="b-to"></span><span class="flap" id="b-via"></span><span class="flap" id="b-fare"></span></div>
+          <p class="board-note" id="board-note"></p>
+        </div>
       </div>
     </section>
 
     <!-- ------------------------------------------------------------ brands -->
-    <section class="section" id="brands">
-      <div class="brands">
+    <section class="section brands-sec" id="brands" data-stop="Tangaza" data-stop-en="Ads">
+      <div class="brands reveal">
         <div>
-          <span class="badge" data-sw="📢 Kwa biashara" data-en="📢 For businesses">📢 Kwa biashara</span>
-          <h2 data-sw="Tangaza kwa Wabongo wanaocheza kila siku" data-en="Reach players every single day">Tangaza kwa Wabongo wanaocheza kila siku</h2>
-          <p data-sw="Mabango 11 katikati ya mji — Posta, Kariakoo, Coco Beach, Masaki na Daraja la Nyerere. Weka picha, ujumbe na link ya biashara yako moja kwa moja ndani ya mchezo kupitia Simu → Matangazo." data-en="11 billboards across the city — Posta, Kariakoo, Coco Beach, Masaki and the Nyerere Bridge. Put your image, message and link up directly in the game through Phone → Ads.">Mabango 11 katikati ya mji — Posta, Kariakoo, Coco Beach, Masaki na Daraja la Nyerere. Weka picha, ujumbe na link ya biashara yako moja kwa moja ndani ya mchezo kupitia Simu → Matangazo.</p>
+          <span class="kicker" data-sw="08 · KWA BIASHARA" data-en="08 · FOR BUSINESSES">08 · KWA BIASHARA</span>
+          <h2 class="display" data-sw="BANGO LAKO <span class='hl'>MJINI.</span>" data-en="YOUR BILLBOARD <span class='hl'>IN TOWN.</span>" data-html>BANGO LAKO <span class='hl'>MJINI.</span></h2>
+          <p class="sub" data-sw="Mabango 11 — Posta, Kariakoo, Coco Beach, Masaki na Daraja la Nyerere. Lipa kwa nTZS, weka picha, ujumbe na link. Kila mchezaji anayepita analiona." data-en="11 billboards — Posta, Kariakoo, Coco Beach, Masaki and the Nyerere Bridge. Pay in nTZS, add your image, message and link. Every passing player sees it.">Mabango 11 — Posta, Kariakoo, Coco Beach, Masaki na Daraja la Nyerere. Lipa kwa nTZS, weka picha, ujumbe na link. Kila mchezaji anayepita analiona.</p>
+          <label class="bb-input"><span data-sw="Jaribu: andika jina la biashara yako" data-en="Try it: type your business name">Jaribu: andika jina la biashara yako</span><input id="bb-text" maxlength="28" placeholder="Mama Ntilie Sinza" /></label>
           <div class="cta">
             <a class="btn btn-dark play" href="#" data-sw="Weka tangazo ndani ya mchezo" data-en="Place an ad in the game">Weka tangazo ndani ya mchezo</a>
-            <a class="btn btn-white" id="ads-policy" href="#" data-sw="Sera ya Matangazo" data-en="Advertising Policy">Sera ya Matangazo</a>
+            <a class="btn btn-line" id="ads-policy" href="#" data-sw="Sera ya Matangazo" data-en="Advertising Policy">Sera ya Matangazo</a>
           </div>
         </div>
         <div class="billboard">
-          <div class="bb-board"><b data-sw="Tangaza Hapa!" data-en="Advertise Here!">Tangaza Hapa!</b><span>📢 Posta CBD</span></div>
+          <div class="bb-board" id="bb-board"><b id="bb-show" data-sw="Tangaza Hapa!" data-en="Advertise Here!">Tangaza Hapa!</b><span>📢 Posta CBD</span></div>
           <div class="bb-legs"><i></i><i></i></div>
         </div>
       </div>
     </section>
 
     <!-- ------------------------------------------------------------ faq -->
-    <section class="section" id="faq">
-      <h2 data-sw="Maswali ya mara kwa mara" data-en="Frequently asked questions">Maswali ya mara kwa mara</h2>
-      <div class="faq">
-        <details><summary data-sw="Je, ni bure?" data-en="Is it free?">Je, ni bure?</summary><p data-sw="Ndiyo. Kujisajili na kucheza ni bure. Kuongeza salio ni hiari kabisa." data-en="Yes. Signing up and playing are free. Topping up is completely optional.">Ndiyo. Kujisajili na kucheza ni bure. Kuongeza salio ni hiari kabisa.</p></details>
+    <section class="section faq-sec" id="faq" data-stop="Maswali" data-stop-en="FAQ">
+      <h2 class="display reveal" data-sw="MASWALI" data-en="QUESTIONS">MASWALI</h2>
+      <div class="faq reveal">
+        <details><summary data-sw="Je, ni bure?" data-en="Is it free?">Je, ni bure?</summary><p data-sw="Ndiyo. Kujisajili na kucheza ni bure. Kuongeza salio kwa M-Pesa, Mixx by Yas au Airtel Money ni hiari kabisa." data-en="Yes. Signing up and playing are free. Topping up with M-Pesa, Mixx by Yas or Airtel Money is completely optional.">Ndiyo. Kujisajili na kucheza ni bure. Kuongeza salio kwa M-Pesa, Mixx by Yas au Airtel Money ni hiari kabisa.</p></details>
         <details><summary data-sw="Nahitaji kudownload app?" data-en="Do I need to download an app?">Nahitaji kudownload app?</summary><p data-sw="Hapana. Bongo Life inafunguka moja kwa moja kwenye browser ya simu (Chrome au Safari). Unaweza kuiweka kwenye home screen kama app." data-en="No. Bongo Life opens straight in your phone's browser (Chrome or Safari). You can add it to your home screen like an app.">Hapana. Bongo Life inafunguka moja kwa moja kwenye browser ya simu (Chrome au Safari). Unaweza kuiweka kwenye home screen kama app.</p></details>
         <details><summary data-sw="Inafanya kazi kwenye simu yangu?" data-en="Will it run on my phone?">Inafanya kazi kwenye simu yangu?</summary><p data-sw="Simu nyingi za Android na iPhone za miaka ya karibuni zinaweza. Kama inakwama, chagua Graphics → Chini kwenye Mipangilio." data-en="Most recent Android phones and iPhones can. If it lags, choose Graphics → Low in Settings.">Simu nyingi za Android na iPhone za miaka ya karibuni zinaweza. Kama inakwama, chagua Graphics → Chini kwenye Mipangilio.</p></details>
         <details><summary data-sw="Naweza kutoa pesa ya mchezo?" data-en="Can I withdraw in-game money?">Naweza kutoa pesa ya mchezo?</summary><p data-sw="Hapana. TSh za ndani ya mchezo ni za burudani tu — haziwezi kutolewa, kuuzwa wala kubadilishwa kuwa pesa halisi." data-en="No. In-game TSh are for fun only — they can't be withdrawn, sold or converted into real money.">Hapana. TSh za ndani ya mchezo ni za burudani tu — haziwezi kutolewa, kuuzwa wala kubadilishwa kuwa pesa halisi.</p></details>
@@ -185,10 +327,21 @@
     </section>
 
     <!-- ------------------------------------------------------------ final cta -->
-    <section class="final">
-      <h2 data-sw="Mtaa unakusubiri." data-en="The streets are waiting.">Mtaa unakusubiri.</h2>
-      <p data-sw="Jiunge na Wabongo wanaoishi maisha yao ya Dar sasa hivi." data-en="Join the players living their Dar life right now.">Jiunge na Wabongo wanaoishi maisha yao ya Dar sasa hivi.</p>
-      <a class="btn btn-white play" href="#" data-sw="Cheza bure sasa →" data-en="Play free now →">Cheza bure sasa →</a>
+    <section class="final" data-stop="Twende" data-stop-en="Go">
+      <a class="admit play reveal" href="#">
+        <span class="admit-side">ADMIT ONE · ADMIT ONE · ADMIT ONE</span>
+        <span class="admit-body">
+          <small data-sw="TIKETI YA KUZALIWA · BONGO LIFE" data-en="BIRTH TICKET · BONGO LIFE">TIKETI YA KUZALIWA · BONGO LIFE</small>
+          <b data-sw="MTAA UNAKUSUBIRI." data-en="THE STREETS ARE WAITING.">MTAA UNAKUSUBIRI.</b>
+          <span class="admit-go" data-sw="Cheza bure sasa →" data-en="Play free now →">Cheza bure sasa →</span>
+        </span>
+        <span class="admit-no">Nº <i id="admit-no">000001</i></span>
+      </a>
+      <div class="final-social">
+        <a href="https://www.instagram.com/bongolifegames" target="_blank" rel="noopener">Instagram</a>
+        <a href="https://www.tiktok.com/@bongolifegames" target="_blank" rel="noopener">TikTok</a>
+        <a href="https://chat.whatsapp.com/KCgM5FOmzQE6byU18abpB1" target="_blank" rel="noopener" data-sw="Jumuiya ya WhatsApp" data-en="WhatsApp community">Jumuiya ya WhatsApp</a>
+      </div>
     </section>
   </main>
 
