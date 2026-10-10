@@ -165,6 +165,28 @@ export function connect() {
     useStore.setState((x) => ({ dmVersion: x.dmVersion + 1, lastGm: msg }));
   });
   socket.on('msg:update', (msg) => useStore.setState({ msgUpdate: { ...msg, at: Date.now() } }));
+  // Someone is making it rain in your venue.
+  socket.on('rain', ({ placeId, from, drops, total }) => {
+    const at = Date.now();
+    useStore.setState((s) => ({ rain: [...s.rain.filter((d) => d.expires > at), ...drops.map((d) => ({ ...d, placeId, at }))] }));
+    sfx('cash');
+    if (from !== st().me?.username) st().toast(L(`💸 @${from} anarusha TSh ${total.toLocaleString()} — okota!`, `💸 @${from} is making it rain TSh ${total.toLocaleString()} — grab some!`));
+  });
+  socket.on('court:update', () => useStore.setState((s) => ({ courtVersion: s.courtVersion + 1 })));
+  socket.on('court:verdict', () => { sfx('levelup'); useStore.setState((s) => ({ courtVersion: s.courtVersion + 1 })); st().refreshMe().catch(() => {}); });
+  socket.on('court:invite', ({ caseId, defendant, plaintiff }) => {
+    sfx('notify');
+    st().toast(L(`🧑‍⚖️ Umeombwa kuwa jaji: @${defendant}${plaintiff ? ` vs @${plaintiff}` : ''} — fungua Mahakama`, `🧑‍⚖️ You've been asked to judge @${defendant}${plaintiff ? ` vs @${plaintiff}` : ''} — open Court`));
+    useStore.setState((s) => ({ courtVersion: s.courtVersion + 1 }));
+    systemNotify('🧑‍⚖️ Kisutu Court', `@${defendant}${plaintiff ? ` vs @${plaintiff}` : ''}`);
+    void caseId;
+  });
+  socket.on('mention', ({ from, text }) => {
+    sfx('notify');
+    st().toast(L(`📣 @${from} amekutaja: ${text.slice(0, 70)}`, `📣 @${from} mentioned you: ${text.slice(0, 70)}`));
+    systemNotify(`📣 @${from}`, text.slice(0, 120));
+  });
+  socket.on('rain:picked', ({ id }) => useStore.setState((s) => ({ rain: s.rain.filter((d) => d.id !== id) })));
   // Dating: matches, asks (date / partner / proposal) and their answers.
   socket.on('love:match', (m) => { sfx('levelup'); useStore.setState({ loveMatch: m }); });
   socket.on('love:ask', (a) => { sfx('notify'); useStore.setState({ loveAsk: { ...a, at: Date.now() } }); });

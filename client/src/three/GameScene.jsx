@@ -5,7 +5,8 @@ import { gameClock, CITIES } from '@shared/world.js';
 import { City } from './City.jsx';
 import { LocalPlayer, RemotePlayers, ParkedCar } from './Players.jsx';
 import { AudioDriver } from './AudioDriver.jsx';
-import { ActivityScene, SCENES, SCENE_ORIGIN, sceneCam } from './Scenes.jsx';
+import { ActivityScene, SCENES, SCENE_ORIGIN, sceneCam, sceneFocus } from './Scenes.jsx';
+import { setCityNight } from './CityDecor.jsx';
 import { HomeScene, HOME_ORIGIN } from './HomeScene.jsx';
 import { livePartyAt } from '../ui/events.js';
 import { MapPins } from './MapPins.jsx';
@@ -144,12 +145,15 @@ function CameraRig({ mode, sceneKey }) {
         camera.lookAt(ox + l[0], oy + l[1], oz + l[2]);
         return;
       }
-      const { pos, look } = SCENES[sceneKey].camera;
+      const { pos, look: look0 } = SCENES[sceneKey].camera;
+      sceneFocus.x += (sceneFocus.tx - sceneFocus.x) * Math.min(1, dt * 2.5);
+      sceneFocus.z += (sceneFocus.tz - sceneFocus.z) * Math.min(1, dt * 2.5);
+      const look = [look0[0] + sceneFocus.x, look0[1], look0[2] + sceneFocus.z];
       // Portrait screens are narrow: pull back so the whole room fits.
       const k = size.width / size.height < 1 ? 1.35 : 1;
-      const px = look[0] + (pos[0] - look[0]) * k;
-      const py = look[1] + (pos[1] - look[1]) * k;
-      const pz = look[2] + (pos[2] - look[2]) * k;
+      const px = look[0] + (pos[0] - look0[0]) * k;
+      const py = look[1] + (pos[1] - look0[1]) * k;
+      const pz = look[2] + (pos[2] - look0[2]) * k;
       camera.position.set(ox + px + Math.sin(t.current * 0.25) * 0.8, oy + py + Math.sin(t.current * 0.4) * 0.15, oz + pz);
       camera.lookAt(ox + look[0], oy + look[1], oz + look[2]);
       return;
@@ -238,6 +242,7 @@ function DayNight({ interior }) {
     hemi.current.intensity = 1.0 + day * 0.6;
     sun.current.intensity = 0.55 + day * 1.2;
     hemi.current.color.set(day > 0.3 ? '#ffffff' : '#9fb4ff');
+    setCityNight(Math.min(1, Math.max(0, 1 - day * 1.25)));
     const ang = ((h - 6) / 12) * Math.PI;
     sun.current.position.set(Math.cos(ang) * 80, 40 + Math.max(0, Math.sin(ang)) * 80, 40);
   });
@@ -285,9 +290,10 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
           onBillboard={onBillboard}
           onGround={onGround}
           myUsername={me?.username}
-          walkers={lowEnd ? 5 : 10}
+          walkers={lowEnd ? 8 : 18}
           showLabels={mode === 'play'}
           mapMode={mode === 'map'}
+          lowEnd={lowEnd}
         />
         </group>
         {home && me && <HomeScene me={me} />}

@@ -11,6 +11,7 @@ import { setAudioSettings, sfx } from '../../audio.js';
 import { useAudioSettings } from '../useAudioSettings.js';
 import { InviteCard } from '../Invite.jsx';
 import { InstallRow } from '../InstallApp.jsx';
+import { Socials } from '../Socials.jsx';
 
 function SoundSettings() {
   const s = useAudioSettings();
@@ -175,6 +176,7 @@ export function Mipangilio({ back }) {
         <SoundSettings />
         <Haptics />
         <InstallRow />
+        <div className="box"><Socials /></div>
         <div className="box">
           <div className="bold" style={{ marginBottom: 8 }}>{L('Lugha', 'Language')}</div>
           <LangToggle full />

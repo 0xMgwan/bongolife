@@ -4,12 +4,14 @@ import * as THREE from 'three';
 import {
   WATER, LAND_PATCHES, BRIDGES, BEACHES, ROADS, PLACES, PLOTS, BILLBOARDS, DISTRICTS, WORLD_SIZE,
   isWater, onRoad, buildingById, fmtShort, randomAppearance, AD_ROTATE_SECONDS, CITIES,
+  cityAt,
 } from '@shared/world.js';
-import { mat, geo, emojiTexture, labelTexture, windowTexture, adTexture } from './textures.js';
+import { mat, geo, emojiTexture, labelTexture, windowTexture, adTexture, mapLabelTexture } from './textures.js';
 import { Vehicle, Boat, Plane, Car } from './Vehicle.jsx';
 import { Avatar } from './Avatar.jsx';
+import { houseMat, towerGlowMat, fluffyCrown, Streets, RoofTanks, LedScreens, StreetNames, shopGlassMat, neonMat } from './CityDecor.jsx';
 import { L, loc } from '../i18n.js';
-import { trafficCars } from '../net.js';
+import { trafficCars, local } from '../net.js';
 
 const GRASS = '#c7dca6';
 const PAD = '#eceee6';
@@ -201,10 +203,11 @@ const CityFiller = memo(function CityFiller({ city }) {
   const acacia = city.id === 'aru';
   return (
     <group>
-      <Instanced items={houses} geometry={unitBox} material={whiteMat} transform={(h) => ({ pos: [h.x, 0, h.z], scale: [h.w, h.h, h.d], color: h.c })} />
+      <Instanced items={houses} geometry={unitBox} material={houseMat} transform={(h) => ({ pos: [h.x, 0, h.z], scale: [h.w, h.h, h.d], color: h.c })} />
       <Instanced items={houses} geometry={unitBox} material={roofMat} transform={(h) => ({ pos: [h.x, h.h, h.z], scale: [h.w + 0.4, 0.35, h.d + 0.4], color: city.id === 'znz' ? '#b45309' : '#9ca3af' })} />
+      <RoofTanks houses={houses} />
       <Instanced items={trees} geometry={trunkGeo} material={mat('#7c5a3a')} transform={([x, z, s]) => ({ pos: [x, 0, z], scale: [s, (acacia ? 2.4 : 1.6) * s, s] })} />
-      <Instanced items={trees} geometry={crownGeo} material={mat(acacia ? '#4d7c0f' : '#3f9b4a')} transform={([x, z, s]) => ({ pos: [x, (acacia ? 3.6 : 2.2) * s, z], scale: acacia ? [2.4 * s, 0.5 * s, 2.4 * s] : [1.5 * s, 1.4 * s, 1.5 * s] })} />
+      <Instanced items={trees} geometry={acacia ? crownGeo : fluffyCrown} material={mat(acacia ? '#4d7c0f' : '#3f9b4a')} transform={([x, z, s]) => ({ pos: [x, (acacia ? 3.6 : 2.2) * s, z], scale: acacia ? [2.4 * s, 0.5 * s, 2.4 * s] : [1.5 * s, 1.4 * s, 1.5 * s] })} />
       <Instanced items={palms} geometry={trunkGeo} material={mat('#9a7b4f')} transform={([x, z, s]) => ({ pos: [x, 0, z], scale: [s * 0.8, 4.5 * s, s * 0.8] })} />
       <Instanced items={palms} geometry={palmLeafGeo} material={mat('#2f9e57')} transform={([x, z, s]) => ({ pos: [x, 4.6 * s, z], scale: [s, s, s], rot: x })} />
     </group>
@@ -338,21 +341,16 @@ const palmLeafGeo = new THREE.ConeGeometry(1.8, 0.8, 7).translate(0, -0.2, 0);
 
 const Filler = memo(function Filler() {
   const { houses, towers, trees, palms } = useFiller();
-  useEffect(() => {
-    const t = windowTexture().clone();
-    t.repeat.set(2, 5);
-    t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.needsUpdate = true;
-    towerMat.map = t;
-    towerMat.needsUpdate = true;
-  }, []);
   return (
     <group>
-      <Instanced items={houses} geometry={unitBox} material={whiteMat} transform={(h) => ({ pos: [h.x, 0, h.z], scale: [h.w, h.h, h.d], color: h.c })} />
+      <Instanced items={houses} geometry={unitBox} material={houseMat} transform={(h) => ({ pos: [h.x, 0, h.z], scale: [h.w, h.h, h.d], color: h.c })} />
       <Instanced items={houses} geometry={unitBox} material={roofMat} transform={(h) => ({ pos: [h.x, h.h, h.z], scale: [h.w + 0.4, 0.35, h.d + 0.4], color: '#9ca3af' })} />
-      <Instanced items={towers} geometry={unitBox} material={towerMat} transform={(h) => ({ pos: [h.x, 0, h.z], scale: [h.w, h.h, h.d], color: h.c })} />
+      <RoofTanks houses={houses} />
+      <Instanced items={towers} geometry={unitBox} material={towerGlowMat} transform={(h) => ({ pos: [h.x, 0, h.z], scale: [h.w, h.h, h.d], color: h.c })} />
+      <Instanced items={towers} geometry={unitBox} material={roofMat} transform={(h) => ({ pos: [h.x, h.h, h.z], scale: [h.w + 0.3, 0.5, h.d + 0.3], color: '#64748b' })} />
+      <LedScreens towers={towers} />
       <Instanced items={trees} geometry={trunkGeo} material={mat('#7c5a3a')} transform={([x, z, s]) => ({ pos: [x, 0, z], scale: [s, 1.6 * s, s] })} />
-      <Instanced items={trees} geometry={crownGeo} material={mat('#3f9b4a')} transform={([x, z, s]) => ({ pos: [x, 2.2 * s, z], scale: [1.5 * s, 1.4 * s, 1.5 * s] })} />
+      <Instanced items={trees} geometry={fluffyCrown} material={mat('#3f9b4a')} transform={([x, z, s]) => ({ pos: [x, 2.4 * s, z], scale: [1.45 * s, 1.35 * s, 1.45 * s] })} />
       <Instanced items={palms} geometry={trunkGeo} material={mat('#9a7b4f')} transform={([x, z, s]) => ({ pos: [x, 0, z], scale: [s * 0.8, 4.5 * s, s * 0.8] })} />
       <Instanced items={palms} geometry={palmLeafGeo} material={mat('#2f9e57')} transform={([x, z, s]) => ({ pos: [x, 4.6 * s, z], scale: [s, s, s], rot: x })} />
     </group>
@@ -600,8 +598,10 @@ function PlaceModel({ place, owner }) {
       return (
         <group>
           <Box w={w} h={h} d={d} color={c} />
-          <mesh geometry={geo('box', w + 0.1, 0.25, d + 0.1)} material={NEON_PINK} position={[0, h - 0.6, 0]} />
-          <mesh geometry={geo('box', w + 0.1, 0.25, d + 0.1)} material={NEON_CYAN} position={[0, 1.2, 0]} />
+          <mesh geometry={geo('box', w + 0.1, 0.25, d + 0.1)} material={neonMat('#ec4899')} position={[0, h - 0.6, 0]} />
+          <mesh geometry={geo('box', w + 0.1, 0.25, d + 0.1)} material={neonMat('#22d3ee')} position={[0, 1.2, 0]} />
+          <mesh geometry={geo('box', 0.2, h, 0.2)} material={neonMat('#a855f7')} position={[w / 2 + 0.05, h / 2, d / 2 + 0.05]} />
+          <mesh geometry={geo('box', 0.2, h, 0.2)} material={neonMat('#a855f7')} position={[-w / 2 - 0.05, h / 2, d / 2 + 0.05]} />
           <Sign text={loc(place).toUpperCase()} w={w * 0.85} y={h - 2} z={d / 2 + 0.06} bg="#111827" fg="#f472b6" />
         </group>
       );
@@ -621,7 +621,9 @@ function PlaceModel({ place, owner }) {
         <group>
           <Box w={w} h={h} d={d} color={c} />
           <Box w={w + 0.5} h={0.5} d={d + 0.5} color="#6b7280" y={h} />
-          <Box w={2.2} h={2.4} d={0.2} color="#374151" z={d / 2} />
+          {/* shopfront glass that glows warm at night, with a door in the middle */}
+          <mesh geometry={unitBox} material={shopGlassMat} position={[0, 0.4, d / 2 + 0.02]} scale={[w * 0.82, Math.min(2.2, h * 0.5), 0.12]} />
+          <Box w={2.2} h={2.4} d={0.2} color="#374151" z={d / 2 + 0.05} />
           {place.type === 'food' && <mesh geometry={geo('box', w + 1, 0.15, 3)} material={mat('#f97316')} position={[0, 2.8, d / 2 + 1.3]} rotation={[0.25, 0, 0]} />}
           {place.type === 'campus' && <Box w={3} h={h + 6} d={3} color="#fef3c7" x={w / 2 - 2} />}
           {place.type === 'mall' && <Box w={w * 0.5} h={2} d={0.3} color="#7c3aed" y={h - 2.4} z={d / 2 + 0.1} />}
@@ -647,14 +649,14 @@ function towerFacade(color) {
  * Map icon: a constant on-screen size (like a map pin) at any zoom.
  * `scale` is the old world size; it maps to a fraction of the screen height.
  */
-export function Marker({ emoji, y, scale = 3.2, label, onClick, ring, pill }) {
-  // Map view: one white pill with the icon and the name (like Lagos), easy to read from above.
-  const pillTex = useMemo(() => (pill && label ? labelTexture(label, { size: 72, emoji, bold: 700, fg: '#111827', bg: 'rgba(255,255,255,.97)' }) : null), [pill, label, emoji]);
+export function Marker({ emoji, y, scale = 3.2, label, onClick, ring, pill, tone }) {
+  // Map view: a dark icon badge + outlined name, coloured by what kind of place it is.
+  const pillTex = useMemo(() => (pill && label ? mapLabelTexture(label, emoji, tone || '#ffffff') : null), [pill, label, emoji, tone]);
   // Map markers keep their disc: bare emojis are too small to spot over buildings on a phone.
   const tex = useMemo(() => emojiTexture(emoji, { ring }), [emoji, ring]);
   const lab = useMemo(() => (label && !pill ? labelTexture(label, { size: 60, bold: 700 }) : null), [label, pill]);
   if (pillTex) {
-    const ph = 0.031;
+    const ph = 0.036;
     return (
       <group position={[0, y, 0]}>
         <sprite scale={[ph * pillTex.aspect, ph, 1]} onClick={onClick} renderOrder={6}>
@@ -679,6 +681,16 @@ export function Marker({ emoji, y, scale = 3.2, label, onClick, ring, pill }) {
   );
 }
 
+// Map label colours by kind of place (food orange, nightlife pink, shops yellow, transport blue…).
+const TONES = [
+  [['food', 'restaurant', 'grill', 'fish', 'market'], '#fdba74'],
+  [['club', 'lounge', 'bar', 'stage', 'casino', 'studio'], '#f9a8d4'],
+  [['shop', 'mall', 'salon', 'stonetown'], '#fde047'],
+  [['airport', 'ferry', 'terminal', 'port', 'yard', 'slipway'], '#7dd3fc'],
+  [['beach', 'museum', 'safari', 'mountain', 'forest', 'farm', 'monument', 'stadium', 'golf', 'waterpark', 'karting'], '#86efac'],
+];
+const toneOf = (p) => TONES.find(([types]) => types.includes(p.type))?.[1] || '#ffffff';
+
 const Places = memo(function Places({ onPlace, businesses, showLabels, mapMode }) {
   return PLACES.map((p) => {
     const click = (e) => {
@@ -698,7 +710,7 @@ const Places = memo(function Places({ onPlace, businesses, showLabels, mapMode }
         <mesh position={[0, Math.max(2, p.h) / 2, 0]} onClick={click} visible={false}>
           <boxGeometry args={[w + 2, Math.max(4, p.h), d + 2]} />
         </mesh>
-        <Marker emoji={p.icon} y={Math.max(p.h, 2) + 3.4} label={showLabels || mapMode ? loc(p) : null} pill={mapMode} onClick={click} />
+        <Marker emoji={p.icon} y={Math.max(p.h, 2) + 3.4} label={showLabels || mapMode ? loc(p) : null} pill={mapMode} tone={toneOf(p)} onClick={click} />
       </group>
     );
   });
@@ -924,15 +936,26 @@ function AirportTraffic({ w, z }) {
 }
 
 // ------------------------------------------------------------ walkers
-function Walkers({ count = 10 }) {
+/** Which city the player is in (re-checked every few seconds). */
+function useCityId() {
+  const [id, setId] = useState(() => cityAt(local.x, local.z)?.id || 'dar');
+  useEffect(() => {
+    const t = setInterval(() => setId(cityAt(local.x, local.z)?.id || 'dar'), 3000);
+    return () => clearInterval(t);
+  }, []);
+  return id;
+}
+
+function Walkers({ count = 10, cityId = 'dar' }) {
+  const pool = useMemo(() => PLACES.filter((p) => !p.comingSoon && (cityAt(...p.pos)?.id || 'dar') === cityId), [cityId]);
   const items = useMemo(() => {
-    const r = rng(42);
+    const r = rng(42 + cityId.length);
     return Array.from({ length: count }, () => {
-      const p = PLACES[Math.floor(r() * PLACES.length)];
+      const p = pool[Math.floor(r() * pool.length)] || PLACES[0];
       const pos = [p.pos[0] + (r() - 0.5) * 8, p.pos[1] + p.size[1] / 2 + 3];
       return { appearance: randomAppearance(), pos, target: null, wait: r() * 4, motion: { current: { moving: false } } };
     });
-  }, [count]);
+  }, [count, pool]);
   const refs = useRef([]);
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.1);
@@ -943,7 +966,7 @@ function Walkers({ count = 10 }) {
         w.wait -= dt;
         w.motion.current.moving = false;
         if (w.wait <= 0) {
-          const near = PLACES.filter((p) => !p.comingSoon && Math.hypot(p.pos[0] - w.pos[0], p.pos[1] - w.pos[1]) < 70);
+          const near = pool.filter((p) => Math.hypot(p.pos[0] - w.pos[0], p.pos[1] - w.pos[1]) < 70);
           const p = near[Math.floor(Math.random() * near.length)] || PLACES[0];
           const t = [p.pos[0] + (Math.random() - 0.5) * p.size[0], p.pos[1] + p.size[1] / 2 + 2.5];
           if (!isWater(t[0], t[1])) w.target = t;
@@ -978,19 +1001,22 @@ function Districts() {
   return DISTRICTS.map((d) => <FlatText key={d.id} text={d.name.toUpperCase()} pos={[d.pos[0], d.pos[1] + 12]} size={3.2} color="rgba(55,65,81,.35)" />);
 }
 
-export function City({ world, ads, onPlace, onPlot, onBillboard, onGround, myUsername, walkers = 10, showLabels = true, mapMode = false }) {
+export function City({ world, ads, onPlace, onPlot, onBillboard, onGround, myUsername, walkers = 10, showLabels = true, mapMode = false, lowEnd = false }) {
+  const cityId = useCityId();
   return (
     <group>
       <Terrain onGround={onGround} />
       {CITIES.filter((c) => c.id !== 'dar').map((c) => <CityGround key={c.id} city={c} onGround={onGround} />)}
       <Roads onGround={onGround} />
+      <Streets lowEnd={lowEnd} />
+      {mapMode && <StreetNames />}
       <Filler />
       <Districts />
       <Places onPlace={onPlace} businesses={world?.businesses} showLabels={showLabels} mapMode={mapMode} />
       <Plots plots={world?.plots} onPlot={onPlot} myUsername={myUsername} />
       <Billboards ads={ads} onBillboard={onBillboard} big={mapMode} />
       <Traffic />
-      {walkers > 0 && <Walkers count={walkers} />}
+      {walkers > 0 && <Walkers key={cityId} count={walkers} cityId={cityId} />}
     </group>
   );
 }

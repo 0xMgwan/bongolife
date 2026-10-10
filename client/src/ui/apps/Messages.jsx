@@ -8,6 +8,7 @@ import { avatarEmoji } from '../../three/Avatar.jsx';
 import { AppHead } from '../Phone.jsx';
 import { L } from '../../i18n.js';
 import { inviteHome, visitHome } from '../social.js';
+import { MentionText, MentionSuggest } from '../Mentions.jsx';
 
 // "::hello" style system lines from quick interactions.
 const NUDGES = { hello: ['amesalimia 👋', 'said hello 👋'], gist: ['anataka stori 💬', 'wants to gist 💬'], joke: ['amepiga utani 😂', 'cracked a joke 😂'], 'joke:fail': ['alijaribu utani 😬', 'tried a joke 😬'], shade: ['amepiga kijembe 😒', 'threw shade 😒'] };
@@ -147,7 +148,7 @@ function NewGroup({ back, onCreated }) {
 }
 
 // ------------------------------------------------------------ voice notes
-function VoicePlayer({ m }) {
+export function VoicePlayer({ m }) {
   const ref = useRef();
   const [playing, setPlaying] = useState(false);
   const [t, setT] = useState(0);
@@ -169,7 +170,7 @@ function VoicePlayer({ m }) {
 }
 
 /** Hold to talk, release to send, slide left to cancel. */
-function useVoiceRecorder(onDone) {
+export function useVoiceRecorder(onDone) {
   const [rec, setRec] = useState(null); // { secs, cancel }
   const st = useRef({});
   const start = async (x) => {
@@ -514,15 +515,16 @@ export function Mtaa({ back, open }) {
               {m.username !== myName && (
                 <button className="bold small" style={{ display: 'block', color: 'var(--green-d)' }} onClick={() => open('dm', m.username)}>@{m.username}</button>
               )}
-              {m.text}
+              <MentionText text={m.text} />
               <small>{ago(m.at)}</small>
             </div>
           ))}
           <div ref={end} />
         </div>
       </div>
+      <MentionSuggest text={text} setText={setText} />
       <form className="composer" onSubmit={send}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={L('Niaje wanangu…', 'Hey everyone…')} maxLength={200} enterKeyHint="send" />
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={L('Niaje wanangu… (@jina kumtaja mtu)', 'Hey everyone… (@name to mention)')} maxLength={200} enterKeyHint="send" />
         <button className="btn btn-green btn-sm" disabled={!text.trim()}>{L('Tuma', 'Send')}</button>
       </form>
     </>

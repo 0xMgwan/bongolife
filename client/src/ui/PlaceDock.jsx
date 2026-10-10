@@ -8,6 +8,10 @@ import { L, loc } from '../i18n.js';
 import { sfx } from '../audio.js';
 import { share } from './share.js';
 
+// Nightlife venues where you can make it rain / tip (matches server/src/venue.js).
+const RAIN_VENUES = ['club', 'lounge', 'bar', 'singeli', 'kendwa', 'casino', 'viavia', 'nyamachoma'];
+const RAIN_AMOUNTS = [10_000, 50_000, 100_000, 500_000];
+const TIP_AMOUNTS = [5_000, 20_000, 50_000, 100_000];
 const CASINO_GAMES = [['slots', '🎰', 'Slot machines', 'Slot machines'], ['blackjack', '🃏', 'Meza ya Blackjack', 'Blackjack table'], ['roulette', '🎡', 'Roulette', 'Roulette']];
 
 /** The place you're in (entered, inside its scene, or doing something there), else null. */
@@ -52,6 +56,16 @@ export function PlaceDock({ me, placeId, onHome, onMap }) {
   const dates = near ? DATE_SPOTS.filter((d) => d.placeId === placeId).flatMap((d) => (me.partners || [])
     .filter((pt) => [...remotes.values()].some((r) => r.username === pt.username && (r.inside === placeId || Math.hypot(r.tx - p.pos[0], r.tz - p.pos[1]) < Math.max(...p.size) / 2 + 14)))
     .map((pt) => ({ spot: d, pt }))) : [];
+  const [money, setMoney] = useState(null); // 'rain' | 'tip'
+  const nightlife = RAIN_VENUES.includes(placeId) && (isIn || me.busy?.placeId === placeId);
+  const throwMoney = async (kind, amount) => {
+    const r = await run(`/venues/${placeId}/${kind}`, { method: 'POST', body: { amount } });
+    if (r) {
+      sfx('cash');
+      setMoney(null);
+      if (kind === 'tip') useStore.getState().toast(r.to ? L(`🎧 Tip imemfikia @${r.to}`, `🎧 Tip sent to @${r.to}`) : L('🎧 DJ amefurahi! ⭐+1', '🎧 The DJ loved it! ⭐+1'));
+    }
+  };
   const startDate = async ({ spot, pt }) => {
     const r = await run(`/love/${pt.rid}/date`, { method: 'POST', body: { spot: spot.id } });
     if (r) { sfx('levelup'); useStore.getState().toast(L(`💕 Deti na @${pt.username} — mapenzi ${r.affection}/100`, `💕 Date with @${pt.username} — affection ${r.affection}/100`)); }
@@ -85,7 +99,13 @@ export function PlaceDock({ me, placeId, onHome, onMap }) {
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder={L(`Sema kitu kwa watu ${here} walioko hapa…`, `Say something to the ${here} players here…`)} maxLength={200} enterKeyHint="send" />
         <button className="pd-send" disabled={!text.trim()} aria-label={L('Tuma', 'Send')}>➤</button>
       </form>
-      {(cats.length > 0 || canEnter || dates.length > 0) && (
+      {money && (
+        <div className="pd-money-pick">
+          <small>{money === 'rain' ? L('Pesa itaanguka sakafuni — yeyote humu anaweza kuokota 💸', 'Notes fall on the floor — anyone here can grab them 💸') : L('Ikiwa DJ ni mchezaji, tip inamfikia yeye', 'If a player is on the decks, the tip goes to them')}</small>
+          <div>{(money === 'rain' ? RAIN_AMOUNTS : TIP_AMOUNTS).map((a) => <button key={a} disabled={me.money < a} onClick={() => throwMoney(money, a)}>{fmtShort(a)}</button>)}</div>
+        </div>
+      )}
+      {(cats.length > 0 || canEnter || dates.length > 0 || nightlife) && (
         <div className="pd-chips">
           {cats.length > 0 && <button className={`pd-up ${openCat ? 'on' : ''}`} onClick={() => setOpen(openCat ? false : cats[0].key)} aria-label={L('Zaidi', 'More')}>{openCat ? '⌄' : '˄'}</button>}
           {cats.map((c) => (
@@ -94,6 +114,8 @@ export function PlaceDock({ me, placeId, onHome, onMap }) {
             </button>
           ))}
           {dates.map((d) => <button key={`${d.spot.id}-${d.pt.rid}`} className="sel" onClick={() => startDate(d)}><span>💘</span>{L(`Deti na @${d.pt.username}`, `Date with @${d.pt.username}`)}</button>)}
+          {nightlife && <button className={money === 'rain' ? 'sel' : ''} onClick={() => setMoney(money === 'rain' ? null : 'rain')}><span>💸</span>{L('Rusha pesa', 'Make it rain')}</button>}
+          {nightlife && <button className={money === 'tip' ? 'sel' : ''} onClick={() => setMoney(money === 'tip' ? null : 'tip')}><span>🎧</span>{L('Tip DJ', 'Tip the DJ')}</button>}
           {canEnter && <button onClick={() => setInside(placeId)}><span>🚪</span>{L('Ingia ndani', 'Go inside')}</button>}
         </div>
       )}

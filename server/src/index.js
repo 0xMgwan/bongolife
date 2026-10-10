@@ -145,6 +145,12 @@ io.on('connection', (socket) => {
     p.lastChat = t;
     const info = insertMsg.run(uid, null, text, t);
     broadcast('chat', { mid: info.lastInsertRowid, id: uid, username: p.username, name: p.name, text, at: t });
+    // @mentions: ping each mentioned player (once per message, never yourself or someone who blocked you).
+    const named = [...new Set((text.match(/@([a-z0-9_.]{3,24})/gi) || []).map((m) => m.slice(1).toLowerCase()))].slice(0, 5);
+    for (const n of named) {
+      const u = db.prepare('SELECT id FROM users WHERE lower(username) = ?').get(n);
+      if (u && u.id !== uid && !isBlocked(uid, u.id)) emitTo(u.id, 'mention', { from: p.username, text, at: t });
+    }
     // Chatting fills the social need a little.
     const u = getUser(uid);
     saveFields(uid, { needs: { ...u.needs, social: Math.min(100, (u.needs.social ?? 50) + 2) } });

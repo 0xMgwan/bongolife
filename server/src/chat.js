@@ -123,17 +123,23 @@ const AUDIO = [
   { ext: 'ogg', test: (b) => b.toString('ascii', 0, 4) === 'OggS' },
   { ext: 'm4a', test: (b) => b.toString('ascii', 4, 8) === 'ftyp' },
 ];
-export function sendVoice(userId, { to, groupId, replyTo, duration }, file) {
-  checkMuted(userId);
+/** Validate and store an uploaded voice note; returns its path and clamped length. */
+export function storeVoice(file, duration) {
   if (!file?.buffer?.length) throw new GameError(['Hakuna sauti', 'No audio']);
   if (file.buffer.length > CHAT.maxVoiceBytes) throw new GameError(['Sauti ni ndefu mno.', 'Voice note is too long.']);
   const kind = AUDIO.find((a) => a.test(file.buffer));
   if (!kind) throw new GameError(['Aina ya sauti haikubaliki.', 'Unsupported audio format.']);
-  const dest = target({ userId, to, groupId });
   const secs = Math.max(1, Math.min(CHAT.maxVoiceSecs, Math.round(Number(duration) || 1)));
   const rel = `voice/${crypto.randomUUID()}.${kind.ext}`;
   fs.mkdirSync(path.join(UPLOAD_DIR, 'voice'), { recursive: true });
   fs.writeFileSync(path.join(UPLOAD_DIR, rel), file.buffer);
+  return { rel, secs };
+}
+
+export function sendVoice(userId, { to, groupId, replyTo, duration }, file) {
+  checkMuted(userId);
+  const dest = target({ userId, to, groupId });
+  const { rel, secs } = storeVoice(file, duration);
   const info = q.insert.run({ from: userId, to: dest.to, group: dest.group, body: '🎤', t: now(), reply: validReply(replyTo, dest), fwd: 0, kind: 'voice', audio: rel, duration: secs });
   return fanout(q.msg.get(info.lastInsertRowid), dest.group ? 'gm' : 'dm');
 }

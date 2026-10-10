@@ -108,7 +108,7 @@ function ArrestModal() {
         )}</p>
         <button className="choice primary" disabled={me.money < j.fine} onClick={() => choose('fine')}><b>{L('Lipa faini', 'Pay the fine')} · {fmtTsh(j.fine)}</b><small>{L('Toka kituoni sasa hivi', 'Walk out of the station')}</small></button>
         <button className="choice" onClick={() => choose('cell')}><b>{L('Kaa rumande', 'Sit in the cell')}</b><small>{L(`Hakuna faini sasa, subiri (au lipa dhamana ${fmtTsh(j.bail)})`, `No fine now, but you wait it out (or pay ${fmtTsh(j.bail)} bail)`)}</small></button>
-        <button className="choice" disabled={me.money < CRIME.lawyerFee} onClick={() => choose('lawyer')}><b>{L('Mwite wakili', 'Call a lawyer')} ⚖️ · {fmtTsh(CRIME.lawyerFee)}</b><small>{L(`Kesi Kisutu baada ya dakika ${Math.round(CRIME.courtDelayMs / 60000)}: ukishinda uko huru, ukishindwa nusu ya muda rumande`, `Court at Kisutu in ${Math.round(CRIME.courtDelayMs / 60000)} min: win and you walk, lose and it's half the time`)}</small></button>
+        <button className="choice" disabled={me.money < CRIME.lawyerFee} onClick={() => choose('lawyer')}><b>{L('Mwite wakili', 'Call a lawyer')} ⚖️ · {fmtTsh(CRIME.lawyerFee)}</b><small>{L('Kesi Kisutu (dk 5): toa maelezo kwa maandishi au sauti, chagua jaji. Ukishinda uko huru; ukishindwa faini + nusu ya muda rumande', 'A real hearing at Kisutu (5 min): give your side in writing or by voice, pick a judge. Win and you walk; lose and it\'s the fine + half the time')}</small></button>
       </div>
     </div>
   );
@@ -137,7 +137,7 @@ export function JailPanel() {
     }).catch(() => {});
   }, [now, end]);
   if (!j || (j.phase !== 'cell' && j.phase !== 'court')) return null;
-  const total = j.phase === 'cell' ? (j.verdict ? CRIME.cellMs / 2 : CRIME.cellMs) : CRIME.courtDelayMs;
+  const total = j.phase === 'cell' ? (j.verdict ? CRIME.cellMs / 2 : CRIME.cellMs) : Math.max(60_000, (j.courtAt || 0) - (j.at || Date.now()));
   const left = Math.max(0, end - now);
   const pct = Math.min(100, 100 - (left / total) * 100);
   const mm = `${Math.floor(left / 60000)}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}`;
@@ -146,6 +146,7 @@ export function JailPanel() {
       <div className="jp-t">{j.phase === 'cell' ? L('🔒 Uko rumande · Kituo cha Polisi Oysterbay', '🔒 In the cell · Oysterbay Police Station') : L('⚖️ Mahakama ya Kisutu · kesi yako inasikilizwa', '⚖️ Kisutu Court · your case is being heard')}</div>
       <div className="jp-s">{pick(j.reason)} · {j.phase === 'cell' ? L(`unatoka baada ya ${mm}`, `out in ${mm}`) : L(`hukumu baada ya ${mm}`, `verdict in ${mm}`)}</div>
       <div className="jp-bar"><i style={{ width: `${pct}%` }} /></div>
+      {j.phase === 'court' && j.caseId && <button className="btn btn-white btn-block btn-sm" style={{ marginBottom: 6 }} onClick={() => useStore.getState().openPhone('mahakama', j.caseId)}>⚖️ {L('Fungua kesi — toa maelezo, chagua jaji', 'Open your case — give your side, pick a judge')}</button>}
       {j.phase === 'cell' && <button className="btn btn-white btn-block btn-sm" disabled={me.money < j.bail} onClick={() => run('/jail/bail', { method: 'POST' }).then((r) => r && (sfx('cash'), useStore.getState().toast(L('🔓 Dhamana imelipwa — uko huru.', '🔓 Bail paid — you are free.'))))}>{L('Lipa dhamana', 'Pay bail')} · {fmtTsh(j.bail)}</button>}
     </div>
   );

@@ -5,6 +5,7 @@ import { Logo } from './Logo.jsx';
 import { avatarEmoji } from '../three/Avatar.jsx';
 import { L, pick } from '../i18n.js';
 import { LangToggle } from './LangToggle.jsx';
+import { Socials } from './Socials.jsx';
 
 const k = (n) => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n ?? 0));
 
@@ -80,6 +81,7 @@ export default function Landing() {
             <button className="btn btn-green grow" onClick={() => go('signup')}>{L('Jisajili bure', 'Sign up free')}</button>
             <button className="btn btn-white" onClick={() => go('login')}>{L('Ingia', 'Log in')}</button>
           </div>
+          <Socials compact />
           <div className="land-legal">
             <a href="/terms">{L('Masharti', 'Terms')}</a>
             <a href="/privacy">{L('Faragha', 'Privacy')}</a>

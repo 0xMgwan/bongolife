@@ -361,3 +361,64 @@ if (typeof document !== 'undefined' && document.fonts) {
     }
   });
 }
+
+/**
+ * Map label in the stylised-city look: a dark round icon badge + bold text with a dark outline,
+ * coloured by category. Returns { texture, aspect } like labelTexture.
+ */
+export function mapLabelTexture(text, emoji, color = '#ffffff') {
+  const key = ['map', text, emoji, color].join('|');
+  if (labelCache.has(key)) return labelCache.get(key);
+  const size = 64;
+  const m = document.createElement('canvas').getContext('2d');
+  m.font = `800 ${size}px ${FONT}`;
+  const tw = Math.ceil(m.measureText(text).width);
+  const badge = size * 1.5;
+  const gap = size * 0.28;
+  const stroke = size * 0.2;
+  const w = Math.ceil(badge + gap + tw + stroke * 2 + 8);
+  const h = Math.ceil(badge + 10);
+  const paint = (ctx) => {
+    ctx.clearRect(0, 0, w, h);
+    const cy = h / 2;
+    // badge
+    ctx.shadowColor = 'rgba(0,0,0,.35)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.arc(badge / 2 + 4, cy, badge / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.arc(badge / 2 + 4, cy, badge / 2 - 3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.font = `${size * 0.82}px ${EMOJI_FONT}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(emoji || '📍', badge / 2 + 4, cy + 3);
+    // text with outline
+    ctx.font = `800 ${size}px ${FONT}`;
+    ctx.textAlign = 'left';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = stroke;
+    ctx.strokeStyle = 'rgba(17,24,39,.92)';
+    const tx = badge + gap + stroke / 2 + 4;
+    ctx.strokeText(text, tx, cy + 3);
+    ctx.fillStyle = color;
+    ctx.fillText(text, tx, cy + 3);
+  };
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  paint(c.getContext('2d'));
+  const texture = new THREE.CanvasTexture(c);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  const res = { texture, aspect: w / h, paint };
+  labelCache.set(key, res);
+  return res;
+}

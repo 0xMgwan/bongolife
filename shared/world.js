@@ -1675,3 +1675,22 @@ export const MUSIC_VENUES = [
   { id: 'forodhani', name: 'Forodhani', style: 'Taarab' },
   { id: 'home', name: 'Home radio', style: 'Any' },
 ];
+
+// ============================================================ Zanzibar & Arusha businesses
+// Buyable like the Dar ones: walk up (or use an agent in the Invest app) and it pays every hour.
+const MORE_BUSINESS = {
+  forodhani: { price: 15_000_000, incomePerHour: 100_000, label: 'Banda la Zanzibar pizza Forodhani', labelEn: 'Zanzibar pizza stall, Forodhani' },
+  darajani: { price: 12_000_000, incomePerHour: 85_000, label: 'Kibanda cha viungo Darajani', labelEn: 'Spice stall, Darajani' },
+  stonetown: { price: 30_000_000, incomePerHour: 200_000, label: 'Duka la vinyago Stone Town', labelEn: 'Curio shop, Stone Town' },
+  spice: { price: 60_000_000, incomePerHour: 380_000, label: 'Shamba la Viungo (ziara)', labelEn: 'Spice farm tours' },
+  therock: { price: 150_000_000, incomePerHour: 1_000_000 },
+  nungwi: { price: 45_000_000, incomePerHour: 300_000, label: 'Baa ya ufukweni Nungwi', labelEn: 'Nungwi beach bar' },
+  kendwa: { price: 260_000_000, incomePerHour: 1_800_000 },
+  'zn-hotel': { price: 600_000_000, incomePerHour: 3_800_000 },
+  maasai: { price: 14_000_000, incomePerHour: 95_000, label: 'Kibanda cha shanga za Kimasai', labelEn: 'Maasai beadwork stall' },
+  coffee: { price: 80_000_000, incomePerHour: 520_000, label: 'Shamba la Kahawa (mavuno)', labelEn: 'Coffee farm (harvests)' },
+  viavia: { price: 55_000_000, incomePerHour: 360_000 },
+  'ar-hotel': { price: 450_000_000, incomePerHour: 2_900_000 },
+  safari: { price: 200_000_000, incomePerHour: 1_350_000, label: 'Kampuni ya safari', labelEn: 'Safari company' },
+};
+for (const [id, b] of Object.entries(MORE_BUSINESS)) if (placeById[id] && !placeById[id].business) placeById[id].business = b;

@@ -4,6 +4,7 @@ import { db, getUser, saveFields, addMoney, GameError, now } from './db.js';
 import { online, broadcast, emitTo } from './presence.js';
 import { applyNeeds } from './game.js';
 import { bumpStats } from './story.js';
+import { openCase, COURT } from './court.js';
 
 const jailed = (u) => !!u?.jail && u.jail.phase !== 'free';
 export const isJailed = jailed;
@@ -137,7 +138,8 @@ export const jailChoose = db.transaction((userId, option) => {
   if (option === 'lawyer') {
     if (u.money < CRIME.lawyerFee) throw new GameError(['Huna pesa ya wakili.', "You can't afford a lawyer."]);
     addMoney(userId, -CRIME.lawyerFee, 'spend', 'Ada ya wakili');
-    saveFields(userId, { jail: { ...j, phase: 'court', courtAt: now() + CRIME.courtDelayMs } });
+    const caseId = openCase(userId, j);
+    saveFields(userId, { jail: { ...j, phase: 'court', courtAt: now() + COURT.hearingMs, caseId } });
     moveTo(userId, COURT_ID);
     return { court: true };
   }

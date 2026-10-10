@@ -24,6 +24,7 @@ import { Majirani } from './apps/Majirani.jsx';
 import { Kampuni } from './apps/Kampuni.jsx';
 import { Maduka } from './apps/Maduka.jsx';
 import { Penzi } from './apps/Penzi.jsx';
+import { Mahakama } from './apps/Mahakama.jsx';
 import { api } from '../api.js';
 
 // Built-in apps. `g` is the icon gradient.
@@ -40,6 +41,7 @@ export const APPS = [
   { id: 'penzi', name: 'Penzi', nameEn: 'Dating', icon: '💘', g: ['#fb7185', '#be123c'], C: Penzi },
   { id: 'majirani', name: 'Majirani', nameEn: 'Neighbours', icon: '🏘️', g: ['#f9a8d4', '#be185d'], C: Majirani },
   { id: 'polisi', name: 'Polisi', nameEn: 'Police', icon: '🚓', g: ['#60a5fa', '#1e3a8a'], C: Polisi },
+  { id: 'mahakama', name: 'Mahakama', nameEn: 'Court', icon: '⚖️', g: ['#d6a35c', '#78350f'], C: Mahakama },
   { id: 'anwani', name: 'Anwani', nameEn: 'Contacts', icon: '📞', g: ['#4ade80', '#16a34a'], C: Contacts },
   { id: 'mtaa', name: 'Mtaa', nameEn: 'Street Chat', icon: '📣', g: ['#fb923c', '#ea580c'], C: Mtaa },
   { id: 'pesa', name: 'Bongo Pesa', nameEn: 'Bank', icon: '🏦', g: ['#a78bfa', '#7c3aed'], C: Pesa },

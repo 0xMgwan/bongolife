@@ -25,6 +25,8 @@ import * as company from '../company.js';
 import * as chat from '../chat.js';
 import * as love from '../love.js';
 import * as music from '../music.js';
+import * as venue from '../venue.js';
+import * as court from '../court.js';
 
 export const api = express.Router();
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -571,10 +573,29 @@ api.post('/jail/bail', (req, res) => {
   const r = crime.payBail(req.user.id);
   res.json({ ...r, me: game.playerState(req.user.id) });
 });
-api.post('/jail/tick', (req, res) => {
+api.post('/jail/tick', wrap(async (req, res) => {
+  // A real court case: let the judge / magistrate settle it, then report the outcome.
+  const j = getUser(req.user.id).jail;
+  if (j?.phase === 'court' && j.caseId && now() >= j.courtAt) {
+    await court.settle(j.caseId);
+    const after = getUser(req.user.id).jail;
+    const verdict = !after ? 'win' : after.phase === 'cell' ? 'lose' : undefined;
+    return res.json({ verdict, free: !after, jail: after, me: game.playerState(req.user.id) });
+  }
   const r = crime.jailTick(req.user.id);
   res.json({ ...r, me: game.playerState(req.user.id) });
-});
+}));
+
+// ------------------------------------------------------------------------ court
+api.get('/court/cases', (req, res) => res.json(court.myCases(req.user.id)));
+api.get('/court/cases/:id', (req, res) => res.json(court.caseView(req.user.id, req.params.id)));
+api.post('/court/cases/:id/statement', rateLimit('stmt', 30, 60_000), (req, res) => { court.addText(req.user.id, req.params.id, req.body.text); res.json(court.caseView(req.user.id, req.params.id)); });
+const courtVoice = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1_600_000, files: 1 } });
+api.post('/court/cases/:id/voice', rateLimit('stmt', 30, 60_000), courtVoice.single('audio'), (req, res) => { court.addVoice(req.user.id, req.params.id, req.file, req.body.duration); res.json(court.caseView(req.user.id, req.params.id)); });
+api.post('/court/cases/:id/judge', (req, res) => { court.proposeJudge(req.user.id, req.params.id, str(req.body.username, 30)); res.json(court.caseView(req.user.id, req.params.id)); });
+api.post('/court/cases/:id/judge/answer', (req, res) => { court.answerProposal(req.user.id, req.params.id, !!req.body.accept); res.json(court.caseView(req.user.id, req.params.id)); });
+api.post('/court/cases/:id/judge/invite', (req, res) => { court.answerJudgeInvite(req.user.id, req.params.id, !!req.body.accept); res.json(court.caseView(req.user.id, req.params.id)); });
+api.post('/court/cases/:id/rule', (req, res) => { court.judgeRules(req.user.id, req.params.id, str(req.body.verdict, 12), req.body.reason); res.json({ ...court.caseView(req.user.id, req.params.id), me: game.playerState(req.user.id) }); });
 
 // ---------------------------------------------------------- invites
 api.get('/me/referrals', (req, res) => {
@@ -719,6 +740,15 @@ api.post('/invest/trucks', (req, res) => {
   investDone(req, res);
 });
 api.post('/invest/trucks/:id/sell', (req, res) => investDone(req, res, invest.sellTruck(req.user.id, Number(req.params.id))));
+
+// --------------------------------------------------------- nightlife money
+api.get('/venues/:placeId/rain', (req, res) => res.json(venue.current(str(req.params.placeId, 20))));
+api.post('/venues/:placeId/rain', rateLimit('rain', 20, 60_000), (req, res) => {
+  crime.assertFree(getUser(req.user.id));
+  res.json({ ...venue.rain(req.user.id, str(req.params.placeId, 20), req.body.amount), me: game.playerState(req.user.id) });
+});
+api.post('/venues/:placeId/pick', rateLimit('pick', 240, 60_000), (req, res) => res.json({ ...venue.pick(req.user.id, str(req.params.placeId, 20), str(req.body.id, 12)), me: game.playerState(req.user.id) }));
+api.post('/venues/:placeId/tip', rateLimit('tip', 20, 60_000), (req, res) => res.json({ ...venue.tip(req.user.id, str(req.params.placeId, 20), req.body.amount), me: game.playerState(req.user.id) }));
 
 // ------------------------------------------------------------------------ music
 api.get('/music', (req, res) => res.json(music.tracksFor(str(req.query.venue, 20))));

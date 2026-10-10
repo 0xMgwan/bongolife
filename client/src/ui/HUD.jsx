@@ -20,6 +20,7 @@ import { Crown } from './Logo.jsx';
 import { LiveNow } from './LiveNow.jsx';
 import { SidePop } from './SidePop.jsx';
 import { startBuild } from './BuildBar.jsx';
+import { MentionText, MentionSuggest } from './Mentions.jsx';
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -844,11 +845,12 @@ function ChatDock() {
   return (
     <>
       <div className="feed">
-        {recent.map((m) => <div key={`${m.mid ?? m.id}-${m.at}`}><b>@{m.username}</b> {m.text}</div>)}
+        {recent.map((m) => <div key={`${m.mid ?? m.id}-${m.at}`}><b>@{m.username}</b> <MentionText text={m.text} /></div>)}
       </div>
       {(
         <div className={`chat-dock ${open ? '' : 'closed'}`} aria-hidden={!open}>
           <div className="emote-row">{EMOTES.map((e) => <button key={e} onClick={() => { sendEmote(e); set({ chatOpen: false }); }}>{e}</button>)}</div>
+          {open && <MentionSuggest text={text} setText={setText} />}
           <form onSubmit={submit}>
             <input ref={inputRef} tabIndex={open ? 0 : -1} value={text} onChange={(e) => setText(e.target.value)} placeholder={L('Sema kitu mtaani…', 'Say something…')} maxLength={200} enterKeyHint="send" />
             <button className="btn btn-green btn-xs" disabled={!text.trim()}>{L('Tuma', 'Send')}</button>

@@ -17,10 +17,13 @@ import { Body, Overhead } from './Players.jsx';
 import { remotes } from '../net.js';
 import { useStore } from '../store.js';
 import { L, loc } from '../i18n.js';
+import { MoneyRain } from './MoneyRain.jsx';
 
 export const SCENE_ORIGIN = [4000, 0, 4000];
 /** Scenes flagged `dynamic` drive the camera themselves through this (scene-local coords). */
 export const sceneCam = { pos: [0, 5, 10], look: [0, 1, 0] };
+/** Static scene cameras pan by this offset (eased) — e.g. toward the VIP booth while you're there. */
+export const sceneFocus = { x: 0, z: 0, tx: 0, tz: 0 };
 
 const unitBox = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
 const basic = (color, opts) => new THREE.MeshBasicMaterial({ color, ...opts });
@@ -173,13 +176,13 @@ function Crowd({ me, myBusy, people, slots, localSlot, crowd, modeFor, extra }) 
     return slots[i];
   };
   // You get the most central seat so you're always in frame.
-  let ls = localSlot;
-  if (!ls) {
+  let ls = localSlot === 'none' ? null : localSlot;
+  if (!ls && localSlot !== 'none') {
     const centre = slots.reduce((best, sl, i) => (Math.abs(sl[0]) + Math.abs(sl[2]) * 0.3 < Math.abs(slots[best][0]) + Math.abs(slots[best][2]) * 0.3 ? i : best), 0);
     used.push(centre);
     ls = slots[centre];
   }
-  out.push(<Person key="me" slot={ls} appearance={me.appearance} mode={modeFor('me', myBusy)} id={me.id} username={me.username} prop={extra?.(ls, 'me')} />);
+  if (localSlot !== 'none') out.push(<Person key="me" slot={ls} appearance={me.appearance} mode={modeFor('me', myBusy)} id={me.id} username={me.username} prop={extra?.(ls, 'me')} />);
   for (const r of people) {
     const s = take();
     if (!s) break;
@@ -282,6 +285,77 @@ function drawVideo(ctx, t) {
   ctx.save(); ctx.translate(w / 2 + sway, h * 0.42); ctx.rotate(-1 + Math.sin(t * 4)); ctx.fillRect(0, 0, 8, 36); ctx.restore();
 }
 
+// ----------------------------------------------------------- VIP section
+/** A sparkler fountain on a bottle: flickering hot core + spitting sparks. */
+function Sparkler({ p = [0, 0, 0] }) {
+  const g = useRef();
+  useFrame(({ clock }) => {
+    if (!g.current) return;
+    const t = clock.elapsedTime * 30;
+    g.current.children.forEach((c, i) => {
+      const k = (t * 0.05 + i * 0.37) % 1;
+      c.position.set(Math.sin(i * 7.1) * k * 0.35, 0.1 + k * 0.7, Math.cos(i * 5.3) * k * 0.35);
+      c.scale.setScalar(1 - k * 0.8);
+    });
+  });
+  return (
+    <group position={p}>
+      <mesh geometry={geo('sphere', 0.07, 6, 6)} material={basic('#fff7cc')} position={[0, 0.06, 0]} />
+      <group ref={g}>{Array.from({ length: 14 }, (_, i) => <mesh key={i} geometry={geo('sphere', 0.035, 4, 4)} material={basic(i % 3 ? '#fde68a' : '#ffffff')} />)}</group>
+      <pointLight color="#fde68a" intensity={3} distance={3} position={[0, 0.4, 0]} />
+    </group>
+  );
+}
+/** Champagne bottle (optionally with a sparkler) — table decor or held in a raised hand. */
+function Bottle({ p = [0, 0, 0], r = [0, 0, 0], spark }) {
+  return (
+    <group position={p} rotation={r}>
+      <mesh geometry={geo('cyl', 0.07, 0.08, 0.34, 10)} material={mat('#14532d')} position={[0, 0.17, 0]} />
+      <mesh geometry={geo('cyl', 0.03, 0.06, 0.14, 8)} material={mat('#14532d')} position={[0, 0.41, 0]} />
+      <mesh geometry={geo('cyl', 0.032, 0.032, 0.06, 8)} material={basic('#fbbf24')} position={[0, 0.5, 0]} />
+      <mesh geometry={geo('box', 0.12, 0.1, 0.01)} material={basic('#f8fafc')} position={[0, 0.18, 0.08]} />
+      {spark && <Sparkler p={[0, 0.53, 0]} />}
+    </group>
+  );
+}
+// Seats on the VIP sofa (x, y, z, facing) — you take the middle one.
+const VIP_DZ = -5.7; // the section sits beside the dance floor so the camera sees it
+const VIP_SEATS = [[8.3, 0.45, 4.2, -Math.PI / 2], [8.3, 0.45, 5.2, -Math.PI / 2], [8.3, 0.45, 6.2, -Math.PI / 2], [7.2, 0.45, 7.3, Math.PI], [6.2, 0.45, 7.3, Math.PI], [7.2, 0.45, 3.1, 0]].map(([x, y, z, r]) => [x, y, z + VIP_DZ, r]);
+/** Raised VIP section: velvet rope, gold posts, U-sofa, bottles on ice, sparklers when you're popping. */
+function VipSection({ popping }) {
+  return (
+    <group position={[0, 0, VIP_DZ]}>
+      <Box p={[7.2, 0, 5.2]} s={[4.6, 0.25, 5.4]} c="#1c1917" />
+      <Box p={[7.2, 0.25, 5.2]} s={[4.4, 0.02, 5.2]} c="#3b0764" />
+      <Box p={[4.9, 0.02, 5.2]} s={[0.05, 0.25, 5.4]} m={basic('#fbbf24')} />
+      {/* velvet rope between gold posts */}
+      {[2.8, 4.4, 6, 7.6].map((z) => (
+        <group key={z} position={[4.6, 0, z]}>
+          <mesh geometry={geo('cyl', 0.05, 0.08, 1, 10)} material={mat('#fbbf24')} position={[0, 0.5, 0]} />
+          <mesh geometry={geo('sphere', 0.09, 10, 8)} material={mat('#fbbf24')} position={[0, 1.02, 0]} />
+        </group>
+      ))}
+      {[3.6, 5.2, 6.8].map((z) => <mesh key={z} geometry={geo('cyl', 0.04, 0.04, 1.6, 8)} material={mat('#9f1239')} position={[4.6, 0.82, z]} rotation={[Math.PI / 2, 0, 0]} />)}
+      {/* U-shaped sofa */}
+      <Box p={[8.8, 0.25, 5.2]} s={[0.9, 0.45, 4.6]} c="#6d28d9" />
+      <Box p={[9.2, 0.7, 5.2]} s={[0.3, 0.9, 4.6]} c="#6d28d9" />
+      <Box p={[7, 0.25, 7.6]} s={[3.6, 0.45, 0.9]} c="#6d28d9" />
+      <Box p={[7, 0.7, 8]} s={[3.6, 0.9, 0.3]} c="#6d28d9" />
+      <Box p={[7, 0.25, 2.8]} s={[3.6, 0.45, 0.9]} c="#6d28d9" />
+      {/* table with bottles on ice */}
+      <Box p={[7.1, 0.25, 5.2]} s={[1.6, 0.45, 2.4]} c="#0f0f13" />
+      <Box p={[7.1, 0.7, 5.2]} s={[1.7, 0.04, 2.5]} m={basic('#fbbf24')} />
+      <mesh geometry={geo('cyl', 0.28, 0.22, 0.32, 14)} material={mat('#d1d5db')} position={[7.1, 0.88, 5.2]} />
+      <Bottle p={[7.0, 0.85, 5.15]} r={[0.25, 0, 0.1]} />
+      <Bottle p={[6.9, 0.72, 4.4]} spark={popping} />
+      <Bottle p={[7.3, 0.72, 6.0]} spark={popping} />
+      {[[6.7, 4.8], [7.5, 4.6], [6.8, 5.8], [7.5, 5.7]].map(([x, z]) => <mesh key={`${x}${z}`} geometry={geo('cyl', 0.05, 0.03, 0.2, 8)} material={basic('#fde68a', { transparent: true, opacity: 0.8 })} position={[x, 0.82, z]} />)}
+      <Sign text="VIP" p={[9.3, 2.6, 5.2]} h={0.9} fg="#fbbf24" />
+      <pointLight color="#a855f7" intensity={popping ? 10 : 5} distance={7} position={[7.2, 3, 5.2]} />
+    </group>
+  );
+}
+
 function Club({ me, myBusy, people, lounge, placeId }) {
   const venueName = (loc(placeById[placeId]) || 'CLUB').toUpperCase();
   const screenTex = useCanvasTexture(256, 144, drawVideo, 10);
@@ -291,6 +365,16 @@ function Club({ me, myBusy, people, lounge, placeId }) {
     return s;
   }, []);
   const djSlot = [0, 0.25, -5.6, 0];
+  const vip = myBusy?.id === 'vip';
+  useEffect(() => {
+    sceneFocus.tx = vip && !lounge ? 5.2 : 0;
+    sceneFocus.tz = vip && !lounge ? -0.6 : 0;
+    return () => { sceneFocus.tx = 0; sceneFocus.tz = 0; };
+  }, [vip, lounge]);
+  const round = myBusy?.id === 'mzunguko';
+  // Other players doing VIP sit with you; everyone else fills the dance floor.
+  const vipPeople = vip ? people.filter((r) => r.busy?.id === 'vip').slice(0, VIP_SEATS.length) : [];
+  const crowdPeople = vip ? people.filter((r) => !vipPeople.includes(r)) : people;
   const iAmDj = myBusy?.kind === 'job' && myBusy.id === 'dj';
   const dancing = (busy) => (busy && ['cheza', 'vip', 'mzunguko', 'sundowner'].includes(busy.id) ? 'dance' : 'dance');
   const pointA = useRef();
@@ -381,13 +465,7 @@ function Club({ me, myBusy, people, lounge, placeId }) {
               {Array.from({ length: 7 }, (_, i) => <mesh key={i} geometry={geo('cone', 0.12, 1.4, 5)} material={mat('#15803d')} position={[Math.sin(i) * 0.15, 1.2, Math.cos(i) * 0.15]} rotation={[Math.sin(i * 2) * 0.5, 0, Math.cos(i * 2) * 0.5]} />)}
             </group>
           ))}
-          {/* VIP couch */}
-          <group position={[8.5, 0, 5]}>
-            <Box s={[2.4, 0.5, 3.6]} c="#4c1d95" />
-            <Box p={[1, 0.5, 0]} s={[0.4, 0.8, 3.6]} c="#4c1d95" />
-            <Box p={[-1.6, 0, 0]} s={[0.8, 0.6, 1.6]} c="#18181b" />
-            <mesh geometry={geo('cyl', 0.09, 0.12, 0.5, 8)} material={basic('#facc15')} position={[-1.6, 0.85, 0.3]} />
-          </group>
+          <VipSection popping={myBusy?.id === 'vip'} />
           <pointLight ref={pointA} color="#ec4899" intensity={22} distance={14} />
           <pointLight ref={pointB} color="#22d3ee" intensity={22} distance={14} />
           <pointLight color="#fbbf24" intensity={6} distance={10} position={[-8, 3.5, -1]} />
@@ -402,7 +480,22 @@ function Club({ me, myBusy, people, lounge, placeId }) {
         <Box p={[0, 0.3, 0.66]} s={[4.6, 0.2, 0.02]} m={basic('#ec4899')} />
       </group>
       {!iAmDj && <Person slot={djSlot} appearance={NPC_LOOKS[23]} mode="dj" />}
-      <Crowd me={me} myBusy={myBusy} people={people} slots={slots} localSlot={iAmDj ? djSlot : lounge && myBusy?.id === 'sundowner' ? [-7, 0.45, 3.2, Math.PI / 2] : null} crowd={lounge ? 9 : 14} modeFor={(who, busy) => (who === 'me' && iAmDj ? 'dj' : who === 'me' && lounge && myBusy?.id === 'sundowner' ? 'sit' : dancing(busy))} />
+      {/* VIP: you and your crew on the sofa, a bottle raised with a sparkler; others on VIP join you */}
+      {!lounge && vip && (
+        <>
+          <Person slot={[8.05, 0.25, 4.8 + VIP_DZ, -Math.PI / 2 + 0.5]} appearance={me.appearance} mode="cheer" id={me.id} username={me.username} prop={<Bottle p={[0.32, 1.95, 0.12]} r={[0, 0, -0.4]} spark />} />
+          {vipPeople.map((r, i) => <Person key={r.id} slot={VIP_SEATS[i]} appearance={r.appearance} mode="cheer" id={r.id} username={r.username} />)}
+          {VIP_SEATS.slice(vipPeople.length, vipPeople.length + 3).map((s, i) => <Person key={`vipf${i}`} slot={s} appearance={NPC_LOOKS[(i * 7 + 3) % NPC_LOOKS.length]} mode={i % 2 ? 'cheer' : 'sit'} />)}
+          <Person slot={[5.6, 0.25, 6.4 + VIP_DZ, Math.PI / 2]} appearance={NPC_LOOKS[11]} mode="idle" prop={<Bottle p={[0.3, 1.95, 0.1]} spark />} />
+        </>
+      )}
+      {/* Buying a round: you're at the bar with your people, drinks lined up */}
+      {!lounge && round && (
+        <>
+          {[-2, -1, 0, 1, 2].map((z) => <mesh key={z} geometry={geo('cyl', 0.06, 0.045, 0.22, 8)} material={basic(['#fbbf24', '#f97316', '#fde68a'][(z + 3) % 3], { transparent: true, opacity: 0.85 })} position={[-7.4, 1.3, -1 + z * 0.7]} />)}
+        </>
+      )}
+      <Crowd me={me} myBusy={myBusy} people={crowdPeople} slots={slots} localSlot={iAmDj ? djSlot : vip && !lounge ? 'none' : round && !lounge ? [-6.5, 0, -1, -Math.PI / 2] : lounge && myBusy?.id === 'sundowner' ? [-7, 0.45, 3.2, Math.PI / 2] : null} crowd={lounge ? 9 : 14} modeFor={(who, busy) => (who === 'me' && iAmDj ? 'dj' : who === 'me' && round ? 'cheer' : who === 'me' && lounge && myBusy?.id === 'sundowner' ? 'sit' : dancing(busy))} />
     </group>
   );
 }
@@ -2322,6 +2415,7 @@ export function ActivityScene({ scene, placeId, me, myBusy }) {
       <Shadows light={[4, 12, 8]} size={16} intensity={cfg.dark ? 0.25 : 0.6}>
       <cfg.C me={me} myBusy={myBusy} people={people} placeId={placeId} />
       {party && scene !== 'flight' && <PartyDecor event={party} banner={PARTY_BANNER[scene]} />}
+      <MoneyRain placeId={placeId} />
       </Shadows>
     </group>
   );

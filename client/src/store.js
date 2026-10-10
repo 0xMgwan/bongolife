@@ -70,6 +70,8 @@ export const useStore = create((set, get) => ({
   quality: (() => { try { return localStorage.getItem('bl_q') || 'auto'; } catch { return 'auto'; } })(),
   dmVersion: 0,
   lastGm: null, // newest group message
+  courtVersion: 0, // bumps when a case you're in changes
+  rain: [], // banknotes thrown in venues (see three/MoneyRain.jsx)
   loveMatch: null, // { with, rid } — it's a match!
   loveAsk: null, // incoming date / partner / proposal ask
   msgUpdate: null, // an edited / deleted / reacted message
