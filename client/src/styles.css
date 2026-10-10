@@ -1610,3 +1610,47 @@ html, body { background: #1e2a47; }
 .quest-card.ready { background: var(--gold); }
 .event { background: var(--gold); color: var(--ink-hard); border: 2px solid var(--ink-hard); box-shadow: 2px 2px 0 var(--ink-hard); }
 .side-pop { border: 2.5px solid var(--ink-hard); border-right: 0; box-shadow: -4px 4px 0 var(--ink-hard); }
+
+/* Sheets and the home catalogue are solid paper cards now, so everything in them is dark ink
+   (this replaces the older "floating white text over a blurred game" look). */
+.sheet, .catalogue.card { background: var(--cream); color: var(--ink-hard); text-shadow: none; border: 3px solid var(--ink-hard); box-shadow: 8px 8px 0 var(--ink-hard), 0 24px 60px rgba(0,0,0,.35); overflow: hidden; }
+.sheet *, .catalogue * { text-shadow: none; }
+.sheet .muted, .sheet .small, .sheet .item .s, .sheet .section-t, .sheet p, .sheet .tc-blurb, .sheet .hint { color: #5b554b; }
+.sheet .section-t { font-family: var(--display); font-stretch: 80%; font-weight: 900; text-transform: uppercase; color: var(--ink-hard); }
+.sheet .sheet-head .x, .sheet .travel-card .x, .travel-card .x { background: var(--paper); color: var(--ink-hard); border: 2px solid var(--ink-hard); font-size: 15px; }
+.sheet .item + .item { border-top: 1.5px solid #e2d9c5; }
+.sheet .fx .up { color: #15803d; }
+.sheet .fx .dn, .sheet .s.red { color: #b91c1c; }
+.sheet .link-share { color: #1d4ed8; }
+.sheet .sheet-body .item.picked { background: #fff4cc; border-radius: 16px; }
+.sheet .sheet-body .item.picked .t { color: var(--ink-hard); }
+.sheet .btn-dark { background: var(--ink-hard); color: #fff; }
+.sheet .btn-white { background: #fff; color: var(--ink-hard); border: 2.5px solid var(--ink-hard) !important; }
+.sheet .btn-ghost { background: var(--paper); color: var(--ink-hard); }
+.sheet .pill { background: var(--paper); color: var(--ink-hard); border: 2px solid var(--ink-hard); }
+.sheet .tc-chips span { color: var(--ink-hard); }
+.sheet .travel-opt, .sheet .act-card, .sheet .report-list button, .sheet .go-grid button, .sheet .car-card { background: var(--paper); color: var(--ink-hard); border: 2px solid var(--ink-hard); box-shadow: 2px 2px 0 var(--ink-hard); }
+.sheet .travel-opt small, .sheet .act-card small, .sheet .car-card .s { color: #6b655b; }
+.sheet .travel-opt.own { background: #dbeafe; }
+.sheet .go-grid button.on { background: #7c3aed; color: #fff; }
+.sheet .go-out { background: #fff4cc; border: 2px solid var(--ink-hard); }
+.sheet .mini-acts button { background: var(--paper); color: var(--ink-hard); border: 1.5px solid var(--ink-hard); box-shadow: none; }
+.sheet .mini-acts button.danger { background: #fee2e2; color: #991b1b; border-color: #991b1b; }
+.sheet .report-note { background: #fff; color: var(--ink-hard); border-color: var(--ink-hard); }
+.sheet .report-note::placeholder { color: #8a8478; }
+.sheet .tag.friend { background: #dcfce7; color: #166534; }
+.sheet .item .em, .sheet .act-card .ac-ic, .sheet .travel-opt .em, .sheet .tc-ic, .sheet .sheet-head h2 > span { filter: none; }
+
+/* Home catalogue */
+.catalogue h3 { color: var(--ink-hard); font-family: var(--display); font-stretch: 78%; font-weight: 900; text-transform: uppercase; }
+.catalogue .cat-x { background: var(--paper); border: 2px solid var(--ink-hard); box-shadow: none; }
+.catalogue .cat-chips .chip:not(.on-yellow) { background: var(--paper); }
+.catalogue .cat-chips .chip.on-yellow { background: var(--gold); color: var(--ink-hard); }
+.catalogue .cat-item { background: var(--paper); border: 2px solid var(--ink-hard); border-radius: 16px; padding: 8px 4px 10px; }
+.catalogue .cat-ic { filter: drop-shadow(0 6px 6px rgba(0,0,0,.25)); }
+.catalogue .cat-price { color: var(--ink-hard); font-family: var(--display); font-stretch: 85%; font-weight: 900; font-size: 15px; }
+.cat-pick { background: var(--gold); color: var(--ink-hard); border: 2px solid var(--ink-hard); box-shadow: 2px 2px 0 var(--ink-hard); }
+.cat-item.broke { opacity: 1; }
+.cat-item.broke .cat-ic { opacity: .5; }
+.cat-item.broke .cat-pick { background: #e9e2d3; color: #6b655b; border-color: #a8a093; box-shadow: none; }
+.cat-fab { background: var(--ink-hard); border: 2.5px solid var(--ink-hard); box-shadow: 3px 3px 0 var(--gold); }

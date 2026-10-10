@@ -364,7 +364,8 @@ function tracksFor(venue) {
 function loadTrack() {
   const t = trackList[trackIdx % trackList.length];
   if (!t || !trackEl) return;
-  trackEl.src = `/uploads/${t.file}`;
+  // Tracks live in Cloudflare R2 (full URL) or, for older uploads, on the game server.
+  trackEl.src = /^https:\/\//.test(t.file) ? t.file : `/uploads/${t.file}`;
   trackEl.play().catch(() => {});
   setNow(t);
   import('./api.js').then(({ api }) => api(`/music/${t.id}/play`, { method: 'POST' })).catch(() => {});

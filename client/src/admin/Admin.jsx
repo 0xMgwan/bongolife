@@ -336,6 +336,33 @@ function MailHealth() {
 }
 
 /** Licensed tracks that play at venues (1245, Singeli, Stone Town…), replacing the synth there. */
+/** Where track files live: Cloudflare R2 (off the server) or the server's disk. */
+function MusicStorage() {
+  const { data, reload } = useApi('/admin/music/storage');
+  const [busy, setBusy] = useState(false);
+  if (!data) return null;
+  const mb = (b) => (b / 1e6).toFixed(1) + ' MB';
+  return (
+    <div className="panel" style={{ marginBottom: 12 }}>
+      <h2>☁️ Storage</h2>
+      <div className="small">
+        {data.r2
+          ? <><b style={{ color: '#16a34a' }}>Cloudflare R2 on</b> — new uploads go to R2, not the server.</>
+          : <><b style={{ color: '#b45309' }}>Server disk</b> — set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET and R2_PUBLIC_URL on Railway to store music in R2.</>}
+        <span className="muted"> · {data.onR2} on R2 · {data.onDisk} on the server ({mb(data.disk.bytes)})</span>
+      </div>
+      {data.r2 && data.onDisk > 0 && (
+        <button className="btn btn-green" style={{ marginTop: 8 }} disabled={busy} onClick={async () => {
+          setBusy(true);
+          const r = await act('/music/migrate', { ok: false });
+          setBusy(false);
+          if (r) { useStore.getState().toast(`☁️ Moved ${r.moved} track(s) to R2`); reload(); }
+        }}>Move {data.onDisk} track(s) to R2</button>
+      )}
+    </div>
+  );
+}
+
 function MusicAdmin() {
   const { data, reload } = useApi('/admin/music');
   const [f, setF] = useState({ title: '', artist: '', venues: ['club'], rights: '' });
@@ -364,6 +391,7 @@ function MusicAdmin() {
   return (
     <>
       <div className="adm-head"><div><h1>Music</h1><div className="sub">Real tracks for venues. Where a venue has tracks, they play instead of the built-in synth (with a "Now playing" label).</div></div></div>
+      <MusicStorage />
       <div className="adm-cols">
         <div className="panel">
           <h2>Add a track</h2>

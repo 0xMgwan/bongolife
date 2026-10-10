@@ -427,9 +427,17 @@ admin.get('/settings', (_req, res) => res.json(getSettings()));
 // ---- music library (licensed tracks for venues)
 const musicUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15_000_000, files: 1 } });
 admin.get('/music', (_req, res) => res.json(music.listTracks()));
-admin.post('/music', musicUpload.single('audio'), (req, res, next) => {
+admin.get('/music/storage', (_req, res) => res.json(music.storageStatus()));
+admin.post('/music/migrate', async (req, res, next) => {
   try {
-    const id = music.addTrack(req.user.id, { title: req.body.title, artist: req.body.artist, venues: req.body.venues, rights: req.body.rights }, req.file);
+    const moved = await music.migrateToR2();
+    audit(req.user.id, 'music.migrate', 'music', null, { moved });
+    res.json({ moved, status: music.storageStatus() });
+  } catch (e) { next(e); }
+});
+admin.post('/music', musicUpload.single('audio'), async (req, res, next) => {
+  try {
+    const id = await music.addTrack(req.user.id, { title: req.body.title, artist: req.body.artist, venues: req.body.venues, rights: req.body.rights }, req.file);
     audit(req.user.id, 'music.add', 'music', id, { title: req.body.title, artist: req.body.artist });
     res.status(201).json(music.listTracks());
   } catch (e) { next(e); }

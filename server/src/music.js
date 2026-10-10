@@ -1,8 +1,7 @@
 // Real music: admins upload licensed tracks and tag the venues where they play.
-import fs from 'node:fs';
-import path from 'node:path';
 import crypto from 'node:crypto';
-import { db, GameError, now, UPLOAD_DIR } from './db.js';
+import { db, GameError, now } from './db.js';
+import { putFile, removeFile, moveToR2, r2Enabled, diskUsage } from './storage.js';
 import { MUSIC_VENUES } from '../../shared/world.js';
 
 db.exec(`
@@ -39,7 +38,7 @@ export function countPlay(id) {
 export function listTracks() {
   return db.prepare('SELECT * FROM music_tracks ORDER BY id DESC').all().map((t) => ({ ...t, venues: t.venues.split(',').filter(Boolean) }));
 }
-export function addTrack(adminId, { title, artist, venues, rights }, file) {
+export async function addTrack(adminId, { title, artist, venues, rights }, file) {
   if (!file?.buffer?.length) throw new GameError('Choose an audio file');
   const kind = AUDIO.find((a) => a.test(file.buffer));
   if (!kind) throw new GameError('Audio must be MP3, M4A or OGG');
@@ -51,10 +50,9 @@ export function addTrack(adminId, { title, artist, venues, rights }, file) {
   rights = clean(rights, 200);
   if (!rights) throw new GameError('Confirm the rights / licence for this track');
   const rel = `music/${crypto.randomUUID()}.${kind.ext}`;
-  fs.mkdirSync(path.join(UPLOAD_DIR, 'music'), { recursive: true });
-  fs.writeFileSync(path.join(UPLOAD_DIR, rel), file.buffer);
+  const ref = await putFile(rel, file.buffer);
   return db.prepare('INSERT INTO music_tracks (title, artist, file, venues, rights, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(title, artist, rel, v.join(','), rights, adminId, now()).lastInsertRowid;
+    .run(title, artist, ref, v.join(','), rights, adminId, now()).lastInsertRowid;
 }
 export function updateTrack(id, { active, venues }) {
   const t = db.prepare('SELECT * FROM music_tracks WHERE id = ?').get(Number(id));
@@ -70,5 +68,22 @@ export function deleteTrack(id) {
   const t = db.prepare('SELECT * FROM music_tracks WHERE id = ?').get(Number(id));
   if (!t) return;
   db.prepare('DELETE FROM music_tracks WHERE id = ?').run(t.id);
-  fs.rm(path.join(UPLOAD_DIR, t.file), () => {});
+  removeFile(t.file);
+}
+
+/** Where tracks live: Cloudflare R2 or the server's disk. */
+export function storageStatus() {
+  const rows = db.prepare('SELECT file FROM music_tracks').all();
+  const onR2 = rows.filter((r) => /^https:\/\//.test(r.file)).length;
+  return { r2: r2Enabled(), onR2, onDisk: rows.length - onR2, disk: diskUsage('music') };
+}
+/** Move every track still on the server's disk into R2. */
+export async function migrateToR2() {
+  if (!r2Enabled()) throw new GameError('R2 is not configured — set the R2_* variables first');
+  let moved = 0;
+  for (const t of db.prepare("SELECT id, file FROM music_tracks WHERE file NOT LIKE 'https://%'").all()) {
+    const ref = await moveToR2(t.file);
+    if (ref !== t.file) { db.prepare('UPDATE music_tracks SET file = ? WHERE id = ?').run(ref, t.id); moved++; }
+  }
+  return moved;
 }
