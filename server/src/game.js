@@ -3,6 +3,7 @@ import {
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST, industryById, COMPANY,
   furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
+  jobLocks,
 } from '../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
 
@@ -276,6 +277,8 @@ export const startAction = db.transaction((userId, { kind, placeId, id }) => {
     if (!job) throw new GameError(['Kazi haipo', 'Job not found'], 404);
     if (job.requires?.elimu && user.elimu < job.requires.elimu)
       throw new GameError([`Unahitaji Elimu level ${job.requires.elimu}. Soma kozi Chuo Kikuu cha Dar.`, `You need Education level ${job.requires.elimu}. Take a course at the University of Dar.`]);
+    const lock = jobLocks(job, user)[0];
+    if (lock) throw new GameError([`${lock[0]} ${lock[1]}`, `${lock[0]} ${lock[2]}`]);
     if (job.requires?.vehicle) {
       const owned = q.vehicles.all(userId).map((v) => v.model);
       if (!job.requires.vehicle.some((m) => owned.includes(m)))

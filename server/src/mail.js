@@ -136,72 +136,98 @@ export function startCampaign({ recipients, build }) {
 }
 
 // ------------------------------------------------------------------ templates
-// Email-safe HTML: tables + inline styles, no SVG/webfonts required (they fall back gracefully).
+// Email-safe HTML in the www.bongolife.app style: cream paper, ink outlines, gold, condensed caps.
+// Tables + inline styles only; images are PNG/JPG on the landing site (email apps don't show SVG).
+// Archivo loads in Apple Mail / iOS; Gmail and Outlook fall back to Arial Narrow / Arial.
 const PLAY = 'https://play.bongolife.app';
+const ASSETS = () => (env('MAIL_ASSETS_URL') || 'https://www.bongolife.app/assets/email').replace(/\/$/, '');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const FONT = "'Plus Jakarta Sans',-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+const DISPLAY = "'Archivo','Arial Narrow','Helvetica Neue Condensed',Arial,sans-serif";
+const INK = '#141414';
+const GOLD = '#f5b800';
+const PAPER = '#fffdf8';
+const CREAM = '#f6f1e6';
 
-function layout({ preheader, body, unsub }) {
-  return `<!doctype html><html lang="sw"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>Bongo Life</title></head>
-<body style="margin:0;padding:0;background:#f6f1e7;">
-<span style="display:none!important;opacity:0;color:transparent;height:0;width:0;overflow:hidden">${esc(preheader)}</span>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f1e7;padding:24px 12px;font-family:${FONT};">
+const headline = (text, size = 38, color = INK) =>
+  `<div style="font-family:${DISPLAY};font-stretch:75%;font-size:${size}px;line-height:.95;font-weight:900;letter-spacing:-.5px;text-transform:uppercase;color:${color}">${text}</div>`;
+const kicker = (text, bg = INK, fg = GOLD) =>
+  `<span style="display:inline-block;background:${bg};color:${fg};font-family:${FONT};font-weight:800;font-size:11px;letter-spacing:2px;padding:6px 11px;border-radius:999px;border:2px solid ${INK}">${text}</span>`;
+const button = (href, label) =>
+  `<table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr><td style="background:${GOLD};border:3px solid ${INK};border-radius:999px;box-shadow:4px 4px 0 ${INK}">` +
+  `<a href="${href}" style="display:inline-block;padding:15px 30px;font-family:${FONT};font-weight:800;font-size:16px;color:${INK};text-decoration:none">${label}</a></td></tr></table>`;
+const tile = (emoji, title, text, bg) =>
+  `<td width="33%" valign="top" style="padding:5px"><div style="background:${bg};border-radius:16px;padding:12px;border:2px solid ${INK};font-family:${FONT}">` +
+  `<div style="font-size:24px;line-height:1">${emoji}</div><div style="font-family:${DISPLAY};font-stretch:80%;font-weight:900;font-size:15px;text-transform:uppercase;color:${INK};margin:6px 0 3px">${title}</div>` +
+  `<div style="font-size:12px;color:#3d3a35;line-height:1.35">${text}</div></div></td>`;
+const social = (href, label, bg, fg = '#fff') =>
+  `<a href="${href}" style="display:inline-block;margin:3px;padding:8px 14px;border-radius:999px;background:${bg};color:${fg};border:2px solid ${INK};text-decoration:none;font-family:${FONT};font-size:13px;font-weight:800">${label}</a>`;
+
+function layout({ preheader, body, unsub, hero = false }) {
+  return `<!doctype html><html lang="sw"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,800..900&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+<title>Bongo Life</title></head>
+<body style="margin:0;padding:0;background:${CREAM};">
+<span style="display:none!important;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all">${esc(preheader)}</span>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CREAM};padding:22px 10px;font-family:${FONT};">
 <tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:24px;overflow:hidden;border:2px solid #111827;">
-<tr><td style="background:#111827;padding:18px 24px;" align="left">
-  <span style="font-size:26px;vertical-align:middle">👑</span>
-  <span style="font-family:${FONT};font-size:20px;font-weight:800;color:#f5b800;vertical-align:middle;margin-left:6px">Bongo Life</span>
-  <span style="float:right;font-size:12px;color:#9ca3af;line-height:30px">Metaverse ya Tanzania 🇹🇿</span>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${PAPER};border-radius:22px;overflow:hidden;border:3px solid ${INK};box-shadow:7px 7px 0 ${INK};">
+<tr><td style="background:${GOLD};padding:14px 18px;border-bottom:3px solid ${INK}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+    <td valign="middle" width="46"><img src="${ASSETS()}/logo-192.png" width="40" height="40" alt="" style="display:block;border:0;border-radius:10px;background:#fff"></td>
+    <td valign="middle" style="font-family:${DISPLAY};font-stretch:75%;font-weight:900;font-size:24px;letter-spacing:.5px;color:${INK};text-transform:uppercase">Bongo Life</td>
+    <td valign="middle" align="right">${kicker('🇹🇿 METAVERSE')}</td>
+  </tr></table>
 </td></tr>
+${hero ? `<tr><td style="border-bottom:3px solid ${INK};line-height:0;font-size:0"><a href="${PLAY}"><img src="${ASSETS()}/hero.jpg" width="554" alt="Bongo Life — Dar es Salaam" style="display:block;width:100%;height:auto;border:0"></a></td></tr>` : ''}
 ${body}
-<tr><td style="padding:18px 24px 22px;border-top:1px solid #f1ece2;background:#fbf8f2;font-family:${FONT}" align="center">
-  <div style="font-size:13px;color:#374151;margin-bottom:10px;font-weight:700">Tufuate · Follow us</div>
-  <a href="https://www.instagram.com/bongolifegames" style="display:inline-block;margin:0 4px;padding:8px 14px;border-radius:999px;background:#e1306c;color:#fff;text-decoration:none;font-size:13px;font-weight:700">Instagram</a>
-  <a href="https://www.tiktok.com/@bongolifegames" style="display:inline-block;margin:0 4px;padding:8px 14px;border-radius:999px;background:#111827;color:#fff;text-decoration:none;font-size:13px;font-weight:700">TikTok</a>
-  <a href="https://chat.whatsapp.com/KCgM5FOmzQE6byU18abpB1" style="display:inline-block;margin:0 4px;padding:8px 14px;border-radius:999px;background:#25d366;color:#fff;text-decoration:none;font-size:13px;font-weight:700">WhatsApp</a>
-  <div style="font-size:11.5px;color:#9ca3af;margin-top:14px;line-height:1.5">Bongo Life · NEDA Labs Limited · Dar es Salaam<br>Umepokea email hii kwa sababu umejisajili Bongo Life. · You're getting this because you signed up for Bongo Life.${unsub ? `<br><a href="${unsub}" style="color:#9ca3af">Acha kupokea habari · Unsubscribe from updates</a>` : ''}</div>
+<tr><td style="padding:20px 22px 22px;border-top:3px solid ${INK};background:${INK}" align="center">
+  <div style="font-family:${DISPLAY};font-stretch:78%;font-weight:900;font-size:18px;color:${GOLD};text-transform:uppercase;margin-bottom:10px">Tufuate · Follow us</div>
+  ${social('https://www.instagram.com/bongolifegames', 'Instagram', '#e1306c')}${social('https://www.tiktok.com/@bongolifegames', 'TikTok', '#ffffff', INK)}${social('https://chat.whatsapp.com/KCgM5FOmzQE6byU18abpB1', 'WhatsApp', '#25d366')}
+  <div style="font-size:11.5px;color:#b8b2a6;margin-top:14px;line-height:1.55;font-family:${FONT}">Bongo Life · NEDA Labs Limited · Dar es Salaam 🇹🇿<br>Umepokea email hii kwa sababu umejisajili Bongo Life. · You're getting this because you signed up for Bongo Life.${unsub ? `<br><a href="${unsub}" style="color:#b8b2a6">Acha kupokea habari · Unsubscribe from updates</a>` : ''}</div>
 </td></tr>
 </table></td></tr></table></body></html>`;
 }
-const button = (href, label) => `<a href="${href}" style="display:inline-block;background:#f5b800;color:#111827;font-weight:800;font-size:16px;text-decoration:none;padding:14px 28px;border-radius:999px;border:2px solid #111827;box-shadow:0 4px 0 #111827">${label}</a>`;
-const tile = (emoji, title, text, bg) => `<td width="33%" valign="top" style="padding:6px"><div style="background:${bg};border-radius:16px;padding:12px;border:1.5px solid #111827;font-family:${FONT}"><div style="font-size:24px">${emoji}</div><div style="font-weight:800;font-size:13.5px;color:#111827;margin:4px 0 2px">${title}</div><div style="font-size:12px;color:#374151;line-height:1.35">${text}</div></div></td>`;
 
 /** The welcome email for a new player. */
 export function welcomeEmail({ name, username, startMoney }) {
   const first = esc(String(name || username).split(' ')[0]);
   const invite = `${PLAY}/?ref=${encodeURIComponent(username)}`;
+  const money = Number(startMoney || 0).toLocaleString('en-US');
   const body = `
-<tr><td style="padding:0;background:linear-gradient(135deg,#fde68a,#f5b800);" align="center">
-  <div style="padding:30px 24px 26px;font-family:${FONT}">
-    <div style="font-size:44px;line-height:1">🏙️</div>
-    <div style="font-size:30px;font-weight:900;color:#111827;margin-top:8px;letter-spacing:-.5px">Karibu Bongo, ${first}!</div>
-    <div style="font-size:15px;color:#3f2d00;margin-top:6px">Welcome to Bongo Life — your Dar es Salaam life starts now.</div>
-  </div>
+<tr><td style="padding:26px 24px 8px;font-family:${FONT}">
+  ${kicker('TIKETI YA KUZALIWA · BIRTH TICKET', GOLD, INK)}
+  <div style="height:12px"></div>
+  ${headline(`Karibu Bongo,<br><span style="color:${GOLD};text-shadow:2px 2px 0 ${INK}">${first}!</span>`, 44)}
+  <p style="font-size:15px;color:${INK};line-height:1.6;margin:16px 0 6px">Mambo <b>@${esc(username)}</b>! 👋🏾 Umeingia mtaani na <b>TSh ${money}</b> mfukoni na Toyota IST yako. Chakarika, kula bata, jenga jina — na fuata ndoto zako.</p>
+  <p style="font-size:14px;color:#6b655b;line-height:1.6;margin:0 0 22px">You've landed with <b>TSh ${money}</b> in your pocket and your own Toyota IST. Hustle, party, build a name — and chase your ambition.</p>
+  ${button(PLAY, 'Cheza sasa · Play now →')}
 </td></tr>
-<tr><td style="padding:24px;font-family:${FONT}">
-  <p style="font-size:15px;color:#111827;line-height:1.6;margin:0 0 14px">Mambo <b>@${esc(username)}</b>! 👋🏾 Umeingia mtaani na <b>TSh ${Number(startMoney || 0).toLocaleString()}</b> mfukoni na Toyota IST yako. Chakarika, kula bata, jenga jina — na ndoto zako.</p>
-  <p style="font-size:14px;color:#4b5563;line-height:1.6;margin:0 0 20px">You've landed with <b>TSh ${Number(startMoney || 0).toLocaleString()}</b> in your pocket and your own Toyota IST. Hustle, party, build a name — and chase your ambition.</p>
-  <div style="text-align:center;margin:6px 0 24px">${button(PLAY, 'Cheza sasa · Play now →')}</div>
+<tr><td style="padding:22px 19px 6px">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-    ${tile('💼', 'Kazi · Jobs', 'Piga shifti, panda cheo. Work shifts, get promoted.', '#dcfce7')}
-    ${tile('🌟', 'Ndoto · Ambitions', 'Nyota, tajiri, Meya… Pick your life path.', '#fef3c7')}
-    ${tile('💃', 'Bata · Nightlife', '1245, Elements, Kendwa. VIP & make it rain.', '#fce7f3')}
+    ${tile('💼', 'Kazi', 'Shifti, vyeo, mshahara. Work shifts, get promoted.', '#dcfce7')}
+    ${tile('🌟', 'Ndoto', 'Staa, tajiri, Meya… Pick your life path.', '#fff4cc')}
+    ${tile('🍾', 'Bata', '1245 VIP, tip DJ, rusha pesa. Nightlife.', '#ffd6e2')}
   </tr><tr>
-    ${tile('🏢', 'Kampuni', 'Anzisha biashara yako. Start a company.', '#e0f2fe')}
-    ${tile('⛴️', 'Safari', 'Zanzibar & Arusha. Ferry, flights, safari.', '#ede9fe')}
-    ${tile('💘', 'Penzi', 'Deti, zawadi, harusi. Dates & weddings.', '#ffe4e6')}
+    ${tile('🏢', 'Kampuni', 'Anzisha biashara. Start a company.', '#dbeafe')}
+    ${tile('⛴️', 'Safari', 'Zanzibar & Arusha. Ferry, flights.', '#ede9fe')}
+    ${tile('💞', 'Penzi', 'Deti, pete, harusi. Dates & weddings.', '#ffe4e6')}
   </tr></table>
-  <div style="margin-top:22px;background:#111827;border-radius:18px;padding:16px 18px;font-family:${FONT}">
-    <div style="color:#f5b800;font-weight:800;font-size:14px">🎁 Alika washkaji · Invite friends</div>
-    <div style="color:#e5e7eb;font-size:13px;line-height:1.5;margin:6px 0 10px">Mkiingia kupitia link yako, mnapata zawadi wote wawili. Friends who join with your link — you both get a bonus.</div>
-    <a href="${invite}" style="color:#fde68a;font-size:13px;word-break:break-all">${invite}</a>
-  </div>
-  <p style="font-size:12.5px;color:#9ca3af;line-height:1.5;margin:18px 0 0">💡 Weka Bongo Life kwenye Home Screen ya simu yako — inafunguka kama app. Add it to your home screen for the full-screen app.</p>
+</td></tr>
+<tr><td style="padding:16px 24px 26px;font-family:${FONT}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:3px dashed ${INK};border-radius:16px;background:${GOLD}"><tr>
+    <td style="padding:16px 18px">
+      ${headline('🎁 Alika washkaji', 22)}
+      <div style="color:#3f2d00;font-size:13px;line-height:1.5;margin:6px 0 10px">Mshkaji akijiunga kwa link yako na kumaliza shifti ya kwanza, mnapata zawadi wote wawili. · Friends who join with your link — you both get a bonus.</div>
+      <a href="${invite}" style="display:inline-block;background:${INK};color:${GOLD};font-size:13px;font-weight:700;padding:8px 12px;border-radius:10px;text-decoration:none;word-break:break-all">${invite}</a>
+    </td>
+  </tr></table>
+  <p style="font-size:12.5px;color:#8a8478;line-height:1.5;margin:16px 0 0">💡 Weka Bongo Life kwenye Home Screen ya simu yako — inafunguka kama app. · Add it to your home screen for the full-screen app.</p>
 </td></tr>`;
   return {
     subject: `Karibu Bongo, ${String(name || username).split(' ')[0]}! 👑 Your Dar life starts now`,
-    text: `Karibu Bongo Life, @${username}!\n\nUmeanza na TSh ${Number(startMoney || 0).toLocaleString()} na Toyota IST yako.\nYou start with TSh ${Number(startMoney || 0).toLocaleString()} and your own Toyota IST.\n\nCheza sasa / Play now: ${PLAY}\nAlika washkaji / Invite friends: ${invite}\n\nInstagram: https://www.instagram.com/bongolifegames\nTikTok: https://www.tiktok.com/@bongolifegames\nWhatsApp: https://chat.whatsapp.com/KCgM5FOmzQE6byU18abpB1`,
-    html: layout({ preheader: `Karibu Bongo, ${first}! Your Dar es Salaam life starts now 🇹🇿`, body }),
+    text: `Karibu Bongo Life, @${username}!\n\nUmeanza na TSh ${money} na Toyota IST yako.\nYou start with TSh ${money} and your own Toyota IST.\n\nCheza sasa / Play now: ${PLAY}\nAlika washkaji / Invite friends: ${invite}\n\nInstagram: https://www.instagram.com/bongolifegames\nTikTok: https://www.tiktok.com/@bongolifegames\nWhatsApp: https://chat.whatsapp.com/KCgM5FOmzQE6byU18abpB1`,
+    html: layout({ preheader: `Karibu Bongo, ${first}! Your Dar es Salaam life starts now 🇹🇿`, body, hero: true }),
   };
 }
 
@@ -209,11 +235,12 @@ export function welcomeEmail({ name, username, startMoney }) {
 export function resetEmail({ name, username, code }) {
   const body = `
 <tr><td style="padding:28px 24px;font-family:${FONT}" align="center">
-  <div style="font-size:40px">🔑</div>
-  <div style="font-size:22px;font-weight:900;color:#111827;margin:6px 0">Code yako · Your reset code</div>
-  <p style="font-size:14px;color:#4b5563;line-height:1.6;margin:0 0 18px">Mambo ${esc(name || username)}, hii ni code ya kubadilisha password ya <b>@${esc(username)}</b>.<br>Here's the code to reset the password for <b>@${esc(username)}</b>.</p>
-  <div style="display:inline-block;background:#111827;color:#f5b800;font-size:36px;font-weight:900;letter-spacing:10px;padding:14px 22px 14px 32px;border-radius:16px">${esc(code)}</div>
-  <p style="font-size:12.5px;color:#9ca3af;line-height:1.6;margin:18px 0 0">Inaisha baada ya dakika 15 · Expires in 15 minutes.<br>Kama hukuomba, puuza email hii · If you didn't ask, ignore this email.</p>
+  <div style="font-size:40px;line-height:1">🔑</div>
+  <div style="height:8px"></div>
+  ${headline('Code yako · Your code', 30)}
+  <p style="font-size:14px;color:#3d3a35;line-height:1.6;margin:12px 0 18px">Mambo ${esc(name || username)}, hii ni code ya kubadilisha password ya <b>@${esc(username)}</b>.<br>Here's the code to reset the password for <b>@${esc(username)}</b>.</p>
+  <div style="display:inline-block;background:${INK};color:${GOLD};font-family:${DISPLAY};font-size:40px;font-weight:900;letter-spacing:10px;padding:14px 22px 14px 32px;border-radius:16px;border:3px solid ${INK};box-shadow:4px 4px 0 ${GOLD}">${esc(code)}</div>
+  <p style="font-size:12.5px;color:#8a8478;line-height:1.6;margin:20px 0 0">Inaisha baada ya dakika 15 · Expires in 15 minutes.<br>Kama hukuomba, puuza email hii · If you didn't ask, ignore this email.</p>
 </td></tr>`;
   return {
     subject: `Bongo Life: ${code} ni code yako / is your reset code`,
@@ -225,26 +252,25 @@ export function resetEmail({ name, username, code }) {
 /** "What's new" email sent to players from the admin panel. Body text: blank lines split paragraphs. */
 export function updateEmail({ user, subject, title, titleEn, body, bodyEn, cta, ctaUrl }) {
   const name = esc(String(user.name || user.username || '').split(' ')[0] || 'Mbongo');
-  const paras = (t) => String(t || '').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
-    .map((p) => `<p style="font-size:15px;color:#111827;line-height:1.6;margin:0 0 12px">${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
+  const paras = (t, color) => String(t || '').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
+    .map((p) => `<p style="font-size:15px;color:${color};line-height:1.6;margin:0 0 12px">${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
   const url = /^https:\/\//.test(ctaUrl || '') ? ctaUrl : PLAY;
   const html = `
-<tr><td style="padding:0;background:#f5b800;border-bottom:2px solid #111827" align="left">
-  <div style="padding:26px 24px 22px;font-family:${FONT}">
-    <div style="display:inline-block;background:#111827;color:#f5b800;font-weight:800;font-size:11px;letter-spacing:2px;padding:5px 10px;border-radius:999px">HABARI MPYA · WHAT'S NEW</div>
-    <div style="font-size:30px;font-weight:900;color:#111827;margin-top:12px;line-height:1.05;letter-spacing:-.5px;text-transform:uppercase">${esc(title)}</div>
-    ${titleEn ? `<div style="font-size:15px;color:#3f2d00;margin-top:6px;font-weight:700">${esc(titleEn)}</div>` : ''}
-  </div>
+<tr><td style="padding:26px 24px 6px;font-family:${FONT}">
+  ${kicker("HABARI MPYA · WHAT'S NEW", GOLD, INK)}
+  <div style="height:12px"></div>
+  ${headline(esc(title), 40)}
+  ${titleEn ? `<div style="font-size:15px;color:#6b655b;margin-top:8px;font-weight:700">${esc(titleEn)}</div>` : ''}
 </td></tr>
-<tr><td style="padding:24px;font-family:${FONT}">
-  <p style="font-size:15px;color:#111827;line-height:1.6;margin:0 0 12px">Mambo ${name}! 👋🏾</p>
-  ${paras(body)}
-  ${bodyEn ? `<div style="border-top:1px dashed #e5e7eb;margin:16px 0 14px"></div><div style="color:#4b5563">${paras(bodyEn).replace(/color:#111827/g, 'color:#4b5563')}</div>` : ''}
-  <div style="text-align:center;margin:18px 0 6px">${button(url, esc(cta || 'Cheza sasa · Play now →'))}</div>
-</td></tr>`;
+<tr><td style="padding:16px 24px 6px;font-family:${FONT}">
+  <p style="font-size:15px;color:${INK};line-height:1.6;margin:0 0 12px">Mambo ${name}! 👋🏾</p>
+  ${paras(body, INK)}
+  ${bodyEn ? `<div style="border-top:2px dashed #d9d1bf;margin:16px 0 14px"></div>${paras(bodyEn, '#6b655b')}` : ''}
+</td></tr>
+<tr><td style="padding:10px 24px 28px">${button(url, esc(cta || 'Cheza sasa · Play now →'))}</td></tr>`;
   return {
     subject: subject || `Bongo Life: ${title}`,
     text: `${title}${titleEn ? ` / ${titleEn}` : ''}\n\nMambo ${user.name || user.username}!\n\n${body}${bodyEn ? `\n\n---\n\n${bodyEn}` : ''}\n\n${url}\n\nAcha kupokea habari / Unsubscribe: ${user.id ? unsubUrl(user.id) : ''}`,
-    html: layout({ preheader: titleEn || title, body: html, unsub: user.id ? unsubUrl(user.id) : null }),
+    html: layout({ preheader: titleEn || title, body: html, unsub: user.id ? unsubUrl(user.id) : null, hero: true }),
   };
 }

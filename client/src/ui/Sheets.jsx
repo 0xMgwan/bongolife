@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   adPriceTzs, NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
   outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
+  jobLocks,
 } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
@@ -206,7 +207,7 @@ function PlaceSheet({ id, onClose }) {
       {p.jobs?.map((j) => {
         const shifts = me.jobXp?.[j.id] || 0;
         const pay = shiftPay(j, { shifts, mood: me.mood, trait: me.trait, fame: me.fame });
-        const needsElimu = j.requires?.elimu && me.elimu < j.requires.elimu;
+        const locks = jobLocks(j, me);
         const needsVehicle = j.requires?.vehicle && !me.vehicles.some((v) => j.requires.vehicle.includes(v.model));
         return (
           <div key={j.id} className="item">
@@ -214,10 +215,10 @@ function PlaceSheet({ id, onClose }) {
             <div className="grow">
               <div className="t">{jt(j, shifts)}</div>
               <div className="s">~{fmtTsh(pay)} / {L('shifti', 'shift')} · {j.secs}s · ⚡ -{j.energy} · Level {jobLevel(shifts) + 1} ({shifts} {L('shifti', 'shifts')})</div>
-              {needsElimu && <div className="s red">🎓 {L('Inahitaji Elimu level', 'Needs Education level')} {j.requires.elimu}</div>}
+              {locks.map(([ic, sw, en]) => <div key={en} className="s red">{ic} {L(sw, en)}</div>)}
               {needsVehicle && <div className="s red">🔑 {L('Inahitaji', 'Needs')} {(j.requires.vehicle.length > 3 ? L('gari lolote', 'any car') : j.requires.vehicle.map((m) => loc(vehicleById[m])).join(' / '))}</div>}
             </div>
-            <button className="btn btn-dark btn-sm" disabled={busy || needsElimu || needsVehicle} onClick={() => start('job', j.id)}>{L('Anza', 'Start')}</button>
+            <button className="btn btn-dark btn-sm" disabled={busy || locks.length > 0 || needsVehicle} onClick={() => start('job', j.id)}>{L('Anza', 'Start')}</button>
           </div>
         );
       })}

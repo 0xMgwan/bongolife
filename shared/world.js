@@ -782,7 +782,47 @@ export const PLACES = [
     jobs: [{ id: 'croupier', title: 'Croupier', titles: ['Croupier', 'Pit boss', 'Meneja wa kasino'], secs: 60, pay: 30_000, energy: 10 }],
   },
 ];
+
+// Senior careers. The best-paid jobs need more than Education: experience in a related job
+// (requires.exp = { jobId: shifts }) and/or fame. Pay here is before the shift scaling below.
+const CAREER_JOBS = {
+  posta: [{ id: 'mhasibu', title: 'Mhasibu', titles: ['Mhasibu msaidizi', 'Mhasibu', 'Mhasibu mkuu', 'CFO'], secs: 70, pay: 60_000, energy: 9, requires: { elimu: 2 } }],
+  bank: [{ id: 'afisa-uwekezaji', title: 'Afisa Uwekezaji', titles: ['Mchambuzi', 'Afisa uwekezaji', 'Mkuu wa uwekezaji', 'Mkurugenzi Mtendaji'], secs: 90, pay: 190_000, energy: 13, requires: { elimu: 3, exp: { teller: 10 } } }],
+  techhub: [
+    { id: 'designer', title: 'Mbunifu wa Apps', titles: ['Junior designer', 'Product designer', 'Lead designer', 'Head of design'], secs: 70, pay: 70_000, energy: 10, requires: { elimu: 1 } },
+    { id: 'ai-engineer', title: 'Mhandisi wa AI', titles: ['ML engineer', 'Senior AI engineer', 'Head of AI', 'Chief AI Officer'], secs: 90, pay: 200_000, energy: 14, requires: { elimu: 4, exp: { developer: 10 } } },
+  ],
+  hospitali: [
+    { id: 'mfamasia', title: 'Mfamasia', titles: ['Mfamasia', 'Mfamasia mkuu', 'Mkuu wa famasia'], secs: 60, pay: 50_000, energy: 9, requires: { elimu: 2 } },
+    { id: 'daktari-bingwa', title: 'Daktari bingwa wa upasuaji', titles: ['Daktari wa upasuaji', 'Bingwa wa upasuaji', 'Profesa wa upasuaji'], secs: 90, pay: 210_000, energy: 16, requires: { elimu: 4, exp: { daktari: 15 } } },
+  ],
+  mahakama: [{ id: 'hakimu', title: 'Hakimu', titles: ['Hakimu mkazi', 'Hakimu mfawidhi', 'Jaji', 'Jaji Mkuu'], secs: 90, pay: 230_000, energy: 12, requires: { elimu: 5, exp: { wakili: 20 } } }],
+  airport: [{ id: 'mhandisi-ndege', title: 'Mhandisi wa ndege', titles: ['Fundi wa ndege', 'Mhandisi wa ndege', 'Mhandisi mkuu'], secs: 90, pay: 170_000, energy: 14, requires: { elimu: 3, exp: { fundi: 10 } } }],
+  uwanja: [{ id: 'mchezaji', title: 'Mchezaji wa Ligi Kuu', titles: ['Mchezaji wa akiba', 'Mchezaji wa kikosi', 'Nahodha', 'Staa wa taifa'], secs: 90, pay: 120_000, energy: 18, fameBonus: true, requires: { fame: 60, exp: { trainer: 10 } } }],
+  studio: [{ id: 'producer', title: 'Producer', titles: ['Producer chipukizi', 'Producer', 'Hitmaker', 'Mmiliki wa label'], secs: 80, pay: 90_000, energy: 12, fameBonus: true, requires: { fame: 30, exp: { msanii: 10 } } }],
+  club: [{ id: 'promota', title: 'Promota wa matamasha', titles: ['Promota', 'Promota mkubwa', 'Mratibu wa tamasha'], secs: 70, pay: 70_000, energy: 12, fameBonus: true, requires: { fame: 20 } }],
+  polisi: [{ id: 'mpelelezi', title: 'Mpelelezi', titles: ['Mpelelezi', 'Mpelelezi mkuu', 'Mkuu wa upelelezi'], secs: 80, pay: 90_000, energy: 13, requires: { exp: { askari: 15 } } }],
+  serena: [{ id: 'meneja-hoteli', title: 'Meneja wa hoteli', titles: ['Meneja msaidizi', 'Meneja wa hoteli', 'Meneja mkuu'], secs: 80, pay: 130_000, energy: 11, requires: { elimu: 2, exp: { receptionist: 10 } } }],
+  'zn-port': [{ id: 'afisa-forodha', title: 'Afisa Forodha', titles: ['Afisa forodha', 'Afisa mkuu', 'Kamishna wa forodha'], secs: 70, pay: 70_000, energy: 10, requires: { elimu: 2 } }],
+  coffee: [{ id: 'mtaalamu-kahawa', title: 'Mtaalamu wa kahawa', titles: ['Mwonjaji wa kahawa', 'Mtaalamu', 'Msafirishaji wa kahawa'], secs: 70, pay: 65_000, energy: 10, requires: { elimu: 1 } }],
+};
+for (const p of PLACES) if (CAREER_JOBS[p.id]) p.jobs = [...(p.jobs || []), ...CAREER_JOBS[p.id]];
 export const placeById = Object.fromEntries(PLACES.map((p) => [p.id, p]));
+export const jobById = Object.fromEntries(PLACES.flatMap((p) => (p.jobs || []).map((j) => [j.id, j])));
+
+/** What's still missing before a player can take this job: [[icon, sw, en], …]. Vehicles are checked separately. */
+export function jobLocks(job, u) {
+  const r = job.requires || {};
+  const out = [];
+  if (r.elimu && (u.elimu || 0) < r.elimu) out.push(['🎓', `Inahitaji Elimu level ${r.elimu}`, `Needs Education level ${r.elimu}`]);
+  if (r.fame && (u.fame || 0) < r.fame) out.push(['⭐', `Inahitaji umaarufu ${r.fame} (una ${u.fame || 0})`, `Needs ${r.fame} fame (you have ${u.fame || 0})`]);
+  for (const [id, n] of Object.entries(r.exp || {})) {
+    const have = u.jobXp?.[id] || 0;
+    const j = jobById[id];
+    if (have < n) out.push(['💼', `Inahitaji shifti ${n} kama ${j?.title || id} (${have}/${n})`, `Needs ${n} shifts as ${j?.titleEn || j?.title || id} (${have}/${n})`]);
+  }
+  return out;
+}
 
 export function findActivity(placeId, id) {
   return placeById[placeId]?.activities?.find((a) => a.id === id) || null;
@@ -1062,6 +1102,21 @@ const EN = {
     mbebaji: ['Baggage handler', ['Baggage handler', 'Baggage supervisor']],
     'mhudumu-ndege': ['Cabin crew', ['Cabin crew', 'Senior cabin crew', 'Purser']],
     rubani: ['Pilot', ['First officer', 'Pilot', 'Captain', 'Chief captain']],
+    mhasibu: ['Accountant', ['Junior accountant', 'Accountant', 'Senior accountant', 'CFO']],
+    'afisa-uwekezaji': ['Investment Banker', ['Analyst', 'Investment officer', 'Head of investments', 'CEO']],
+    designer: ['App Designer', ['Junior designer', 'Product designer', 'Lead designer', 'Head of design']],
+    'ai-engineer': ['AI Engineer', ['ML engineer', 'Senior AI engineer', 'Head of AI', 'Chief AI Officer']],
+    mfamasia: ['Pharmacist', ['Pharmacist', 'Senior pharmacist', 'Head of pharmacy']],
+    'daktari-bingwa': ['Surgeon', ['Surgeon', 'Senior surgeon', 'Professor of surgery']],
+    hakimu: ['Magistrate', ['Resident magistrate', 'Senior magistrate', 'Judge', 'Chief Justice']],
+    'mhandisi-ndege': ['Aircraft Engineer', ['Aircraft technician', 'Aircraft engineer', 'Chief engineer']],
+    mchezaji: ['Premier League Footballer', ['Substitute', 'First-team player', 'Captain', 'National star']],
+    producer: ['Music Producer', ['Upcoming producer', 'Producer', 'Hitmaker', 'Label owner']],
+    promota: ['Event Promoter', ['Promoter', 'Big promoter', 'Festival organiser']],
+    mpelelezi: ['Detective', ['Detective', 'Senior detective', 'Head of CID']],
+    'meneja-hoteli': ['Hotel Manager', ['Assistant manager', 'Hotel manager', 'General manager']],
+    'afisa-forodha': ['Customs Officer', ['Customs officer', 'Senior officer', 'Customs commissioner']],
+    'mtaalamu-kahawa': ['Coffee Specialist', ['Coffee taster', 'Specialist', 'Coffee exporter']],
     'mpishi-pizza': ['Zanzibar pizza cook', ['Cook', 'Head cook']],
     mwongoza: ['Tour guide', ['Tour guide', 'Senior guide', 'Tour company owner']],
     barista: ['Barista', ['Barista', 'Head barista']],
@@ -1158,7 +1213,7 @@ const ACTIVITY_SCENES = {
   karting: { race: 'karting', grandprix: 'karting' },
   serena: { massage: 'spa', suite: 'spa', rooftop: 'rooftop', dinner: 'dining' },
 };
-const JOB_SCENES = { dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', msaidizi: 'dining', cashier: 'shop', machinga: 'shop', nesi: 'hospital', daktari: 'hospital', teller: 'bank', karani: 'office', developer: 'office', mlinzi: 'stadium', mvuvi: 'beach', 'mhudumu-ndege': 'flight', rubani: 'flight' , lifeguard: 'waterpark', 'mpiga-ngoma': 'ngoma', caddie: 'golf', nahodha: 'dhow', fundi: 'karting', receptionist: 'spa' , 'mpishi-pizza': 'grill', mwongoza: null, croupier: 'casino', 'safari-guide': 'safari', porter: 'hike', barista: 'dining' };
+const JOB_SCENES = { dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', msaidizi: 'dining', cashier: 'shop', machinga: 'shop', nesi: 'hospital', daktari: 'hospital', teller: 'bank', karani: 'office', developer: 'office', mlinzi: 'stadium', mvuvi: 'beach', 'mhudumu-ndege': 'flight', rubani: 'flight' , lifeguard: 'waterpark', 'mpiga-ngoma': 'ngoma', caddie: 'golf', nahodha: 'dhow', fundi: 'karting', receptionist: 'spa' , 'mpishi-pizza': 'grill', mwongoza: null, croupier: 'casino', 'safari-guide': 'safari', porter: 'hike', barista: 'dining', mhasibu: 'office', 'afisa-uwekezaji': 'bank', designer: 'office', 'ai-engineer': 'office', mfamasia: 'hospital', 'daktari-bingwa': 'hospital', 'mhandisi-ndege': 'flight', mchezaji: 'stadium', producer: 'studio', promota: 'club', 'meneja-hoteli': 'spa', 'mtaalamu-kahawa': 'dining' };
 
 /** Scene for a busy state ({ kind, id, placeId }), or null to stay outdoors. */
 const TRIP_SCENES = { flight: 'flight', heli: 'heli', ferry: 'ferry', bus: 'road', car: 'road' };
