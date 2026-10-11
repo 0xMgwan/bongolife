@@ -2366,6 +2366,157 @@ function CasinoScene({ me, myBusy, people }) {
   );
 }
 
+
+// ------------------------------------------------------------------ market
+// Kariakoo-style open-air market: the yellow umbrella-roof hall at the back, painted ad bands,
+// rows of stalls under umbrellas, sellers, shoppers with baskets on their heads, a daladala and bajaji.
+const UMBRELLA = ['#ef4444', '#2563eb', '#f59e0b', '#16a34a', '#db2777', '#0ea5e9', '#f97316', '#7c3aed'];
+const MKT_GOODS = ['fruit', 'banana', 'kitenge', 'tomato', 'shoes', 'spice', 'melon', 'bucket', 'coconut', 'kitenge', 'fruit', 'charcoal'];
+function Goods({ kind, seed }) {
+  const r = rng(seed + 7);
+  const piles = [];
+  const ball = (x, y, z, rad, c) => <mesh key={`${x}${y}${z}`} geometry={geo('sphere', rad, 8, 6)} material={mat(c)} position={[x, y, z]} />;
+  if (kind === 'fruit' || kind === 'tomato' || kind === 'coconut') {
+    const c = kind === 'fruit' ? ['#f97316', '#fb923c', '#facc15'] : kind === 'tomato' ? ['#dc2626', '#ef4444'] : ['#7c4a1e', '#92400e'];
+    const rad = kind === 'coconut' ? 0.2 : 0.13;
+    for (let k = 0; k < 3; k++) for (let i = 0; i < 4 - k; i++) for (let j = 0; j < 3 - k; j++) piles.push(ball(-1 + i * rad * 2.1 + k * rad + (j % 2) * 0.05, 0.98 + k * rad * 1.6, -0.3 + j * rad * 2.1 + k * rad, rad, c[(i + j + k) % c.length]));
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) piles.push(ball(0.35 + i * rad * 2.1, 0.98, -0.3 + j * rad * 2.1, rad, c[(i * j) % c.length]));
+  } else if (kind === 'banana') {
+    for (let i = 0; i < 7; i++) piles.push(<mesh key={i} geometry={geo('capsule', 0.09, 0.5, 4, 8)} material={mat(i % 3 ? '#facc15' : '#a3e635')} position={[-1 + i * 0.32, 1.05, (i % 2) * 0.25 - 0.1]} rotation={[0, 0, Math.PI / 2 + (r() - 0.5) * 0.6]} />);
+  } else if (kind === 'melon') {
+    for (let i = 0; i < 5; i++) piles.push(<mesh key={i} geometry={geo('sphere', 0.28, 10, 8)} material={mat(i % 2 ? '#15803d' : '#166534')} position={[-0.9 + i * 0.45, 1.15, (i % 2) * 0.3 - 0.15]} scale={[1, 0.85, 1.25]} />);
+  } else if (kind === 'kitenge') {
+    for (let i = 0; i < 5; i++) for (let k = 0; k < 4; k++) piles.push(<mesh key={`${i}-${k}`} geometry={geo('box', 0.5, 0.07, 0.6)} material={mat(UMBRELLA[(i + k + seed) % UMBRELLA.length])} position={[-1.1 + i * 0.55, 0.94 + k * 0.08, 0]} />);
+    piles.push(<mesh key="rail" geometry={geo('box', 3, 0.05, 0.05)} material={mat('#78350f')} position={[0, 2.3, -0.75]} />);
+    for (let i = 0; i < 5; i++) piles.push(<mesh key={`h${i}`} geometry={geo('box', 0.52, 1.1, 0.02)} material={mat(UMBRELLA[(i * 3 + seed) % UMBRELLA.length])} position={[-1.15 + i * 0.58, 1.72, -0.75]} />);
+  } else if (kind === 'shoes') {
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 2; j++) piles.push(<mesh key={`${i}${j}`} geometry={geo('box', 0.14, 0.12, 0.34)} material={mat(['#111827', '#f8fafc', '#b91c1c', '#1d4ed8', '#78350f'][(i + j) % 5])} position={[-1.1 + i * 0.42 + j * 0.16, 0.96, -0.1 + j * 0.05]} />);
+  } else if (kind === 'spice') {
+    ['#dc2626', '#f59e0b', '#92400e', '#65a30d', '#facc15'].forEach((c, i) => {
+      piles.push(<mesh key={`b${i}`} geometry={geo('cyl', 0.24, 0.2, 0.14, 10)} material={mat('#e5e7eb')} position={[-1 + i * 0.5, 0.97, 0]} />);
+      piles.push(<mesh key={`p${i}`} geometry={geo('cone', 0.22, 0.22, 10)} material={mat(c)} position={[-1 + i * 0.5, 1.15, 0]} />);
+    });
+  } else if (kind === 'bucket') {
+    for (let i = 0; i < 4; i++) for (let k = 0; k < 3; k++) piles.push(<mesh key={`${i}${k}`} geometry={geo('cyl', 0.24, 0.18, 0.32, 10, 1, true)} material={mat(UMBRELLA[(i + seed) % UMBRELLA.length], { side: THREE.DoubleSide })} position={[-0.9 + i * 0.6, 1.06 + k * 0.12, 0]} />);
+  } else if (kind === 'charcoal') {
+    for (let i = 0; i < 3; i++) piles.push(<mesh key={i} geometry={geo('capsule', 0.32, 0.4, 4, 8)} material={mat('#e7e5e4')} position={[-0.8 + i * 0.8, 1.2, 0]} />);
+    piles.push(<mesh key="c" geometry={geo('cone', 0.45, 0.3, 8)} material={mat('#1c1917')} position={[0.9, 1.05, 0.35]} />);
+  }
+  return piles;
+}
+function Stall({ x, z, i }) {
+  const c = UMBRELLA[i % UMBRELLA.length];
+  const c2 = UMBRELLA[(i + 3) % UMBRELLA.length];
+  return (
+    <group position={[x, 0, z]}>
+      <Box p={[0, 0, 0]} s={[3, 0.88, 1.5]} c={['#a16207', '#92400e', '#78350f'][i % 3]} />
+      <Box p={[0, 0.88, 0]} s={[3.1, 0.04, 1.6]} c="#d6c3a1" />
+      <Goods kind={MKT_GOODS[i % MKT_GOODS.length]} seed={i} />
+      <mesh geometry={geo('cyl', 0.05, 0.05, 2.9, 5)} material={mat('#e5e7eb')} position={[1.6, 1.45, -0.8]} />
+      <mesh geometry={geo('cone', 1.45, 0.6, 8)} material={mat(c)} position={[1.6, 3.2, -0.8]} />
+      <mesh geometry={geo('cone', 1.47, 0.6, 8, 1, true, 0, Math.PI / 4)} material={mat(c2, { side: THREE.DoubleSide })} position={[1.6, 3.2, -0.8]} />
+      <mesh geometry={geo('cone', 1.47, 0.6, 8, 1, true, Math.PI, Math.PI / 4)} material={mat(c2, { side: THREE.DoubleSide })} position={[1.6, 3.2, -0.8]} />
+    </group>
+  );
+}
+function KariakooHall({ name }) {
+  const cones = Array.from({ length: 9 }, (_, i) => -12 + i * 3);
+  return (
+    <group position={[0, 0, -10.6]}>
+      <Box p={[0, 0, 0]} s={[30, 6.2, 1.2]} c="#fbbf24" />
+      {/* the hall's famous inverted-umbrella roof */}
+      {cones.map((x) => (
+        <group key={x} position={[x, 7.3, 0.3]}>
+          <mesh geometry={geo('cone', 1.75, 1.6, 10)} material={mat('#f59e0b')} rotation={[Math.PI, 0, 0]} />
+          <mesh geometry={geo('cyl', 0.18, 0.22, 1.2, 6)} material={mat('#fde68a')} position={[0, -1.3, 0]} />
+        </group>
+      ))}
+      <Box p={[0, 6.2, 0.35]} s={[30.4, 0.3, 1.8]} c="#d97706" />
+      {/* painted ad bands, Tinga-Tinga colours */}
+      <Box p={[-7.5, 4.4, 0.62]} s={[14, 1.4, 0.05]} c="#dc2626" />
+      <Sign text="BONGO COLA · Ladha Halisi" p={[-7.5, 5.1, 0.66]} h={0.9} fg="#ffffff" />
+      <Box p={[7.5, 4.4, 0.62]} s={[14, 1.4, 0.05]} c="#1d4ed8" />
+      <Sign text="PESA SIMU · Tuma kwa sekunde" p={[7.5, 5.1, 0.66]} h={0.85} fg="#fde047" />
+      <Box p={[0, 1.9, 0.62]} s={[9, 1.6, 0.05]} c="#ffffff" />
+      <Sign text={name} p={[0, 2.95, 0.68]} h={1} fg="#111827" />
+      <Sign text="ONYO: Usitupe taka ovyo · Faini TSh 50,000" p={[0, 2.25, 0.68]} h={0.38} fg="#b91c1c" />
+      {[-12, -8, 8, 12].map((x) => <Box key={x} p={[x, 0, 0.62]} s={[2.2, 3, 0.05]} c="#3f2d0f" />)}
+      <mesh geometry={geo('cyl', 0.04, 0.04, 3, 5)} material={mat('#9ca3af')} position={[0, 9, 0.3]} />
+      <mesh geometry={geo('plane', 1.4, 0.9)} material={mat('#1eb53a', { side: THREE.DoubleSide })} position={[0.72, 10, 0.3]} />
+    </group>
+  );
+}
+const MKT_STALLS = (() => {
+  const out = [];
+  [-10.5, -4.2, 2.1, 8.4].forEach((x, ci) => [-6, -1.5, 3].forEach((z, ri) => out.push({ x, z, i: ci * 3 + ri })));
+  return out;
+})();
+// Shoppers walking the aisles: [aisle x, phase, speed, carries basket]
+const MKT_WALKERS = [[-7.3, 0, 0.9, 1], [-7.3, 3.1, 1, 0], [-7.6, 5, 0.7, 0], [-1.1, 1.2, 0.8, 1], [-1.1, 4.4, 1.1, 0], [-0.8, 2.6, 0.75, 1], [5.2, 2.2, 0.95, 1], [5.2, 5.4, 0.85, 0], [5.5, 0.4, 0.7, 0], [11.4, 0.6, 1, 1], [11.6, 3.7, 0.8, 0], [-13, 2.6, 0.9, 0], [-13.2, 5.6, 0.8, 1]];
+const MKT_CROSS = [[0, 1.2, 1], [3.3, 0.9, 0], [6.1, 1.1, 1], [1.7, 0.8, 0], [4.6, 1, 0], [2.4, 0.7, 1]];
+function Market({ me, myBusy, people, placeId }) {
+  const hallName = (loc(placeById[placeId]) || 'Soko la Kariakoo').toUpperCase();
+  const working = myBusy?.kind === 'job';
+  const basket = (
+    <group position={[0, 2.02, 0]}>
+      <mesh geometry={geo('cyl', 0.34, 0.24, 0.22, 10)} material={mat('#b45309')} />
+      {[[-0.12, 0], [0.12, 0.05], [0, -0.12]].map(([x, z], i) => <mesh key={i} geometry={geo('sphere', 0.11, 8, 6)} material={mat(['#f97316', '#facc15', '#dc2626'][i])} position={[x, 0.16, z]} />)}
+    </group>
+  );
+  const sellers = MKT_STALLS.slice(0, 10);
+  const realSpots = [[-7.3, 0, 6.5, Math.PI], [-1.1, 0, 7, Math.PI], [5.2, 0, 6.5, Math.PI], [11.4, 0, 7, Math.PI], [-4, 0, 8, Math.PI]];
+  return (
+    <group>
+      <Box p={[0, -0.1, 0]} s={[34, 0.1, 26]} c="#cdb991" />
+      {[-7.3, -1.1, 5.2, 11.4].map((x) => <Box key={x} p={[x, -0.04, -1]} s={[2.4, 0.02, 18]} c="#b9a57c" />)}
+      <KariakooHall name={hallName} />
+      {MKT_STALLS.map((s) => <Stall key={s.i} {...s} />)}
+      {/* sellers behind their stalls */}
+      {sellers.map((s, k) => (
+        working && k === 1 ? null : <Person key={`s${k}`} slot={[s.x - 0.2, 0, s.z - 1.15, 0]} appearance={look(k * 3 + 1)} mode={k % 3 === 0 ? 'cheer' : 'idle'} />
+      ))}
+      {working && <Person slot={[MKT_STALLS[1].x - 0.2, 0, MKT_STALLS[1].z - 1.15, 0]} appearance={me.appearance} mode="cheer" id={me.id} username={me.username} />}
+      {/* shoppers up and down the aisles */}
+      {MKT_WALKERS.map(([x, ph, sp, b], i) => (
+        <Mover key={`w${i}`} fn={(o, t) => {
+          const k = ((t * sp * 0.12 + ph / 6.28) % 1 + 1) % 1;
+          const fwd = k < 0.5;
+          const zz = fwd ? -7 + k * 2 * 15 : 8 - (k - 0.5) * 2 * 15;
+          o.position.set(x, 0, zz);
+          o.rotation.y = fwd ? 0 : Math.PI;
+        }}>
+          <Person slot={[0, 0, 0, 0]} appearance={look(i * 5 + 2)} mode="walk" prop={b ? basket : null} />
+        </Mover>
+      ))}
+      {MKT_CROSS.map(([ph, sp, b], i) => (
+        <Mover key={`c${i}`} fn={(o, t) => {
+          const k = ((t * sp * 0.07 + ph / 6.28) % 1 + 1) % 1;
+          const fwd = k < 0.5;
+          o.position.set(fwd ? -15 + k * 2 * 30 : 15 - (k - 0.5) * 2 * 30, 0, 9.4 + (i % 2) * 1.1);
+          o.rotation.y = fwd ? Math.PI / 2 : -Math.PI / 2;
+        }}>
+          <Person slot={[0, 0, 0, 0]} appearance={look(i * 7 + 4)} mode="walk" prop={b ? basket : null} />
+        </Mover>
+      ))}
+      {/* you and other real players, browsing */}
+      {!working && <Person slot={[-1.1, 0, 5.2, Math.PI]} appearance={me.appearance} mode="idle" id={me.id} username={me.username} />}
+      {people.slice(0, realSpots.length).map((r, i) => <Person key={r.id} slot={realSpots[i]} appearance={r.appearance} mode={r.busy?.kind === 'job' ? 'cheer' : 'idle'} id={r.id} username={r.username} />)}
+      {/* street edge: a daladala loading, a bajaji, a mkokoteni with sacks */}
+      <group position={[13.5, 0, 11.6]} rotation={[0, -Math.PI / 2, 0]}>
+        <VehicleS kind="bus" color="#fde047" />
+      </group>
+      <Sign text="KARIAKOO – MASAKI" p={[13.5, 3.3, 11.6]} h={0.5} bg="#111827" fg="#fde047" />
+      <group position={[-13, 0, 11.4]} rotation={[0, Math.PI / 2, 0]}><VehicleS kind="bajaji" color="#16a34a" /></group>
+      <group position={[-14.5, 0, 3]} rotation={[0, 0.3, 0]}>
+        <Box p={[0, 0.55, 0]} s={[1.4, 0.12, 2.6]} c="#78350f" />
+        {[-0.75, 0.75].map((x) => <mesh key={x} geometry={geo('cyl', 0.42, 0.42, 0.1, 12)} material={mat('#1f2937')} rotation={[0, 0, Math.PI / 2]} position={[x, 0.42, 0.3]} />)}
+        {[0, 1, 2].map((i) => <mesh key={i} geometry={geo('capsule', 0.3, 0.5, 4, 8)} material={mat('#f5f5f4')} rotation={[Math.PI / 2, 0, 0]} position={[(i - 1) * 0.42, 0.95, -0.2 + (i % 2) * 0.5]} />)}
+      </group>
+      <pointLight color="#fff7e6" intensity={4} distance={30} position={[0, 9, 4]} />
+    </group>
+  );
+}
+
 // ---------------------------------------------------------------- config
 export const SCENES = {
   club: { C: Club, camera: { pos: [3, 14, 13], look: [-1, 0.2, -2.2] }, dark: true, bg: '#0b0614', light: 0.25 },
@@ -2399,6 +2550,7 @@ export const SCENES = {
   flight: { C: Flight, dynamic: true, bg: '#7dd3fc', light: 1.1 },
   office: { C: Office, camera: { pos: [0, 8, 11], look: [0, 0.6, -0.5] }, bg: '#0f172a', light: 1 },
   bank: { C: (p) => <Office {...p} bank />, camera: { pos: [0, 8, 11], look: [0, 0.6, -0.8] }, bg: '#0f172a', light: 1 },
+  market: { C: Market, camera: { pos: [0, 9.5, 17.5], look: [0, 1.4, -1.5] }, bg: '#7dd3fc', light: 1.1 },
   shop: { C: Shop, camera: { pos: [0, 7.5, 10.5], look: [0, 0.6, -0.5] }, bg: '#1c1917', light: 1 },
   hospital: { C: Hospital, camera: { pos: [0, 8.5, 12], look: [0, 0.6, -2.2] }, bg: '#0f172a', light: 1 },
   classroom: { C: Classroom, camera: { pos: [0, 5.5, 9], look: [0, 1.6, -4] }, bg: '#1c1917', light: 0.9 },

@@ -383,6 +383,119 @@ function Umbrella({ x, z, c }) {
   );
 }
 
+/** Kariakoo Market: the yellow hall with its inverted-umbrella roof, painted ad bands and stalls out front. */
+function KariakooModel({ w, h, d }) {
+  const cols = 5, rows = 3;
+  const UMB = ['#ef4444', '#2563eb', '#f59e0b', '#16a34a', '#db2777', '#0ea5e9'];
+  return (
+    <group>
+      <Box w={w} h={h} d={d} color="#fbbf24" />
+      <Box w={w + 0.8} h={0.5} d={d + 0.8} color="#d97706" y={h} />
+      {Array.from({ length: cols * rows }, (_, i) => {
+        const x = -w / 2 + (w / cols) * ((i % cols) + 0.5);
+        const z = -d / 2 + (d / rows) * (Math.floor(i / cols) + 0.5);
+        return (
+          <group key={i} position={[x, h + 0.5, z]}>
+            <mesh geometry={geo('cyl', 0.25, 0.3, 1.2, 6)} material={mat('#fde68a')} position={[0, 0.6, 0]} />
+            <mesh geometry={geo('cone', Math.min(w / cols, d / rows) * 0.62, 1.5, 10)} material={mat('#f59e0b')} position={[0, 1.9, 0]} rotation={[Math.PI, 0, 0]} />
+          </group>
+        );
+      })}
+      <Box w={w * 0.48} h={1.3} d={0.1} color="#dc2626" x={-w * 0.25} y={h - 1.6} z={d / 2 + 0.02} />
+      <group position={[-w * 0.25, 0, 0]}><Sign text="BONGO COLA · LADHA HALISI" w={w * 0.44} y={h - 1.6} z={d / 2 + 0.1} bg="#dc2626" fg="#ffffff" /></group>
+      <group position={[w * 0.25, 0, 0]}><Sign text="PESA SIMU · TUMA SASA" w={w * 0.42} y={h - 1.6} z={d / 2 + 0.1} bg="#1d4ed8" fg="#fde047" /></group>
+      <Sign text="SOKO LA KARIAKOO" w={w * 0.5} y={h - 3.6} z={d / 2 + 0.1} bg="#ffffff" fg="#111827" />
+      {[-0.42, -0.14, 0.14, 0.42].map((f, i) => <Box key={f} w={2.6} h={2.6} d={0.1} color="#3f2d0f" x={w * f} z={d / 2 + 0.02} />)}
+      {Array.from({ length: 6 }, (_, i) => (
+        <group key={i} position={[-w / 2 + 1.6 + i * ((w - 3.2) / 5), 0, d / 2 + 2.6]}>
+          <mesh geometry={geo('cyl', 0.06, 0.06, 2.6, 5)} material={mat('#e5e7eb')} position={[0, 1.3, 0]} />
+          <mesh geometry={geo('cone', 1.5, 0.6, 8)} material={mat(UMB[i % UMB.length])} position={[0, 2.75, 0]} />
+          <Box w={1.8} h={0.8} d={0.9} color="#92400e" z={0.5} />
+          {[0, 1, 2].map((k) => <mesh key={k} geometry={geo('sphere', 0.18, 7, 5)} material={mat(['#f97316', '#facc15', '#16a34a', '#dc2626'][(i + k) % 4])} position={[-0.5 + k * 0.5, 0.95, 0.5]} />)}
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// ------------------------------------------------------------ crowds
+// Cheap instanced crowds (a body + a head each) that make busy places feel packed.
+const CROWD_SPOTS = [
+  { id: 'kariakoo', n: 140, pad: 7 },
+  { id: 'stendi', n: 50, pad: 5 },
+  { id: 'posta', n: 40, pad: 5 },
+  { id: 'ferry', n: 40, pad: 5 },
+  { id: 'darajani', n: 45, pad: 5 },
+  { id: 'forodhani', n: 35, pad: 5 },
+  { id: 'maasai', n: 35, pad: 5 },
+];
+const CLOTHES = ['#ef4444', '#f59e0b', '#16a34a', '#2563eb', '#db2777', '#7c3aed', '#f8fafc', '#111827', '#0ea5e9', '#facc15', '#ea580c', '#14b8a6'];
+const SKINS = ['#3b2219', '#4a2c20', '#5c3826', '#704532', '#8a5a3c'];
+const crowdBody = new THREE.CapsuleGeometry(0.26, 0.75, 3, 7).translate(0, 0.65, 0);
+const crowdHead = new THREE.SphereGeometry(0.2, 8, 6).translate(0, 1.42, 0);
+const crowdBodyMat = new THREE.MeshLambertMaterial();
+const crowdHeadMat = new THREE.MeshLambertMaterial();
+function Crowds() {
+  const body = useRef();
+  const head = useRef();
+  const people = useMemo(() => {
+    const r = rng(2024);
+    const out = [];
+    for (const { id, n, pad } of CROWD_SPOTS) {
+      const p = PLACES.find((x) => x.id === id);
+      if (!p) continue;
+      const [w, d] = p.size;
+      let tries = 0;
+      for (let k = 0; k < n && tries < n * 12; tries++) {
+        // Somewhere in a band around the building, never on the road or in the water.
+        const side = r() * 4 | 0;
+        const along = r() - 0.5;
+        const out_ = 1.2 + r() * pad;
+        const x = p.pos[0] + (side < 2 ? along * (w + pad) : (side === 2 ? -1 : 1) * (w / 2 + out_));
+        const z = p.pos[1] + (side < 2 ? (side === 0 ? -1 : 1) * (d / 2 + out_) : along * (d + pad));
+        if (onRoad(x, z, 0.6) || isWater(x, z)) continue;
+        out.push({ x, z, ry: r() * Math.PI * 2, s: 0.92 + r() * 0.16, ph: r() * 6, c: CLOTHES[(r() * CLOTHES.length) | 0], k: SKINS[(r() * SKINS.length) | 0] });
+        k++;
+      }
+    }
+    return out;
+  }, []);
+  useLayoutEffect(() => {
+    const col = new THREE.Color();
+    people.forEach((pp, i) => {
+      body.current.setColorAt(i, col.set(pp.c));
+      head.current.setColorAt(i, col.set(pp.k));
+    });
+    body.current.instanceColor.needsUpdate = true;
+    head.current.instanceColor.needsUpdate = true;
+  }, [people]);
+  const m = useMemo(() => new THREE.Matrix4(), []);
+  const q = useMemo(() => new THREE.Quaternion(), []);
+  const v = useMemo(() => new THREE.Vector3(), []);
+  const sc = useMemo(() => new THREE.Vector3(), []);
+  const up = useMemo(() => new THREE.Vector3(0, 1, 0), []);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    people.forEach((pp, i) => {
+      // A little sway and bounce, like people chatting and haggling.
+      q.setFromAxisAngle(up, pp.ry + Math.sin(t * 0.6 + pp.ph) * 0.35);
+      v.set(pp.x, 0.1 + Math.abs(Math.sin(t * 2.2 + pp.ph)) * 0.05, pp.z);
+      sc.setScalar(pp.s);
+      m.compose(v, q, sc);
+      body.current.setMatrixAt(i, m);
+      head.current.setMatrixAt(i, m);
+    });
+    body.current.instanceMatrix.needsUpdate = true;
+    head.current.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <group>
+      <instancedMesh ref={body} args={[crowdBody, crowdBodyMat, people.length]} frustumCulled={false} />
+      <instancedMesh ref={head} args={[crowdHead, crowdHeadMat, people.length]} frustumCulled={false} />
+    </group>
+  );
+}
+
 function PlaceModel({ place, owner }) {
   const [w, d] = place.size;
   const h = place.h;
@@ -573,6 +686,7 @@ function PlaceModel({ place, owner }) {
         </group>
       );
     case 'market':
+      if (place.id === 'kariakoo') return <KariakooModel w={w} h={h} d={d} />;
       return (
         <group>
           <Box w={w} h={h} d={d} color={c} />
@@ -1208,6 +1322,7 @@ export function City({ world, ads, onPlace, onPlot, onBillboard, onGround, myUse
       <Billboards ads={ads} onBillboard={onBillboard} big={mapMode} />
       <Traffic cityId={cityId} lowEnd={lowEnd} />
       {!mapMode && <StreetLife cityId={cityId} max={lowEnd ? 7 : 14} />}
+      {!mapMode && <Crowds />}
       {walkers > 0 && <Walkers key={cityId} count={walkers} cityId={cityId} />}
     </group>
   );
