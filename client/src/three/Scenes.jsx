@@ -2593,6 +2593,177 @@ function Stand({ me, myBusy, people }) {
   );
 }
 
+
+// ------------------------------------------------------------------ Posta
+// Posta CBD: towers behind, the old post office, the Askari Monument, a daladala terminus,
+// office workers with briefcases, a newspaper stand, a shoeshine, mitumba and a coffee seller.
+function Plaza({ me, people }) {
+  const briefcase = <mesh geometry={geo('box', 0.42, 0.3, 0.12)} material={mat('#3f2d0f')} position={[0.38, 0.75, 0]} />;
+  const phone = <mesh geometry={geo('box', 0.08, 0.16, 0.02)} material={mat('#111827')} position={[0.2, 1.55, 0.18]} />;
+  const realSpots = [[-3, 0, 6.5, Math.PI], [3, 0, 6.5, Math.PI], [0, 0, 8, Math.PI], [-6, 0, 8, Math.PI]];
+  return (
+    <group>
+      <Box p={[0, -0.1, 0]} s={[34, 0.1, 26]} c="#d6d3d1" />
+      <Box p={[0, -0.05, 9.5]} s={[34, 0.06, 4]} c="#4b5563" />
+      {[-4, -2, 0, 2, 4].map((x) => <Box key={x} p={[x, -0.02, 9.5]} s={[1, 0.02, 4]} c="#f8fafc" />)}
+      {/* skyline */}
+      {[[-13, 26, '#93c5fd'], [-8, 34, '#bae6fd'], [8, 30, '#a5b4fc'], [13.5, 22, '#cbd5e1']].map(([x, h, c]) => (
+        <Box key={x} p={[x, 0, -11]} s={[4.5, h, 4.5]} c={c} />
+      ))}
+      <Sign text="POSTA TOWERS" p={[-8, 30, -8.7]} h={1} bg="#0f172a" fg="#ffffff" />
+      <Sign text="BENKI YA BONGO" p={[8, 25, -8.7]} h={0.9} bg="#7c2d12" fg="#fde68a" />
+      {/* the old post office */}
+      <group position={[0, 0, -9]}>
+        <Box s={[11, 6, 3]} c="#fde68a" />
+        <Box p={[0, 6, 0]} s={[11.6, 0.5, 3.4]} c="#b45309" />
+        {[-4, -2, 0, 2, 4].map((x) => <Box key={x} p={[x, 0, 1.52]} s={[1.3, 2.6, 0.05]} c="#78350f" />)}
+        <Sign text="POSTA KUU · 1893" p={[0, 4.4, 1.56]} h={0.8} bg="#ffffff" fg="#7c2d12" />
+      </group>
+      {/* Askari Monument */}
+      <group position={[0, 0, -2]}>
+        <mesh geometry={geo('cyl', 1.6, 1.8, 0.5, 16)} material={mat('#9ca3af')} position={[0, 0.25, 0]} />
+        <Box p={[0, 0.5, 0]} s={[1.2, 2.2, 1.2]} c="#e5e7eb" />
+        <mesh geometry={geo('capsule', 0.3, 0.9, 4, 8)} material={mat('#78716c')} position={[0, 3.35, 0]} />
+        <mesh geometry={geo('sphere', 0.24, 10, 8)} material={mat('#78716c')} position={[0, 4.15, 0]} />
+        <mesh geometry={geo('cyl', 0.04, 0.04, 1.4, 5)} material={mat('#57534e')} position={[0.35, 3.6, 0.2]} rotation={[0.6, 0, 0]} />
+      </group>
+      {/* daladala terminus */}
+      {[[-9.5, '#fde047', 'POSTA – KARIAKOO'], [-9.5, '#f8fafc', 'POSTA – UBUNGO']].map(([x, c, r], i) => (
+        <group key={r} position={[x + i * 0.2, 0, 2 + i * 5.5]}>
+          <VehicleS kind="bus" color={c} />
+          <Sign text={r} p={[0, 2.75, 0]} h={0.45} bg="#111827" fg="#fde047" />
+        </group>
+      ))}
+      <Person slot={[-7.2, 0, 4.5, -Math.PI / 2]} appearance={look(4)} mode="cheer" />
+      {/* newspaper stand */}
+      <group position={[5.5, 0, 1.5]}>
+        <Box s={[2.4, 0.9, 1.1]} c="#1d4ed8" />
+        {[0, 1, 2, 3].map((i) => <Box key={i} p={[-0.85 + i * 0.56, 0.9, 0]} s={[0.48, 0.04 + (i % 2) * 0.04, 0.65]} c={['#f8fafc', '#fef3c7', '#f8fafc', '#fee2e2'][i]} />)}
+        <Sign text="MAGAZETI" p={[0, 1.6, 0.56]} h={0.4} bg="#facc15" fg="#111827" />
+      </group>
+      <Person slot={[5.5, 0, 0.4, 0]} appearance={look(11)} mode="idle" />
+      {/* shoeshine */}
+      <group position={[7.5, 0, 4.5]}>
+        <Box s={[0.6, 0.45, 0.6]} c="#78350f" />
+        <Box p={[0.9, 0, 0]} s={[0.5, 0.5, 0.5]} c="#92400e" />
+      </group>
+      <Person slot={[7.5, 0, 3.9, 0.3]} appearance={look(14)} mode="sit" />
+      <Person slot={[8.5, 0, 5.1, Math.PI + 0.3]} appearance={look(17)} mode="sit" prop={briefcase} />
+      {/* mitumba rack and coffee seller */}
+      <group position={[-5, 0, 6.5]}>
+        <Box p={[0, 2, 0]} s={[3, 0.06, 0.06]} c="#57534e" />
+        {[-1.2, -0.6, 0, 0.6, 1.2].map((x, i) => <Box key={x} p={[x, 1, 0]} s={[0.5, 0.95, 0.04]} c={['#ef4444', '#1d4ed8', '#f8fafc', '#16a34a', '#f59e0b'][i]} />)}
+        {[-1.4, 1.4].map((x) => <Box key={x} p={[x, 0, 0]} s={[0.06, 2, 0.06]} c="#57534e" />)}
+      </group>
+      <mesh geometry={geo('cyl', 0.18, 0.28, 0.9, 10)} material={mat('#b45309')} position={[3.6, 0.45, 3]} />
+      <Person slot={[4.3, 0, 3, -Math.PI / 2]} appearance={{ ...look(6), body: 'man', outfit: 'kanzu', hair: 'kofia' }} mode="idle" />
+      {/* office workers on the move */}
+      {[[-1, 0.9, 1], [2.6, 0.7, 0], [4.5, 1, 1], [1.2, 0.8, 0], [5.6, 0.75, 1]].map(([ph, sp, bag], i) => (
+        <Mover key={`o${i}`} fn={(o, t) => {
+          const k = ((t * sp * 0.06 + ph / 6.28) % 1 + 1) % 1;
+          const fwd = k < 0.5;
+          o.position.set(fwd ? -15 + k * 2 * 30 : 15 - (k - 0.5) * 2 * 30, 0, 9 + (i % 3) * 0.9 - (i > 2 ? 4 : 0));
+          o.rotation.y = fwd ? Math.PI / 2 : -Math.PI / 2;
+        }}>
+          <Person slot={[0, 0, 0, 0]} appearance={{ ...look(i * 3 + 7), outfit: i % 2 ? 'suti' : 'shati' }} mode="walk" prop={bag ? briefcase : phone} />
+        </Mover>
+      ))}
+      {/* people hanging around the monument and the square */}
+      {[[-1.9, 0.5, -1.2, 0.6, 'sit'], [1.9, 0.5, -1.4, -0.6, 'sit'], [-2.6, 0, 1.4, 2.4, 'idle'], [-1.8, 0, 2.3, 3.6, 'cheer'], [2.4, 0, 1.6, -2.4, 'idle'], [-3.5, 0, 4.2, 0.4, 'idle'], [-2.8, 0, 5, 3.4, 'cheer'], [2.2, 0, 4.6, -0.8, 'idle'], [3, 0, 5.6, 2.6, 'cheer'], [-0.6, 0, 7.2, 0, 'idle']].map(([x, y, z, ry, m], i) => (
+        <Person key={`sq${i}`} slot={[x, y, z, ry]} appearance={look(i * 5 + 6)} mode={m} prop={i % 4 === 1 ? phone : null} />
+      ))}
+      {[[-2, 0.85], [4.1, 0.7], [1, 1]].map(([ph, sp], i) => (
+        <Mover key={`n${i}`} fn={(o, t) => {
+          const k = ((t * sp * 0.09 + ph / 6.28) % 1 + 1) % 1;
+          const fwd = k < 0.5;
+          o.position.set(fwd ? -8 + k * 2 * 16 : 8 - (k - 0.5) * 2 * 16, 0, 3 + i * 1.6);
+          o.rotation.y = fwd ? Math.PI / 2 : -Math.PI / 2;
+        }}>
+          <Person slot={[0, 0, 0, 0]} appearance={{ ...look(i * 4 + 12), outfit: i % 2 ? 'suti' : 'ofisi-sketi', body: i % 2 ? 'man' : 'woman' }} mode="walk" prop={briefcase} />
+        </Mover>
+      ))}
+      <Person slot={[0, 0, 5, Math.PI]} appearance={me.appearance} mode="idle" id={me.id} username={me.username} />
+      {people.slice(0, realSpots.length).map((r, i) => <Person key={r.id} slot={realSpots[i]} appearance={r.appearance} mode="idle" id={r.id} username={r.username} />)}
+      <pointLight color="#fff7e6" intensity={4} distance={30} position={[0, 9, 4]} />
+    </group>
+  );
+}
+
+// ------------------------------------------------------------------ ferry terminal
+// Kivukoni / Kigamboni / Zanzibar port: the pantoni comes and goes with cars and people,
+// a crowd waits behind the gate, fish sellers next door, hawkers and bajajis.
+function Pantoni() {
+  return (
+    <group>
+      <Box p={[0, 0, 0]} s={[7, 0.7, 13]} c="#e5e7eb" />
+      <Box p={[0, 0.7, 0]} s={[7.1, 0.12, 13.1]} c="#374151" />
+      {[-3.5, 3.5].map((x) => <Box key={x} p={[x, 0.7, 0]} s={[0.08, 0.9, 13]} c="#f59e0b" />)}
+      <Box p={[2.6, 0.82, -5]} s={[1.6, 2.4, 1.6]} c="#f8fafc" />
+      <group position={[-1.6, 0.82, -2.5]}><Car body="hatch" color="#dc2626" /></group>
+      <group position={[1.4, 0.82, 1]}><Car body="sedan" color="#1d4ed8" /></group>
+      {[[-2, 3.5], [-0.8, 4.4], [0.6, 3.6], [2, 4.8], [-1.6, 5.6]].map(([x, z], i) => (
+        <Person key={i} slot={[x, 0.82, z, Math.PI * (i % 2)]} appearance={look(i * 4 + 5)} mode="idle" />
+      ))}
+    </group>
+  );
+}
+function Terminal({ me, people, placeId }) {
+  const name = (loc(placeById[placeId]) || 'Kivukoni').toUpperCase();
+  const fish = (x) => [0, 1, 2, 3].map((i) => <mesh key={i} geometry={geo('capsule', 0.09, 0.45, 4, 6)} material={mat(i % 2 ? '#94a3b8' : '#cbd5e1')} position={[x - 0.6 + i * 0.4, 0.98, 0]} rotation={[0, 0, Math.PI / 2]} />);
+  const queue = Array.from({ length: 12 }, (_, i) => [-6 + (i % 6) * 1.1, 0, 1.2 + Math.floor(i / 6) * 1.1, Math.PI + 0.3]);
+  const realSpots = [[-3, 0, 6.5, Math.PI], [3, 0, 6.5, Math.PI], [0, 0, 8, Math.PI], [-6, 0, 7.5, Math.PI]];
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.25, -80]}><planeGeometry args={[260, 160]} /><meshBasicMaterial color="#0e7490" /></mesh>
+      <Box p={[0, -0.1, 3]} s={[34, 0.1, 18]} c="#d6d3d1" />
+      <Box p={[0, -0.2, -3]} s={[8, 0.3, 6]} c="#9ca3af" />
+      {/* the pantoni sails out and comes back */}
+      <Mover fn={(o, t) => {
+        const k = (t % 40) / 40;
+        const away = k < 0.25 ? 0 : k < 0.5 ? (k - 0.25) / 0.25 : k < 0.75 ? 1 : 1 - (k - 0.75) / 0.25;
+        o.position.set(0, -0.3 + Math.sin(t * 1.3) * 0.05, -12.5 - away * 30);
+      }}>
+        <Pantoni />
+      </Mover>
+      {/* waiting shed with benches and the gate */}
+      {[-9, -3, 3, 9].map((x) => <Box key={x} p={[x, 0, -0.2]} s={[0.25, 4, 0.25]} c="#9ca3af" />)}
+      <Box p={[0, 4, 1.4]} s={[20, 0.35, 0.6]} c="#0ea5e9" />
+      <Sign text={`${name} · NAULI TSH 500`} p={[0, 4.75, 1.85]} h={0.6} bg="#ffffff" fg="#111827" />
+      <Box p={[-1.5, 0, 0]} s={[3, 1.1, 0.12]} c="#f59e0b" />
+      <Box p={[3.2, 0, 0]} s={[3, 1.1, 0.12]} c="#f59e0b" />
+      {queue.map((sl, i) => <Person key={`q${i}`} slot={sl} appearance={look(i * 5 + 3)} mode="idle" />)}
+      {[[5.5, 2.2], [7.4, 2.2]].map(([x, z]) => <Box key={x} p={[x, 0, z]} s={[1.6, 0.45, 0.6]} c="#78350f" />)}
+      <Person slot={[5.5, 0.1, 2.2, Math.PI]} appearance={look(13)} mode="sit" />
+      <Person slot={[7.4, 0.1, 2.2, Math.PI]} appearance={look(19)} mode="sit" />
+      {/* fish sellers */}
+      {[10.5, 13.5].map((x, i) => (
+        <group key={x} position={[x, 0, 4]}>
+          <Box s={[2.4, 0.88, 1.2]} c="#a8a29e" />
+          {fish(0)}
+          <Person slot={[0, 0, -1, 0]} appearance={look(i * 6 + 8)} mode={i ? 'cheer' : 'idle'} />
+        </group>
+      ))}
+      <Sign text="SOKO LA SAMAKI" p={[12, 2.6, 4.6]} h={0.5} bg="#16a34a" fg="#ffffff" />
+      {/* bajajis waiting for passengers */}
+      {[[-12.5, 6], [-14, 8]].map(([x, z], i) => <group key={x} position={[x, 0, z]} rotation={[0, 0.5, 0]}><VehicleS kind="bajaji" color={['#facc15', '#16a34a'][i]} /></group>)}
+      {/* hawkers with trays */}
+      {[[0.5, 0.8], [3.4, 0.7]].map(([ph, sp], i) => (
+        <Mover key={`h${i}`} fn={(o, t) => {
+          const k = ((t * sp * 0.06 + ph / 6.28) % 1 + 1) % 1;
+          const fwd = k < 0.5;
+          o.position.set(fwd ? -14 + k * 2 * 28 : 14 - (k - 0.5) * 2 * 28, 0, 9.5 - i);
+          o.rotation.y = fwd ? Math.PI / 2 : -Math.PI / 2;
+        }}>
+          <Person slot={[0, 0, 0, 0]} appearance={look(i * 9 + 2)} mode="walk" />
+        </Mover>
+      ))}
+      <Person slot={[0, 0, 5, Math.PI]} appearance={me.appearance} mode="idle" id={me.id} username={me.username} />
+      {people.slice(0, realSpots.length).map((r, i) => <Person key={r.id} slot={realSpots[i]} appearance={r.appearance} mode="idle" id={r.id} username={r.username} />)}
+      <pointLight color="#fff7e6" intensity={4} distance={30} position={[0, 9, 4]} />
+    </group>
+  );
+}
+
 // ---------------------------------------------------------------- config
 export const SCENES = {
   club: { C: Club, camera: { pos: [3, 14, 13], look: [-1, 0.2, -2.2] }, dark: true, bg: '#0b0614', light: 0.25 },
@@ -2626,6 +2797,8 @@ export const SCENES = {
   flight: { C: Flight, dynamic: true, bg: '#7dd3fc', light: 1.1 },
   office: { C: Office, camera: { pos: [0, 8, 11], look: [0, 0.6, -0.5] }, bg: '#0f172a', light: 1 },
   bank: { C: (p) => <Office {...p} bank />, camera: { pos: [0, 8, 11], look: [0, 0.6, -0.8] }, bg: '#0f172a', light: 1 },
+  plaza: { C: Plaza, camera: { pos: [0, 9, 18], look: [0, 2, -2] }, bg: '#bae6fd', light: 1.1 },
+  terminal: { C: Terminal, camera: { pos: [0, 10, 18], look: [0, 1, -3] }, bg: '#bae6fd', light: 1.1 },
   stand: { C: Stand, camera: { pos: [0, 7.5, 16], look: [0, 1.6, -2.5] }, bg: '#bae6fd', light: 1.1 },
   market: { C: Market, camera: { pos: [0, 9.5, 17.5], look: [0, 1.4, -1.5] }, bg: '#7dd3fc', light: 1.1 },
   shop: { C: Shop, camera: { pos: [0, 7.5, 10.5], look: [0, 0.6, -0.5] }, bg: '#1c1917', light: 1 },

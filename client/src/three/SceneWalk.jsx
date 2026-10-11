@@ -20,7 +20,7 @@ export function resetSceneWalk(key) {
   scenePeers.clear();
 }
 
-const BOUNDS = { default: [-10, 10, -7, 9], market: [-15, 15, -8, 11], stand: [-15, 15, -0.5, 11], stadium: [-14, 14, -6, 14], beach: [-12, 12, -8, 9], club: [-10, 10, -7, 8], flight: [-2, 2, -6, 6] };
+const BOUNDS = { default: [-10, 10, -7, 9], market: [-15, 15, -8, 11], stand: [-15, 15, -0.5, 11], plaza: [-14, 14, -0.5, 11], terminal: [-14, 14, 0.8, 11], stadium: [-14, 14, -6, 14], beach: [-12, 12, -8, 9], club: [-10, 10, -7, 8], flight: [-2, 2, -6, 6] };
 const SPEED = 4.2;
 
 // Hotspots per scene: [x, z, vibe]. Scenes not listed get a couple of generic ones.
@@ -29,6 +29,8 @@ const SPOTS = {
   lounge: [[0, 0.5, 'dance'], [-5, -3, 'drink'], [4, 3.5, 'selfie']],
   concert: [[0, 1.5, 'dance'], [-5, 4, 'cheer'], [5, 4, 'selfie']],
   bar: [[-2, -2.5, 'drink'], [3.5, 1, 'play'], [0, 3, 'cheer']],
+  plaza: [[5.5, 2.9, 'news'], [7.5, 5.9, 'shine'], [3.6, 4.2, 'coffee'], [0, 1, 'photo'], [-5, 7.8, 'haggle']],
+  terminal: [[12, 5.6, 'fish'], [-2, 3.2, 'greet'], [0, -0.8, 'photo'], [6.5, 3.4, 'rest']],
   stand: [[-12.5, 8.6, 'photo'], [-2, 3.5, 'fruit'], [4, 6.5, 'greet'], [12, 9, 'rest']],
   market: [[-7.3, 2, 'haggle'], [-1.1, -3, 'fruit'], [5.2, 2, 'haggle'], [11.4, -2, 'fruit'], [-13, 8, 'pray'], [2, 9, 'greet']],
   dining: [[-2.5, 0.5, 'eat'], [2.5, 0.5, 'drink'], [0, 3.5, 'selfie']],

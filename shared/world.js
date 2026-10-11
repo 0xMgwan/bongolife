@@ -1177,7 +1177,7 @@ export function moodLabelEn(m) {
 
 // ------------------------------------------------------------ interiors
 // Venues you can walk into (others see you there), and which scene an activity shows.
-export const ENTERABLE = { casino: 'casino', kendwa: 'concert', polisi: 'police', mahakama: 'court', club: 'club', lounge: 'club', bar: 'bar', uwanja: 'stadium', studio: 'studio', singeli: 'concert', kinyozi: 'salon', nyamachoma: 'grill' };
+export const ENTERABLE = { posta: 'plaza', ferry: 'terminal', ferrykig: 'terminal', 'zn-port': 'terminal', casino: 'casino', kendwa: 'concert', polisi: 'police', mahakama: 'court', club: 'club', lounge: 'club', bar: 'bar', uwanja: 'stadium', studio: 'studio', singeli: 'concert', kinyozi: 'salon', nyamachoma: 'grill' };
 const ACTIVITY_SCENES = {
   gesti: { lala: 'room', oga: 'room', pika: 'room' },
   mamantilie: { chipsi: 'dining', walimaharage: 'dining', ugalisamaki: 'dining', chai: 'dining' },
@@ -1652,6 +1652,10 @@ export const VIBES = {
   work: { emoji: '💻', name: ['Jibu email', 'Answer emails'], effects: { fun: -1, social: 1 }, cd: 30, mode: 'type' },
   cheer: { emoji: '📣', name: ['Shangilia', 'Cheer'], effects: { fun: 4, social: 1 }, cd: 20, mode: 'cheer' },
   photo: { emoji: '📸', name: ['Piga picha', 'Take a photo'], effects: { fun: 2 }, cd: 30, mode: 'pose' },
+  news: { emoji: '📰', name: ['Soma gazeti', 'Read the paper'], cost: 500, effects: { fun: 2, social: 1 }, cd: 40, mode: 'idle' },
+  shine: { emoji: '👞', name: ['Ng\'arisha viatu', 'Shoe shine'], cost: 1_000, effects: { hygiene: 3, fun: 1 }, cd: 60, mode: 'sit' },
+  coffee: { emoji: '☕', name: ['Kahawa na kashata', 'Coffee & kashata'], cost: 500, effects: { energy: 3, social: 1 }, cd: 30, mode: 'eat' },
+  fish: { emoji: '🐟', name: ['Nunua samaki wa kukaanga', 'Buy fried fish'], cost: 2_000, effects: { hunger: 7 }, cd: 30, mode: 'eat' },
 };
 export const VIBE_DAILY = 40; // per player per day across all hotspots
 
