@@ -12,6 +12,7 @@ import { hashPassword, checkPassword, signToken, requireAuth, requireAdmin, rate
 import { admin } from './admin.js';
 import { canVisit } from '../social.js';
 import { sendMail, welcomeEmail, resetEmail, checkUnsubToken } from '../mail.js';
+import { pushPublicKey, subscribe as pushSubscribe, unsubscribe as pushUnsubscribe, pushCount, notify as pushNotify } from '../push.js';
 import * as election from '../election.js';
 import * as crime from '../crime.js';
 import * as casino from '../casino.js';
@@ -22,6 +23,7 @@ import { provider, providers, TOPUP_RATE } from '../payments/index.js';
 import * as story from '../story.js';
 import * as invest from '../invest.js';
 import * as company from '../company.js';
+import * as hiring from '../hiring.js';
 import * as chat from '../chat.js';
 import * as love from '../love.js';
 import * as music from '../music.js';
@@ -155,11 +157,34 @@ const unsubscribe = (req, res) => {
 <p style="color:#555;line-height:1.5">${ok ? 'Hutapokea tena habari mpya kwa email. Unaweza kuwasha tena kwenye Simu → Mipangilio.<br>You won\'t get update emails any more. Turn them back on in Phone → Settings.' : 'Fungua Simu → Mipangilio kubadilisha email zako.<br>Open Phone → Settings to change your email preferences.'}</p>
 <a href="https://play.bongolife.app" style="display:inline-block;margin-top:8px;background:#f5b800;color:#141414;font-weight:800;text-decoration:none;padding:12px 20px;border-radius:999px;border:2px solid #141414">Bongo Life →</a></div></body>`);
 };
+api.get('/push/key', (_req, res) => res.json({ key: pushPublicKey() }));
 api.get('/unsubscribe', unsubscribe);
 api.post('/unsubscribe', unsubscribe);
 
 // ------------------------------------------------------------- me
 api.use(requireAuth);
+// Remember each player's language so push notifications and emails speak it.
+const langSeen = new Map();
+const setLang = db.prepare('UPDATE users SET lang = ? WHERE id = ?');
+api.use((req, _res, next) => {
+  const l = req.get('x-lang');
+  if ((l === 'sw' || l === 'en') && langSeen.get(req.user.id) !== l) { langSeen.set(req.user.id, l); setLang.run(l, req.user.id); }
+  next();
+});
+
+// Push notifications: save / remove this device, or send a test.
+api.post('/me/push', (req, res) => {
+  try { res.json({ ok: true, devices: pushSubscribe(req.user.id, req.body.subscription) }); }
+  catch { throw new GameError(['Arifa hazikuweza kuwashwa kwenye kifaa hiki.', "Couldn't turn on notifications on this device."]); }
+});
+api.post('/me/push/off', (req, res) => {
+  pushUnsubscribe(req.user.id, req.body.endpoint);
+  res.json({ ok: true, devices: pushCount(req.user.id) });
+});
+api.post('/me/push/test', rateLimit('pushtest', 5, 10 * 60_000), wrap(async (req, res) => {
+  const sent = await pushNotify(req.user.id, ['🔔 Arifa zinafanya kazi! Tutakujulisha meseji, mauzo na ajira.', "🔔 Notifications work! We'll tell you about messages, sales and jobs."], { tag: 'test' });
+  res.json({ ok: sent > 0, sent });
+}));
 
 // Change password (signs out other devices) and recovery email.
 api.post('/me/password', rateLimit('chpw', 10, 15 * 60_000), wrap(async (req, res) => {
@@ -815,6 +840,27 @@ api.post('/companies', (req, res) => {
   crime.assertFree(getUser(req.user.id));
   const id = company.createCompany(req.user.id, { name: req.body.name, logo: req.body.logo, color: req.body.color, industry: str(req.body.industry, 20) });
   res.status(201).json({ id, companies: company.myCompanies(req.user.id), me: game.playerState(req.user.id) });
+});
+// Hiring other players: job posts, applications, staff and shifts (hiring.js).
+const companiesOut = (req, extra = {}) => ({ ...extra, companies: company.myCompanies(req.user.id), me: game.playerState(req.user.id) });
+api.get('/jobs/board', (req, res) => res.json({ posts: hiring.board(req.user.id), employers: hiring.myEmployers(req.user.id) }));
+api.post('/jobs/:id/apply', rateLimit('apply', 20, 60 * 60_000), (req, res) => {
+  hiring.apply(req.user.id, req.params.id, req.body.note);
+  res.json({ ok: true, posts: hiring.board(req.user.id) });
+});
+api.post('/companies/:id/posts', rateLimit('jobpost', 10, 60 * 60_000), (req, res) => {
+  const id = hiring.postJob(req.user.id, req.params.id, { role: req.body.role, wage: req.body.wage, slots: req.body.slots, note: req.body.note });
+  res.status(201).json(companiesOut(req, { id }));
+});
+api.post('/jobposts/:id/announce', (req, res) => { hiring.announce(req.user.id, req.params.id); res.json(companiesOut(req)); });
+api.post('/jobposts/:id/close', (req, res) => { hiring.closePost(req.user.id, req.params.id); res.json(companiesOut(req)); });
+api.get('/jobposts/:id/applicants', (req, res) => res.json(hiring.applicants(req.user.id, req.params.id)));
+api.post('/jobapps/:id', (req, res) => { hiring.answer(req.user.id, req.params.id, req.body.accept === true); res.json(companiesOut(req)); });
+api.post('/staff/:id/wage', (req, res) => { hiring.setWage(req.user.id, req.params.id, req.body.wage); res.json(companiesOut(req)); });
+api.post('/staff/:id/leave', (req, res) => { hiring.endJob(req.user.id, req.params.id); res.json(companiesOut(req, { employers: hiring.myEmployers(req.user.id) })); });
+api.post('/staff/:id/shift', (req, res) => {
+  const busy = game.startCompanyShift(req.user.id, req.params.id);
+  res.json({ busy, me: game.playerState(req.user.id) });
 });
 api.get('/shops', (req, res) => res.json(company.openShops(req.user.id)));
 api.post('/shops/:id/buy', (req, res) => {

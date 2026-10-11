@@ -19,6 +19,8 @@ import { useSwipeRow } from './useSwipeRow.js';
 import { Crown } from './Logo.jsx';
 import { LiveNow } from './LiveNow.jsx';
 import { SidePop } from './SidePop.jsx';
+import { HiringPop } from './apps/Ajira.jsx';
+import { PushPrompt } from './PushPrompt.jsx';
 import { startBuild } from './BuildBar.jsx';
 import { MentionText, MentionSuggest } from './Mentions.jsx';
 
@@ -895,6 +897,8 @@ export function HUD() {
     <div className="layer">
       {!shop && <TopBar me={me} />}
       {town && <CityChips />}
+      {!riding && <HiringPop />}
+      <PushPrompt />
       {!shop && !riding && !clean && (
         <SidePop items={[
           ...(world?.event && town && !scene ? [{ key: 'event', tone: 'green', text: loc(world.event, 'text') }] : []),

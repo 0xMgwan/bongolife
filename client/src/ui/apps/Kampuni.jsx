@@ -6,6 +6,7 @@ import { AppHead } from '../Phone.jsx';
 import { ask } from '../Confirm.jsx';
 import { L, pick } from '../../i18n.js';
 import { sfx } from '../../audio.js';
+import { TeamSection } from './Ajira.jsx';
 
 const PRICE_LABEL = { cheap: ['Bei nafuu', 'Cheap'], normal: ['Kawaida', 'Normal'], premium: ['Bei ya juu', 'Premium'] };
 const sign = (n) => (n >= 0 ? `+${fmtShort(n)}` : `-${fmtShort(-n)}`);
@@ -120,6 +121,8 @@ function CompanyView({ c, onBack, onChanged }) {
         <small className={c.busy === 'ok' ? 'muted' : 'warn'}>{c.busy === 'understaffed' ? L('⚠️ Wateja wanaondoka — wafanyakazi hawatoshi.', '⚠️ Customers are walking out — not enough staff.') : c.busy === 'overstaffed' ? L('💤 Wafanyakazi wengi kuliko wateja — unalipa mishahara bure.', "💤 More staff than customers — you're paying wages for nothing.") : L('👌 Idadi ya wafanyakazi inalingana na wateja.', '👌 Staff level matches demand.')}</small>
       </div>
 
+      <TeamSection c={c} onChanged={(cs) => onChanged(cs)} />
+
       <div className="section-t">{L('BEI', 'PRICES')}</div>
       <div className="seg">
         {Object.keys(COMPANY.prices).map((p) => <button key={p} className={c.price === p ? 'on' : ''} onClick={() => act('price', p)}>{pick(PRICE_LABEL[p])}</button>)}
@@ -188,7 +191,7 @@ export function Kampuni({ back }) {
                 <span className="co-logo" style={{ background: c.color }}>{c.logo}</span>
                 <span className="grow">
                   <b>{c.name}</b>
-                  <small>{pick(c.industryDef.name)} · {c.staff} {L('wafanyakazi', 'staff')} · ⭐ {c.reputation}</small>
+                  <small>{pick(c.industryDef.name)} · {c.staff} {L('wafanyakazi', 'staff')}{c.team.length ? ` + ${c.team.length} 🧑🏾‍💼` : ''} · ⭐ {c.reputation}{c.posts.some((p) => p.pending) ? ` · 📝 ${c.posts.reduce((n, p) => n + p.pending, 0)}` : ''}</small>
                 </span>
                 <span className="co-amt">
                   <b className={c.balance < 0 ? 'red' : ''}>{fmtShort(c.balance)}</b>

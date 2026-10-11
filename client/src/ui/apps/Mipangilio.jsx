@@ -10,6 +10,7 @@ import { L, loc } from '../../i18n.js';
 import { setAudioSettings, sfx } from '../../audio.js';
 import { useAudioSettings } from '../useAudioSettings.js';
 import { InviteCard } from '../Invite.jsx';
+import { PushSettings } from '../PushPrompt.jsx';
 import { InstallRow } from '../InstallApp.jsx';
 import { Socials } from '../Socials.jsx';
 
@@ -200,6 +201,7 @@ export function Mipangilio({ back }) {
         </div>
         <InviteCard />
         <Security />
+        <PushSettings />
         <SoundSettings />
         <Haptics />
         <InstallRow />

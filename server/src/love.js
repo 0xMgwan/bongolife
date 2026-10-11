@@ -243,7 +243,7 @@ export function gift(userId, rid, giftId) {
   addMoney(userId, -g.price, 'gift', `${g.emoji} Zawadi kwa mpenzi`);
   const aff = touch(r, g.affection);
   const me = getUser(userId);
-  emitTo(partnerId, 'toast', { text: [`${g.emoji} @${me.username} amekutumia ${g.name[0]}! 💕`, `${g.emoji} @${me.username} sent you ${g.name[1].toLowerCase()}! 💕`], refresh: true });
+  emitTo(partnerId, 'toast', { text: [`${g.emoji} @${me.username} amekutumia ${g.name[0]}! 💕`, `${g.emoji} @${me.username} sent you ${g.name[1].toLowerCase()}! 💕`], refresh: true, push: true, pushTag: 'love' });
   return { affection: aff };
 }
 

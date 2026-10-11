@@ -181,6 +181,7 @@ export function connect() {
     systemNotify('🧑‍⚖️ Kisutu Court', `@${defendant}${plaintiff ? ` vs @${plaintiff}` : ''}`);
     void caseId;
   });
+  socket.on('hiring', (d) => { sfx('notify'); useStore.setState({ hiringPop: d }); });
   socket.on('mention', ({ from, text }) => {
     sfx('notify');
     st().toast(L(`📣 @${from} amekutaja: ${text.slice(0, 70)}`, `📣 @${from} mentioned you: ${text.slice(0, 70)}`));

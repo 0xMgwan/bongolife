@@ -3,15 +3,25 @@ import { useStore } from '../../store.js';
 import { goToPlace } from '../../nav.js';
 import { AppHead } from '../Phone.jsx';
 import { L, loc, isEn } from '../../i18n.js';
+import { useState } from 'react';
+import { JobsBoard } from './Ajira.jsx';
 
 export function Kazi({ back, close }) {
   const me = useStore((s) => s.me);
+  const arg = useStore((s) => s.phoneArg);
+  const [tab, setTab] = useState(arg === 'ajira' || arg === 'mine' ? arg : 'city');
   const jobs = PLACES.flatMap((p) => (p.jobs || []).map((j) => ({ j, p })));
   jobs.sort((a, b) => a.j.pay - b.j.pay);
   return (
     <>
       <AppHead title={L('Kazi · Chakarika', 'Jobs · Hustle')} onBack={back} />
       <div className="app-body">
+        <div className="seg">
+          <button className={tab === 'city' ? 'on' : ''} onClick={() => setTab('city')}>{L('Mjini', 'In town')}</button>
+          <button className={tab === 'ajira' ? 'on' : ''} onClick={() => setTab('ajira')}>📢 {L('Ajira', 'Hiring')}</button>
+          <button className={tab === 'mine' ? 'on' : ''} onClick={() => setTab('mine')}>{L('Kazi zangu', 'My jobs')}</button>
+        </div>
+        {tab !== 'city' ? <JobsBoard tab={tab} close={close} /> : <>
         <div className="box small" style={{ background: 'var(--green-l)' }}>
           💡 {L('Mshahara unapanda kadri unavyofanya shifti nyingi (cheo) na ukiwa na mood nzuri. Kula, lala na pumzika ili ulipwe zaidi.', 'Pay rises as you work more shifts (promotions) and when your mood is good. Eat, sleep and relax to earn more.')}
         </div>
@@ -33,6 +43,7 @@ export function Kazi({ back, close }) {
             </div>
           );
         })}
+        </>}
       </div>
     </>
   );

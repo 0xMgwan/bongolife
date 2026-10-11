@@ -3,8 +3,9 @@ import {
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST, industryById, COMPANY,
   furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
-  jobLocks,
+  jobLocks, HIRING,
 } from '../../shared/world.js';
+import * as hiring from './hiring.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
 
 export function liveEvent() {
@@ -312,6 +313,19 @@ export const workTask = db.transaction((userId, taskId) => {
   return { perf, done };
 });
 
+/** A shift at a player's company (see hiring.js). Remote: no need to stand at the place. */
+export const startCompanyShift = db.transaction((userId, staffId) => {
+  assertNotJailed(getUser(userId));
+  const user = getUser(userId);
+  if (user.busy && user.busy.endsAt > now()) throw new GameError(['Bado uko bize na kitu kingine.', 'You\'re still busy with something else.']);
+  if ((user.health ?? 100) < HEALTH.injuredBelow) throw new GameError(['Uko mgonjwa — nenda hospitali kwanza. 🏥', "You're injured — get treated at the hospital first. 🏥"]);
+  if ((user.needs.energy ?? 0) < HIRING.shiftEnergy) throw new GameError(['Umechoka sana! Nenda kalale kwanza. 😴', 'You\'re exhausted! Go sleep first. 😴']);
+  const { staff, company, place, emoji } = hiring.shiftInfo(userId, staffId);
+  const busy = { kind: 'company', id: staff.id, placeId: place, emoji, label: `${staff.role} — ${company.name}`, labelEn: `${staff.role} at ${company.name}`, startedAt: now(), endsAt: now() + HIRING.shiftSecs * 1000 };
+  setBusy(userId, busy);
+  return busy;
+});
+
 export const finishAction = db.transaction((userId, { early = false } = {}) => {
   const user = getUser(userId);
   const busy = user.busy;
@@ -373,6 +387,14 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
       result.teleport = [x, z];
     }
     result.title = [`${act.emoji} ${act.name}`, `${act.emoji} ${act.nameEn}`];
+  } else if (busy.kind === 'company') {
+    const r = hiring.payShift(userId, busy);
+    fields.needs = applyNeeds(user.needs, { energy: -HIRING.shiftEnergy, hunger: -6, hygiene: -5, social: 5 });
+    result.kind = 'job';
+    result.title = ['💼 Shifti imeisha!', '💼 Shift complete!'];
+    result.lines.push(...r.lines);
+    result.pay = r.pay;
+    if (r.company && r.pay) emitTo(r.company.owner_id, 'toast', { text: [`💼 @${user.username} amemaliza shifti — ${r.company.name}`, `💼 @${user.username} finished a shift at ${r.company.name}`] });
   } else if (busy.kind === 'trip') {
     // Arrive in the other city — and, if you skipped insurance, maybe some wahala on the way.
     const m = TRIP_MODES[busy.id];
@@ -430,6 +452,7 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
   if (busy.kind === 'activity') bumpStats(userId, ['acts', `place:${busy.placeId}`, `act:${busy.id}`, pl && `type:${pl.type === 'lounge' ? 'club' : pl.type}`]);
   else if (busy.kind === 'job' && frac >= 1) bumpStats(userId, ['shifts', `job:${busy.id}`]);
   else if (busy.kind === 'trip') bumpStats(userId, ['trips', `city:${busy.to}`, `trip:${busy.id}`]);
+  else if (busy.kind === 'company') bumpStats(userId, ['shifts', 'company_shifts']);
   return result;
 });
 
@@ -624,7 +647,7 @@ export const sendMoney = db.transaction((fromId, toUsername, amount, note) => {
   const from = getUser(fromId);
   addMoney(fromId, -amount, 'transfer_out', `Kwa @${to.username}${note ? ' — ' + note : ''}`);
   addMoney(to.id, amount, 'transfer_in', `Kutoka @${from.username}${note ? ' — ' + note : ''}`);
-  emitTo(to.id, 'toast', { text: [`💸 @${from.username} amekutumia TSh ${amount.toLocaleString()}`, `💸 @${from.username} sent you TSh ${amount.toLocaleString()}`], refresh: true });
+  emitTo(to.id, 'toast', { text: [`💸 @${from.username} amekutumia TSh ${amount.toLocaleString()}`, `💸 @${from.username} sent you TSh ${amount.toLocaleString()}`], refresh: true, push: true, pushTag: 'money' });
   return to;
 });
 

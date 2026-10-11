@@ -1,6 +1,8 @@
 // In-memory presence for connected players. The DB stays the source of truth
 // for everything except live position, which is flushed periodically.
 export const online = new Map(); // userId -> { sockets:Set, x, z, ry, m, v, name, username, appearance, vehicle, busy, lastChat }
+import { pushForEvent } from './push.js';
+
 let io = null;
 
 export const setIO = (server) => (io = server);
@@ -8,7 +10,9 @@ export const getIO = () => io;
 
 export function emitTo(userId, event, data) {
   const p = online.get(userId);
-  if (!p || !io) return;
+  // Not in the game right now: important events become a push notification instead.
+  if (!p) return void pushForEvent(userId, event, data);
+  if (!io) return;
   for (const sid of p.sockets) io.to(sid).emit(event, data);
 }
 

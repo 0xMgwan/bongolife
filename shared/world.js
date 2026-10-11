@@ -1632,6 +1632,21 @@ export const INDUSTRIES = [
   { id: 'tech', emoji: '💻', name: ['Kampuni ya teknolojia', 'Tech startup'], cost: 50_000_000, ticket: 1_200_000, margin: 0.8, base: 0.6, wage: 120_000, rent: 150_000, maxStaff: 12, logos: ['💻', '📱', '🚀', '🤖', '🛰️'], blurb: ['Apps na mifumo kwa makampuni. Hatari kubwa, zawadi kubwa.', 'Apps and systems for businesses. High risk, high reward.'] },
 ];
 export const industryById = Object.fromEntries(INDUSTRIES.map((i) => [i.id, i]));
+// Hiring other players into your company.
+export const HIRING = {
+  maxWageMult: 8, // wage per shift: industry wage … 8× it
+  maxSlots: 5,
+  maxOpenPosts: 3,
+  maxEmployers: 2, // a player can work for at most this many player companies
+  announceEveryMs: 60 * 60_000,
+  shiftSecs: 150,
+  shiftEnergy: 10,
+  outputMult: 2, // each finished shift earns the company 2× the industry wage
+  activeMs: 24 * 3_600_000, // staff who worked within a day count towards capacity
+  staffWeight: 2, // a real player counts as two NPC staff
+  // Where each industry's staff go to work (the shift shows at this place).
+  places: { food: 'mamantilie', salon: 'kinyozi', duka: 'kariakoo', fashion: 'fashion', events: 'club', pharmacy: 'hospitali', dispatch: 'stendi', tech: 'techhub' },
+};
 export const COMPANY = {
   max: 2,
   prices: { cheap: { price: 0.8, cust: 1.35 }, normal: { price: 1, cust: 1 }, premium: { price: 1.35, cust: 0.7 } },

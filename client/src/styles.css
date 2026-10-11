@@ -1654,3 +1654,24 @@ html, body { background: #1e2a47; }
 .cat-item.broke .cat-ic { opacity: .5; }
 .cat-item.broke .cat-pick { background: #e9e2d3; color: #6b655b; border-color: #a8a093; box-shadow: none; }
 .cat-fab { background: var(--ink-hard); border: 2.5px solid var(--ink-hard); box-shadow: 3px 3px 0 var(--gold); }
+
+/* Hiring: jobs board cards, company team rows, live "is hiring" banner */
+.job-card { background: var(--paper); border: 2px solid var(--ink-hard); box-shadow: 3px 3px 0 var(--ink-hard); border-radius: 18px; padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
+.job-card b { font-family: var(--display); font-stretch: 82%; font-weight: 900; font-size: 18px; text-transform: uppercase; display: block; line-height: 1.05; }
+.job-card small { color: #6b655b; font-size: 12px; }
+.job-wage { text-align: right; flex: none; }
+.job-wage b { color: var(--ink-hard); font-size: 20px; }
+.job-note { margin: 4px 0 0; font-size: 13px; font-style: italic; color: #3d3a35; display: block; }
+.tag-ok, .tag-wait { margin-top: 6px; font-size: 12.5px; font-weight: 800; border-radius: 999px; padding: 5px 10px; align-self: flex-start; border: 1.5px solid var(--ink-hard); }
+.tag-ok { background: #dcfce7; }
+.tag-wait { background: #fff4cc; }
+.team-row { padding: 8px 0; border-bottom: 1.5px solid #e2d9c5; gap: 8px; font-size: 13.5px; }
+.post-row { margin-top: 8px; padding: 10px; border: 2px dashed var(--ink-hard); border-radius: 14px; background: #fff4cc; font-size: 13.5px; }
+.app-row { display: flex; align-items: center; gap: 6px; padding: 8px 0 0; font-size: 13px; }
+.app-row .job-note { font-size: 12px; }
+.hiring-pop { top: calc(210px + var(--safe-top)); text-align: left; cursor: pointer; }
+.co-box input[type=range] { width: 100%; accent-color: var(--gold); }
+.push-prompt { position: absolute; left: 12px; right: 12px; bottom: calc(150px + var(--safe-bottom)); max-width: 420px; margin: 0 auto; z-index: 16; display: flex; gap: 12px; padding: 14px; animation: center-pop .38s cubic-bezier(.2,1.3,.4,1) both; }
+.push-prompt .pp-ic { font-size: 34px; line-height: 1; }
+.push-prompt b { font-family: var(--display); font-stretch: 80%; font-weight: 900; font-size: 18px; text-transform: uppercase; display: block; }
+.push-prompt small { color: #5b554b; font-size: 13px; }

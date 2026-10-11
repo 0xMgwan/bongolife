@@ -1,8 +1,9 @@
 // Start-your-own companies: daily trading days settled lazily (like trucks), with a company account.
 import { db, getUser, addMoney, GameError, now } from './db.js';
-import { INDUSTRIES, industryById, COMPANY, COMPANY_EVENTS, SHOP_ITEMS, SHOP, NEEDS } from '../../shared/world.js';
+import { INDUSTRIES, industryById, COMPANY, COMPANY_EVENTS, SHOP_ITEMS, SHOP, NEEDS, HIRING } from '../../shared/world.js';
 import { emitTo } from './presence.js';
 import { bumpStats } from './story.js';
+import { activeStaffCount, staffOf, postsOf } from './hiring.js';
 
 const DAY = 86_400_000;
 
@@ -69,7 +70,8 @@ function tradeDay(c, dayIdx, fame) {
   const rep = 1 + (c.reputation - 10) / (c.price === 'premium' ? 80 : 160);
   const fameMult = 1 + Math.min(fame || 0, 200) / 400;
   const demand = ind.base * (1 + COMPANY.staffBoost * ind.maxStaff * 0.6) * pm.cust * rep * fameMult * marketing * luck * (ev?.cust || 1);
-  const capacity = ind.base * (1 + COMPANY.staffBoost * c.staff);
+  // Player staff who actually worked recently add real capacity.
+  const capacity = ind.base * (1 + COMPANY.staffBoost * (c.staff + HIRING.staffWeight * (c.players || 0)));
   const raw = Math.max(0, Math.min(demand, capacity));
   // Small-ticket businesses count whole customers; events/tech count fractional "jobs" over time.
   const customers = ind.base >= 3 ? Math.round(raw) : raw;
@@ -85,6 +87,7 @@ function tradeDay(c, dayIdx, fame) {
 
 /** Run every finished day since the last settlement (capped). */
 function settle(c, fame, t = now()) {
+  c = { ...c, players: activeStaffCount(c.id) };
   const full = Math.floor((t - c.last_settled) / DAY);
   if (full <= 0) return c;
   const n = Math.min(COMPANY.maxDays, full);
@@ -106,7 +109,7 @@ function view(c, fame) {
   const days = q.days.all(c.id).map((d) => ({ ...d, eventText: COMPANY_EVENTS.find((e) => e.id === d.event)?.text || null }));
   const preview = tradeDay(c, Math.floor(now() / DAY) + 999, fame); // a typical day, for the "capacity vs demand" hint
   return {
-    ...c, industryDef: ind, days,
+    ...c, industryDef: ind, days, team: staffOf(c.id), posts: postsOf(c.id),
     nextIn: Math.max(0, c.last_settled + DAY - now()),
     busy: preview.demand > preview.capacity * 1.05 ? 'understaffed' : preview.demand < preview.capacity * 0.7 ? 'overstaffed' : 'ok',
     sellFor: Math.round(ind.cost * COMPANY.sellBack) + Math.max(0, c.balance),
@@ -224,6 +227,6 @@ export const buyFromShop = db.transaction((buyerId, companyId, itemId) => {
   for (const [k, v] of Object.entries(item.effects || {})) if (NEEDS.some((n) => n.id === k)) needs[k] = clamp((needs[k] ?? 50) + v);
   db.prepare('UPDATE users SET needs = ?, health = ? WHERE id = ?').run(JSON.stringify(needs), Math.min(100, (buyer.health ?? 100) + (item.health || 0)), buyerId);
   bumpStats(buyerId, ['shop_buys']);
-  emitTo(c.owner_id, 'toast', { text: [`🛍️ @${buyer.username} amenunua ${item.name[0]} — ${c.name} (+TSh ${profit.toLocaleString()})`, `🛍️ @${buyer.username} bought ${item.name[1]} at ${c.name} (+TSh ${profit.toLocaleString()})`] });
+  emitTo(c.owner_id, 'toast', { text: [`🛍️ @${buyer.username} amenunua ${item.name[0]} — ${c.name} (+TSh ${profit.toLocaleString()})`, `🛍️ @${buyer.username} bought ${item.name[1]} at ${c.name} (+TSh ${profit.toLocaleString()})`], push: true, pushTag: `shop-${c.id}` });
   return { item: item.id, price, shop: c.name };
 });
