@@ -18,6 +18,7 @@ import { remotes } from '../net.js';
 import { useStore } from '../store.js';
 import { L, loc } from '../i18n.js';
 import { MoneyRain } from './MoneyRain.jsx';
+import { SceneWalker, FloorCatcher, Hotspots, livePerson } from './SceneWalk.jsx';
 
 export const SCENE_ORIGIN = [4000, 0, 4000];
 /** Scenes flagged `dynamic` drive the camera themselves through this (scene-local coords). */
@@ -147,8 +148,17 @@ function Person({ slot, appearance, mode, id, username, height = 1.95, prop }) {
   const motion = useRef({ mode });
   motion.current.mode = mode;
   const [x, y, z, ry] = slot;
+  const g = useRef();
+  // Real players can walk around the room (you, or others whose moves arrive over the network).
+  useFrame(() => {
+    if (id == null || !g.current) return;
+    g.current.position.set(x, y, z);
+    g.current.rotation.y = ry;
+    const live = livePerson(g.current, id, useStore.getState().me?.id, mode);
+    motion.current.mode = live || mode;
+  });
   return (
-    <group position={[x, y, z]} rotation={[0, ry, 0]}>
+    <group ref={g} position={[x, y, z]} rotation={[0, ry, 0]}>
       <Body appearance={appearance} motion={motion} />
       {username && <Overhead id={id} username={username} height={mode === 'sleep' ? 0.9 : mode === 'sit' || mode === 'eat' || mode === 'cheer' ? 1.55 : height} />}
       {prop}
@@ -2517,6 +2527,72 @@ function Market({ me, myBusy, people, placeId }) {
   );
 }
 
+
+// ------------------------------------------------------------------ bus stand
+// Magufuli / Ubungo bus stand: coaches in their bays with destination boards, conductors
+// shouting routes, queues with luggage, hawkers with trays, a ticket office and boda stand.
+const COACHES = [['ARUSHA', '#dc2626'], ['MWANZA', '#1d4ed8'], ['MBEYA', '#16a34a'], ['DODOMA', '#f59e0b'], ['MOSHI', '#7c3aed']];
+function Coach({ x, dest, color }) {
+  return (
+    <group position={[x, 0, -4.5]}>
+      <VehicleS kind="bus" color={color} />
+      <Sign text={dest} p={[0, 2.75, 3.25]} h={0.55} bg="#111827" fg="#fde047" />
+    </group>
+  );
+}
+function Stand({ me, myBusy, people }) {
+  const working = myBusy?.kind === 'job';
+  const tray = (
+    <group position={[0, 1.95, 0.1]}>
+      <mesh geometry={geo('box', 0.7, 0.06, 0.5)} material={mat('#a16207')} />
+      {[-0.2, 0, 0.2].map((x, i) => <mesh key={x} geometry={geo('cyl', 0.06, 0.06, 0.26, 8)} material={mat(['#38bdf8', '#f97316', '#38bdf8'][i])} position={[x, 0.16, 0]} />)}
+    </group>
+  );
+  const bag = (c) => <mesh geometry={geo('box', 0.5, 0.45, 0.3)} material={mat(c)} position={[0.45, 0.22, 0]} />;
+  const queue = Array.from({ length: 10 }, (_, i) => [-11 + (i % 5) * 5.4 + (i > 4 ? 1.2 : 0), 0, 0.2 + (i > 4 ? 1.4 : 0), Math.PI]);
+  const realSpots = [[-3, 0, 6, Math.PI], [3, 0, 6, Math.PI], [0, 0, 7.5, Math.PI], [-6, 0, 7, Math.PI]];
+  return (
+    <group>
+      <Box p={[0, -0.1, 0]} s={[34, 0.1, 26]} c="#6b7280" />
+      {[-13.5, -8.1, -2.7, 2.7, 8.1, 13.5].map((x) => <Box key={x} p={[x, -0.04, -4.5]} s={[0.15, 0.02, 8]} c="#facc15" />)}
+      <Box p={[0, -0.04, 1.6]} s={[30, 0.05, 1.6]} c="#d1d5db" />
+      {/* shelter */}
+      {[-14, -7, 7, 14].map((x) => <Box key={x} p={[x, 0, 1.2]} s={[0.25, 4.6, 0.25]} c="#9ca3af" />)}
+      <Box p={[0, 4.6, 1.2]} s={[31, 0.35, 0.5]} c="#0ea5e9" />
+      <Sign text="STENDI KUU YA MABASI · MAGUFULI" p={[0, 5.3, 1.9]} h={0.7} bg="#ffffff" fg="#111827" />
+      {COACHES.map(([d, c], i) => <Coach key={d} x={-10.8 + i * 5.4} dest={d} color={c} />)}
+      {/* ticket office */}
+      <group position={[-12.5, 0, 6.5]}>
+        <Box s={[4, 2.8, 2.6]} c="#fde047" />
+        <Box p={[0, 1.1, 1.31]} s={[2.6, 0.9, 0.05]} c="#1f2937" />
+        <Sign text="TIKETI · BOOKING" p={[0, 3.1, 1.32]} h={0.5} bg="#dc2626" fg="#ffffff" />
+      </group>
+      {/* boda stand */}
+      {[[11, 7], [12.4, 7.6], [13.8, 7]].map(([x, z], i) => <group key={x} position={[x, 0, z]} rotation={[0, 0.4, 0]}><VehicleS kind="moto" color={['#dc2626', '#111827', '#16a34a'][i]} /></group>)}
+      {/* conductors calling out routes */}
+      {COACHES.slice(0, 4).map(([d], i) => <Person key={d} slot={[-12.4 + i * 5.4, 0, -0.6, 0.4]} appearance={look(i * 3 + 2)} mode="cheer" />)}
+      {/* passengers queuing with luggage */}
+      {queue.map((sl, i) => <Person key={`q${i}`} slot={sl} appearance={look(i * 5 + 1)} mode="idle" prop={i % 3 === 0 ? bag(['#7c3aed', '#16a34a', '#dc2626'][i % 3]) : null} />)}
+      {/* hawkers with trays of water and snacks */}
+      {[[0, 0.9], [3.1, 0.7]].map(([ph, sp], i) => (
+        <Mover key={`h${i}`} fn={(o, t) => {
+          const k = ((t * sp * 0.06 + ph / 6.28) % 1 + 1) % 1;
+          const fwd = k < 0.5;
+          o.position.set(fwd ? -14 + k * 2 * 28 : 14 - (k - 0.5) * 2 * 28, 0, 3.2 + i * 1.2);
+          o.rotation.y = fwd ? Math.PI / 2 : -Math.PI / 2;
+        }}>
+          <Person slot={[0, 0, 0, 0]} appearance={look(i * 7 + 9)} mode="walk" prop={tray} />
+        </Mover>
+      ))}
+      {working
+        ? <Person slot={[-1.6, 0, -0.6, 0.3]} appearance={me.appearance} mode="cheer" id={me.id} username={me.username} />
+        : <Person slot={[0, 0, 5, Math.PI]} appearance={me.appearance} mode="idle" id={me.id} username={me.username} />}
+      {people.slice(0, realSpots.length).map((r, i) => <Person key={r.id} slot={realSpots[i]} appearance={r.appearance} mode="idle" id={r.id} username={r.username} />)}
+      <pointLight color="#fff7e6" intensity={4} distance={30} position={[0, 9, 4]} />
+    </group>
+  );
+}
+
 // ---------------------------------------------------------------- config
 export const SCENES = {
   club: { C: Club, camera: { pos: [3, 14, 13], look: [-1, 0.2, -2.2] }, dark: true, bg: '#0b0614', light: 0.25 },
@@ -2550,22 +2626,27 @@ export const SCENES = {
   flight: { C: Flight, dynamic: true, bg: '#7dd3fc', light: 1.1 },
   office: { C: Office, camera: { pos: [0, 8, 11], look: [0, 0.6, -0.5] }, bg: '#0f172a', light: 1 },
   bank: { C: (p) => <Office {...p} bank />, camera: { pos: [0, 8, 11], look: [0, 0.6, -0.8] }, bg: '#0f172a', light: 1 },
+  stand: { C: Stand, camera: { pos: [0, 7.5, 16], look: [0, 1.6, -2.5] }, bg: '#bae6fd', light: 1.1 },
   market: { C: Market, camera: { pos: [0, 9.5, 17.5], look: [0, 1.4, -1.5] }, bg: '#7dd3fc', light: 1.1 },
   shop: { C: Shop, camera: { pos: [0, 7.5, 10.5], look: [0, 0.6, -0.5] }, bg: '#1c1917', light: 1 },
   hospital: { C: Hospital, camera: { pos: [0, 8.5, 12], look: [0, 0.6, -2.2] }, bg: '#0f172a', light: 1 },
   classroom: { C: Classroom, camera: { pos: [0, 5.5, 9], look: [0, 1.6, -4] }, bg: '#1c1917', light: 0.9 },
 };
 
+// Set pieces where you stay put (vehicles, the cells).
+const NO_WALK = ['heli', 'road', 'police', 'court', 'ferry'];
 export function ActivityScene({ scene, placeId, me, myBusy }) {
   const cfg = SCENES[scene];
   const people = useScenePeople(placeId, scene);
   const events = useStore((s) => s.events);
   const party = livePartyAt(events, placeId);
   if (!cfg) return null;
+  const walkable = !cfg.dynamic && !NO_WALK.includes(scene);
   return (
     <group position={SCENE_ORIGIN}>
       <Shadows light={[4, 12, 8]} size={16} intensity={cfg.dark ? 0.25 : 0.6}>
       <cfg.C me={me} myBusy={myBusy} people={people} placeId={placeId} />
+      {walkable && <><SceneWalker sceneKey={scene} /><FloorCatcher sceneKey={scene} /><Hotspots sceneKey={scene} /></>}
       {party && scene !== 'flight' && <PartyDecor event={party} banner={PARTY_BANNER[scene]} />}
       <MoneyRain placeId={placeId} />
       </Shadows>

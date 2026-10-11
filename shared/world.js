@@ -1213,7 +1213,7 @@ const ACTIVITY_SCENES = {
   karting: { race: 'karting', grandprix: 'karting' },
   serena: { massage: 'spa', suite: 'spa', rooftop: 'rooftop', dinner: 'dining' },
 };
-const JOB_SCENES = { dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', msaidizi: 'dining', cashier: 'shop', machinga: 'market', nesi: 'hospital', daktari: 'hospital', teller: 'bank', karani: 'office', developer: 'office', mlinzi: 'stadium', mvuvi: 'beach', 'mhudumu-ndege': 'flight', rubani: 'flight' , lifeguard: 'waterpark', 'mpiga-ngoma': 'ngoma', caddie: 'golf', nahodha: 'dhow', fundi: 'karting', receptionist: 'spa' , 'mpishi-pizza': 'grill', mwongoza: null, croupier: 'casino', 'safari-guide': 'safari', porter: 'hike', barista: 'dining', mhasibu: 'office', 'afisa-uwekezaji': 'bank', designer: 'office', 'ai-engineer': 'office', mfamasia: 'hospital', 'daktari-bingwa': 'hospital', 'mhandisi-ndege': 'flight', mchezaji: 'stadium', producer: 'studio', promota: 'club', 'meneja-hoteli': 'spa', 'mtaalamu-kahawa': 'dining' };
+const JOB_SCENES = { konda: 'stand', dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', msaidizi: 'dining', cashier: 'shop', machinga: 'market', nesi: 'hospital', daktari: 'hospital', teller: 'bank', karani: 'office', developer: 'office', mlinzi: 'stadium', mvuvi: 'beach', 'mhudumu-ndege': 'flight', rubani: 'flight' , lifeguard: 'waterpark', 'mpiga-ngoma': 'ngoma', caddie: 'golf', nahodha: 'dhow', fundi: 'karting', receptionist: 'spa' , 'mpishi-pizza': 'grill', mwongoza: null, croupier: 'casino', 'safari-guide': 'safari', porter: 'hike', barista: 'dining', mhasibu: 'office', 'afisa-uwekezaji': 'bank', designer: 'office', 'ai-engineer': 'office', mfamasia: 'hospital', 'daktari-bingwa': 'hospital', 'mhandisi-ndege': 'flight', mchezaji: 'stadium', producer: 'studio', promota: 'club', 'meneja-hoteli': 'spa', 'mtaalamu-kahawa': 'dining' };
 
 /** Scene for a busy state ({ kind, id, placeId }), or null to stay outdoors. */
 const TRIP_SCENES = { flight: 'flight', heli: 'heli', ferry: 'ferry', bus: 'road', car: 'road' };
@@ -1470,7 +1470,7 @@ export const EVENT_LIMITS = { titleMax: 40, descMax: 140, maxActivePerHost: 3, m
 export const EVENT_PLACES = ['home', 'club', 'bar', 'lounge', 'singeli', 'nyamachoma', 'serena', 'coco', 'kigbeach', 'slipway', 'waterpark', 'karting', 'golf', 'makumbusho', 'uwanja', 'mall', 'masakigrill', 'studio'];
 // Venues without their own walk-in interior use this scene while a party is live there.
 // Every place has an inside: explicit venues first, then the closest interior for its type.
-const TYPE_SCENES = { market: 'market', mall: 'shop', shop: 'shop', stonetown: 'shop', restaurant: 'dining', food: 'dining', fish: 'dining', grill: 'grill', bar: 'bar', club: 'club', lounge: 'club', hotel: 'rooftop', gesti: 'room', beach: 'beach', waterpark: 'waterpark', golf: 'golf', karting: 'karting', slipway: 'dhow', stage: 'concert', stadium: 'stadium', studio: 'studio', gym: 'gym', salon: 'salon', office: 'office', tower: 'office', bank: 'bank', hospital: 'hospital', campus: 'classroom', police: 'police', court: 'court', casino: 'casino', safari: 'safari', mountain: 'hike', forest: 'safari', museum: 'ngoma' };
+const TYPE_SCENES = { market: 'market', terminal: 'stand', mall: 'shop', shop: 'shop', stonetown: 'shop', restaurant: 'dining', food: 'dining', fish: 'dining', grill: 'grill', bar: 'bar', club: 'club', lounge: 'club', hotel: 'rooftop', gesti: 'room', beach: 'beach', waterpark: 'waterpark', golf: 'golf', karting: 'karting', slipway: 'dhow', stage: 'concert', stadium: 'stadium', studio: 'studio', gym: 'gym', salon: 'salon', office: 'office', tower: 'office', bank: 'bank', hospital: 'hospital', campus: 'classroom', police: 'police', court: 'court', casino: 'casino', safari: 'safari', mountain: 'hike', forest: 'safari', museum: 'ngoma' };
 /** The interior scene for a place, or null for open-air landmarks (ports, airports…). */
 export function venueOf(placeId) {
   const p = placeById[placeId];
@@ -1632,6 +1632,29 @@ export const INDUSTRIES = [
   { id: 'tech', emoji: '💻', name: ['Kampuni ya teknolojia', 'Tech startup'], cost: 50_000_000, ticket: 1_200_000, margin: 0.8, base: 0.6, wage: 120_000, rent: 150_000, maxStaff: 12, logos: ['💻', '📱', '🚀', '🤖', '🛰️'], blurb: ['Apps na mifumo kwa makampuni. Hatari kubwa, zawadi kubwa.', 'Apps and systems for businesses. High risk, high reward.'] },
 ];
 export const industryById = Object.fromEntries(INDUSTRIES.map((i) => [i.id, i]));
+// Things to do while you're inside a venue: walk up to a hotspot and tap it.
+// effects are small need boosts; cd = cooldown (s); cost in TSh; reward = [min, max] TSh found/saved.
+export const VIBES = {
+  dance: { emoji: '💃', name: ['Cheza muziki', 'Dance'], effects: { fun: 4, energy: -2 }, cd: 20, mode: 'dance' },
+  drink: { emoji: '🍹', name: ['Agiza kinywaji', 'Get a drink'], cost: 3_000, effects: { fun: 3, hunger: 2 }, cd: 30, mode: 'eat' },
+  greet: { emoji: '🤝', name: ['Salimia watu', 'Greet people'], effects: { social: 4 }, cd: 25, mode: 'cheer' },
+  selfie: { emoji: '🤳', name: ['Piga selfie', 'Take a selfie'], effects: { fun: 2, social: 1 }, cd: 40, mode: 'pose' },
+  eat: { emoji: '🍽️', name: ['Onja chakula', 'Grab a bite'], cost: 2_000, effects: { hunger: 7 }, cd: 30, mode: 'eat' },
+  haggle: { emoji: '🛍️', name: ['Patana bei', 'Haggle'], effects: { fun: 2, social: 2 }, cd: 30, reward: [0, 1_500], mode: 'cheer' },
+  fruit: { emoji: '🍊', name: ['Nunua tunda', 'Buy fruit'], cost: 500, effects: { hunger: 4, hygiene: 0 }, cd: 25, mode: 'eat' },
+  swim: { emoji: '🏊', name: ['Ogelea', 'Swim'], effects: { fun: 4, hygiene: 3, energy: -2 }, cd: 25, mode: 'swim' },
+  ball: { emoji: '⚽', name: ['Cheza mpira', 'Kick a ball'], effects: { fun: 4, energy: -3 }, cd: 25, mode: 'cheer' },
+  lift: { emoji: '🏋️', name: ['Nyanyua vyuma', 'Lift weights'], effects: { energy: -3, fun: 1 }, health: 1, cd: 30, mode: 'lift' },
+  sing: { emoji: '🎤', name: ['Imba freestyle', 'Freestyle'], effects: { fun: 4 }, cd: 30, mode: 'sing' },
+  rest: { emoji: '🪑', name: ['Pumzika kidogo', 'Take a seat'], effects: { energy: 4 }, cd: 30, mode: 'sit' },
+  play: { emoji: '🎱', name: ['Cheza pool', 'Play pool'], effects: { fun: 4, social: 2 }, cd: 30, mode: 'cheer' },
+  pray: { emoji: '🙏🏾', name: ['Toa sadaka', 'Give alms'], cost: 1_000, effects: { social: 3, fun: 1 }, cd: 60, mode: 'idle' },
+  work: { emoji: '💻', name: ['Jibu email', 'Answer emails'], effects: { fun: -1, social: 1 }, cd: 30, mode: 'type' },
+  cheer: { emoji: '📣', name: ['Shangilia', 'Cheer'], effects: { fun: 4, social: 1 }, cd: 20, mode: 'cheer' },
+  photo: { emoji: '📸', name: ['Piga picha', 'Take a photo'], effects: { fun: 2 }, cd: 30, mode: 'pose' },
+};
+export const VIBE_DAILY = 40; // per player per day across all hotspots
+
 // Hiring other players into your company.
 export const HIRING = {
   maxWageMult: 8, // wage per shift: industry wage … 8× it

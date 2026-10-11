@@ -282,6 +282,24 @@ io.on('connection', (socket) => {
 
   registerInteractions(socket, uid);
 
+  // Walking around inside a venue/room: relay your spot to everyone in the same room.
+  socket.on('scene:pos', (d = {}) => {
+    const x = Number(d.x), z = Number(d.z), ry = Number(d.ry);
+    if (![x, z, ry].every(Number.isFinite) || Math.abs(x) > 40 || Math.abs(z) > 40) return;
+    const t = now();
+    if (t - (p.lastScenePos || 0) < 90) return;
+    p.lastScenePos = t;
+    const room = p.inside || (p.busy && p.busy.endsAt > t ? p.busy.placeId : null);
+    if (!room) return;
+    const mode = typeof d.mode === 'string' && d.mode.length <= 10 ? d.mode : null;
+    const out = { id: uid, x, z, ry, m: !!d.m, mode };
+    for (const [id, o] of online) {
+      if (id === uid) continue;
+      const theirs = o.inside || (o.busy && o.busy.endsAt > t ? o.busy.placeId : null);
+      if (theirs === room) emitTo(id, 'scene:pos', out);
+    }
+  });
+
   socket.on('emote', (e) => {
     if (typeof e === 'string' && e.length <= 8) broadcast('emote', { id: uid, e });
   });

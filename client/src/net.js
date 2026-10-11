@@ -4,6 +4,7 @@ import { token } from './api.js';
 import { useStore } from './store.js';
 import { L } from './i18n.js';
 import { sfx } from './audio.js';
+import { scenePeers } from './three/SceneWalk.jsx';
 
 // ---- Mutable, per-frame game state kept outside React for performance.
 export const local = {
@@ -182,6 +183,7 @@ export function connect() {
     void caseId;
   });
   socket.on('hiring', (d) => { sfx('notify'); useStore.setState({ hiringPop: d }); });
+  socket.on('scene:pos', (d) => { const prev = scenePeers.get(d.id) || {}; scenePeers.set(d.id, { ...prev, ...d, at: performance.now() }); });
   socket.on('mention', ({ from, text }) => {
     sfx('notify');
     st().toast(L(`📣 @${from} amekutaja: ${text.slice(0, 70)}`, `📣 @${from} mentioned you: ${text.slice(0, 70)}`));
@@ -388,6 +390,10 @@ export function jump() {
   if (t - local.jumpAt < 600 || local.driving) return;
   local.jumpAt = t;
   socket?.emit('jump');
+}
+/** Your spot while walking around inside a room. */
+export function sendScenePos(d) {
+  socket?.emit('scene:pos', d);
 }
 export function sendEmote(e) {
   socket?.emit('emote', e);

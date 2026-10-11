@@ -267,7 +267,7 @@ function RoadLine({ cx, cz, len, horiz }) {
 }
 
 // -------------------------------------------------- procedural filler
-const HOUSE_COLORS = ['#f5f5f4', '#fde68a', '#fecaca', '#bfdbfe', '#d9f99d', '#e9d5ff', '#fed7aa', '#e2e8f0', '#99f6e4'];
+const HOUSE_COLORS = ['#fde047', '#fb923c', '#f472b6', '#60a5fa', '#4ade80', '#c084fc', '#f87171', '#2dd4bf', '#ffffff', '#facc15', '#38bdf8', '#a3e635'];
 const TOWER_COLORS = ['#cbd5e1', '#bae6fd', '#e2e8f0', '#a5b4fc', '#94a3b8'];
 
 function useFiller() {
@@ -339,6 +339,101 @@ const trunkGeo = new THREE.CylinderGeometry(0.18, 0.25, 1, 6).translate(0, 0.5, 
 const crownGeo = new THREE.IcosahedronGeometry(1, 0);
 const palmLeafGeo = new THREE.ConeGeometry(1.8, 0.8, 7).translate(0, -0.2, 0);
 
+// ------------------------------------------------------- painted wall ads
+// Hand-painted adverts on walls facing the main roads, Tinga-Tinga style (all brands made up).
+const MURALS = [
+  ['BONGO COLA', 'Baridi kabisa!', '#dc2626', '#ffffff', '🥤'],
+  ['PESA SIMU', 'Tuma · Toa · Lipa', '#1d4ed8', '#fde047', '📱'],
+  ['CHIPSI MAYAI', 'TSh 2,000 tu', '#f97316', '#ffffff', '🍟'],
+  ['KINYOZI WA KISASA', 'Unyoaji · Saluni', '#16a34a', '#ffffff', '💈'],
+  ['DUKA LA DAWA', 'Afya kwanza', '#ffffff', '#15803d', '💊'],
+  ['UNGA SEMBE BORA', 'Ugali mtamu', '#facc15', '#7c2d12', '🌽'],
+  ['BIA BARIDI', 'Hapa hapa!', '#b45309', '#fef3c7', '🍺'],
+  ['BONGO TEL', 'Vocha hapa', '#7c3aed', '#ffffff', '📶'],
+  ['MAFUTA YA ALIZETI', 'Safi kwa afya', '#fde047', '#166534', '🌻'],
+  ['SABUNI YA MCHE', 'Usafi ni afya', '#0ea5e9', '#ffffff', '🧼'],
+  ['MAMA NTILIE', 'Wali · Maharage', '#db2777', '#ffffff', '🍛'],
+  ['BAJAJI KWA SIMU', 'Piga, tunafika', '#111827', '#facc15', '🛺'],
+];
+const muralCache = new Map();
+function muralMat(i) {
+  if (muralCache.has(i)) return muralCache.get(i);
+  const [title, sub, bg, fg, emoji] = MURALS[i];
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 256;
+  const x = c.getContext('2d');
+  x.fillStyle = bg; x.fillRect(0, 0, 512, 256);
+  // painted border + stripes
+  x.strokeStyle = fg; x.lineWidth = 14; x.strokeRect(12, 12, 488, 232);
+  x.fillStyle = fg; x.globalAlpha = 0.18;
+  for (let k = 0; k < 6; k++) x.fillRect(0, 30 + k * 40, 512, 8);
+  x.globalAlpha = 1;
+  x.font = '120px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+  x.textBaseline = 'middle';
+  x.fillText(emoji, 34, 128);
+  x.fillStyle = fg;
+  x.font = '900 64px "Archivo Variable","Archivo","Arial Narrow",sans-serif';
+  x.fillText(title, 176, 104, 312);
+  x.font = '700 34px "Plus Jakarta Sans",sans-serif';
+  x.fillText(sub, 178, 172, 312);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  const m = new THREE.MeshLambertMaterial({ map: tex });
+  muralCache.set(i, m);
+  return m;
+}
+const muralGeo = new THREE.PlaneGeometry(1, 1);
+const Murals = memo(function Murals() {
+  const { houses } = useFiller();
+  const items = useMemo(() => {
+    const out = [];
+    let n = 0;
+    for (const h of houses) {
+      if (h.h < 2.8) continue;
+      // The nearest road decides which wall faces the street.
+      let best = null;
+      for (const [x1, z1, x2, z2, w] of ROADS) {
+        const horiz = z1 === z2;
+        const inside = horiz ? h.x > Math.min(x1, x2) && h.x < Math.max(x1, x2) : h.z > Math.min(z1, z2) && h.z < Math.max(z1, z2);
+        if (!inside) continue;
+        const d = horiz ? z1 - h.z : x1 - h.x;
+        if (Math.abs(d) < 15 && (!best || Math.abs(d) < Math.abs(best.d))) best = { horiz, d };
+      }
+      if (!best || n++ % 3 === 2) continue;
+      const fw = (best.horiz ? h.w : h.d) * 0.86;
+      const fh = Math.min(h.h * 0.62, fw * 0.5);
+      const s = Math.sign(best.d);
+      const pos = best.horiz ? [h.x, h.h * 0.52, h.z + s * (h.d / 2 + 0.04)] : [h.x + s * (h.w / 2 + 0.04), h.h * 0.52, h.z];
+      const ry = best.horiz ? (s > 0 ? 0 : Math.PI) : s > 0 ? Math.PI / 2 : -Math.PI / 2;
+      out.push({ pos, ry, w: fw, h: fh, i: (out.length * 5) % MURALS.length });
+      if (out.length >= 80) break;
+    }
+    return out;
+  }, [houses]);
+  return items.map((m, k) => <mesh key={k} geometry={muralGeo} material={muralMat(m.i)} position={m.pos} rotation={[0, m.ry, 0]} scale={[m.w, m.h, 1]} />);
+});
+
+// Daladala route boards: the destinations painted along both sides.
+const ROUTES = ['KARIAKOO – MASAKI', 'POSTA – UBUNGO', 'MBEZI – KIVUKONI', 'TEMEKE – MWENGE', 'GONGO LA MBOTO – POSTA', 'SINZA – KARIAKOO', 'TEGETA – POSTA', 'BUGURUNI – MASAKI'];
+const routeCache = new Map();
+function routeMat(i) {
+  if (!routeCache.has(i)) {
+    const { texture } = labelTexture(ROUTES[i % ROUTES.length], { bg: '#111827', fg: '#fde047', size: 46, bold: 900 });
+    routeCache.set(i, new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide }));
+  }
+  return routeCache.get(i);
+}
+function RouteBoard({ i }) {
+  const m = routeMat(i);
+  return (
+    <group>
+      <mesh geometry={muralGeo} material={m} position={[0, 2.45, 0]} rotation={[0, Math.PI / 2, 0]} scale={[4.6, 0.55, 1]} />
+      <mesh geometry={geo('box', 0.08, 0.3, 4.4)} material={mat('#111827')} position={[0, 2.2, 0]} />
+    </group>
+  );
+}
+
 const Filler = memo(function Filler() {
   const { houses, towers, trees, palms } = useFiller();
   return (
@@ -397,7 +492,7 @@ function KariakooModel({ w, h, d }) {
         return (
           <group key={i} position={[x, h + 0.5, z]}>
             <mesh geometry={geo('cyl', 0.25, 0.3, 1.2, 6)} material={mat('#fde68a')} position={[0, 0.6, 0]} />
-            <mesh geometry={geo('cone', Math.min(w / cols, d / rows) * 0.62, 1.5, 10)} material={mat('#f59e0b')} position={[0, 1.9, 0]} rotation={[Math.PI, 0, 0]} />
+            <mesh geometry={geo('cone', Math.min(w / cols, d / rows) * 0.46, 1.4, 10)} material={mat('#f59e0b')} position={[0, 1.9, 0]} rotation={[Math.PI, 0, 0]} />
           </group>
         );
       })}
@@ -995,6 +1090,7 @@ function Traffic({ cityId = 'dar', lowEnd = false }) {
   return state.map((s, i) => (
     <group key={`${cityId}-${i}`} ref={(el) => (refs.current[i] = el)}>
       <Vehicle kind={s.kind} color={s.color} body={s.kind === 'car' ? (i % 3 === 0 ? 'sedan' : 'hatch') : s.kind === 'suv' && i % 2 ? 'suv-big' : undefined} />
+      {s.kind === 'bus' && <RouteBoard i={i} />}
     </group>
   ));
 }
@@ -1316,6 +1412,7 @@ export function City({ world, ads, onPlace, onPlot, onBillboard, onGround, myUse
       <Streets lowEnd={lowEnd} />
       {mapMode && <StreetNames />}
       <Filler />
+      <Murals />
       <Districts />
       <Places onPlace={onPlace} businesses={world?.businesses} showLabels={showLabels} mapMode={mapMode} />
       <Plots plots={world?.plots} onPlot={onPlot} myUsername={myUsername} />

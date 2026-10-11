@@ -6,6 +6,7 @@ import path from 'node:path';
 import {
   GAME, HAIRSTYLES, SKIN_TONES, HAIR_COLORS, OUTFITS, TRAITS, SPAWNS, BILLBOARDS, AD_MAX_DAYS,
   billboardById, outfitById, ADS_PER_BOARD, adPriceTzs, adTzsPerDay, CRIME, plotById, togetherById, REFERRAL, ELECTION, EVENT_LIMITS, EVENT_PLACES, placeById,
+  VIBES, VIBE_DAILY,
 } from '../../../shared/world.js';
 import { db, getUser, getUserByUsername, createUser, saveFields, addMoney, GameError, now, UPLOAD_DIR, getSettings } from '../db.js';
 import { hashPassword, checkPassword, signToken, requireAuth, requireAdmin, rateLimit, USERNAME_RE, normalizePhone } from '../auth.js';
@@ -279,6 +280,37 @@ api.post('/act/finish', (req, res) => {
   }
   if (result.teleport) emitTo(req.user.id, 'teleport', { pos: result.teleport });
   res.json({ result, me: game.playerState(req.user.id) });
+});
+// Hotspots inside venues: dance, grab a drink, haggle… small boosts, with cooldowns.
+const vibeLast = new Map();
+const vibeDay = new Map();
+api.post('/act/vibe', (req, res) => {
+  const v = VIBES[str(req.body.id, 12)];
+  if (!v) throw new GameError(['Haipo', 'Unknown'], 404);
+  const uid = req.user.id;
+  const o = online.get(uid);
+  const t = now();
+  if (!o || !(o.inside || (o.busy && o.busy.endsAt > t))) throw new GameError(['Ingia ndani ya sehemu kwanza.', 'Go inside a place first.']);
+  const key = `${uid}:${req.body.id}`;
+  const wait = (vibeLast.get(key) || 0) + v.cd * 1000 - t;
+  if (wait > 0) throw new GameError([`Subiri sekunde ${Math.ceil(wait / 1000)}.`, `Wait ${Math.ceil(wait / 1000)}s.`], 429);
+  const day = `${uid}:${Math.floor(t / 86_400_000)}`;
+  if ((vibeDay.get(day) || 0) >= VIBE_DAILY) throw new GameError(['Umefanya vya kutosha leo 😅', "You've done plenty today 😅"], 429);
+  const u = getUser(uid);
+  if (v.cost) addMoney(uid, -v.cost, 'spend', `${v.emoji} ${v.name[0]}`);
+  vibeLast.set(key, t);
+  vibeDay.set(day, (vibeDay.get(day) || 0) + 1);
+  const needs = game.applyNeeds(u.needs, v.effects);
+  const fields = { needs };
+  if (v.health) fields.health = Math.min(100, (u.health ?? 100) + v.health);
+  saveFields(uid, fields);
+  let found = 0;
+  if (v.reward) {
+    found = Math.round((v.reward[0] + Math.random() * (v.reward[1] - v.reward[0])) / 100) * 100;
+    if (found) addMoney(uid, found, 'gift', `${v.emoji} ${v.name[0]}`);
+  }
+  broadcast('emote', { id: uid, e: v.emoji });
+  res.json({ ok: true, found, me: game.playerState(uid) });
 });
 api.post('/act/task', (req, res) => {
   const r = game.workTask(req.user.id, str(req.body.task, 20));
