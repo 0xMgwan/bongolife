@@ -21,6 +21,8 @@ import { shopRentTick } from './company.js';
 import { addInvite, canVisit } from './social.js';
 import * as chat from './chat.js';
 import * as luxury from './luxury.js';
+import * as afya from './health.js';
+import * as lift from './lift.js';
 
 const PORT = Number(process.env.PORT) || 8787;
 const app = express();
@@ -123,6 +125,7 @@ io.on('connection', (socket) => {
 
   socket.on('move', (d) => {
     if (!d || !Number.isFinite(d.x) || !Number.isFinite(d.z)) return;
+    if (lift.isRiding(uid)) return; // passengers go where the driver goes
     // Loose anti-teleport: ignore jumps larger than a fast car could make between packets.
     if (Math.hypot(d.x - p.x, d.z - p.z) > 40) return socket.emit('teleport', { pos: [p.x, p.z] });
     if (p.inside && d.m) {
@@ -136,6 +139,7 @@ io.on('connection', (socket) => {
     p.ry = Number.isFinite(d.ry) ? d.ry : p.ry;
     p.m = d.m === 2 ? 2 : d.m ? 1 : 0; // 2 = running
     pendingMoves.set(uid, [uid, +p.x.toFixed(2), +p.z.toFixed(2), +p.ry.toFixed(2), p.m]);
+    lift.follow(uid, p, (pid, pp) => pendingMoves.set(pid, [pid, +pp.x.toFixed(2), +pp.z.toFixed(2), +(pp.ry || 0).toFixed(2), 1]));
   });
 
   socket.on('chat', (payload) => {
@@ -310,6 +314,7 @@ io.on('connection', (socket) => {
   // Walking around inside a venue/room: relay your spot to everyone in the same room.
   attachVoice(socket, uid, p);
   attachWatch(socket, uid, p);
+  lift.attachLift(socket, uid, p);
 
   socket.on('scene:pos', (d = {}) => {
     const x = Number(d.x), z = Number(d.z), ry = Number(d.ry);
@@ -334,7 +339,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    if (p.sockets.size <= 1) { leaveVoice(uid); leaveWatch(uid); }
+    if (p.sockets.size <= 1) { leaveVoice(uid); leaveWatch(uid); lift.leave(uid); }
     if (p.home) socket.to(`home:${p.home}`).emit('home:leave', { id: uid });
     p.sockets.delete(socket.id);
     if (p.sockets.size) return;
@@ -360,7 +365,7 @@ setInterval(() => {
       if (!u) continue;
       // Sleeping / busy players don't decay while the activity runs.
       const needs = u.busy && u.busy.endsAt > now() ? u.needs : decayNeeds(u);
-      const health = neglectHealth(u, needs);
+      const health = neglectHealth(u, needs) ?? afya.planRegen(uid, u.health ?? 100);
       saveFields(uid, { needs, x: p.x, z: p.z, lastSeen: now(), ...(health != null ? { health } : {}) });
       emitTo(uid, 'needs', { needs, mood: moodOf(needs), health: health ?? u.health });
     }

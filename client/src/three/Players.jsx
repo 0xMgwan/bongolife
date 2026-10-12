@@ -4,7 +4,7 @@ import { isWater, vehicleById, placeById, HEALTH } from '@shared/world.js';
 import { Avatar } from './Avatar.jsx';
 import { Vehicle, riderOffset } from './Vehicle.jsx';
 import { labelTexture, bubbleTexture, emojiTexture } from './textures.js';
-import { local, input, remotes, bubbles, emotes, sendMove, view, trafficCars } from '../net.js';
+import { local, input, remotes, bubbles, emotes, sendMove, view, trafficCars, lifts, riderOf } from '../net.js';
 import { TOGETHER_ANIM } from '../ui/together.js';
 import { api } from '../api.js';
 import { sfx } from '../audio.js';
@@ -120,6 +120,27 @@ const overheadHeight = (vehicle) => {
   return riderOffset(v.kind) ? 1.9 : 2.3;
 };
 
+// ------------------------------------------------------------- lifts
+/** Where a passenger sits in the driver's vehicle (local offset) and whether you can see them. */
+function passengerSeat(vehicle, idx) {
+  const v = vehicle && vehicleById[vehicle.model];
+  if (v?.kind === 'moto') return { show: true, off: [0, 0.38, -0.62] };
+  if (v?.kind === 'bajaji') return { show: true, off: [idx % 2 ? 0.3 : -0.3, 0.42, -0.45] };
+  return { show: false, off: [idx % 2 ? 0.45 : -0.45, 0, -0.4 - Math.floor(idx / 2) * 0.8] };
+}
+/** If `id` is riding with someone: { x, y, z, ry, show } in world space, else null. */
+function rideSpot(id, baseX, baseZ, ry) {
+  const did = riderOf.get(id);
+  if (did == null) return null;
+  const myId = useStore.getState().myId;
+  const vehicle = did === myId ? useStore.getState().me?.vehicles?.find((v) => v.id === useStore.getState().me.activeVehicle) : remotes.get(did)?.v;
+  const idx = Math.max(0, (lifts.get(did) || []).findIndex((p) => p.id === id));
+  const { show, off } = passengerSeat(vehicle, idx);
+  const c = Math.cos(ry);
+  const s = Math.sin(ry);
+  return { x: baseX + off[0] * c + off[2] * s, y: off[1], z: baseZ - off[0] * s + off[2] * c, ry, show };
+}
+
 // ------------------------------------------------------------- local
 const HIT_GRACE_MS = HEALTH.accidentCooldownMs;
 /** Pedestrian vs traffic: NPC cars, plus other players driving past. Returns the driver's username, '' for NPCs, or null. */
@@ -167,6 +188,8 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
   const healthRef = useRef(100);
   healthRef.current = me.health ?? 100;
   const seen = useRef(local.teleported);
+  const bodyRef = useRef();
+  const smooth = useRef({ x: 0, z: 0, ry: 0, on: false });
 
   useEffect(() => {
     // Only seed from the server once; remounts (e.g. language switch) keep the live position.
@@ -193,6 +216,27 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
       local.moving = false;
       return;
     }
+    // Passenger in someone's car: sit where they drive.
+    if (riderOf.has(useStore.getState().myId)) {
+      const sm = smooth.current;
+      if (!sm.on) Object.assign(sm, { x: local.x, z: local.z, ry: local.ry, on: true });
+      const a = 1 - Math.exp(-dt * 8);
+      sm.x += (local.x - sm.x) * a;
+      sm.z += (local.z - sm.z) * a;
+      let dr = local.ry - sm.ry;
+      dr = Math.atan2(Math.sin(dr), Math.cos(dr));
+      sm.ry += dr * a;
+      const spot = rideSpot(useStore.getState().myId, sm.x, sm.z, sm.ry);
+      local.target = null;
+      local.moving = false;
+      motion.current.mode = 'sit';
+      if (bodyRef.current) bodyRef.current.visible = spot.show;
+      g.position.set(spot.x, 0.1 + spot.y, spot.z);
+      g.rotation.y = sm.ry;
+      return;
+    }
+    smooth.current.on = false;
+    if (bodyRef.current) bodyRef.current.visible = true;
     // Riding a cab/daladala: follow the route, no steering.
     if (local.ride) {
       const R = local.ride;
@@ -318,7 +362,7 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
 
   return (
     <group ref={group}>
-      <Body appearance={me.appearance} vehicle={vehicle} motion={motion} />
+      <group ref={bodyRef}><Body appearance={me.appearance} vehicle={vehicle} motion={motion} /></group>
       <Overhead id={me.id} username={me.username} height={overheadHeight(vehicle)} getBusy={() => busyRef.current} />
     </group>
   );
@@ -327,6 +371,7 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
 // ------------------------------------------------------------ remotes
 function RemotePlayer({ r, onClick }) {
   const group = useRef();
+  const bodyRef = useRef();
   const motion = useRef({ moving: false, mode: 'idle', speed: 1 });
   const pos = useRef({ x: r.x, z: r.z, ry: r.ry || 0 });
   useFrame(({ camera }, dt) => {
@@ -353,6 +398,15 @@ function RemotePlayer({ r, onClick }) {
     }
     g.position.set(p.x, 0.1 + hop, p.z);
     g.rotation.y = p.ry;
+    const spot = rideSpot(r.id, p.x, p.z, p.ry);
+    if (bodyRef.current) bodyRef.current.visible = !spot || spot.show;
+    if (spot) {
+      g.position.set(spot.x, 0.1 + spot.y, spot.z);
+      motion.current.mode = 'sit';
+      motion.current.moving = false;
+      g.visible = Math.hypot(camera.position.x - p.x, camera.position.z - p.z) < 140;
+      return;
+    }
     // Cheap LOD: hide players far from the camera focus.
     g.visible = !r.inside && Math.hypot(camera.position.x - p.x, camera.position.z - p.z) < 140;
     const busy = r.busy && r.busy.endsAt > Date.now() ? r.busy : null;
@@ -367,7 +421,7 @@ function RemotePlayer({ r, onClick }) {
   };
   return (
     <group ref={group} onClick={click}>
-      <Body appearance={r.appearance} vehicle={r.v} motion={motion} />
+      <group ref={bodyRef}><Body appearance={r.appearance} vehicle={r.v} motion={motion} /></group>
       <Overhead id={r.id} username={r.username} height={overheadHeight(r.v)} getBusy={() => (r.busy && r.busy.endsAt > Date.now() ? r.busy : null)} />
     </group>
   );

@@ -6,6 +6,7 @@ import {
   jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats, luxuryById, LUXURY_RESALE,
 } from '../../shared/world.js';
 import * as hiring from './hiring.js';
+import * as health from './health.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
 
 export function liveEvent() {
@@ -269,7 +270,7 @@ export const startAction = db.transaction((userId, { kind, placeId, id }) => {
   if (kind === 'activity') {
     const act = findActivity(placeId, id);
     if (!act) throw new GameError(['Shughuli haipo', 'Activity not found'], 404);
-    const cost = discount(user, act.cost);
+    const cost = health.hospitalPrice(userId, placeId, discount(user, act.cost));
     if (cost > 0) addMoney(userId, -cost, 'spend', `${act.name} — ${place.name}`);
     let secs = act.secs;
     if (act.special?.elimu && user.trait === 'msomi') secs = Math.round(secs * 0.6);
@@ -726,7 +727,7 @@ export const ambulance = db.transaction((userId) => {
   const u = getUser(userId);
   const h = placeById[HOSPITAL_ID];
   const pos = [h.pos[0], h.pos[1] + h.size[1] / 2 + 3];
-  const cost = (u.health ?? 100) < HEALTH.injuredBelow ? HEALTH.ambulanceCost : HEALTH.ambulanceCost * 2;
+  const cost = health.planOf(userId)?.ambulance ? 0 : (u.health ?? 100) < HEALTH.injuredBelow ? HEALTH.ambulanceCost : HEALTH.ambulanceCost * 2;
   addMoney(userId, -Math.min(cost, u.money), 'travel', 'Gari la wagonjwa 🚑');
   saveFields(userId, { x: pos[0], z: pos[1] });
   const p = online.get(userId);

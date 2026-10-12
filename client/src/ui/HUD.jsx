@@ -28,6 +28,7 @@ import { CameraOverlay, openCamera } from './Camera.jsx';
 import { WatchParty, WatchInvite } from './WatchParty.jsx';
 import { openUserActions } from './UserActions.jsx';
 import { LuxInvite } from './apps/Anasa.jsx';
+import { LiftAsk, LiftBar } from './Lift.jsx';
 import { startBuild } from './BuildBar.jsx';
 import { MentionText, MentionSuggest } from './Mentions.jsx';
 
@@ -910,6 +911,8 @@ export function HUD() {
       <CameraOverlay />
       <WatchInvite />
       <LuxInvite />
+      <LiftAsk />
+      <LiftBar />
       <WatchParty />
       <CallBar />
       <IncomingCall />

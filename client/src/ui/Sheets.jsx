@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   adPriceTzs, NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
   outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
-  jobLocks, HOUSE_UPGRADES, houseStats,
+  jobLocks, HOUSE_UPGRADES, houseStats, liftSeats,
 } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
@@ -22,6 +22,7 @@ import { useSlideSelect } from './useSlideSelect.js';
 import { TogetherRow } from './Together.jsx';
 import { ask } from './Confirm.jsx';
 import { TipRow } from './UserActions.jsx';
+import { giveLift, askLift } from './Lift.jsx';
 
 const jt = (j, n) => (isEn() ? jobTitleEn(j, n) : jobTitle(j, n));
 
@@ -443,6 +444,18 @@ function PlayerSheet({ username, onClose }) {
       {p.friend && !blocked && (
         <button className="btn btn-dark btn-block" style={{ marginTop: 8 }} onClick={() => { callFriends([p.username]); onClose(); }}>📞 {p.online ? L('Piga simu', 'Call') : L('Piga simu (hayupo online)', 'Call (offline)')}</button>
       )}
+      {p.online && !blocked && (() => {
+        const them = [...remotes.values()].find((r) => r.username === p.username);
+        const theyDrive = !!liftSeats(them?.v?.model);
+        const iDrive = !!liftSeats(me.vehicles?.find((v) => v.id === me.activeVehicle)?.model);
+        const iHaveCar = (me.vehicles || []).some((v) => liftSeats(v.model) > 0);
+        return (
+          <div className="row" style={{ marginTop: 8, gap: 8 }}>
+            {iHaveCar && <button className="btn btn-white grow" style={{ border: '1px solid var(--line)' }} onClick={() => { giveLift(p.username); onClose(); }}>🚗 {d <= 12 ? L('Mpe lifti', 'Give a lift') : L('Mfuate umchukue', 'Pick them up')}</button>}
+            {theyDrive && !iDrive && <button className="btn btn-white grow" style={{ border: '1px solid var(--line)' }} onClick={() => { askLift(p.username); onClose(); }}>🙋 {L('Omba lifti', 'Ask for a lift')}</button>}
+          </div>
+        );
+      })()}
       {p.online && !blocked && (
         <div className="row" style={{ marginTop: 8, gap: 8 }}>
           <button className="btn btn-dark grow" onClick={() => inviteHome(p.username)}>🏠 {L('Mwalike kwako', 'Invite home')}</button>

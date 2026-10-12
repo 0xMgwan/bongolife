@@ -99,8 +99,39 @@ export function connect() {
     else st().toast(L('Sogea karibu na mlango kwanza.', 'Get closer to the entrance first.'), 'err');
   });
   socket.on('lux:invite', (d) => { sfx('notify'); useStore.setState({ luxInvite: d }); });
+  // ---- lifts
+  const liftState = ({ driver, passengers }) => {
+    for (const [pid, did] of [...riderOf]) if (did === driver) riderOf.delete(pid);
+    if (passengers.length) lifts.set(driver, passengers); else lifts.delete(driver);
+    for (const p of passengers) riderOf.set(p.id, driver);
+    const me = st().myId;
+    const myDriver = riderOf.get(me);
+    useStore.setState({
+      liftRide: myDriver != null ? { driverId: myDriver, driver: remotes.get(myDriver)?.username || '' } : null,
+      liftPassengers: lifts.get(me) || [],
+      ...(myDriver != null ? { liftWaiting: null } : {}),
+      liftPickups: (st().liftPickups || []).filter((x) => !passengers.some((p) => p.id === x.id)),
+    });
+    bump();
+  };
+  socket.on('lift:all', (list) => { lifts.clear(); riderOf.clear(); for (const l of list) liftState(l); });
+  socket.on('lift:state', liftState);
+  socket.on('lift:ask', (d) => { sfx('notify'); useStore.setState({ liftAsk: d }); });
+  socket.on('lift:pickup', (d) => { sfx('notify'); useStore.setState((s) => ({ liftPickups: [...(s.liftPickups || []).filter((x) => x.id !== d.id), d] })); });
+  socket.on('lift:waiting', (d) => useStore.setState({ liftWaiting: d }));
+  socket.on('lift:cancelled', ({ by }) => {
+    useStore.setState((s) => ({ liftWaiting: null, liftPickups: (s.liftPickups || []).filter((x) => x.username !== by) }));
+    st().toast(L(`🚗 @${by} ameghairi lifti.`, `🚗 @${by} cancelled the lift.`));
+  });
+  socket.on('lift:dropped', ({ placeId }) => {
+    useStore.setState({ liftRide: null });
+    if (placeId) setTimeout(() => setInside(placeId), 300);
+  });
   socket.on('moves', (list) => {
+    const me = st().myId;
     for (const [id, x, z, ry, m] of list) {
+      // Riding in someone's car: the server moves you with them.
+      if (id === me && riderOf.has(me)) { local.x = x; local.z = z; local.ry = ry; continue; }
       const r = remotes.get(id);
       if (r) { r.tx = x; r.tz = z; r.tr = ry; r.m = m; }
     }
@@ -353,6 +384,18 @@ export function replyInvite(fromId, accept) {
 }
 
 /** Walk into a venue (placeId) or back out (null). */
+// ---- lifts: driverId -> [{ id, username }], passengerId -> driverId
+export const lifts = new Map();
+export const riderOf = new Map();
+const liftEmit = (ev, body) => new Promise((resolve) => (socket ? socket.emit(ev, body, resolve) : resolve({ error: 'offline' })));
+export const offerLift = (to) => liftEmit('lift:offer', { to });
+export const requestLift = (to) => liftEmit('lift:request', { to });
+export const replyLift = (fromId, accept) => { useStore.setState({ liftAsk: null }); return liftEmit('lift:reply', { fromId, accept }); };
+export const dropLift = (id = null, placeId = null) => socket?.emit('lift:drop', { id, placeId });
+export const leaveLift = () => { useStore.setState({ liftWaiting: null }); socket?.emit('lift:leave'); };
+export const cancelPickup = (id) => { useStore.setState((s) => ({ liftPickups: (s.liftPickups || []).filter((x) => x.id !== id) })); socket?.emit('lift:cancel', { id }); };
+export const wherePickup = (id) => liftEmit('lift:where', { id });
+
 /** Board your own (or a friend's) yacht/jet — from anywhere. */
 export function boardLuxury(kind, hostId) {
   useStore.setState({ inside: kind, insideHost: hostId, phone: null, sheet: null, luxInvite: null, cityView: 'follow' });

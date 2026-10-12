@@ -1460,6 +1460,46 @@ export const HEALTH = {
   neglectDrain: 0.5, // per needs tick while starving or exhausted
 };
 export const HOSPITAL_ID = 'hospitali';
+
+// ---------------------------------------------------------------- Afya (health app)
+// Health plans last 30 days: cheaper hospital care, free ambulance, cheaper/free therapy.
+export const HEALTH_PLANS = [
+  { id: 'nhif', emoji: '🟢', name: 'NHIF Msingi', nameEn: 'NHIF Basic', price: 60_000, days: 30, hospitalOff: 0.5, therapyOff: 0.5, doctorOff: 0.5, ambulance: true, regen: 0, color: '#16a34a',
+    perks: [['Nusu bei hospitalini', 'Half-price hospital care'], ['Gari la wagonjwa bure', 'Free ambulance'], ['Ushauri nasaha nusu bei', 'Half-price therapy']] },
+  { id: 'jubilee', emoji: '🔵', name: 'Jubilee Afya Silver', nameEn: 'Jubilee Silver', price: 250_000, days: 30, hospitalOff: 0.8, therapyOff: 1, doctorOff: 1, ambulance: true, regen: 0, color: '#2563eb',
+    perks: [['80% punguzo hospitalini', '80% off hospital care'], ['Ushauri nasaha bure', 'Free therapy sessions'], ['Daktari mtandaoni bure', 'Free online doctor'], ['Gari la wagonjwa bure', 'Free ambulance']] },
+  { id: 'aar', emoji: '🟡', name: 'AAR Gold Premier', nameEn: 'AAR Gold Premier', price: 750_000, days: 30, hospitalOff: 1, therapyOff: 1, doctorOff: 1, ambulance: true, regen: 1, color: '#ca8a04',
+    perks: [['Matibabu yote bure', 'All hospital care free'], ['Ushauri nasaha + daktari bure', 'Free therapy + online doctor'], ['Afya inapanda yenyewe kila dakika', 'Health slowly recovers on its own'], ['Gari la wagonjwa bure', 'Free ambulance']] },
+];
+export const healthPlanById = Object.fromEntries(HEALTH_PLANS.map((p) => [p.id, p]));
+export const THERAPISTS = [
+  { id: 'neema', name: 'Dkt. Neema Mushi', emoji: '👩🏾‍⚕️', focus: ['Msongo wa mawazo na kazi', 'Stress & work'], look: { body: 'woman', skin: 3, hair: 'bun', outfit: 'ofisi-sketi', hairColor: 0 } },
+  { id: 'juma', name: 'Bw. Juma Kileo', emoji: '👨🏾‍⚕️', focus: ['Mahusiano na familia', 'Relationships & family'], look: { body: 'man', skin: 2, hair: 'fade', outfit: 'kaunda', hairColor: 0 } },
+  { id: 'aisha', name: 'Dkt. Aisha Salim', emoji: '🧕🏾', focus: ['Usingizi na wasiwasi', 'Sleep & anxiety'], look: { body: 'woman', skin: 4, hair: 'kilemba', outfit: 'buibui', hairColor: 0 } },
+];
+export const AFYA = {
+  therapy: { price: 40_000, cooldownMs: 20 * 60_000, effects: { fun: 15, social: 10, energy: 5 }, health: 5 },
+  doctor: { price: 10_000, cooldownMs: 30 * 60_000, health: 12 },
+  pharmacy: [
+    { id: 'panadol', emoji: '💊', name: 'Panadol', nameEn: 'Painkillers', price: 3_000, health: 8 },
+    { id: 'ors', emoji: '🧃', name: 'ORS', nameEn: 'Rehydration salts', price: 1_500, health: 4, effects: { energy: 8 } },
+    { id: 'vitamini', emoji: '🍊', name: 'Vitamini', nameEn: 'Multivitamins', price: 15_000, health: 12, effects: { energy: 5 } },
+    { id: 'firstaid', emoji: '🩹', name: 'Huduma ya kwanza', nameEn: 'First aid kit', price: 25_000, health: 20 },
+  ],
+  pharmacyCooldownMs: 10 * 60_000,
+};
+// ---------------------------------------------------------------- lifts
+// Seats for passengers when you give someone a lift (driver not counted).
+export function liftSeats(model) {
+  const v = vehicleById[model];
+  if (!v) return 0;
+  if (v.kind === 'moto') return 1;
+  if (v.kind === 'bajaji') return 2;
+  if (v.kind === 'van' || v.body === 'suv-big' || v.body === 'range' || v.body === 'rolls') return 5;
+  if (v.kind === 'suv' || v.kind === 'car') return v.body === 'sports' ? 1 : 3;
+  return 0;
+}
+export const LIFT = { boardDist: 10, askTtlMs: 90_000 };
 export const POLICE_ID = 'polisi';
 
 // ------------------------------------------------------- city-to-city trips

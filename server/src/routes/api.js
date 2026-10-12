@@ -30,6 +30,7 @@ import * as gist from '../gist.js';
 import * as watch from '../watch.js';
 import * as chat from '../chat.js';
 import * as luxury from '../luxury.js';
+import * as afya from '../health.js';
 import * as love from '../love.js';
 import * as music from '../music.js';
 import * as venue from '../venue.js';
@@ -539,6 +540,13 @@ api.post('/wallet/send', (req, res) => {
   const to = game.sendMoney(req.user.id, str(req.body.to, 30).replace(/^@/, ''), req.body.amount, str(req.body.note, 80));
   res.json({ to: to.username, me: game.playerState(req.user.id) });
 });
+
+// --------------------------------------------------------- Afya (health)
+api.get('/health', (req, res) => res.json(afya.view(req.user.id)));
+api.post('/health/plan', (req, res) => res.json({ ...afya.buyPlan(req.user.id, str(req.body.id, 20)), me: game.playerState(req.user.id) }));
+api.post('/health/therapy', (req, res) => res.json({ ...afya.therapy(req.user.id, str(req.body.therapist, 20)), me: game.playerState(req.user.id) }));
+api.post('/health/doctor', (req, res) => res.json({ ...afya.doctor(req.user.id), me: game.playerState(req.user.id) }));
+api.post('/health/pharmacy', (req, res) => res.json({ ...afya.pharmacy(req.user.id, str(req.body.id, 20)), me: game.playerState(req.user.id) }));
 
 // --------------------------------------------------------- yachts & jets
 api.get('/luxury', (req, res) => res.json(luxury.view(req.user.id)));
