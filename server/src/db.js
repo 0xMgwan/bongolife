@@ -296,6 +296,8 @@ if (!db.prepare('SELECT COUNT(*) n FROM phone_apps').get().n) {
 
 // ------------------------------------------------------------ settings
 export const DEFAULT_SETTINGS = {
+  // The latest "what's new" (set when an update email goes out): { title, titleEn, body, bodyEn, at }
+  latestUpdate: null,
   maintenance: false,
   signupsEnabled: true,
   topupsEnabled: true,

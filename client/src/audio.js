@@ -21,6 +21,7 @@ export function onAudioSettings(fn) {
   return () => listeners.delete(fn);
 }
 export function setAudioSettings(patch) {
+  import('./radio.js').then((r) => r.applyRadioVolume()).catch(() => {});
   Object.assign(audioSettings, patch);
   try { localStorage.setItem(KEY, JSON.stringify(audioSettings)); } catch {}
   applyVolumes();

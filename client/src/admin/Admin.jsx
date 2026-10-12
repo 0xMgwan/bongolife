@@ -263,7 +263,7 @@ function MailHealth() {
   const { data, reload } = useApi('/admin/mail');
   const [to, setTo] = useState('');
   const [busy, setBusy] = useState(false);
-  const [u, setU] = useState({ title: '', titleEn: '', body: '', bodyEn: '', cta: '', ctaUrl: '' });
+  const [u, setU] = useState({ title: '', titleEn: '', body: '', bodyEn: '', cta: '', ctaUrl: '', push: true });
   const running = data?.campaign?.running;
   useEffect(() => {
     if (!running) return;
@@ -313,6 +313,7 @@ function MailHealth() {
         <input className="in" style={{ flex: 1, minWidth: 140 }} placeholder="Button text (optional)" value={u.cta} maxLength={40} onChange={(e) => setU({ ...u, cta: e.target.value })} />
         <input className="in" style={{ flex: 2, minWidth: 180 }} placeholder="Button link https://… (default: the game)" value={u.ctaUrl} onChange={(e) => setU({ ...u, ctaUrl: e.target.value })} />
       </div>
+      <label className="small" style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6 }}><input type="checkbox" checked={u.push} onChange={(e) => setU({ ...u, push: e.target.checked })} /> Also send a push notification to every phone with notifications on, and show it in the game's welcome as “What's new”</label>
       <div className="toolbar" style={{ marginTop: 6 }}>
         <button className="btn btn-outline" disabled={busy || !u.title || !u.body} onClick={() => sendUpdate(true)}>Send preview to me</button>
         <button className="btn btn-green" disabled={busy || running || !u.title || !u.body || !data.enabled} onClick={() => sendUpdate(false)}>Send to all players</button>

@@ -1659,6 +1659,25 @@ export const VIBES = {
 };
 export const VIBE_DAILY = 40; // per player per day across all hotspots
 
+// Real monuments and big buildings, for the look of the city and the map (not enterable).
+export const LANDMARKS = [
+  { id: 'askari', city: 'dar', kind: 'statue', emoji: '🗿', pos: [56, 8], size: [5, 5], name: 'Askari Monument', blurb: ['Sanamu ya askari katikati ya Posta, tangu 1927 — kitovu cha mji.', 'The soldier statue in the heart of Posta since 1927 — the centre of town.'] },
+  { id: 'clock', city: 'dar', kind: 'clock', emoji: '🕰️', pos: [42, -8], size: [4, 4], name: 'Saa ya Mnara', blurb: ['Mnara wa saa wa Posta, alama ya uhuru wa Tanganyika.', "Posta's clock tower, a landmark of Tanganyika's independence."] },
+  { id: 'stjoseph', city: 'dar', kind: 'cathedral', emoji: '⛪', pos: [85, 21], size: [9, 12], name: "St Joseph's Cathedral", blurb: ['Kanisa kuu la Kikatoliki la mwaka 1897, ufukweni mwa bandari.', 'The 1897 Catholic cathedral on the harbour front.'] },
+  { id: 'azania', city: 'dar', kind: 'church', emoji: '⛪', pos: [29, 49], size: [8, 10], name: 'Azania Front Lutheran Church', blurb: ['Kanisa la Kilutheri lenye paa jekundu, tangu 1898.', 'The red-roofed Lutheran church, since 1898.'] },
+  { id: 'uhuru', city: 'dar', kind: 'torch', emoji: '🔥', pos: [23, 7], size: [5, 5], name: 'Mnara wa Uhuru · Mnazi Mmoja', blurb: ['Mwenge wa Uhuru — "kumulika hata nje ya mipaka yetu".', 'The Uhuru Torch — "to shine even beyond our borders".'] },
+  { id: 'millennium', city: 'dar', kind: 'twin', emoji: '🏙️', pos: [-5, -35], size: [12, 8], name: 'Millennium Towers', blurb: ['Minara pacha ya ofisi Kijitonyama.', 'The twin office towers of Kijitonyama.'] },
+  { id: 'bot', city: 'dar', kind: 'twin', emoji: '🏦', pos: [65, -37], size: [12, 8], name: 'Minara Pacha ya BoT', blurb: ['Minara pacha ya Benki Kuu ya Tanzania, ufukweni Posta.', 'The Bank of Tanzania twin towers on the Posta waterfront.'] },
+  { id: 'mkapa', city: 'dar', kind: 'tower', emoji: '🏢', pos: [20, -28], size: [8, 8], name: 'Mkapa Tower', blurb: ['Moja ya majengo marefu zaidi Dar.', 'One of the tallest buildings in Dar.'] },
+  { id: 'tanzanite', city: 'dar', kind: 'bridge', emoji: '🌉', pos: [100, -28], name: 'Daraja la Tanzanite', blurb: ['Daraja jipya la baharini kutoka Agakhan hadi Coco Beach na Masaki.', 'The new sea bridge from Aga Khan to Coco Beach and Masaki.'] },
+  { id: 'ubungo', city: 'dar', kind: 'flyover', emoji: '🛣️', pos: [-110, 0], name: 'Ubungo Interchange', blurb: ['Barabara za juu za Ubungo — mwisho wa foleni ya Morogoro Road.', 'The Ubungo flyovers — the end of the Morogoro Road jam.'] },
+  { id: 'wonders', city: 'znz', kind: 'wonders', emoji: '🏛️', pos: [1563, -9], size: [10, 8], name: 'Beit al-Ajaib · House of Wonders', blurb: ['Jumba la Maajabu, nyumba ya kwanza Afrika Mashariki kuwa na umeme na lifti.', 'The House of Wonders — first building in East Africa with electricity and a lift.'] },
+  { id: 'oldfort', city: 'znz', kind: 'fort', emoji: '🏰', pos: [1537, 10], size: [10, 10], name: 'Ngome Kongwe · Old Fort', blurb: ['Ngome ya Waomani ya karne ya 17.', 'The 17th-century Omani fort.'] },
+  { id: 'christchurch', city: 'znz', kind: 'church', emoji: '⛪', pos: [1562, 31], size: [8, 10], name: 'Christ Church Cathedral', blurb: ['Imejengwa juu ya soko la zamani la watumwa.', 'Built on the site of the old slave market.'] },
+  { id: 'aicc', city: 'aru', kind: 'twin', emoji: '🏙️', pos: [-1571, -45], size: [12, 8], name: 'AICC Arusha', blurb: ['Kituo cha mikutano cha kimataifa cha Arusha.', "Arusha's international conference centre."] },
+  { id: 'arushatorch', city: 'aru', kind: 'torch', emoji: '🔥', pos: [-1580, -10], size: [5, 5], name: 'Mnara wa Azimio la Arusha', blurb: ['Mnara wa Azimio la Arusha, 1967.', 'The Arusha Declaration monument, 1967.'] },
+];
+
 // Hiring other players into your company.
 export const HIRING = {
   maxWageMult: 8, // wage per shift: industry wage … 8× it

@@ -25,6 +25,7 @@ import * as story from '../story.js';
 import * as invest from '../invest.js';
 import * as company from '../company.js';
 import * as hiring from '../hiring.js';
+import * as live from '../live.js';
 import * as chat from '../chat.js';
 import * as love from '../love.js';
 import * as music from '../music.js';
@@ -159,6 +160,10 @@ const unsubscribe = (req, res) => {
 <a href="https://play.bongolife.app" style="display:inline-block;margin-top:8px;background:#f5b800;color:#141414;font-weight:800;text-decoration:none;padding:12px 20px;border-radius:999px;border:2px solid #141414">Bongo Life →</a></div></body>`);
 };
 api.get('/push/key', (_req, res) => res.json({ key: pushPublicKey() }));
+// Live weather per city, the Tanzanian radio stations, and the latest "what's new".
+api.get('/weather', wrap(async (req, res) => { res.set('Cache-Control', 'public, max-age=300'); res.json(await live.weather(str(req.query.city, 5) || 'dar')); }));
+api.get('/radio', wrap(async (_req, res) => { res.set('Cache-Control', 'public, max-age=3600'); res.json(await live.radioStations()); }));
+api.get('/news', (_req, res) => res.json({ latest: getSettings().latestUpdate || null }));
 api.get('/unsubscribe', unsubscribe);
 api.post('/unsubscribe', unsubscribe);
 

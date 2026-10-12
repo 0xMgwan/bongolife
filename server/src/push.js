@@ -83,6 +83,17 @@ export async function notify(userId, text, { title = 'Bongo Life', url = '/', ta
   return sent;
 }
 
+/** Push the same notification to every player with push on (sequential, gentle on the push services). */
+export async function notifyEveryone(text, opts = {}) {
+  const ids = db.prepare('SELECT DISTINCT user_id FROM push_subs').all().map((r) => r.user_id);
+  let sent = 0;
+  for (const id of ids) {
+    sent += await notify(id, text, { ...opts, tag: opts.tag || 'news' }).catch(() => 0);
+    await new Promise((r) => setTimeout(r, 40));
+  }
+  return { users: ids.length, sent };
+}
+
 /**
  * Turn a live event for an offline player into a push notification (called from presence.emitTo).
  * Returns nothing; unknown events are ignored.

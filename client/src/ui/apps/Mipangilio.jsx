@@ -11,6 +11,7 @@ import { setAudioSettings, sfx } from '../../audio.js';
 import { useAudioSettings } from '../useAudioSettings.js';
 import { InviteCard } from '../Invite.jsx';
 import { PushSettings } from '../PushPrompt.jsx';
+import { voiceOn, setVoiceOn } from '../Welcome.jsx';
 import { InstallRow } from '../InstallApp.jsx';
 import { Socials } from '../Socials.jsx';
 
@@ -53,6 +54,21 @@ function Haptics() {
 }
 
 /** Change password + recovery email. */
+/** Spoken welcome + How to play. */
+function VoiceSettings() {
+  const [on, setOn] = useState(voiceOn());
+  return (
+    <div className="box">
+      <div className="row between">
+        <span className="bold">🗣️ {L('Sauti ya karibu', 'Welcome voice')}</span>
+        <button className={`btn btn-xs ${on ? 'btn-green' : 'btn-ghost'}`} onClick={() => { setVoiceOn(!on); setOn(!on); }}>{on ? L('Imewashwa ✓', 'On ✓') : L('Imezimwa', 'Off')}</button>
+      </div>
+      <div className="hint">{L('Ukiingia, sauti inakukaribisha, inakuambia hali ya hewa na habari mpya, kisha redio inaanza.', 'When you open the game, a voice welcomes you with the weather and what’s new, then the radio starts.')}</div>
+      <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => { useStore.getState().set?.({ phone: null }); useStore.setState({ phone: null }); window.dispatchEvent(new Event('bl:howto')); }}>❓ {L('Jinsi ya kucheza', 'How to play')}</button>
+    </div>
+  );
+}
+
 function Security() {
   const me = useStore((s) => s.me);
   const run = useStore((s) => s.run);
@@ -202,6 +218,7 @@ export function Mipangilio({ back }) {
         <InviteCard />
         <Security />
         <PushSettings />
+        <VoiceSettings />
         <SoundSettings />
         <Haptics />
         <InstallRow />

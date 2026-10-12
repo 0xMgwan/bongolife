@@ -21,6 +21,7 @@ import { LiveNow } from './LiveNow.jsx';
 import { SidePop } from './SidePop.jsx';
 import { HiringPop } from './apps/Ajira.jsx';
 import { PushPrompt } from './PushPrompt.jsx';
+import { WelcomeFlow, RadioPill } from './Welcome.jsx';
 import { startBuild } from './BuildBar.jsx';
 import { MentionText, MentionSuggest } from './Mentions.jsx';
 
@@ -899,6 +900,8 @@ export function HUD() {
       {town && <CityChips />}
       {!riding && <HiringPop />}
       <PushPrompt />
+      <WelcomeFlow />
+      {!riding && <RadioPill />}
       {!shop && !riding && !clean && (
         <SidePop items={[
           ...(world?.event && town && !scene ? [{ key: 'event', tone: 'green', text: loc(world.event, 'text') }] : []),

@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { placeById, WATER, BEACHES, gameClock, vehicleById } from '@shared/world.js';
 import { local } from '../net.js';
 import { setVenueMusic, setAmbience } from '../audio.js';
+import { radioDuck } from '../radio.js';
 
 // Venues that play music, with how far it carries (world units).
 // Tanzanian sound: 1245 & bars play Bongo Flava, Mbagala plays Singeli, Stone Town plays Taarab.
@@ -53,6 +54,7 @@ export function AudioDriver({ me, scene, placeId, party }) {
       let [style, level] = party ? ['amapiano', 1] : radio ? ['bongoflava', 0.8] : SCENE_MUSIC[scene] || [null, 0];
       if (placeId && PLACE_MUSIC[placeId] && style) style = PLACE_MUSIC[placeId];
       setVenueMusic(style, level, placeId || scene);
+      radioDuck(style ? level : 0);
       setAmbience({ city: 0, waves: scene === 'beach' ? 1 : 0, engine: 0 });
       return;
     }
@@ -67,6 +69,7 @@ export function AudioDriver({ me, scene, placeId, party }) {
     }
     if (busy?.placeId === 'studio' && busy.id === 'rekodi') best = { style: 'bongoflava', level: 1, venue: 'studio' };
     setVenueMusic(best.style, best.level, best.venue);
+    radioDuck(best.style ? best.level : 0);
 
     const water = Math.min(...WATER.map((r) => rectDist(r, x, z)), ...BEACHES.map((r) => rectDist(r, x, z) + 4));
     const waves = Math.max(0, 1 - water / 40);

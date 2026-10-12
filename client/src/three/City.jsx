@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {
   WATER, LAND_PATCHES, BRIDGES, BEACHES, ROADS, PLACES, PLOTS, BILLBOARDS, DISTRICTS, WORLD_SIZE,
   isWater, onRoad, buildingById, fmtShort, randomAppearance, AD_ROTATE_SECONDS, CITIES,
-  cityAt,
+  cityAt, LANDMARKS,
 } from '@shared/world.js';
 import { mat, geo, emojiTexture, labelTexture, bubbleTexture, windowTexture, adTexture, mapLabelTexture } from './textures.js';
 import { Vehicle, Boat, Plane, Car } from './Vehicle.jsx';
@@ -12,6 +12,7 @@ import { Avatar } from './Avatar.jsx';
 import { houseMat, towerGlowMat, fluffyCrown, Streets, RoofTanks, LedScreens, StreetNames, shopGlassMat, neonMat } from './CityDecor.jsx';
 import { L, loc } from '../i18n.js';
 import { trafficCars, local } from '../net.js';
+import { useStore } from '../store.js';
 
 const GRASS = '#c7dca6';
 const PAD = '#eceee6';
@@ -36,6 +37,7 @@ const RESERVED = [
   ...PLACES.map((p) => rectOf(p.pos, p.size, 5)),
   ...PLOTS.map((p) => rectOf(p.pos, [p.size, p.size], 2.5)),
   ...BILLBOARDS.map((b) => rectOf(b.pos, [6, 6])),
+  ...LANDMARKS.filter((l) => l.size).map((l) => rectOf(l.pos, l.size, 2)),
   ...BEACHES,
   ...BRIDGES.map((b) => ({ x1: b.x1 - 4, x2: b.x2 + 4, z1: b.z1 - 4, z2: b.z2 + 4 })),
 ];
@@ -590,6 +592,143 @@ function Crowds() {
     </group>
   );
 }
+
+// ------------------------------------------------------------ landmarks
+const GLASS_A = mat('#7dd3fc', { roughness: 0.2 });
+const GLASS_B = mat('#38bdf8');
+function clockTex() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+  const x = cv.getContext('2d');
+  x.fillStyle = '#fffbeb'; x.beginPath(); x.arc(64, 64, 60, 0, 7); x.fill();
+  x.strokeStyle = '#111827'; x.lineWidth = 6; x.stroke();
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; x.fillRect(64 + Math.sin(a) * 48 - 2, 64 - Math.cos(a) * 48 - 2, 5, 5); }
+  x.lineWidth = 6; x.beginPath(); x.moveTo(64, 64); x.lineTo(64, 28); x.moveTo(64, 64); x.lineTo(90, 64); x.stroke();
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+let CLOCK_MAT = null;
+function LandmarkModel({ l }) {
+  const [w, d] = l.size || [6, 6];
+  switch (l.kind) {
+    case 'statue': return (
+      <group>
+        <mesh geometry={geo('cyl', 2, 2.3, 0.6, 16)} material={mat('#9ca3af')} position={[0, 0.3, 0]} />
+        <Box w={1.6} h={3} d={1.6} color="#e5e7eb" y={0.6} />
+        <mesh geometry={geo('capsule', 0.4, 1.2, 4, 8)} material={mat('#57534e')} position={[0, 4.6, 0]} />
+        <mesh geometry={geo('sphere', 0.32, 10, 8)} material={mat('#57534e')} position={[0, 5.7, 0]} />
+        <mesh geometry={geo('cyl', 0.05, 0.05, 1.8, 5)} material={mat('#44403c')} position={[0.5, 5, 0.3]} rotation={[0.6, 0, 0]} />
+      </group>
+    );
+    case 'clock': {
+      CLOCK_MAT ||= new THREE.MeshBasicMaterial({ map: clockTex() });
+      return (
+        <group>
+          <Box w={2.6} h={11} d={2.6} color="#f5f5f4" />
+          <Box w={3} h={0.4} d={3} color="#d6d3d1" y={11} />
+          {[0, 1, 2, 3].map((i) => <mesh key={i} geometry={geo('plane', 1.8, 1.8)} material={CLOCK_MAT} position={[Math.sin(i * Math.PI / 2) * 1.32, 9.3, Math.cos(i * Math.PI / 2) * 1.32]} rotation={[0, i * Math.PI / 2, 0]} />)}
+          <mesh geometry={geo('cone', 1.6, 2.2, 4)} material={mat('#b45309')} position={[0, 12.5, 0]} rotation={[0, Math.PI / 4, 0]} />
+        </group>
+      );
+    }
+    case 'cathedral': return (
+      <group>
+        <Box w={w * 0.7} h={8} d={d} color="#f8fafc" />
+        <mesh geometry={geo('cone', w * 0.45, 3.5, 4)} material={mat('#64748b')} position={[0, 9.7, 0]} rotation={[0, Math.PI / 4, 0]} scale={[1, 1, d / w * 1.3]} />
+        {[-1, 1].map((s) => (
+          <group key={s} position={[s * w * 0.3, 0, d / 2 - 1.2]}>
+            <Box w={2.2} h={13} d={2.2} color="#f1f5f9" />
+            <mesh geometry={geo('cone', 1.5, 5, 8)} material={mat('#475569')} position={[0, 15.5, 0]} />
+          </group>
+        ))}
+        <Box w={1.6} h={3.5} d={0.1} color="#7c2d12" z={d / 2 + 0.02} />
+      </group>
+    );
+    case 'church': return (
+      <group>
+        <Box w={w * 0.75} h={6} d={d} color="#fefce8" />
+        <mesh geometry={geo('cone', w * 0.55, 3, 4)} material={mat('#b91c1c')} position={[0, 7.5, 0]} rotation={[0, Math.PI / 4, 0]} scale={[1, 1, d / w * 1.3]} />
+        <group position={[0, 0, d / 2 - 1]}>
+          <Box w={2.4} h={11} d={2.4} color="#fefce8" />
+          <mesh geometry={geo('cone', 1.8, 4, 4)} material={mat('#b91c1c')} position={[0, 13, 0]} rotation={[0, Math.PI / 4, 0]} />
+        </group>
+      </group>
+    );
+    case 'torch': return (
+      <group>
+        <Box w={4} h={1} d={4} color="#d6d3d1" />
+        <mesh geometry={geo('cyl', 0.6, 1.1, 12, 4)} material={mat('#f8fafc')} position={[0, 7, 0]} rotation={[0, Math.PI / 4, 0]} />
+        <mesh geometry={geo('cone', 0.7, 1.6, 8)} material={neonMat('#f97316')} position={[0, 13.8, 0]} />
+        <mesh geometry={geo('cone', 0.4, 1.1, 8)} material={neonMat('#facc15')} position={[0, 14, 0]} />
+      </group>
+    );
+    case 'twin': return (
+      <group>
+        {[-1, 1].map((s) => (
+          <group key={s} position={[s * w * 0.27, 0, 0]}>
+            <mesh geometry={unitBox} material={towerGlowMat} position={[0, 0, 0]} scale={[w * 0.4, 34, d * 0.8]} />
+            <Box w={w * 0.42} h={0.6} d={d * 0.82} color="#0f172a" y={34} />
+            <mesh geometry={geo('cyl', 0.08, 0.08, 6, 5)} material={mat('#e5e7eb')} position={[0, 37, 0]} />
+          </group>
+        ))}
+      </group>
+    );
+    case 'tower': return (
+      <group>
+        <mesh geometry={unitBox} material={towerGlowMat} scale={[w * 0.8, 44, d * 0.8]} />
+        <mesh geometry={geo('cyl', w * 0.35, w * 0.45, 3, 8)} material={GLASS_B} position={[0, 45.5, 0]} />
+        <mesh geometry={geo('cyl', 0.1, 0.1, 8, 5)} material={mat('#e5e7eb')} position={[0, 51, 0]} />
+      </group>
+    );
+    case 'wonders': return (
+      <group>
+        <Box w={w} h={9} d={d} color="#f8fafc" />
+        {Array.from({ length: 7 }, (_, i) => <mesh key={i} geometry={geo('cyl', 0.25, 0.25, 9, 8)} material={mat('#e7e5e4')} position={[-w / 2 + 0.6 + i * ((w - 1.2) / 6), 4.5, d / 2 + 0.8]} />)}
+        <Box w={w + 0.4} h={0.4} d={d + 2} color="#d6d3d1" y={9} />
+        <Box w={2.6} h={4} d={2.6} color="#f5f5f4" y={9.4} />
+        <mesh geometry={geo('cone', 1.7, 1.6, 4)} material={mat('#16a34a')} position={[0, 14.2, 0]} rotation={[0, Math.PI / 4, 0]} />
+      </group>
+    );
+    case 'fort': return (
+      <group>
+        {[[0, -d / 2, w, 1.2], [0, d / 2, w, 1.2], [-w / 2, 0, 1.2, d], [w / 2, 0, 1.2, d]].map(([x, z, ww, dd], i) => <Box key={i} w={ww} h={5} d={dd} color="#a16207" x={x} z={z} />)}
+        {[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz]) => <mesh key={sx + ',' + sz} geometry={geo('cyl', 1.3, 1.5, 7, 10)} material={mat('#92400e')} position={[sx * w / 2, 3.5, sz * d / 2]} />)}
+        {Array.from({ length: 8 }, (_, i) => <Box key={i} w={0.6} h={0.7} d={1.2} color="#a16207" x={-w / 2 + 0.6 + i * ((w - 1.2) / 7)} y={5} z={d / 2} />)}
+      </group>
+    );
+    case 'bridge': return (
+      <group position={[0, 0, 0]}>
+        <Box w={4} h={0.6} d={40} color="#e5e7eb" y={1.6} />
+        <Box w={4.2} h={0.3} d={40} color="#374151" y={2.2} />
+        {[-12, 12].map((z) => <mesh key={z} geometry={geo('cyl', 0.5, 0.6, 2.2, 8)} material={mat('#9ca3af')} position={[0, 0.5, z]} />)}
+        <Box w={1.2} h={18} d={1.2} color="#f8fafc" />
+        {Array.from({ length: 8 }, (_, i) => {
+          const z = (i < 4 ? -1 : 1) * (4 + (i % 4) * 4);
+          const len = Math.hypot(z, 15.5);
+          return <mesh key={i} geometry={geo('box', 0.08, len, 0.08)} material={mat('#facc15')} position={[0, 2.3 + 15.5 / 2, z / 2]} rotation={[Math.atan2(z, 15.5), 0, 0]} />;
+        })}
+      </group>
+    );
+    case 'flyover': return (
+      <group>
+        <Box w={44} h={0.8} d={6} color="#d6d3d1" y={5} />
+        <Box w={6} h={0.8} d={44} color="#cbd5e1" y={8} />
+        {[-14, -5, 5, 14].map((x) => <Box key={x} w={1.2} h={5} d={1.2} color="#9ca3af" x={x} />)}
+        {[-14, -5, 5, 14].map((z) => <Box key={'z' + z} w={1.2} h={8} d={1.2} color="#9ca3af" z={z} />)}
+        <Box w={44} h={0.6} d={0.3} color="#facc15" y={5.8} z={3} />
+        <Box w={44} h={0.6} d={0.3} color="#facc15" y={5.8} z={-3} />
+      </group>
+    );
+    default: return null;
+  }
+}
+const Landmarks = memo(function Landmarks({ cityId, mapMode }) {
+  const toast = useStore((s) => s.toast);
+  return LANDMARKS.filter((l) => l.city === cityId).map((l) => (
+    <group key={l.id} position={[l.pos[0], 0.05, l.pos[1]]} onClick={(e) => { e.stopPropagation(); toast(`${l.emoji} ${l.name} — ${L(l.blurb[0], l.blurb[1])}`); }}>
+      <LandmarkModel l={l} />
+      {(mapMode || l.kind === 'bridge' || l.kind === 'flyover') && <Marker emoji={l.emoji} y={mapMode ? 18 : 12} label={l.name} pill={mapMode} tone="#e0f2fe" scale={2.6} />}
+    </group>
+  ));
+});
 
 function PlaceModel({ place, owner }) {
   const [w, d] = place.size;
@@ -1420,6 +1559,7 @@ export function City({ world, ads, onPlace, onPlot, onBillboard, onGround, myUse
       <Traffic cityId={cityId} lowEnd={lowEnd} />
       {!mapMode && <StreetLife cityId={cityId} max={lowEnd ? 7 : 14} />}
       {!mapMode && <Crowds />}
+      <Landmarks cityId={cityId} mapMode={mapMode} />
       {walkers > 0 && <Walkers key={cityId} count={walkers} cityId={cityId} />}
     </group>
   );

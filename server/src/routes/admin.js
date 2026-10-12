@@ -1,6 +1,7 @@
 import express from 'express';
 import crypto from 'node:crypto';
 import { sendMail, mailStatus, welcomeEmail, updateEmail, startCampaign } from '../mail.js';
+import { notifyEveryone } from '../push.js';
 import { PLOTS, PLACES, SPAWNS, plotById, placeById, buildingById, vehicleById, NEEDS } from '../../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, audit, getSettings, setSettings, freshNeeds } from '../db.js';
 import { hashPassword } from '../auth.js';
@@ -482,8 +483,11 @@ admin.post('/mail/update', async (req, res, next) => {
       return res.json({ ok, sent: ok ? 1 : 0, status: mailStatus() });
     }
     const recipients = db.prepare("SELECT id, name, username, email FROM users WHERE email IS NOT NULL AND email != '' AND email_updates = 1 AND banned_at IS NULL").all();
-    if (!recipients.length) throw new GameError('No players have an email with updates switched on');
-    if (!startCampaign({ recipients, build: (u) => updateEmail({ user: u, ...content }) })) throw new GameError('An update email is already being sent — wait for it to finish');
+    if (!recipients.length && req.body.push === false) throw new GameError('No players have an email with updates switched on');
+    if (recipients.length && !startCampaign({ recipients, build: (u) => updateEmail({ user: u, ...content }) })) throw new GameError('An update email is already being sent — wait for it to finish');
+    // Remember it as the latest "what's new" (shown and read out in the game), and push it to phones.
+    setSettings({ latestUpdate: { title: content.title, titleEn: content.titleEn || content.title, body: content.body.slice(0, 400), bodyEn: (content.bodyEn || content.body).slice(0, 400), at: now() } });
+    if (req.body.push !== false) notifyEveryone([`🆕 ${content.title}`, `🆕 ${content.titleEn || content.title}`], { title: ['Bongo Life · Habari mpya', "Bongo Life · What's new"], tag: 'news' }).catch(() => {});
     audit(req.user.id, 'mail.update', 'mail', null, { title: content.title, recipients: recipients.length });
     res.json({ ok: true, queued: recipients.length, status: mailStatus() });
   } catch (e) { next(e); }
