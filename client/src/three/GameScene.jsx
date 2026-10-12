@@ -7,6 +7,7 @@ import { LocalPlayer, RemotePlayers, ParkedCar } from './Players.jsx';
 import { AudioDriver } from './AudioDriver.jsx';
 import { ActivityScene, SCENES, SCENE_ORIGIN, sceneCam, sceneFocus } from './Scenes.jsx';
 import { Effects } from './Effects.jsx';
+import { cameraHook } from '../ui/Camera.jsx';
 import { setCityNight } from './CityDecor.jsx';
 import { HomeScene, HOME_ORIGIN } from './HomeScene.jsx';
 import { livePartyAt } from '../ui/events.js';
@@ -280,6 +281,15 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
       flat
       onCreated={(state) => {
         state.gl.setClearColor('#cfe6f7');
+        // In-game camera: render a fresh frame and copy it (no preserveDrawingBuffer needed).
+        cameraHook.grab = () => {
+          const { gl, scene, camera } = state;
+          gl.render(scene, camera);
+          const c = document.createElement('canvas');
+          c.width = gl.domElement.width; c.height = gl.domElement.height;
+          c.getContext('2d').drawImage(gl.domElement, 0, 0);
+          return c;
+        };
         if (import.meta.env.DEV) window.__r3f = state;
       }}
     >

@@ -26,6 +26,7 @@ import * as invest from '../invest.js';
 import * as company from '../company.js';
 import * as hiring from '../hiring.js';
 import * as live from '../live.js';
+import * as gist from '../gist.js';
 import * as chat from '../chat.js';
 import * as love from '../love.js';
 import * as music from '../music.js';
@@ -913,6 +914,17 @@ api.post('/staff/:id/shift', (req, res) => {
   res.json({ busy, me: game.playerState(req.user.id) });
 });
 api.get('/companies/:id/till', (req, res) => res.json(company.tillHistory(req.user.id, req.params.id, { before: req.query.before ? Number(req.query.before) : null, limit: Number(req.query.limit) || 50 })));
+// Bongo Gist: in-game photos.
+const gistUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2_500_000, files: 1 } });
+api.get('/gist', (req, res) => res.json(gist.feed(req.user.id, { before: req.query.before ? Number(req.query.before) : null, user: str(req.query.user, 30) || null })));
+api.post('/gist', rateLimit('gist', 20, 60 * 60_000), gistUpload.single('photo'), wrap(async (req, res) => {
+  const id = await gist.createPost(req.user.id, req.file, { caption: req.body.caption, place: req.body.place });
+  res.status(201).json({ id });
+}));
+api.post('/gist/:id/like', rateLimit('gistlike', 120, 60 * 60_000), (req, res) => res.json(gist.like(req.user.id, req.params.id)));
+api.get('/gist/:id/comments', (req, res) => res.json(gist.comments(req.params.id)));
+api.post('/gist/:id/comments', rateLimit('gistc', 60, 60 * 60_000), (req, res) => res.json(gist.comment(req.user.id, req.params.id, req.body.text)));
+api.delete('/gist/:id', (req, res) => { gist.removePost(req.user.id, req.params.id, req.user.isAdmin); res.json({ ok: true }); });
 api.get('/shops', (req, res) => res.json(company.openShops(req.user.id)));
 api.post('/shops/:id/buy', (req, res) => {
   crime.assertFree(getUser(req.user.id));

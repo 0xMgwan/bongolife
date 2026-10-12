@@ -24,6 +24,7 @@ import { PushPrompt } from './PushPrompt.jsx';
 import { WelcomeFlow, RadioPill } from './Welcome.jsx';
 import { VoiceBar } from './VoiceBar.jsx';
 import { IncomingCall, CallBar } from './Calls.jsx';
+import { CameraOverlay, openCamera } from './Camera.jsx';
 import { startBuild } from './BuildBar.jsx';
 import { MentionText, MentionSuggest } from './Mentions.jsx';
 
@@ -903,6 +904,7 @@ export function HUD() {
       {!riding && <HiringPop />}
       <PushPrompt />
       <WelcomeFlow />
+      <CameraOverlay />
       <CallBar />
       <IncomingCall />
       {!riding && <RadioPill />}
@@ -929,6 +931,7 @@ export function HUD() {
       {!shop && (
         <div className="side">
           <button onClick={() => { Object.assign(view, { yaw: 0, pitch: 1.0, homeYaw: 0.75, homePitch: 0.95, homeDist: 30 }); sfx('click'); }} aria-label={L('Rudisha kamera', 'Reset camera')}>🧭</button>
+          <button onClick={() => openCamera(scene?.placeId ? loc(placeById[scene.placeId]) : null)} aria-label={L('Kamera', 'Camera')}>📷</button>
           {town && (
             <button key={`chat-${me.unread || 0}`} onClick={() => (chatOpen ? useStore.setState({ chatOpen: false }) : openChat())} className={`${chatOpen ? 'on' : ''} ${me.unread > 0 ? 'has-unread' : ''}`} aria-label="Chat">
               💬{me.unread > 0 && <b className="badge">{me.unread}</b>}

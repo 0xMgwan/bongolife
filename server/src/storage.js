@@ -16,7 +16,7 @@ const endpoint = (key) => `https://${env('R2_ACCOUNT_ID')}.r2.cloudflarestorage.
 const publicUrl = (key) => `${env('R2_PUBLIC_URL').replace(/\/$/, '')}/${key}`;
 const isRemote = (ref) => /^https:\/\//.test(ref || '');
 
-const TYPES = { mp3: 'audio/mpeg', m4a: 'audio/mp4', ogg: 'audio/ogg' };
+const TYPES = { mp3: 'audio/mpeg', m4a: 'audio/mp4', ogg: 'audio/ogg', jpg: 'image/jpeg', png: 'image/png' };
 
 /** Save a file; returns the reference to store in the database. */
 export async function putFile(key, buffer) {
