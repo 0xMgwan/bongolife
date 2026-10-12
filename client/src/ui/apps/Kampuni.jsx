@@ -7,6 +7,7 @@ import { ask } from '../Confirm.jsx';
 import { L, pick } from '../../i18n.js';
 import { sfx } from '../../audio.js';
 import { TeamSection } from './Ajira.jsx';
+import { Till } from './Till.jsx';
 
 const PRICE_LABEL = { cheap: ['Bei nafuu', 'Cheap'], normal: ['Kawaida', 'Normal'], premium: ['Bei ya juu', 'Premium'] };
 const sign = (n) => (n >= 0 ? `+${fmtShort(n)}` : `-${fmtShort(-n)}`);
@@ -137,6 +138,13 @@ function CompanyView({ c, onBack, onChanged }) {
               <span>🛍️ {c.shop_open ? L(`Liko wazi · mauzo ${c.shop_sales}`, `Open · ${c.shop_sales} sales`) : L('Wachezaji wengine wanunue kwako', 'Let other players buy from you')}</span>
               <button className={`btn btn-sm ${c.shop_open ? 'btn-ghost' : 'btn-green'}`} onClick={() => act('shop', !c.shop_open, null, c.shop_open ? L('Duka limefungwa', 'Shop closed') : L('🛍️ Duka liko wazi! Liko kwenye app ya Maduka.', '🛍️ Shop open! It’s listed in the Shops app.'))}>{c.shop_open ? L('Funga', 'Close') : L('Fungua duka', 'Open shop')}</button>
             </div>
+            {c.rent_owed > 0 ? (
+              <div className="rent-warn">
+                ⚠️ {L(`Kodi ya duka TSh ${c.rent_owed.toLocaleString()} haijalipwa.`, `Shop rent TSh ${c.rent_owed.toLocaleString()} is unpaid.`)}
+                {c.shop_open && c.rentGraceEnds ? <small> {L(`Duka litafungwa baada ya saa ${Math.max(1, Math.ceil((c.rentGraceEnds - Date.now()) / 3600_000))}.`, `The shop closes in ${Math.max(1, Math.ceil((c.rentGraceEnds - Date.now()) / 3600_000))}h.`)}</small> : <small> {L('Duka limefungwa hadi ulipe.', 'The shop is closed until you pay.')}</small>}
+                <button className="btn btn-green btn-sm" style={{ marginTop: 6 }} onClick={() => act('payrent', null, null, L('🏪 Kodi imelipwa', '🏪 Rent paid'))}>{L('Lipa kodi sasa', 'Pay rent now')}</button>
+              </div>
+            ) : (c.shop_open || c.rent_due) ? <small className="muted">🏪 {L(`Kodi ya duka: TSh ${(c.shopRent || 0).toLocaleString()} kila wiki, kutoka akaunti ya kampuni`, `Shop rent: TSh ${(c.shopRent || 0).toLocaleString()} a week, from the company account`)}{c.rent_due ? ` · ${L('inadaiwa', 'due')} ${new Date(c.rent_due).toLocaleDateString()}` : ''}</small> : null}
             {c.shop_open ? (
               <>
                 <div className="seg" style={{ margin: '4px 0 0' }}>
@@ -152,6 +160,8 @@ function CompanyView({ c, onBack, onChanged }) {
           </div>
         </>
       )}
+
+      <Till companyId={c.id} />
 
       <div className="section-t">{L('MATANGAZO', 'MARKETING')}</div>
       <div className="co-box">

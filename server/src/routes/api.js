@@ -912,6 +912,7 @@ api.post('/staff/:id/shift', (req, res) => {
   const busy = game.startCompanyShift(req.user.id, req.params.id);
   res.json({ busy, me: game.playerState(req.user.id) });
 });
+api.get('/companies/:id/till', (req, res) => res.json(company.tillHistory(req.user.id, req.params.id, { before: req.query.before ? Number(req.query.before) : null, limit: Number(req.query.limit) || 50 })));
 api.get('/shops', (req, res) => res.json(company.openShops(req.user.id)));
 api.post('/shops/:id/buy', (req, res) => {
   crime.assertFree(getUser(req.user.id));

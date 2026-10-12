@@ -16,6 +16,7 @@ import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef } from 
 import { settleElection, currentMayor } from './election.js';
 import { isBlocked } from './crime.js';
 import { attachVoice, leaveVoice } from './voice.js';
+import { shopRentTick } from './company.js';
 import { addInvite, canVisit } from './social.js';
 import * as chat from './chat.js';
 
@@ -356,6 +357,8 @@ const checkElection = () => {
 };
 checkElection();
 setInterval(checkElection, 60_000);
+// Shop rent: reminders, charges, grace period and closing (every 5 minutes).
+setInterval(() => { try { shopRentTick(); } catch (e) { console.error('[rent]', e.message); } }, 5 * 60_000);
 
 /** Is a public party running at this venue right now? */
 function partyLiveAt(placeId) {

@@ -1,6 +1,6 @@
 // Start-your-own companies: daily trading days settled lazily (like trucks), with a company account.
 import { db, getUser, addMoney, GameError, now } from './db.js';
-import { INDUSTRIES, industryById, COMPANY, COMPANY_EVENTS, SHOP_ITEMS, SHOP, NEEDS, HIRING } from '../../shared/world.js';
+import { INDUSTRIES, industryById, COMPANY, COMPANY_EVENTS, SHOP_ITEMS, SHOP, NEEDS, HIRING, shopRent } from '../../shared/world.js';
 import { emitTo } from './presence.js';
 import { bumpStats } from './story.js';
 import { activeStaffCount, staffOf, postsOf } from './hiring.js';
@@ -36,8 +36,31 @@ CREATE TABLE IF NOT EXISTS company_days (
 );
 CREATE INDEX IF NOT EXISTS company_days_c ON company_days(company_id, day);
 `);
+// The till: every money movement of a company, newest first in the app.
+db.exec(`
+CREATE TABLE IF NOT EXISTS company_ledger (
+  id INTEGER PRIMARY KEY,
+  company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  at INTEGER NOT NULL,
+  kind TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  memo TEXT
+);
+CREATE INDEX IF NOT EXISTS company_ledger_c ON company_ledger(company_id, at);
+`);
+const ledgerIns = db.prepare('INSERT INTO company_ledger (company_id, at, kind, amount, memo) VALUES (?, ?, ?, ?, ?)');
+/** Record a till entry (kind: sale, wage, output, deposit, withdraw, rent, day, marketing, start). */
+export const ledger = (companyId, kind, amount, memo = null, at = now()) => ledgerIns.run(companyId, at, kind, Math.round(amount), memo);
+export function tillHistory(userId, companyId, { before = null, limit = 50 } = {}) {
+  const c = db.prepare('SELECT id FROM companies WHERE id = ? AND owner_id = ?').get(Number(companyId), userId);
+  if (!c) throw new GameError(['Kampuni haipo.', 'Company not found.'], 404);
+  const rows = db.prepare(`SELECT id, at, kind, amount, memo FROM company_ledger WHERE company_id = ? ${before ? 'AND id < ?' : ''} ORDER BY id DESC LIMIT ?`).all(...[c.id, before, Math.min(100, limit)].filter((v) => v !== null));
+  const tot = db.prepare("SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount END), 0) inn, COALESCE(SUM(CASE WHEN amount < 0 THEN amount END), 0) out FROM company_ledger WHERE company_id = ? AND at > ?").get(c.id, now() - 7 * DAY);
+  return { rows, week: { in: tot.inn, out: -tot.out } };
+}
+
 // Player shops (added later): open flag, markup over retail, lifetime sales.
-for (const [col, def] of [['shop_open', 'INTEGER NOT NULL DEFAULT 0'], ['shop_markup', 'REAL NOT NULL DEFAULT 1.2'], ['shop_sales', 'INTEGER NOT NULL DEFAULT 0']]) {
+for (const [col, def] of [['shop_open', 'INTEGER NOT NULL DEFAULT 0'], ['shop_markup', 'REAL NOT NULL DEFAULT 1.2'], ['shop_sales', 'INTEGER NOT NULL DEFAULT 0'], ['rent_due', 'INTEGER'], ['rent_owed', 'INTEGER NOT NULL DEFAULT 0'], ['rent_overdue_at', 'INTEGER'], ['rent_warned', 'INTEGER NOT NULL DEFAULT 0']]) {
   if (!db.prepare('PRAGMA table_info(companies)').all().some((c) => c.name === col)) db.exec(`ALTER TABLE companies ADD COLUMN ${col} ${def}`);
 }
 
@@ -96,6 +119,7 @@ function settle(c, fame, t = now()) {
   for (let i = 0; i < n; i++) {
     const d = tradeDay({ ...c, reputation }, firstDay + i, fame);
     q.addDay.run(c.id, firstDay + i, Math.round(d.customers), d.revenue, d.costs, d.profit, d.event);
+    ledger(c.id, 'day', d.profit, `${Math.round(d.customers)} wateja · mauzo ${d.revenue} · gharama ${d.costs}`, (firstDay + i + 1) * DAY);
     balance += d.profit;
     reputation = Math.max(0, Math.min(100, reputation + d.repDelta));
   }
@@ -110,6 +134,7 @@ function view(c, fame) {
   const preview = tradeDay(c, Math.floor(now() / DAY) + 999, fame); // a typical day, for the "capacity vs demand" hint
   return {
     ...c, industryDef: ind, days, team: staffOf(c.id), posts: postsOf(c.id),
+    shopRent: shopRent(c.industry), rentGraceEnds: c.rent_overdue_at ? c.rent_overdue_at + SHOP.graceMs : null,
     nextIn: Math.max(0, c.last_settled + DAY - now()),
     busy: preview.demand > preview.capacity * 1.05 ? 'understaffed' : preview.demand < preview.capacity * 0.7 ? 'overstaffed' : 'ok',
     sellFor: Math.round(ind.cost * COMPANY.sellBack) + Math.max(0, c.balance),
@@ -161,6 +186,7 @@ export const updateCompany = db.transaction((userId, id, { action, value }) => {
     const cost = Math.round(ind.cost * COMPANY.marketing.costPct);
     if (c.boost_until > now()) throw new GameError(['Kampeni bado inaendelea.', 'A campaign is already running.']);
     addMoney(userId, -cost, 'spend', `📣 Matangazo ya ${c.name}`);
+    ledger(c.id, 'marketing', 0, `📣 Kampeni (TSh ${cost.toLocaleString()} kutoka mfukoni)`);
     db.prepare('UPDATE companies SET boost_until = ? WHERE id = ?').run(now() + COMPANY.marketing.days * DAY, c.id);
   } else if (action === 'withdraw' || action === 'deposit') {
     const amt = Math.floor(Number(value));
@@ -169,17 +195,28 @@ export const updateCompany = db.transaction((userId, id, { action, value }) => {
       if (amt > c.balance) throw new GameError(['Kampuni haina kiasi hicho.', "The company doesn't have that much."]);
       db.prepare('UPDATE companies SET balance = balance - ? WHERE id = ?').run(amt, c.id);
       addMoney(userId, amt, 'income', `🏢 Faida kutoka ${c.name}`);
+      ledger(c.id, 'withdraw', -amt);
     } else {
       addMoney(userId, -amt, 'spend', `🏢 Mtaji kwa ${c.name}`);
       db.prepare('UPDATE companies SET balance = balance + ? WHERE id = ?').run(amt, c.id);
+      ledger(c.id, 'deposit', amt);
     }
   } else if (action === 'shop') {
     if (!SHOP_ITEMS[c.industry]) throw new GameError(['Sekta hii haiuzi bidhaa kwa wachezaji.', "This industry doesn't sell to players."]);
-    db.prepare('UPDATE companies SET shop_open = ? WHERE id = ?').run(value ? 1 : 0, c.id);
+    if (value && c.rent_owed > 0) throw new GameError([`Lipa kodi ya duka iliyobaki (TSh ${c.rent_owed.toLocaleString()}) kwanza.`, `Pay the shop's outstanding rent (TSh ${c.rent_owed.toLocaleString()}) first.`]);
+    db.prepare('UPDATE companies SET shop_open = ?, rent_due = COALESCE(rent_due, ?) WHERE id = ?').run(value ? 1 : 0, now() + SHOP.rentEveryMs, c.id);
   } else if (action === 'markup') {
     const m = Number(value);
     if (!SHOP.markups.includes(m)) throw new GameError(['Bei si sahihi.', 'Invalid markup.']);
     db.prepare('UPDATE companies SET shop_markup = ? WHERE id = ?').run(m, c.id);
+  } else if (action === 'payrent') {
+    if (!c.rent_owed) throw new GameError(['Hakuna kodi inayodaiwa.', 'No rent is owed.']);
+    // From the company account first, the rest from your pocket.
+    const fromCo = Math.max(0, Math.min(c.balance, c.rent_owed));
+    const fromMe = c.rent_owed - fromCo;
+    if (fromMe) addMoney(userId, -fromMe, 'spend', `🏪 Kodi ya duka — ${c.name}`);
+    db.prepare('UPDATE companies SET balance = balance - ?, rent_owed = 0, rent_overdue_at = NULL, rent_warned = 0, rent_due = ? WHERE id = ?').run(fromCo, now() + SHOP.rentEveryMs, c.id);
+    ledger(c.id, 'rent', -c.rent_owed, fromMe ? `Kodi ya duka (TSh ${fromMe.toLocaleString()} kutoka mfukoni)` : 'Kodi ya duka');
   } else if (action === 'rename') {
     const name = cleanName(value);
     if (name.length < 2) throw new GameError(['Jina fupi mno.', 'Name is too short.']);
@@ -223,6 +260,7 @@ export const buyFromShop = db.transaction((buyerId, companyId, itemId) => {
   addMoney(buyerId, -price, 'spend', `${item.emoji} ${item.name[0]} — ${c.name}`);
   const profit = price - Math.round(item.price * SHOP.stockCost);
   db.prepare('UPDATE companies SET balance = balance + ?, shop_sales = shop_sales + 1 WHERE id = ?').run(profit, c.id);
+  ledger(c.id, 'sale', profit, `${item.emoji} ${item.name[0]} — @${buyer.username} (bei ${price})`);
   const needs = { ...buyer.needs };
   for (const [k, v] of Object.entries(item.effects || {})) if (NEEDS.some((n) => n.id === k)) needs[k] = clamp((needs[k] ?? 50) + v);
   db.prepare('UPDATE users SET needs = ?, health = ? WHERE id = ?').run(JSON.stringify(needs), Math.min(100, (buyer.health ?? 100) + (item.health || 0)), buyerId);
@@ -230,3 +268,34 @@ export const buyFromShop = db.transaction((buyerId, companyId, itemId) => {
   emitTo(c.owner_id, 'toast', { text: [`🛍️ @${buyer.username} amenunua ${item.name[0]} — ${c.name} (+TSh ${profit.toLocaleString()})`, `🛍️ @${buyer.username} bought ${item.name[1]} at ${c.name} (+TSh ${profit.toLocaleString()})`], push: true, pushTag: `shop-${c.id}` });
   return { item: item.id, price, shop: c.name };
 });
+
+// ------------------------------------------------------------ shop rent
+/** Run every few minutes: warn a day before rent is due, charge it, give 3 days' grace, then close. */
+export function shopRentTick(t = now()) {
+  const shops = db.prepare('SELECT c.*, u.username FROM companies c JOIN users u ON u.id = c.owner_id WHERE c.shop_open = 1 OR c.rent_owed > 0').all();
+  for (const c of shops) {
+    const rent = shopRent(c.industry);
+    if (!c.rent_due) { db.prepare('UPDATE companies SET rent_due = ? WHERE id = ?').run(t + SHOP.rentEveryMs, c.id); continue; }
+    if (c.rent_owed > 0) {
+      if (c.shop_open && c.rent_overdue_at && t - c.rent_overdue_at > SHOP.graceMs) {
+        db.prepare('UPDATE companies SET shop_open = 0 WHERE id = ?').run(c.id);
+        emitTo(c.owner_id, 'toast', { text: [`🔒 Duka la ${c.name} limefungwa — kodi (TSh ${c.rent_owed.toLocaleString()}) haikulipwa kwa siku 3. Lipa kwenye Kampuni ulifungue tena.`, `🔒 ${c.name}'s shop was closed — rent (TSh ${c.rent_owed.toLocaleString()}) went unpaid for 3 days. Pay it in Company to reopen.`], refresh: true, long: true, push: true, pushTag: `rent-${c.id}`, pushTitle: ['🔒 Duka limefungwa', '🔒 Shop closed'] });
+      }
+      continue;
+    }
+    if (c.rent_due - t < SHOP.warnBeforeMs && c.rent_due > t && !c.rent_warned) {
+      db.prepare('UPDATE companies SET rent_warned = 1 WHERE id = ?').run(c.id);
+      const short = c.balance < rent;
+      emitTo(c.owner_id, 'toast', { text: [`🏪 Kodi ya duka la ${c.name} (TSh ${rent.toLocaleString()}) inadaiwa kesho.${short ? ' Weka pesa kwenye akaunti ya kampuni!' : ''}`, `🏪 Rent for ${c.name}'s shop (TSh ${rent.toLocaleString()}) is due tomorrow.${short ? ' Top up the company account!' : ''}`], long: true, push: true, pushTag: `rent-${c.id}`, pushTitle: ['🏪 Kodi ya duka', '🏪 Shop rent'] });
+    }
+    if (t >= c.rent_due) {
+      if (c.balance >= rent) {
+        db.prepare('UPDATE companies SET balance = balance - ?, rent_due = ?, rent_warned = 0 WHERE id = ?').run(rent, c.rent_due + SHOP.rentEveryMs, c.id);
+        ledger(c.id, 'rent', -rent, 'Kodi ya duka ya wiki');
+      } else {
+        db.prepare('UPDATE companies SET rent_owed = ?, rent_overdue_at = ?, rent_warned = 0 WHERE id = ?').run(rent, t, c.id);
+        emitTo(c.owner_id, 'toast', { text: [`⚠️ Kodi ya duka la ${c.name} (TSh ${rent.toLocaleString()}) haijalipwa. Una siku 3 kabla duka halijafungwa.`, `⚠️ ${c.name}'s shop rent (TSh ${rent.toLocaleString()}) is unpaid. You have 3 days before the shop is closed.`], refresh: true, long: true, push: true, pushTag: `rent-${c.id}`, pushTitle: ['⚠️ Kodi haijalipwa', '⚠️ Rent overdue'] });
+      }
+    }
+  }
+}

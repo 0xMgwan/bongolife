@@ -3,6 +3,7 @@
 // the company's capacity (see company.js).
 import { db, getUser, addMoney, GameError, now } from './db.js';
 import { industryById, HIRING } from '../../shared/world.js';
+import { ledger } from './company.js';
 import { emitTo, broadcast, online } from './presence.js';
 import { isBlocked } from './crime.js';
 
@@ -245,6 +246,8 @@ export function payShift(userId, busy) {
   const pay = Math.max(0, Math.min(s.wage, c.balance));
   const output = Math.round(ind.wage * HIRING.outputMult);
   db.prepare('UPDATE companies SET balance = balance - ? + ? WHERE id = ?').run(pay, output, c.id);
+  ledger(c.id, 'wage', -pay, `Mshahara — @${getUser(userId).username} (${s.role})`);
+  ledger(c.id, 'output', output, `Kazi ya shifti — @${getUser(userId).username}`);
   db.prepare('UPDATE company_staff SET shifts = shifts + 1, last_shift = ? WHERE id = ?').run(now(), s.id);
   if (pay) addMoney(userId, pay, 'salary', `${s.role} — ${c.name}`);
   const lines = [[`🏢 ${c.name} · shifti ${s.shifts + 1}`, `🏢 ${c.name} · shift ${s.shifts + 1}`]];

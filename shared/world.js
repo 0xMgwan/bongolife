@@ -1742,7 +1742,12 @@ export const SHOP_ITEMS = {
     { id: 'firstaid', emoji: '🩹', name: ['Kifaa cha huduma ya kwanza', 'First-aid kit'], price: 20_000, health: 30, effects: {} },
   ],
 };
-export const SHOP = { stockCost: 0.55, markups: [1, 1.2, 1.5, 2], buyCooldownMs: 3000 };
+export const SHOP = {
+  stockCost: 0.55, markups: [1, 1.2, 1.5, 2], buyCooldownMs: 3000,
+  // An open player shop pays weekly rent from the company account: 1% of the industry's startup cost.
+  rentPct: 0.01, rentEveryMs: 7 * 86_400_000, warnBeforeMs: 24 * 3_600_000, graceMs: 3 * 86_400_000,
+};
+export const shopRent = (industry) => Math.round(((industryById[industry]?.cost || 1_500_000) * SHOP.rentPct) / 500) * 500;
 
 // ============================================================ dating (opt-in, 18+)
 export const LOVE = {
