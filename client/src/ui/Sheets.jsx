@@ -431,6 +431,8 @@ function PlayerSheet({ username, onClose }) {
         <span className="pill">💰 {fmtShort(p.netWorth)}</span>
         {p.love && <span className="pill love-pill">{p.love.status === 'married' ? '💍' : p.love.status === 'engaged' ? '💎' : '❤️'} {L(`${p.love.status === 'married' ? 'Ameoa/olewa na' : p.love.status === 'engaged' ? 'Mchumba wa' : 'Mpenzi wa'} @${p.love.with}`, `${p.love.status === 'married' ? 'Married to' : p.love.status === 'engaged' ? 'Engaged to' : 'Partners with'} @${p.love.with}`)}</span>}
         <span className="pill">⭐ {p.fame}</span>
+        {p.fitness != null && <span className="pill">💪 {Math.round(p.fitness)}</span>}
+        {p.trainer && <span className="pill">🧑🏾‍🏫 {L('Kocha', 'Trainer')} · {fmtShort(p.trainer.price)}/{L('wiki', 'wk')}</span>}
         <span className="pill">🎓 {p.elimu}</span>
         {trait && <span className="pill">{trait.emoji} {loc(trait)}</span>}
         {p.vehicles.length > 0 && <span className="pill">{p.vehicles.slice(0, 4).map((v) => vehicleById[v.model]?.emoji).join(' ')}</span>}

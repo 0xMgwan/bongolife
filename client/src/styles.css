@@ -1885,3 +1885,26 @@ body.cam-flash::after { content: ''; position: fixed; inset: 0; background: #fff
 .breath-orb.p0, .breath-orb.p1 { transform: scale(1.9); }
 .breath-orb.p2 { transform: scale(1); transition-duration: 6s; }
 .breath b { margin-top: 30px; color: #9d174d; } .breath small { color: #6b655b; }
+/* Gym */
+.gym-hero { display: flex; gap: 12px; align-items: center; background: linear-gradient(135deg, #0f172a, #334155); color: #fff; border-radius: 18px; padding: 12px; }
+.gym-hero b { display: block; } .gym-hero small { display: block; color: #cbd5e1; font-size: 11.5px; margin-top: 2px; }
+.gym-score { width: 72px; height: 72px; border-radius: 18px; background: #f5b800; color: #111; display: grid; place-items: center; align-content: center; flex: none; }
+.gym-score b { font-size: 26px; line-height: 1; } .gym-score small { color: #111; font-size: 10px; font-weight: 700; }
+.gym-bar { height: 8px; background: rgba(255,255,255,.15); border-radius: 99px; overflow: hidden; margin: 5px 0 3px; }
+.gym-bar i { display: block; height: 100%; background: linear-gradient(90deg, #22c55e, #f5b800); border-radius: 99px; transition: width .25s linear; }
+.gym-bar.big { height: 14px; background: #e5e7eb; margin: 14px 0 6px; }
+.gym-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gym-w { position: relative; background: #fff; border: 2px solid var(--ink-hard); border-radius: 14px; padding: 10px; text-align: left; display: grid; gap: 2px; box-shadow: 2px 2px 0 var(--ink-hard); }
+.gym-w span { font-size: 26px; } .gym-w small { color: #6b655b; font-size: 11px; }
+.gym-w:disabled { opacity: .55; box-shadow: none; }
+.gym-w i { position: absolute; top: 6px; right: 8px; font-style: normal; font-size: 10.5px; font-weight: 800; color: #b45309; }
+.gym-session { display: grid; align-content: start; gap: 6px; padding-top: 18px; }
+.gym-pulse { font-size: 84px; text-align: center; animation: gym-pump .9s ease-in-out infinite; }
+.gym-pulse.done { animation: pop .4s; }
+@keyframes gym-pump { 50% { transform: scale(1.15) rotate(-4deg); } }
+.gym-move { text-align: center; font-family: var(--display); font-stretch: 80%; font-weight: 900; font-size: 22px; text-transform: uppercase; }
+.gym-steps { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+.gym-steps span { font-size: 11.5px; background: #f1f5f9; border-radius: 999px; padding: 3px 9px; color: #64748b; }
+.gym-steps span.now { background: #f5b800; color: #111; font-weight: 800; }
+.gym-steps span.ok { background: #dcfce7; color: #166534; }
+.gym-left { text-align: center; font-weight: 900; font-size: 28px; }

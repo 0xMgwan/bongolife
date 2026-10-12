@@ -31,6 +31,7 @@ import * as watch from '../watch.js';
 import * as chat from '../chat.js';
 import * as luxury from '../luxury.js';
 import * as afya from '../health.js';
+import * as gym from '../gym.js';
 import * as love from '../love.js';
 import * as music from '../music.js';
 import * as venue from '../venue.js';
@@ -541,6 +542,16 @@ api.post('/wallet/send', (req, res) => {
   res.json({ to: to.username, me: game.playerState(req.user.id) });
 });
 
+// --------------------------------------------------------- Gym
+api.get('/gym', (req, res) => res.json(gym.view(req.user.id)));
+api.post('/gym/membership', (req, res) => res.json({ ...gym.buyMembership(req.user.id, str(req.body.id, 10)), me: game.playerState(req.user.id) }));
+api.post('/gym/start', (req, res) => res.json({ ...gym.start(req.user.id, str(req.body.id, 12)), me: game.playerState(req.user.id) }));
+api.post('/gym/finish', (req, res) => res.json({ ...gym.finish(req.user.id), me: game.playerState(req.user.id) }));
+api.post('/gym/cancel', (req, res) => res.json(gym.cancel(req.user.id)));
+api.post('/gym/hire', (req, res) => res.json({ ...gym.hire(req.user.id, req.body.kind === 'player' ? 'player' : 'npc', str(String(req.body.ref ?? ''), 20)), me: game.playerState(req.user.id) }));
+api.post('/gym/trainer', (req, res) => res.json(gym.register(req.user.id, { price: req.body.price, focus: str(req.body.focus, 40), bio: str(req.body.bio, 140) })));
+api.delete('/gym/trainer', (req, res) => res.json(gym.unregister(req.user.id)));
+
 // --------------------------------------------------------- Afya (health)
 api.get('/health', (req, res) => res.json(afya.view(req.user.id)));
 api.post('/health/plan', (req, res) => res.json({ ...afya.buyPlan(req.user.id, str(req.body.id, 20)), me: game.playerState(req.user.id) }));
@@ -843,6 +854,7 @@ api.get('/players/:username', (req, res) => {
     love: love.publicStatus(u.id),
     // Mutual contacts = friends (needed for calls).
     friend: !!db.prepare('SELECT 1 FROM contacts x JOIN contacts y ON y.user_id = x.contact_id AND y.contact_id = x.user_id WHERE x.user_id = ? AND x.contact_id = ?').get(req.user.id, u.id),
+    ...gym.publicFitness(u.id),
   });
 });
 api.get('/leaderboard', (_req, res) => res.json(game.leaderboard()));

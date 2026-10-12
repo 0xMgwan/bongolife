@@ -12,6 +12,7 @@ import { Gist } from './apps/Gist.jsx';
 import { Mechi } from './WatchParty.jsx';
 import { Anasa } from './apps/Anasa.jsx';
 import { Afya } from './apps/Afya.jsx';
+import { Gym } from './apps/Gym.jsx';
 import { Ramani } from './apps/Ramani.jsx';
 import { Matangazo } from './apps/Matangazo.jsx';
 import { Viongozi } from './apps/Viongozi.jsx';
@@ -41,6 +42,7 @@ export const APPS = [
   { id: 'mechi', name: 'Mechi', nameEn: 'Matches', icon: '⚽', g: ['#4ade80', '#166534'], C: Mechi },
   { id: 'anasa', name: 'Anasa', nameEn: 'Luxury', icon: '🛥️', g: ['#fde68a', '#b45309'], C: Anasa },
   { id: 'afya', name: 'Afya', nameEn: 'Health', icon: '🩺', g: ['#fda4af', '#be123c'], C: Afya },
+  { id: 'gym', name: 'Gym', nameEn: 'Gym', icon: '🏋🏾', g: ['#94a3b8', '#0f172a'], C: Gym },
   { id: 'wekeza', name: 'Wekeza', nameEn: 'Invest', icon: '📈', g: ['#4ade80', '#15803d'], C: Wekeza },
   { id: 'kampuni', name: 'Kampuni', nameEn: 'Company', icon: '🏢', g: ['#93c5fd', '#1e40af'], C: Kampuni },
   { id: 'maduka', name: 'Maduka', nameEn: 'Shops', icon: '🛍️', g: ['#fda4af', '#e11d48'], C: Maduka },

@@ -185,6 +185,8 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
   busyRef.current = me.busy && me.busy.endsAt > Date.now() - 2000 ? me.busy : null;
   const energyRef = useRef(me.needs?.energy ?? 50);
   energyRef.current = me.needs?.energy ?? 50;
+  const fitRef = useRef(0);
+  fitRef.current = me.fitness || 0;
   const healthRef = useRef(100);
   healthRef.current = me.health ?? 100;
   const seen = useRef(local.teleported);
@@ -329,7 +331,9 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
     local.running = running;
     if (moving) {
       const tired = (energyRef.current < 12 ? 0.6 : 1) * (injured ? 0.55 : 1);
-      const speed = (running ? RUN_SPEED : WALK_SPEED) * speedMult * tired * Math.min(1, manual ? len : 1);
+      // Fit players are quicker on foot (up to +12% at 100 fitness).
+      const fit = vehicle ? 1 : 1 + Math.min(100, fitRef.current) * 0.0012;
+      const speed = (running ? RUN_SPEED : WALK_SPEED) * speedMult * tired * fit * Math.min(1, manual ? len : 1);
       const step = Math.min(speed * dt, manual ? Infinity : len);
       const nx = local.x + (dx / len) * step;
       const nz = local.z + (dz / len) * step;

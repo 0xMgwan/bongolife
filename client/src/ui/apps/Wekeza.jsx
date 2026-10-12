@@ -77,6 +77,7 @@ export function Wekeza({ back, close, open }) {
               <small>{L('Thamani', 'Worth')} {fmtTsh(p.value)} · <span className={p.gain >= 0 ? 'green' : 'red'}>{sign(p.gain)}</span></small>
               <small>{p.building && buildingById[p.building] ? loc(buildingById[p.building]) + ' · ' : ''}{L(`Imepanda +${fmtShort(p.grewWeek)} wiki hii`, `Grew +${fmtShort(p.grewWeek)} this week`)}</small>
             </div>
+            <button className="btn btn-green btn-sm" style={{ marginRight: 6 }} onClick={() => { close?.(); useStore.setState({ phone: null, sheet: { type: 'plot', id: p.id } }); }}>🏗️ {p.building ? L('Boresha', 'Upgrade') : L('Jenga', 'Build')}</button>
             <button className="btn btn-ghost btn-sm" onClick={() => act(`/invest/plots/${p.id}/sell`,
               { icon: '🏷️', title: L(`Uza ${p.name}?`, `Sell ${p.name}?`), text: L(`Utapata ${fmtTsh(Math.round(p.value * (1 - d.fees.agent)))} baada ya dalali (${d.fees.agent * 100}%).${p.building ? ' Nyumba iliyojengwa inauzwa pamoja.' : ''}`, `You'll get ${fmtTsh(Math.round(p.value * (1 - d.fees.agent)))} after the agent (${d.fees.agent * 100}%).${p.building ? ' The house on it is sold too.' : ''}`), ok: L('Uza', 'Sell'), danger: true },
               (r) => L(`🏷️ Umeuza kwa ${fmtTsh(r.got)}`, `🏷️ Sold for ${fmtTsh(r.got)}`))}>{L('Uza', 'Sell')}</button>

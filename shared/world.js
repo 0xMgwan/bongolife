@@ -1488,6 +1488,47 @@ export const AFYA = {
   ],
   pharmacyCooldownMs: 10 * 60_000,
 };
+// ---------------------------------------------------------------- Gym (fitness)
+// Fitness 0–100: workouts raise it, it slips if you stop training, and fit players move faster.
+export const GYM = {
+  places: ['gym', 'zn-hotel', 'ar-hotel'], // where gym workouts count (Mlimani gym + hotel gyms)
+  memberships: [
+    { id: 'day', emoji: '🎟️', name: 'Pasi ya siku', nameEn: 'Day pass', price: 5_000, days: 1, gain: 0 },
+    { id: 'month', emoji: '💪', name: 'Uanachama wa mwezi', nameEn: 'Monthly membership', price: 80_000, days: 30, gain: 0 },
+    { id: 'elite', emoji: '👑', name: 'Elite (sauna + bwawa)', nameEn: 'Elite (sauna + pool)', price: 300_000, days: 30, gain: 0.25, elite: true },
+  ],
+  workouts: [
+    { id: 'home', emoji: '🏠', name: 'Mazoezi ya nyumbani', nameEn: 'Home workout', secs: 30, energy: -8, fitness: 0.6, health: 2, effects: { fun: 2 }, home: true,
+      moves: [['Push-ups x10', 'Push-ups x10'], ['Squats x15', 'Squats x15'], ['Plank sekunde 30', '30-second plank']] },
+    { id: 'cardio', emoji: '🏃🏾', name: 'Cardio (treadmill)', nameEn: 'Cardio (treadmill)', secs: 40, energy: -12, fitness: 1.4, health: 4, effects: { fun: 3 },
+      moves: [['Joto: tembea haraka', 'Warm-up: brisk walk'], ['Kimbia vipindi', 'Running intervals'], ['Poa: tembea', 'Cool-down walk']] },
+    { id: 'strength', emoji: '🏋🏾', name: 'Vyuma (nguvu)', nameEn: 'Strength (weights)', secs: 45, energy: -14, fitness: 1.6, health: 3, effects: { fun: 2 },
+      moves: [['Bench press 3x10', 'Bench press 3x10'], ['Deadlift 3x8', 'Deadlift 3x8'], ['Bicep curls 3x12', 'Bicep curls 3x12']] },
+    { id: 'hiit', emoji: '🔥', name: 'HIIT', nameEn: 'HIIT', secs: 35, energy: -16, fitness: 1.8, health: 4, effects: { fun: 3 },
+      moves: [['Burpees', 'Burpees'], ['Mountain climbers', 'Mountain climbers'], ['Jump squats', 'Jump squats'], ['Pumzika', 'Rest']] },
+    { id: 'yoga', emoji: '🧘🏾', name: 'Yoga', nameEn: 'Yoga', secs: 40, energy: -4, fitness: 0.9, health: 5, effects: { fun: 4, energy: 0 },
+      moves: [['Salamu ya jua', 'Sun salutation'], ['Mkao wa shujaa', 'Warrior pose'], ['Pumua kwa kina', 'Deep breathing']] },
+    { id: 'boxing', emoji: '🥊', name: 'Ndondi', nameEn: 'Boxing', secs: 40, energy: -15, fitness: 1.7, health: 3, effects: { fun: 5 },
+      moves: [['Jab-cross', 'Jab-cross'], ['Ngumi za begi', 'Heavy bag'], ['Kuruka kamba', 'Skipping rope']] },
+    { id: 'swim', emoji: '🏊🏾', name: 'Kuogelea (Elite)', nameEn: 'Swimming (Elite)', secs: 40, energy: -10, fitness: 1.5, health: 5, effects: { fun: 4, hygiene: 10 }, elite: true,
+      moves: [['Freestyle mizunguko 4', 'Freestyle x4 lengths'], ['Breaststroke', 'Breaststroke'], ['Sauna', 'Sauna']] },
+  ],
+  cooldownMs: 8 * 60_000,
+  decayPerDay: 1.5, // fitness lost per day without training
+  trainerBonus: 0.5, // +50% gains while you have a trainer
+  trainerTogether: 0.25, // extra when your player-trainer is in the gym with you
+  trainerCut: 0.1, // the gym keeps 10% of player-trainer fees
+  trainerMinFitness: 50,
+  trainerPrice: [20_000, 2_000_000],
+  npcTrainers: [
+    { id: 'baraka', name: 'Coach Baraka', emoji: '🏋🏾‍♂️', focus: ['Nguvu na misuli', 'Strength & muscle'], price: 150_000 },
+    { id: 'zuhura', name: 'Coach Zuhura', emoji: '🧘🏾‍♀️', focus: ['Yoga na cardio', 'Yoga & cardio'], price: 120_000 },
+    { id: 'mo', name: 'Coach Mo "Simba"', emoji: '🥊', focus: ['Ndondi na HIIT', 'Boxing & HIIT'], price: 200_000 },
+  ],
+};
+export const gymWorkoutById = Object.fromEntries(GYM.workouts.map((w) => [w.id, w]));
+export const fitnessLabel = (f) => (f >= 85 ? ['Mwanamichezo 🏆', 'Athlete 🏆'] : f >= 65 ? ['Fiti sana 💪', 'Very fit 💪'] : f >= 40 ? ['Fiti 🙂', 'Fit 🙂'] : ['Anza mazoezi 🛋️', 'Couch mode 🛋️']);
+
 // ---------------------------------------------------------------- lifts
 // Seats for passengers when you give someone a lift (driver not counted).
 export function liftSeats(model) {

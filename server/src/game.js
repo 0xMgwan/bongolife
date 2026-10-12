@@ -7,6 +7,7 @@ import {
 } from '../../shared/world.js';
 import * as hiring from './hiring.js';
 import * as health from './health.js';
+import * as gymMod from './gym.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
 
 export function liveEvent() {
@@ -109,6 +110,7 @@ export function playerState(userId) {
     x,
     z,
     mood: moodOf(u.needs),
+    fitness: gymMod.fitnessOf(userId),
     vehicles: q.vehicles.all(userId),
     plots: q.plotsOf.all(userId),
     businesses: q.bizOf.all(userId),
