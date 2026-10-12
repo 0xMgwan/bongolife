@@ -23,6 +23,7 @@ import { HiringPop } from './apps/Ajira.jsx';
 import { PushPrompt } from './PushPrompt.jsx';
 import { WelcomeFlow, RadioPill } from './Welcome.jsx';
 import { VoiceBar } from './VoiceBar.jsx';
+import { IncomingCall, CallBar } from './Calls.jsx';
 import { startBuild } from './BuildBar.jsx';
 import { MentionText, MentionSuggest } from './Mentions.jsx';
 
@@ -902,6 +903,8 @@ export function HUD() {
       {!riding && <HiringPop />}
       <PushPrompt />
       <WelcomeFlow />
+      <CallBar />
+      <IncomingCall />
       {!riding && <RadioPill />}
       {scene && scene.placeId && !['flight', 'heli', 'road', 'ferry', 'safari'].includes(scene.key) && <VoiceBar room={scene.placeId} />}
       {!shop && !riding && !clean && (

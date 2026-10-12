@@ -1717,3 +1717,22 @@ html, body { background: #1e2a47; }
 .voice-bar .vb-wait { background: none; color: #6b655b; font-weight: 600; }
 .voice-bar button { border: 2px solid var(--ink-hard); border-radius: 999px; padding: 4px 10px; font-weight: 800; font-size: 12px; background: #fff; }
 .voice-bar .vb-leave { background: #dc2626; color: #fff; }
+/* Calls */
+.call-in { position: absolute; inset: 0; z-index: 70; background: rgba(10,10,10,.82); backdrop-filter: blur(8px); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; text-align: center; padding: 24px; animation: fadein .2s; }
+.call-in .ci-face { width: 110px; height: 110px; border-radius: 50%; background: var(--gold); border: 3px solid #fff; display: grid; place-items: center; font-size: 64px; animation: ring-pulse 1.4s infinite; }
+@keyframes ring-pulse { 0% { box-shadow: 0 0 0 0 rgba(245,184,0,.7); } 100% { box-shadow: 0 0 0 26px rgba(245,184,0,0); } }
+.call-in b { font-family: var(--display); font-stretch: 78%; font-weight: 900; font-size: 32px; margin-top: 14px; text-transform: uppercase; }
+.call-in span { color: #e5e7eb; font-weight: 600; margin-top: 4px; }
+.ci-btn { width: 72px; height: 72px; border-radius: 50%; font-size: 30px; border: 3px solid #fff; }
+.ci-btn.yes { background: #16a34a; animation: nudge 1s infinite; }
+.ci-btn.no { background: #dc2626; }
+.call-bar { position: absolute; left: 50%; transform: translateX(-50%); top: calc(132px + var(--safe-top)); z-index: 18; display: flex; align-items: center; gap: 6px; background: #052e16; color: #fff; border: 2px solid var(--ink-hard); box-shadow: 2px 2px 0 #22c55e; border-radius: 999px; padding: 5px 6px 5px 10px; max-width: calc(100vw - 20px); overflow-x: auto; font-weight: 800; font-size: 12.5px; white-space: nowrap; }
+.call-bar span { padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.12); }
+.call-bar span.talk { box-shadow: 0 0 0 2px #22c55e, 0 0 10px rgba(34,197,94,.7); }
+.call-bar span.dim { opacity: .65; }
+.call-bar .cb-ic { background: none; font-size: 16px; }
+.call-bar button { border: 2px solid #fff; color: #fff; border-radius: 999px; padding: 4px 10px; font-weight: 800; font-size: 12px; }
+.call-bar .vb-leave { background: #dc2626; border-color: #dc2626; }
+.pick-row { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1.5px solid #e2d9c5; }
+.pick-row input { width: 20px; height: 20px; accent-color: var(--gold); }
+.voice-bar span.dim { opacity: .6; }

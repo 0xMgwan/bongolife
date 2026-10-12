@@ -1,7 +1,7 @@
 // Live room bar: join the voice chat of the venue you're in, see who's talking, mute, leave.
 import { useEffect } from 'react';
 import { useStore } from '../store.js';
-import { joinVoice, leaveVoice, toggleMute, pollVoice } from '../voice.js';
+import { joinVoice, leaveVoice, toggleMute, pollVoice, resumeAudio } from '../voice.js';
 import { L } from '../i18n.js';
 
 export function VoiceBar({ room }) {
@@ -9,8 +9,9 @@ export function VoiceBar({ room }) {
   const toast = useStore((s) => s.toast);
   useEffect(() => { pollVoice(); }, [room]);
   // Leaving the room ends the call.
-  useEffect(() => () => { if (useStore.getState().voice?.on) leaveVoice(); }, [room]);
+  useEffect(() => () => { const st = useStore.getState().voice; if (st?.on && st.kind === 'room') leaveVoice(); }, [room]);
   const live = v.room === room ? v.count || 0 : 0;
+  if (v.on && v.kind === 'call') return null; // you're on a call; the call bar shows instead
   if (!v.on) {
     return (
       <button className="voice-join" onClick={async () => {
@@ -26,7 +27,8 @@ export function VoiceBar({ room }) {
   return (
     <div className="voice-bar">
       <span className={`vb-me ${v.meSpeaking && !v.muted ? 'talk' : ''}`}>{v.muted ? '🔇' : '🎙️'} {L('Wewe', 'You')}</span>
-      {(v.peers || []).map((p) => <span key={p.id} className={`vb-p ${p.speaking ? 'talk' : ''}`}>@{p.username}</span>)}
+      {(v.peers || []).map((p) => <span key={p.id} className={`vb-p ${p.speaking ? 'talk' : ''} ${p.state !== 'connected' ? 'dim' : ''}`}>@{p.username}{p.state === 'failed' ? ' ⚠️' : p.state !== 'connected' ? ' …' : ''}</span>)}
+      {v.needTap && <button onClick={resumeAudio}>🔊 {L('Gusa kusikia', 'Tap to hear')}</button>}
       {!(v.peers || []).length && <span className="vb-wait">{L('Unasubiri wengine…', 'Waiting for others…')}</span>}
       <button onClick={toggleMute}>{v.muted ? L('Washa mic', 'Unmute') : L('Zima mic', 'Mute')}</button>
       <button className="vb-leave" onClick={leaveVoice}>{L('Toka', 'Leave')}</button>

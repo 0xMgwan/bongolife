@@ -7,6 +7,7 @@ import {
 import { useStore } from '../store.js';
 import { api } from '../api.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
+import { callFriends } from './Calls.jsx';
 import { AvatarPreview } from './Creator.jsx';
 import { sfx } from '../audio.js';
 import { setInside, remotes, local } from '../net.js';
@@ -390,6 +391,9 @@ function PlayerSheet({ username, onClose }) {
         <button className="btn btn-white grow" style={{ border: '1px solid var(--line)' }} onClick={() => run('/contacts', { method: 'POST', body: { username: p.username } }).then((r) => r && toast(r.find((c) => c.username === p.username)?.mutual ? L(`🤝 Sasa wewe na @${p.username} ni marafiki!`, `🤝 You and @${p.username} are now friends!`) : L(`📨 Ombi la urafiki limetumwa kwa @${p.username}`, `📨 Friend request sent to @${p.username}`)))}>➕ {L('Rafiki', 'Add friend')}</button>
         <button className="btn btn-white grow" style={{ border: '1px solid var(--line)' }} onClick={() => openPhone('pesa', { send: p.username })}>💸 {L('Tuma pesa', 'Send money')}</button>
       </div>
+      {p.friend && !blocked && (
+        <button className="btn btn-dark btn-block" style={{ marginTop: 8 }} onClick={() => { callFriends([p.username]); onClose(); }}>📞 {p.online ? L('Piga simu', 'Call') : L('Piga simu (hayupo online)', 'Call (offline)')}</button>
+      )}
       {p.online && !blocked && (
         <div className="row" style={{ marginTop: 8, gap: 8 }}>
           <button className="btn btn-dark grow" onClick={() => inviteHome(p.username)}>🏠 {L('Mwalike kwako', 'Invite home')}</button>

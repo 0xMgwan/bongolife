@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { callFriends, GroupCallButton } from '../Calls.jsx';
 import { useStore } from '../../store.js';
 import { api } from '../../api.js';
 import { remotes } from '../../net.js';
@@ -39,6 +40,7 @@ export function Contacts({ back, open }) {
           <input className="field" style={{ padding: '11px 16px' }} placeholder={L('@username ya kuongeza', '@username to add')} value={name} onChange={(e) => setName(e.target.value)} autoCapitalize="none" />
           <button className="btn btn-green btn-sm">＋ {L('Ongeza', 'Add')}</button>
         </form>
+        {list?.some((x) => x.mutual) && <div className="row" style={{ marginBottom: 10 }}><GroupCallButton /></div>}
         <div className="box" style={{ padding: '4px 12px' }}>
           {list === null && <div className="small muted" style={{ padding: 12 }}>{L('Inapakia…', 'Loading…')}</div>}
           {list?.length === 0 && <div className="small muted" style={{ padding: 12 }}>{L('Bado huna anwani. Ongeza washkaji wako!', 'No contacts yet. Add your friends!')}</div>}
@@ -50,6 +52,7 @@ export function Contacts({ back, open }) {
                 <div className="small muted">@{c.username} · {c.mutual ? L('rafiki', 'friend') + ' · ' : ''}{c.online ? L('yuko online', 'online') : 'offline'}</div>
               </div>
               {c.online && <button className="round" style={{ width: 36, height: 36, fontSize: 15 }} onClick={() => inviteHome(c.username)} aria-label={L('Mwalike nyumbani', 'Invite home')}>🏠</button>}
+              {c.mutual && <button className="round" style={{ width: 36, height: 36, fontSize: 15 }} onClick={() => callFriends([c.username])} aria-label={L('Piga simu', 'Call')}>📞</button>}
               <button className="round" style={{ width: 36, height: 36, fontSize: 15 }} onClick={() => open('dm', c.username)} aria-label={L('Ujumbe', 'Message')}>💬</button>
               <button className="round" style={{ width: 36, height: 36, fontSize: 15 }} onClick={() => open('pesa', { send: c.username })} aria-label={L('Tuma pesa', 'Send money')}>💸</button>
               <button className="round" style={{ width: 36, height: 36, fontSize: 13 }} onClick={() => remove(c.username)} aria-label={L('Ondoa', 'Remove')}>✕</button>

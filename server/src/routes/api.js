@@ -811,6 +811,8 @@ api.get('/players/:username', (req, res) => {
     id: u.id, username: u.username, name: u.name, appearance: u.appearance, trait: u.trait, fame: u.fame, elimu: u.elimu,
     since: u.createdAt, online: online.has(u.id), plots, businesses: biz, vehicles, netWorth: game.netWorth(u.id), jobXp: u.jobXp,
     love: love.publicStatus(u.id),
+    // Mutual contacts = friends (needed for calls).
+    friend: !!db.prepare('SELECT 1 FROM contacts x JOIN contacts y ON y.user_id = x.contact_id AND y.contact_id = x.user_id WHERE x.user_id = ? AND x.contact_id = ?').get(req.user.id, u.id),
   });
 });
 api.get('/leaderboard', (_req, res) => res.json(game.leaderboard()));
