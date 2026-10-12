@@ -21,7 +21,7 @@ export function setCityNight(v) {
   }
 }
 export const cityNight = night;
-const track = (mat, kind, base, extra = {}) => { glowMats.add({ mat, kind, base, ...extra }); return mat; };
+export const track = (mat, kind, base, extra = {}) => { glowMats.add({ mat, kind, base, ...extra }); return mat; };
 
 // ----------------------------------------------------------------- facades
 function canvas(w, h, draw) {

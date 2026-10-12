@@ -9,6 +9,7 @@ import {
 import { mat, geo, emojiTexture, labelTexture, bubbleTexture, windowTexture, adTexture, mapLabelTexture } from './textures.js';
 import { Vehicle, Boat, Plane, Car } from './Vehicle.jsx';
 import { Avatar } from './Avatar.jsx';
+import { DetailedDistricts, zoneOf, ZONES } from './Districts.jsx';
 import { houseMat, towerGlowMat, fluffyCrown, Streets, RoofTanks, LedScreens, StreetNames, shopGlassMat, neonMat } from './CityDecor.jsx';
 import { L, loc } from '../i18n.js';
 import { trafficCars, local } from '../net.js';
@@ -391,7 +392,8 @@ function muralMat(i) {
 }
 const muralGeo = new THREE.PlaneGeometry(1, 1);
 const Murals = memo(function Murals() {
-  const { houses } = useFiller();
+  const { houses: all } = useFiller();
+  const houses = useMemo(() => all.filter((h) => !zoneOf(h.x, h.z)), [all]);
   const items = useMemo(() => {
     const out = [];
     let n = 0;
@@ -440,8 +442,48 @@ function RouteBoard({ i }) {
   );
 }
 
+/** Dense, regular lots for the detailed districts (city blocks between the roads, around plots and places). */
+function zoneLots() {
+  const r = rng(77);
+  const out = [];
+  const spec = { kariakoo: { step: 8.4, s: [6.4, 7.4], fill: 0.95 }, posta: { step: 10, s: [6.5, 8.5], fill: 0.9 }, masaki: { step: 9.5, s: [6, 7.4], fill: 0.85 } };
+  for (const [zone, Z] of Object.entries(ZONES)) {
+    const sp = spec[zone];
+    for (let x = Z.x1 + sp.step / 2; x <= Z.x2; x += sp.step)
+      for (let z = Z.z1 + sp.step / 2; z <= Z.z2; z += sp.step) {
+        if (r() > sp.fill) continue;
+        const w = sp.s[0] + r() * (sp.s[1] - sp.s[0]);
+        const d = sp.s[0] + r() * (sp.s[1] - sp.s[0]);
+        const half = Math.max(w, d) / 2;
+        const ok = !isReserved(x, z, half + 0.6) && !onRoad(x, z, half + 0.9) && ![[1, 1], [1, -1], [-1, 1], [-1, -1]].some(([a, b]) => isWater(x + a * half, z + b * half));
+        if (!ok) continue;
+        out.push({ x, z, w, d, tower: zone === 'posta' && r() < 0.72, h: 14 + r() * 28 });
+      }
+  }
+  return out;
+}
+
+/** Rotation that turns a building's front (+z) towards its nearest road. */
+function faceOf(x, z) {
+  let best = null;
+  for (const [x1, z1, x2, z2] of ROADS) {
+    const horiz = z1 === z2;
+    const inside = horiz ? x > Math.min(x1, x2) - 4 && x < Math.max(x1, x2) + 4 : z > Math.min(z1, z2) - 4 && z < Math.max(z1, z2) + 4;
+    if (!inside) continue;
+    const dd = horiz ? z1 - z : x1 - x;
+    if (!best || Math.abs(dd) < Math.abs(best.dd)) best = { horiz, dd };
+  }
+  if (!best) return 0;
+  return best.horiz ? (best.dd > 0 ? 0 : Math.PI) : best.dd > 0 ? Math.PI / 2 : -Math.PI / 2;
+}
+
 const Filler = memo(function Filler() {
-  const { houses, towers, trees, palms } = useFiller();
+  const all = useFiller();
+  const { trees, palms } = all;
+  // Posta, Kariakoo and Masaki get detailed, hand-shaped buildings instead of plain boxes.
+  const houses = useMemo(() => all.houses.filter((h) => !zoneOf(h.x, h.z)), [all]);
+  const towers = useMemo(() => all.towers.filter((h) => !zoneOf(h.x, h.z)), [all]);
+  const detailed = useMemo(() => zoneLots(), []);
   const flat = useMemo(() => houses.filter((h) => !h.pitched), [houses]);
   const pitched = useMemo(() => houses.filter((h) => h.pitched), [houses]);
   return (
@@ -451,6 +493,7 @@ const Filler = memo(function Filler() {
       <Instanced items={pitched} geometry={unitBox} material={roofMat} transform={(h) => ({ pos: [h.x, h.h, h.z], scale: [h.w + 0.7, 0.18, h.d + 0.7], color: h.rc })} />
       <Instanced items={pitched} geometry={hipRoofGeo} material={roofMat} transform={(h) => ({ pos: [h.x, h.h + 0.18, h.z], scale: [h.w * 1.12, Math.max(1.1, Math.min(h.w, h.d) * 0.36), h.d * 1.12], color: h.rc })} />
       <RoofTanks houses={flat} />
+      <DetailedDistricts items={detailed} faceOf={faceOf} />
       <Instanced items={towers} geometry={unitBox} material={towerGlowMat} transform={(h) => ({ pos: [h.x, 0, h.z], scale: [h.w, h.h, h.d], color: h.c })} />
       <Instanced items={towers} geometry={unitBox} material={roofMat} transform={(h) => ({ pos: [h.x, h.h, h.z], scale: [h.w + 0.3, 0.5, h.d + 0.3], color: '#64748b' })} />
       <LedScreens towers={towers} />
@@ -711,7 +754,7 @@ function LandmarkModel({ l }) {
         {Array.from({ length: 8 }, (_, i) => {
           const z = (i < 4 ? -1 : 1) * (4 + (i % 4) * 4);
           const len = Math.hypot(z, 15.5);
-          return <mesh key={i} geometry={geo('box', 0.08, len, 0.08)} material={mat('#facc15')} position={[0, 2.3 + 15.5 / 2, z / 2]} rotation={[Math.atan2(z, 15.5), 0, 0]} />;
+          return <mesh key={i} geometry={geo('box', 0.04, len, 0.04)} material={mat('#f1f5f9')} position={[0, 2.3 + 15.5 / 2, z / 2]} rotation={[Math.atan2(z, 15.5), 0, 0]} />;
         })}
       </group>
     );
