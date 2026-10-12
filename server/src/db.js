@@ -298,6 +298,8 @@ if (!db.prepare('SELECT COUNT(*) n FROM phone_apps').get().n) {
 export const DEFAULT_SETTINGS = {
   // The latest "what's new" (set when an update email goes out): { title, titleEn, body, bodyEn, at }
   latestUpdate: null,
+  // The station the in-game radio starts on: { name, url, city, tag } (an https stream link).
+  radioDefault: { name: '102.9 FM', url: '', city: 'Dar es Salaam', tag: ['Kituo chetu', 'Our station'] },
   maintenance: false,
   signupsEnabled: true,
   topupsEnabled: true,

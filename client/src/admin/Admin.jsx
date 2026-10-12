@@ -465,6 +465,14 @@ function Settings() {
           {flag('adsEnabled', 'New ads', 'Allow players to buy billboard ads.')}
         </div>
         <div className="panel">
+          <h2>📻 Default radio station</h2>
+          <div className="small muted" style={{ marginBottom: 6 }}>Plays first when players open the game. Paste the station's https stream link (e.g. from its website's “Listen live” player).</div>
+          <input className="in" style={{ width: '100%', marginBottom: 6 }} placeholder="Name, e.g. 102.9 FM" value={form.radioDefault?.name || ''} onChange={(e) => setForm({ ...form, radioDefault: { ...(form.radioDefault || {}), name: e.target.value } })} maxLength={40} />
+          <input className="in" style={{ width: '100%', marginBottom: 6 }} placeholder="https://… stream link" value={form.radioDefault?.url || ''} onChange={(e) => setForm({ ...form, radioDefault: { ...(form.radioDefault || {}), url: e.target.value } })} />
+          <div className="toolbar" style={{ marginBottom: 16 }}>
+            <button className="btn btn-green" onClick={() => save({ radioDefault: form.radioDefault })}>Save station</button>
+            {form.radioDefault?.url && <audio controls src={form.radioDefault.url} style={{ height: 34 }} />}
+          </div>
           <h2>Announcement banner</h2>
           <div className="small muted" style={{ marginBottom: 8 }}>Shown on the landing page and in-game HUD until cleared.</div>
           <input className="in" style={{ width: '100%', marginBottom: 8 }} placeholder="Kiswahili" value={form.announcement} onChange={(e) => setForm({ ...form, announcement: e.target.value })} maxLength={160} />

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { cityAt } from '@shared/world.js';
 import { useStore } from '../store.js';
-import { api } from '../api.js';
+import { api, token } from '../api.js';
 import { L, isEn } from '../i18n.js';
 import { playRadio, radioAutoOn, toggleRadio, nextStation } from '../radio.js';
 
@@ -104,6 +104,24 @@ async function speak({ sw, en }) {
   });
 }
 
+/** The welcome read by a real-sounding Tanzanian voice from our server; false if it isn't set up. */
+async function naturalVoice(city, returning) {
+  try {
+    const lang = isEn() ? 'en' : 'sw';
+    const r = await fetch(`/api/voice/welcome?lang=${lang}&city=${city}&returning=${returning ? 1 : 0}`, { headers: { authorization: `Bearer ${token.get()}` } });
+    if (!r.ok) return false;
+    const url = URL.createObjectURL(await r.blob());
+    const a = new Audio(url);
+    a.volume = 1;
+    await a.play();
+    await new Promise((resolve) => { a.onended = resolve; a.onerror = resolve; setTimeout(resolve, 25_000); });
+    URL.revokeObjectURL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function script(me, w, news, returning) {
   const first = String(me.name || me.username).split(' ')[0];
   const sw = `${returning ? 'Karibu tena' : 'Karibu'} Bongo, ${first}! Leo ${w.name} kuna ${w.text[0].toLowerCase()}, nyuzi ${w.temp}. ${news ? `Habari mpya: ${news.title}. ` : ''}Furahia mtaa — redio inaanza sasa.`;
@@ -124,7 +142,7 @@ async function greet(me, returning) {
   setW({ card: { w, news, first: String(me.name || me.username).split(' ')[0] } });
   const go = async () => {
     setW({ needTap: false });
-    if (voiceOn()) await speak(text);
+    if (voiceOn()) await (await naturalVoice(city, returning)) || (await speak(text));
     if (radioAutoOn()) playRadio();
   };
   // Browsers only allow sound after the player has touched the page.

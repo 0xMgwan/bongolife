@@ -36,7 +36,13 @@ const FALLBACK = [
   { name: 'Radio Uhai', city: 'Tabora', tag: ['Injili', 'Gospel'], url: 'https://s2.citrus3.com:8050/stream' },
 ];
 let radioCache = null;
-export async function radioStations() {
+/** The station list, with the admin-chosen default station first (when it has a stream link). */
+export async function radioStations(def) {
+  const list = await directory();
+  if (!def?.url) return list;
+  return [{ ...def, isDefault: true }, ...list.filter((s) => s.url !== def.url)];
+}
+async function directory() {
   if (radioCache && Date.now() - radioCache.at < 6 * 3600_000) return radioCache.list;
   try {
     const r = await fetch('https://de1.api.radio-browser.info/json/stations/bycountrycodeexact/TZ?hidebroken=true&order=clickcount&reverse=true&limit=80', { headers: { 'User-Agent': 'BongoLife/1.0 (+https://www.bongolife.app)' }, signal: AbortSignal.timeout(8000) });
@@ -61,4 +67,37 @@ export async function radioStations() {
   } catch {
     return radioCache?.list || FALLBACK;
   }
+}
+
+// ------------------------------------------------------------------ welcome voice
+// Natural Tanzanian voices from Azure Speech (free tier: 0.5M characters/month):
+//   AZURE_SPEECH_KEY, AZURE_SPEECH_REGION (e.g. westeurope). Optional AZURE_VOICE_SW / AZURE_VOICE_EN.
+// Without a key the client falls back to the device's own voice.
+export const voiceReady = () => !!(process.env.AZURE_SPEECH_KEY && process.env.AZURE_SPEECH_REGION);
+const VOICE = { sw: () => process.env.AZURE_VOICE_SW || 'sw-TZ-RehemaNeural', en: () => process.env.AZURE_VOICE_EN || 'en-TZ-ImaniNeural' };
+const xml = (s) => String(s).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
+
+export function welcomeText({ name, w, news, returning, lang }) {
+  const first = String(name || '').split(' ')[0] || 'Mbongo';
+  if (lang === 'en') return `${returning ? 'Welcome back' : 'Welcome'} to Bongo, ${first}! Today in ${w.name} it's ${w.text[1].toLowerCase()}, ${w.temp} degrees. ${news ? `What's new: ${news.titleEn || news.title}. ` : ''}Enjoy the streets — the radio's coming on now.`;
+  return `${returning ? 'Karibu tena' : 'Karibu'} Bongo, ${first}! Leo ${w.name} kuna ${w.text[0].toLowerCase()}, nyuzi ${w.temp}. ${news ? `Habari mpya: ${news.title}. ` : ''}Furahia mtaa — redio inaanza sasa.`;
+}
+
+const ttsCache = new Map(); // text -> Buffer (small LRU)
+export async function speak(text, lang) {
+  if (ttsCache.has(text)) return ttsCache.get(text);
+  const voice = VOICE[lang === 'en' ? 'en' : 'sw']();
+  const locale = voice.split('-').slice(0, 2).join('-');
+  const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${locale}"><voice name="${voice}"><mstts:express-as style="cheerful"><prosody rate="-4%">${xml(text)}</prosody></mstts:express-as></voice></speak>`;
+  const r = await fetch(`https://${process.env.AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`, {
+    method: 'POST',
+    headers: { 'Ocp-Apim-Subscription-Key': process.env.AZURE_SPEECH_KEY, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3', 'User-Agent': 'BongoLife' },
+    body: ssml,
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!r.ok) throw new Error(`tts ${r.status}`);
+  const buf = Buffer.from(await r.arrayBuffer());
+  ttsCache.set(text, buf);
+  if (ttsCache.size > 200) ttsCache.delete(ttsCache.keys().next().value);
+  return buf;
 }

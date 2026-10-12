@@ -2,7 +2,7 @@
 // you move. Glowing hotspots (dance floor, bar, stalls…) can be tapped to do something on the spot.
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { VIBES } from '@shared/world.js';
+import { VIBES, WORK } from '@shared/world.js';
 import { input, sendScenePos } from '../net.js';
 import { useStore } from '../store.js';
 import { emojiTexture, labelTexture } from './textures.js';
@@ -138,8 +138,13 @@ export function FloorCatcher({ sceneKey }) {
 }
 
 /** Tappable hotspots: walk over, then do the thing. */
-export function Hotspots({ sceneKey }) {
+// During a work shift the WorkPanel tasks become places in the room: walk over to do them.
+const WORK_SPOTS = { work: [-3, 1.2], hustle: [3, 1.2], chat: [-4.8, 5], boss: [4.8, -3], nap: [5.2, 5.2] };
+
+export function Hotspots({ sceneKey, myBusy }) {
   const run = useStore((s) => s.run);
+  const working = myBusy?.kind === 'job' && myBusy.endsAt > Date.now();
+  if (working) return <WorkSpots />;
   const spots = spotsFor(sceneKey);
   const doVibe = async (id) => {
     const v = VIBES[id];
@@ -159,10 +164,31 @@ export function Hotspots({ sceneKey }) {
   }} />);
 }
 
-function Hotspot({ x, z, id, onGo }) {
-  const v = VIBES[id];
+function WorkSpots() {
+  const run = useStore((s) => s.run);
+  const doTask = async (t) => {
+    const r = await run('/act/task', { method: 'POST', body: { task: t.id } });
+    if (!r) return;
+    sfx(t.perf > 0 ? 'coin' : 'pop');
+    sceneMe.pose = t.id === 'nap' ? 'sleep' : t.id === 'chat' ? 'cheer' : t.id === 'boss' ? 'pose' : 'type';
+    sceneMe.poseUntil = performance.now() + 3500;
+    sendScenePos({ x: sceneMe.x, z: sceneMe.z, ry: sceneMe.ry, m: false, mode: sceneMe.pose });
+  };
+  return WORK.tasks.map((t) => {
+    const [x, z] = WORK_SPOTS[t.id] || [0, 3];
+    const v = { emoji: t.emoji, name: [t.name, t.nameEn] };
+    return <Hotspot key={t.id} x={x} z={z} v={v} onGo={() => {
+      sceneMe.active = true;
+      sceneMe.target = [x, z + 0.9];
+      sceneMe.arrive = () => { sceneMe.ry = Math.PI; doTask(t); };
+    }} />;
+  });
+}
+
+function Hotspot({ x, z, id, onGo, v: given }) {
+  const v = given || VIBES[id];
   const tex = useMemo(() => emojiTexture(v.emoji, { ring: '#f5b800' }), [v.emoji]);
-  const lab = useMemo(() => labelTexture(L(v.name[0], v.name[1]) + (v.cost ? ` · ${v.cost / 1000}k` : ''), { size: 40, bold: 800, bg: 'rgba(20,20,20,.88)', fg: '#ffd23f' }), [v]);
+  const lab = useMemo(() => labelTexture(L(v.name[0], v.name[1]) + (v.cost ? ` · ${v.cost / 1000}k` : ''), { size: 40, bold: 800, bg: 'rgba(20,20,20,.88)', fg: '#ffd23f' }), [v.emoji, v.name[0], v.name[1], v.cost]); // eslint-disable-line react-hooks/exhaustive-deps
   const ref = useRef();
   const ring = useRef();
   useFrame(({ clock }) => {

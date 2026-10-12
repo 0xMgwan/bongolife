@@ -242,6 +242,8 @@ function DayNight({ interior }) {
     hemi.current.intensity = 1.0 + day * 0.6;
     sun.current.intensity = 0.55 + day * 1.2;
     hemi.current.color.set(day > 0.3 ? '#ffffff' : '#9fb4ff');
+    // Golden hour: a warm, low sun at dawn and dusk.
+    sun.current.color.set('#fff6e8').lerp(GOLDEN, Math.min(1, duskness));
     setCityNight(Math.min(1, Math.max(0, 1 - day * 1.25)));
     const ang = ((h - 6) / 12) * Math.PI;
     sun.current.position.set(Math.cos(ang) * 80, 40 + Math.max(0, Math.sin(ang)) * 80, 40);
@@ -253,6 +255,8 @@ function DayNight({ interior }) {
     </>
   );
 }
+
+const GOLDEN = new THREE.Color('#ffb36b');
 
 export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPlot, onBillboard, onGround, onPlayer, quality = 'auto', scene = null }) {
   const sceneCfg = scene && SCENES[scene.key];

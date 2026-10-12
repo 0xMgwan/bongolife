@@ -269,7 +269,9 @@ function RoadLine({ cx, cz, len, horiz }) {
 }
 
 // -------------------------------------------------- procedural filler
-const HOUSE_COLORS = ['#fde047', '#fb923c', '#f472b6', '#60a5fa', '#4ade80', '#c084fc', '#f87171', '#2dd4bf', '#ffffff', '#facc15', '#38bdf8', '#a3e635'];
+// Realistic Dar walls: whites, creams and soft pastels; roofs in terracotta, blue and green iron sheets.
+const HOUSE_COLORS = ['#f5f0e6', '#efe6d2', '#e8dcc4', '#f3e9dc', '#dfe7ee', '#f0e0c8', '#e9e4d8', '#f6efe1', '#fde7c8', '#e3f0e6', '#f7dfd4', '#fff7e8'];
+const ROOF_COLORS = ['#b5452f', '#c2553a', '#9a3b2c', '#a14b33', '#3b6ea5', '#2f7d5b', '#b85c38', '#8f3a2a', '#c96a45', '#4b5563'];
 const TOWER_COLORS = ['#cbd5e1', '#bae6fd', '#e2e8f0', '#a5b4fc', '#94a3b8'];
 
 function useFiller() {
@@ -299,7 +301,7 @@ function useFiller() {
           const w = 4 + r() * 3;
           const d = 4 + r() * 3;
           if (posta && r() < 0.7) towers.push({ x: jx, z: jz, w: w + 1, d: d + 1, h: 10 + r() * 22, c: TOWER_COLORS[Math.floor(r() * TOWER_COLORS.length)] });
-          else houses.push({ x: jx, z: jz, w, d, h: dense ? 3 + r() * 6 : 2.4 + r() * 2.6, c: HOUSE_COLORS[Math.floor(r() * HOUSE_COLORS.length)] });
+          else houses.push({ x: jx, z: jz, w, d, h: dense ? 3 + r() * 6 : 2.4 + r() * 2.6, c: HOUSE_COLORS[Math.floor(r() * HOUSE_COLORS.length)], pitched: r() < (dense ? 0.3 : 0.75), rc: ROOF_COLORS[Math.floor(r() * ROOF_COLORS.length)] });
         } else if (p < 0.8 && !isReserved(jx, jz, 4)) (jx > 60 || jz > 54 ? palms : trees).push([jx, jz, 0.7 + r() * 0.5]);
       }
     return { houses, towers, trees, palms };
@@ -337,6 +339,8 @@ const unitBox = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
 const whiteMat = new THREE.MeshLambertMaterial({ color: '#ffffff' });
 const towerMat = new THREE.MeshLambertMaterial({ color: '#ffffff' });
 const roofMat = new THREE.MeshLambertMaterial({ color: '#ffffff' });
+// Four-sided hip roof (the classic Dar iron-sheet roof), base at y=0, apex at y=1.
+const hipRoofGeo = new THREE.ConeGeometry(Math.SQRT1_2, 1, 4).rotateY(Math.PI / 4).translate(0, 0.5, 0);
 const trunkGeo = new THREE.CylinderGeometry(0.18, 0.25, 1, 6).translate(0, 0.5, 0);
 const crownGeo = new THREE.IcosahedronGeometry(1, 0);
 const palmLeafGeo = new THREE.ConeGeometry(1.8, 0.8, 7).translate(0, -0.2, 0);
@@ -438,11 +442,15 @@ function RouteBoard({ i }) {
 
 const Filler = memo(function Filler() {
   const { houses, towers, trees, palms } = useFiller();
+  const flat = useMemo(() => houses.filter((h) => !h.pitched), [houses]);
+  const pitched = useMemo(() => houses.filter((h) => h.pitched), [houses]);
   return (
     <group>
       <Instanced items={houses} geometry={unitBox} material={houseMat} transform={(h) => ({ pos: [h.x, 0, h.z], scale: [h.w, h.h, h.d], color: h.c })} />
-      <Instanced items={houses} geometry={unitBox} material={roofMat} transform={(h) => ({ pos: [h.x, h.h, h.z], scale: [h.w + 0.4, 0.35, h.d + 0.4], color: '#9ca3af' })} />
-      <RoofTanks houses={houses} />
+      <Instanced items={flat} geometry={unitBox} material={roofMat} transform={(h) => ({ pos: [h.x, h.h, h.z], scale: [h.w + 0.4, 0.35, h.d + 0.4], color: '#9ca3af' })} />
+      <Instanced items={pitched} geometry={unitBox} material={roofMat} transform={(h) => ({ pos: [h.x, h.h, h.z], scale: [h.w + 0.7, 0.18, h.d + 0.7], color: h.rc })} />
+      <Instanced items={pitched} geometry={hipRoofGeo} material={roofMat} transform={(h) => ({ pos: [h.x, h.h + 0.18, h.z], scale: [h.w * 1.12, Math.max(1.1, Math.min(h.w, h.d) * 0.36), h.d * 1.12], color: h.rc })} />
+      <RoofTanks houses={flat} />
       <Instanced items={towers} geometry={unitBox} material={towerGlowMat} transform={(h) => ({ pos: [h.x, 0, h.z], scale: [h.w, h.h, h.d], color: h.c })} />
       <Instanced items={towers} geometry={unitBox} material={roofMat} transform={(h) => ({ pos: [h.x, h.h, h.z], scale: [h.w + 0.3, 0.5, h.d + 0.3], color: '#64748b' })} />
       <LedScreens towers={towers} />

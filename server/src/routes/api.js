@@ -162,7 +162,7 @@ const unsubscribe = (req, res) => {
 api.get('/push/key', (_req, res) => res.json({ key: pushPublicKey() }));
 // Live weather per city, the Tanzanian radio stations, and the latest "what's new".
 api.get('/weather', wrap(async (req, res) => { res.set('Cache-Control', 'public, max-age=300'); res.json(await live.weather(str(req.query.city, 5) || 'dar')); }));
-api.get('/radio', wrap(async (_req, res) => { res.set('Cache-Control', 'public, max-age=3600'); res.json(await live.radioStations()); }));
+api.get('/radio', wrap(async (_req, res) => { res.set('Cache-Control', 'public, max-age=3600'); res.json(await live.radioStations(getSettings().radioDefault)); }));
 api.get('/news', (_req, res) => res.json({ latest: getSettings().latestUpdate || null }));
 api.get('/unsubscribe', unsubscribe);
 api.post('/unsubscribe', unsubscribe);
@@ -179,6 +179,18 @@ api.use((req, _res, next) => {
 });
 
 // Push notifications: save / remove this device, or send a test.
+// Spoken welcome in a natural Tanzanian voice (Azure). 404 = not configured → the app uses the device voice.
+api.get('/voice/welcome', rateLimit('voice-welcome', 6, 60 * 60_000), wrap(async (req, res) => {
+  if (!live.voiceReady()) return res.status(404).json({ error: 'voice off' });
+  const lang = req.query.lang === 'en' ? 'en' : 'sw';
+  const city = ['dar', 'znz', 'aru'].includes(req.query.city) ? req.query.city : 'dar';
+  const w = await live.weather(city);
+  const latest = getSettings().latestUpdate;
+  const news = latest && Date.now() - latest.at < 14 * 86_400_000 ? latest : null;
+  const text = live.welcomeText({ name: req.user.name, w, news, returning: req.query.returning === '1', lang });
+  const audio = await live.speak(text, lang);
+  res.set('Content-Type', 'audio/mpeg').set('Cache-Control', 'private, max-age=600').send(audio);
+}));
 api.post('/me/push', (req, res) => {
   try { res.json({ ok: true, devices: pushSubscribe(req.user.id, req.body.subscription) }); }
   catch { throw new GameError(['Arifa hazikuweza kuwashwa kwenye kifaa hiki.', "Couldn't turn on notifications on this device."]); }

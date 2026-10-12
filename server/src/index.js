@@ -15,6 +15,7 @@ import { online, setIO, publicPlayer, broadcast, emitTo } from './presence.js';
 import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef } from './game.js';
 import { settleElection, currentMayor } from './election.js';
 import { isBlocked } from './crime.js';
+import { attachVoice, leaveVoice } from './voice.js';
 import { addInvite, canVisit } from './social.js';
 import * as chat from './chat.js';
 
@@ -187,6 +188,7 @@ io.on('connection', (socket) => {
     }
     if (inside !== 'home') leaveHome();
     if (p.inside === inside) return;
+    leaveVoice(uid); // walking out of a room ends its voice chat
     p.inside = inside;
     broadcast('player:inside', { id: uid, inside });
   });
@@ -283,6 +285,8 @@ io.on('connection', (socket) => {
   registerInteractions(socket, uid);
 
   // Walking around inside a venue/room: relay your spot to everyone in the same room.
+  attachVoice(socket, uid, p);
+
   socket.on('scene:pos', (d = {}) => {
     const x = Number(d.x), z = Number(d.z), ry = Number(d.ry);
     if (![x, z, ry].every(Number.isFinite) || Math.abs(x) > 40 || Math.abs(z) > 40) return;
@@ -305,6 +309,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    if (p.sockets.size <= 1) leaveVoice(uid);
     if (p.home) socket.to(`home:${p.home}`).emit('home:leave', { id: uid });
     p.sockets.delete(socket.id);
     if (p.sockets.size) return;

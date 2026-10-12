@@ -506,6 +506,11 @@ admin.put('/settings', (req, res) => {
   const patch = {};
   for (const k of ['maintenance', 'signupsEnabled', 'topupsEnabled', 'chatEnabled', 'adsEnabled']) if (k in req.body) patch[k] = !!req.body[k];
   for (const k of ['announcement', 'announcementEn', 'eventOverride', 'eventOverrideEn']) if (k in req.body) patch[k] = str(req.body[k], 160);
+  if (req.body.radioDefault) {
+    const url = str(req.body.radioDefault.url, 400);
+    if (url && !/^https:\/\//.test(url)) throw new GameError('The radio stream link must start with https:// (browsers block http streams).');
+    patch.radioDefault = { name: str(req.body.radioDefault.name, 40) || 'Radio', url, city: str(req.body.radioDefault.city, 40) || 'Dar es Salaam', tag: ['Kituo chetu', 'Our station'] };
+  }
   const after = setSettings(patch);
   if ('announcement' in patch || 'announcementEn' in patch) broadcast('announcement', publicAnnouncement());
   if ('eventOverride' in patch || 'eventOverrideEn' in patch) worldChanged();

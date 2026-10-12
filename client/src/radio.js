@@ -16,6 +16,7 @@ const publish = (patch) => useStore.setState((s) => ({ radio: { ...(s.radio || {
 export async function loadStations() {
   if (stations.length) return stations;
   stations = await api('/radio').catch(() => []);
+  // Start on the player's last station, else the game's default station (first in the list).
   const last = store.get('bl_radio');
   idx = Math.max(0, stations.findIndex((s) => s.name === last));
   publish({ stations, current: stations[idx] || null });

@@ -2819,7 +2819,7 @@ export function ActivityScene({ scene, placeId, me, myBusy }) {
     <group position={SCENE_ORIGIN}>
       <Shadows light={[4, 12, 8]} size={16} intensity={cfg.dark ? 0.25 : 0.6}>
       <cfg.C me={me} myBusy={myBusy} people={people} placeId={placeId} />
-      {walkable && <><SceneWalker sceneKey={scene} /><FloorCatcher sceneKey={scene} /><Hotspots sceneKey={scene} /></>}
+      {walkable && <><SceneWalker sceneKey={scene} /><FloorCatcher sceneKey={scene} /><Hotspots sceneKey={scene} myBusy={myBusy} /></>}
       {party && scene !== 'flight' && <PartyDecor event={party} banner={PARTY_BANNER[scene]} />}
       <MoneyRain placeId={placeId} />
       </Shadows>
