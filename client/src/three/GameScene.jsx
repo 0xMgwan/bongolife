@@ -6,6 +6,7 @@ import { City } from './City.jsx';
 import { LocalPlayer, RemotePlayers, ParkedCar } from './Players.jsx';
 import { AudioDriver } from './AudioDriver.jsx';
 import { ActivityScene, SCENES, SCENE_ORIGIN, sceneCam, sceneFocus } from './Scenes.jsx';
+import { Effects } from './Effects.jsx';
 import { setCityNight } from './CityDecor.jsx';
 import { HomeScene, HOME_ORIGIN } from './HomeScene.jsx';
 import { livePartyAt } from '../ui/events.js';
@@ -283,6 +284,7 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
       }}
     >
       <Suspense fallback={null}>
+        {!lowEnd && mode !== 'map' && <Effects interiorDark={!!sceneCfg?.dark} />}
         <DayNight interior={sceneCfg ? { bg: sceneCfg.bg, light: sceneCfg.light } : null} />
         <CameraRig mode={mode} sceneKey={sceneCfg ? scene.key : null} />
         <group visible={!sceneCfg && !home}>

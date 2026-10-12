@@ -1709,7 +1709,7 @@ html, body { background: #1e2a47; }
 .kb-open .chat-dock { bottom: calc(var(--kb) + 10px); z-index: 60; transition: bottom .18s ease-out; }
 .kb-open .dm-pop { top: auto; bottom: calc(var(--kb) + 10px); z-index: 60; }
 /* Live voice rooms */
-.voice-join, .voice-bar { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(178px + var(--safe-bottom)); z-index: 12; border: 2px solid var(--ink-hard); box-shadow: 2px 2px 0 var(--ink-hard); border-radius: 999px; font-weight: 800; font-size: 13px; white-space: nowrap; }
+.voice-join, .voice-bar { position: absolute; left: 50%; transform: translateX(-50%); top: calc(132px + var(--safe-top)); z-index: 12; border: 2px solid var(--ink-hard); box-shadow: 2px 2px 0 var(--ink-hard); border-radius: 999px; font-weight: 800; font-size: 13px; white-space: nowrap; }
 .voice-join { background: #dc2626; color: #fff; padding: 8px 14px; }
 .voice-bar { background: var(--paper); display: flex; align-items: center; gap: 6px; padding: 5px 6px 5px 10px; max-width: calc(100vw - 20px); overflow-x: auto; }
 .voice-bar span { padding: 4px 8px; border-radius: 999px; background: #efe8d8; font-size: 12.5px; transition: box-shadow .15s; }

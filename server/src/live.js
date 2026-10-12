@@ -40,7 +40,7 @@ let radioCache = null;
 export async function radioStations(def) {
   const list = await directory();
   if (!def?.url) return list;
-  return [{ ...def, isDefault: true }, ...list.filter((s) => s.url !== def.url)];
+  return [{ ...def, tag: Array.isArray(def.tag) ? def.tag : ['Kituo chetu', 'Our station'], isDefault: true }, ...list.filter((s) => s.url !== def.url)];
 }
 async function directory() {
   if (radioCache && Date.now() - radioCache.at < 6 * 3600_000) return radioCache.list;
