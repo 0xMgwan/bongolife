@@ -9,7 +9,7 @@ import {
 import { mat, geo, emojiTexture, labelTexture, bubbleTexture, windowTexture, adTexture, mapLabelTexture } from './textures.js';
 import { Vehicle, Boat, Plane, Car } from './Vehicle.jsx';
 import { Avatar } from './Avatar.jsx';
-import { DetailedDistricts, zoneOf, ZONES } from './Districts.jsx';
+import { DetailedDistricts, zoneOf, ZONES, districtGlass, facadeBox } from './Districts.jsx';
 import { houseMat, towerGlowMat, fluffyCrown, Streets, RoofTanks, LedScreens, StreetNames, shopGlassMat, neonMat } from './CityDecor.jsx';
 import { L, loc } from '../i18n.js';
 import { trafficCars, local } from '../net.js';
@@ -202,13 +202,16 @@ const CityFiller = memo(function CityFiller({ city }) {
       }
     return { houses, trees, palms };
   }, [city]);
-  const { houses, trees, palms } = data;
+  const { trees, palms } = data;
+  const houses = useMemo(() => data.houses.filter((h) => !zoneOf(h.x, h.z)), [data]);
+  const stone = useMemo(() => (city.id === 'znz' ? zoneLots(['stonetown']) : []), [city.id]);
   const acacia = city.id === 'aru';
   return (
     <group>
       <Instanced items={houses} geometry={unitBox} material={houseMat} transform={(h) => ({ pos: [h.x, 0, h.z], scale: [h.w, h.h, h.d], color: h.c })} />
       <Instanced items={houses} geometry={unitBox} material={roofMat} transform={(h) => ({ pos: [h.x, h.h, h.z], scale: [h.w + 0.4, 0.35, h.d + 0.4], color: city.id === 'znz' ? '#b45309' : '#9ca3af' })} />
       <RoofTanks houses={houses} />
+      {stone.length > 0 && <DetailedDistricts items={stone} faceOf={faceOf} />}
       <Instanced items={trees} geometry={trunkGeo} material={mat('#7c5a3a')} transform={([x, z, s]) => ({ pos: [x, 0, z], scale: [s, (acacia ? 2.4 : 1.6) * s, s] })} />
       <Instanced items={trees} geometry={acacia ? crownGeo : fluffyCrown} material={mat(acacia ? '#4d7c0f' : '#3f9b4a')} transform={([x, z, s]) => ({ pos: [x, (acacia ? 3.6 : 2.2) * s, z], scale: acacia ? [2.4 * s, 0.5 * s, 2.4 * s] : [1.5 * s, 1.4 * s, 1.5 * s] })} />
       <Instanced items={palms} geometry={trunkGeo} material={mat('#9a7b4f')} transform={([x, z, s]) => ({ pos: [x, 0, z], scale: [s * 0.8, 4.5 * s, s * 0.8] })} />
@@ -443,11 +446,15 @@ function RouteBoard({ i }) {
 }
 
 /** Dense, regular lots for the detailed districts (city blocks between the roads, around plots and places). */
-function zoneLots() {
+function zoneLots(only = null) {
   const r = rng(77);
   const out = [];
-  const spec = { kariakoo: { step: 8.4, s: [6.4, 7.4], fill: 0.95 }, posta: { step: 10, s: [6.5, 8.5], fill: 0.9 }, masaki: { step: 9.5, s: [6, 7.4], fill: 0.85 } };
+  const spec = {
+    kariakoo: { step: 8.4, s: [6.4, 7.4], fill: 0.95 }, posta: { step: 10, s: [6.5, 8.5], fill: 0.9 }, masaki: { step: 9.5, s: [6, 7.4], fill: 0.85 },
+    sinza: { step: 8.6, s: [5.6, 7], fill: 0.9 }, mlimani: { step: 9.5, s: [6.5, 8], fill: 0.8 }, kigamboni: { step: 10, s: [6, 7.5], fill: 0.7 }, stonetown: { step: 7.2, s: [5.6, 6.6], fill: 0.95 },
+  };
   for (const [zone, Z] of Object.entries(ZONES)) {
+    if (only && !only.includes(zone)) continue;
     const sp = spec[zone];
     for (let x = Z.x1 + sp.step / 2; x <= Z.x2; x += sp.step)
       for (let z = Z.z1 + sp.step / 2; z <= Z.z2; z += sp.step) {
@@ -483,7 +490,7 @@ const Filler = memo(function Filler() {
   // Posta, Kariakoo and Masaki get detailed, hand-shaped buildings instead of plain boxes.
   const houses = useMemo(() => all.houses.filter((h) => !zoneOf(h.x, h.z)), [all]);
   const towers = useMemo(() => all.towers.filter((h) => !zoneOf(h.x, h.z)), [all]);
-  const detailed = useMemo(() => zoneLots(), []);
+  const detailed = useMemo(() => zoneLots(['kariakoo', 'posta', 'masaki', 'sinza', 'mlimani', 'kigamboni']), []);
   const flat = useMemo(() => houses.filter((h) => !h.pitched), [houses]);
   const pitched = useMemo(() => houses.filter((h) => h.pitched), [houses]);
   return (
@@ -715,7 +722,7 @@ function LandmarkModel({ l }) {
       <group>
         {[-1, 1].map((s) => (
           <group key={s} position={[s * w * 0.27, 0, 0]}>
-            <mesh geometry={unitBox} material={towerGlowMat} position={[0, 0, 0]} scale={[w * 0.4, 34, d * 0.8]} />
+            <mesh geometry={facadeBox(w * 0.4, 34, d * 0.8)} material={districtGlass()} castShadow />
             <Box w={w * 0.42} h={0.6} d={d * 0.82} color="#0f172a" y={34} />
             <mesh geometry={geo('cyl', 0.08, 0.08, 6, 5)} material={mat('#e5e7eb')} position={[0, 37, 0]} />
           </group>
@@ -724,7 +731,7 @@ function LandmarkModel({ l }) {
     );
     case 'tower': return (
       <group>
-        <mesh geometry={unitBox} material={towerGlowMat} scale={[w * 0.8, 44, d * 0.8]} />
+        <mesh geometry={facadeBox(w * 0.8, 44, d * 0.8)} material={districtGlass()} castShadow />
         <mesh geometry={geo('cyl', w * 0.35, w * 0.45, 3, 8)} material={GLASS_B} position={[0, 45.5, 0]} />
         <mesh geometry={geo('cyl', 0.1, 0.1, 8, 5)} material={mat('#e5e7eb')} position={[0, 51, 0]} />
       </group>
@@ -746,16 +753,24 @@ function LandmarkModel({ l }) {
       </group>
     );
     case 'bridge': return (
-      <group position={[0, 0, 0]}>
-        <Box w={4} h={0.6} d={40} color="#e5e7eb" y={1.6} />
-        <Box w={4.2} h={0.3} d={40} color="#374151" y={2.2} />
-        {[-12, 12].map((z) => <mesh key={z} geometry={geo('cyl', 0.5, 0.6, 2.2, 8)} material={mat('#9ca3af')} position={[0, 0.5, z]} />)}
-        <Box w={1.2} h={18} d={1.2} color="#f8fafc" />
-        {Array.from({ length: 8 }, (_, i) => {
-          const z = (i < 4 ? -1 : 1) * (4 + (i % 4) * 4);
-          const len = Math.hypot(z, 15.5);
-          return <mesh key={i} geometry={geo('box', 0.04, len, 0.04)} material={mat('#f1f5f9')} position={[0, 2.3 + 15.5 / 2, z / 2]} rotation={[Math.atan2(z, 15.5), 0, 0]} />;
-        })}
+      <group>
+        <Box w={5} h={0.7} d={40} color="#e7e5e4" y={1.5} />
+        <Box w={5.2} h={0.25} d={40} color="#374151" y={2.2} />
+        {[-2.45, 2.45].map((x) => <Box key={x} w={0.18} h={0.6} d={40} color="#f8fafc" x={x} y={2.45} />)}
+        {Array.from({ length: 9 }, (_, i) => <mesh key={'p' + i} geometry={geo('cyl', 0.45, 0.55, 1.6, 8)} material={mat('#d6d3d1')} position={[0, 0.6, -18 + i * 4.5]} />)}
+        {Array.from({ length: 10 }, (_, i) => <mesh key={'l' + i} geometry={geo('sphere', 0.14, 6, 4)} material={neonMat('#fde68a')} position={[i % 2 ? 2.4 : -2.4, 3.2, -18 + i * 4]} />)}
+        {[-10, 10].map((pz) => (
+          <group key={pz} position={[0, 2.2, pz]}>
+            {[-1, 1].map((s) => <mesh key={s} geometry={geo('box', 0.55, 13.5, 0.7)} material={mat('#f5e6f0')} position={[s * 1.6, 6.5, 0]} rotation={[0, 0, s * 0.2]} />)}
+            <mesh geometry={geo('box', 1.2, 1.4, 0.9)} material={mat('#f5e6f0')} position={[0, 13.2, 0]} />
+            <mesh geometry={geo('cone', 0.5, 1.4, 6)} material={neonMat('#a78bfa')} position={[0, 14.6, 0]} />
+            {Array.from({ length: 10 }, (_, i) => {
+              const dz = (i < 5 ? -1 : 1) * (2 + (i % 5) * 1.8);
+              const len = Math.hypot(dz, 12);
+              return [-1, 1].map((s) => <mesh key={i + '' + s} geometry={geo('box', 0.035, len, 0.035)} material={mat('#f1f5f9')} position={[s * 1.1, 0.3 + 6, dz / 2]} rotation={[Math.atan2(dz, 12), 0, 0]} />);
+            })}
+          </group>
+        ))}
       </group>
     );
     case 'flyover': return (

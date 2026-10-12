@@ -12,6 +12,10 @@ export const ZONES = {
   posta: { x1: 32, x2: 74, z1: -44, z2: 34 },
   kariakoo: { x1: -20, x2: 30, z1: -44, z2: 34 },
   masaki: { x1: 95, x2: 132, z1: -120, z2: -48 },
+  sinza: { x1: -115, x2: -56, z1: -100, z2: -48 },
+  mlimani: { x1: -54, x2: -18, z1: -100, z2: -50 },
+  kigamboni: { x1: 40, x2: 85, z1: 58, z2: 140 },
+  stonetown: { x1: 1531, x2: 1588, z1: -70, z2: 55 },
 };
 export const zoneOf = (x, z) => Object.keys(ZONES).find((k) => { const r = ZONES[k]; return x >= r.x1 && x <= r.x2 && z >= r.z1 && z <= r.z2; }) || null;
 
@@ -40,6 +44,17 @@ function facade(kind) {
       x.fillStyle = g; x.fillRect(0, 0, W, H);
       x.fillStyle = '#2b3a46'; x.fillRect(0, 0, W, 6); x.fillRect(0, 0, 5, H);
       x.fillStyle = 'rgba(255,255,255,.18)'; x.beginPath(); x.moveTo(20, H); x.lineTo(70, 0); x.lineTo(90, 0); x.lineTo(40, H); x.fill();
+    } else if (kind === 'stone') {
+      x.fillStyle = 'rgba(120,90,50,.10)'; for (let i = 0; i < 40; i++) x.fillRect(Math.random() * W, Math.random() * H, 8 + Math.random() * 20, 3 + Math.random() * 10);
+      x.fillStyle = '#e7dcc4'; x.beginPath(); x.moveTo(30, 108); x.lineTo(30, 52); x.arc(64, 52, 34, Math.PI, 0); x.lineTo(98, 108); x.fill();
+      x.fillStyle = '#2f5d4e'; x.fillRect(36, 54, 26, 52); x.fillRect(66, 54, 26, 52);
+      x.strokeStyle = 'rgba(0,0,0,.35)'; x.lineWidth = 2; for (let y = 58; y < 104; y += 6) { x.beginPath(); x.moveTo(38, y); x.lineTo(60, y); x.moveTo(68, y); x.lineTo(90, y); x.stroke(); }
+      x.fillStyle = '#40382e'; x.beginPath(); x.moveTo(36, 52); x.arc(64, 52, 28, Math.PI, 0); x.lineTo(92, 52); x.fill();
+    } else if (kind === 'zdoor') {
+      x.fillStyle = '#e9dfc8'; x.fillRect(0, 0, W, H);
+      x.fillStyle = '#5b3a1e'; x.fillRect(30, 18, 68, 110); x.fillStyle = '#3d2614'; x.fillRect(30, 18, 68, 12);
+      x.fillStyle = '#7a4f29'; x.fillRect(36, 34, 26, 90); x.fillRect(66, 34, 26, 90);
+      x.fillStyle = '#d4a017'; for (let y = 40; y < 120; y += 14) { x.beginPath(); x.arc(49, y, 2.2, 0, 7); x.arc(79, y, 2.2, 0, 7); x.fill(); }
     } else if (kind === 'colonial') {
       x.fillStyle = '#e9e2d0'; x.fillRect(0, H - 10, W, 10);
       x.fillStyle = '#d8cfb8'; x.beginPath(); x.moveTo(24, H - 14); x.lineTo(24, 46); x.arc(64, 46, 40, Math.PI, 0); x.lineTo(104, H - 14); x.fill();
@@ -117,6 +132,8 @@ const mats = () => (MATS ||= {
   commercial: facade('commercial'),
   glass: facade('glass'),
   colonial: facade('colonial'),
+  stone: facade('stone'),
+  zdoor: facade('zdoor'),
   shop: shopMat(),
   sign: signMat(),
   plain: new THREE.MeshLambertMaterial({ vertexColors: true }),
@@ -239,6 +256,62 @@ function build(b, parts) {
       const [sx, sz] = P(0, d / 2 + 1.15);
       push('sign', sign(sx, 3.1, sz, Math.min(w * 0.8, 5), 0.8, Math.floor(rnd() * 12), ry));
     }
+  } else if (zone === 'sinza' || zone === 'mlimani') {
+    // Mixed streets: bars, lodges and shops below, flats above; Mlimani a little taller and more office-like.
+    const tall = zone === 'mlimani';
+    const floors = (tall ? 3 : 1) + Math.floor(rnd() * (tall ? 6 : 4));
+    const fh = 3, gh = 3.4;
+    const wall = pick(tall ? WALLS.posta : WALLS.kariakoo);
+    const shop = rnd() < (tall ? 0.45 : 0.7);
+    if (shop) push('shop', box(x, 0, z, w, gh, d, '#ffffff', 4, gh, ry));
+    else push('residential', box(x, 0, z, w, gh, d, wall, 3, gh, ry));
+    push(tall && rnd() < 0.5 ? 'commercial' : 'residential', box(x, gh, z, w, floors * fh, d, wall, 3, fh, ry));
+    const top = gh + floors * fh;
+    if (shop) {
+      const [sx, sz] = P(0, d / 2 + 0.06);
+      push('sign', sign(sx, gh - 0.55, sz, Math.min(w * 0.9, 5.5), 1, Math.floor(rnd() * SIGNS.length), ry));
+      const [ax, az] = P(0, d / 2 + 0.7);
+      push('plain', box(ax, gh - 1.2, az, w * 0.95, 0.12, 1.4, pick(['#dc2626', '#16a34a', '#2563eb', '#f59e0b', '#7c3aed']), 0, 0, ry));
+    }
+    for (let f = 1; f <= floors; f++) {
+      if (rnd() < 0.55) continue;
+      const [bx, bz] = P(0, d / 2 + 0.45);
+      push('plain', box(bx, gh + (f - 1) * fh - 0.05, bz, w * 0.6, 0.14, 0.9, '#d6d3d1', 0, 0, ry));
+      const [rx, rz] = P(0, d / 2 + 0.88);
+      push('plain', box(rx, gh + (f - 1) * fh + 0.1, rz, w * 0.6, 0.85, 0.05, '#57534e', 0, 0, ry));
+    }
+    if (!tall && rnd() < 0.45) push('plain', hipRoof(x, top, z, w * 1.12, d * 1.12, 1.4, pick(ROOF_TILES)));
+    else {
+      push('plain', box(x, top, z, w + 0.2, 0.5, d + 0.2, '#c8c1b3', 0, 0, ry));
+      push('plain', cyl(x + w * 0.2, top + 0.5, z - d * 0.2, 0.55, 1.2, pick(['#111827', '#1d4ed8'])));
+    }
+  } else if (zone === 'kigamboni') {
+    if (rnd() < 0.5) return build({ ...b, zone: 'masaki', villa: true }, parts);
+    // Low beach-side houses with tin hip roofs and a veranda.
+    const wall = pick(WALLS.masaki.concat(['#fde7c8', '#e3f0e6', '#f7dfd4']));
+    push('residential', box(x, 0, z, w, 3.2, d, wall, 3, 3.2, ry));
+    const [vx, vz] = P(0, d / 2 + 0.9);
+    push('plain', box(vx, 0, vz, w * 0.9, 0.2, 1.8, '#d6d3d1', 0, 0, ry));
+    for (const k of [-1, 1]) { const [px, pz] = P(k * w * 0.4, d / 2 + 1.6); push('plain', box(px, 0, pz, 0.2, 2.8, 0.2, '#f5f5f4', 0, 0, ry)); }
+    push('plain', hipRoof(x, 3.2, z + 0, w * 1.15, d * 1.3, 1.3, pick(['#8a8f96', '#9a4a2a', '#3b6ea5', '#b5452f'])));
+  } else if (zone === 'stonetown') {
+    // Coral-stone townhouses: carved doors, shuttered arches, wooden balconies, flat roofs.
+    const floors = 2 + Math.floor(rnd() * 3), fh = 3.3;
+    const wall = pick(['#efe3c8', '#e8d6b0', '#f4ead6', '#e2cfa8', '#f1e7d3', '#dcc9a6']);
+    push('zdoor', box(x, 0, z, w, fh, d, wall, 3.4, fh, ry));
+    push('stone', box(x, fh, z, w, (floors - 1) * fh, d, wall, 3, fh, ry));
+    const top = floors * fh;
+    if (rnd() < 0.7) {
+      const f = 1 + Math.floor(rnd() * (floors - 1));
+      const [bx, bz] = P(0, d / 2 + 0.55);
+      push('plain', box(bx, f * fh - 0.1, bz, w * 0.75, 0.16, 1.1, '#5b3a1e', 0, 0, ry));
+      const [rx, rz] = P(0, d / 2 + 1.05);
+      push('plain', box(rx, f * fh + 0.1, rz, w * 0.75, 1, 0.08, '#6b4423', 0, 0, ry));
+      const [cx, cz] = P(0, d / 2 + 0.55);
+      push('plain', box(cx, f * fh + 2.2, cz, w * 0.78, 0.12, 1.2, '#4a2f18', 0, 0, ry));
+    }
+    if (rnd() < 0.35) push('plain', hipRoof(x, top, z, w * 1.05, d * 1.05, 0.9, '#9a4a2a'));
+    else push('plain', box(x, top, z, w + 0.1, 0.55, d + 0.1, '#d9c7a1', 0, 0, ry));
   } else if (zone === 'masaki') {
     if (b.villa) {
       // walled compound: villa with tiled hip roof, garden, pool
@@ -279,7 +352,8 @@ export const DetailedDistricts = memo(function DetailedDistricts({ items, faceOf
       const b = { zone, x: it.x, z: it.z, face: faceOf(it.x, it.z) };
       if (zone === 'kariakoo') Object.assign(b, { w: it.w, d: it.d });
       else if (zone === 'posta') Object.assign(b, { w: it.w, d: it.d, tower: !!it.tower, h: it.h || 20 });
-      else Object.assign(b, { w: it.w - 1.6, d: it.d - 1.6, villa: rnd() < 0.55 });
+      else if (zone === 'masaki' || zone === 'kigamboni') Object.assign(b, { w: it.w - 1.6, d: it.d - 1.6, villa: rnd() < 0.55 });
+      else Object.assign(b, { w: it.w, d: it.d });
       build(b, parts);
     }
     const M = mats();
@@ -296,3 +370,12 @@ export const DetailedDistricts = memo(function DetailedDistricts({ items, faceOf
   }, [items, faceOf]);
   return meshes.map((m) => <mesh key={m.k} geometry={m.geometry} material={m.material} castShadow={m.k !== 'sign'} receiveShadow />);
 });
+
+/** The district glass, for landmark towers. */
+export const districtGlass = () => mats().glass;
+
+/** A facade box (bottom at y=0) for landmarks, with the window tile repeating per bay/floor. */
+export function facadeBox(w, h, d, bay = 2.6, floor = 3.4) {
+  const g = box(0, 0, 0, w, h, d, '#ffffff', bay, floor);
+  return g.index ? g.toNonIndexed() : g;
+}
