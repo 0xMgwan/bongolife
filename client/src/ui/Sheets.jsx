@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   adPriceTzs, NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
   outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
-  jobLocks,
+  jobLocks, HOUSE_UPGRADES, houseStats,
 } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
@@ -293,7 +293,53 @@ function PlotSheet({ id, onClose }) {
           })}
         </>
       )}
+      {mine && current && <HouseUpgrades id={id} b={current} up={st.up || {}} />}
     </Sheet>
+  );
+}
+
+/** Make your house bigger and nicer: storeys, features, paint. */
+function HouseUpgrades({ id, b, up }) {
+  const run = useStore((s) => s.run);
+  const me = useStore((s) => s.me);
+  const stats = houseStats(b, up);
+  const max = HOUSE_UPGRADES.maxFloors[b.id] ?? b.floors;
+  const floorCost = Math.round((b.price * HOUSE_UPGRADES.floorCostPct) / 1000) * 1000;
+  const have = new Set(up.features || []);
+  const go = (body, ok) => run(`/plots/${id}/upgrade`, { method: 'POST', body }).then((r) => r && useStore.getState().toast(ok));
+  return (
+    <>
+      <div className="section-t">{L('BORESHA NYUMBA', 'UPGRADE YOUR HOUSE')}</div>
+      <div className="small muted" style={{ marginBottom: 6 }}>🏠 {L(`Ghorofa ${stats.floors}/${max}`, `${stats.floors}/${max} storeys`)}{stats.incomePerHour ? ` · ${L('kodi', 'rent')} ${fmtTsh(stats.incomePerHour)}/${L('saa', 'hr')}` : ''} · ⚡ +{stats.energyBonus}</div>
+      <div className="item">
+        <span className="em">🏗️</span>
+        <div className="grow">
+          <div className="t">{L('Ongeza ghorofa', 'Add a storey')}</div>
+          <div className="s">{fmtTsh(floorCost)}{b.incomePerHour ? ` · ${L('kodi', 'rent')} +${HOUSE_UPGRADES.floorIncome * 100}%` : ` · ⚡ +${HOUSE_UPGRADES.floorEnergy}`}</div>
+        </div>
+        <button className="btn btn-green btn-sm" disabled={stats.floors >= max || me.money < floorCost} onClick={() => go({ kind: 'floor' }, L('🏗️ Ghorofa mpya imejengwa!', '🏗️ New storey built!'))}>{stats.floors >= max ? L('Imefika juu', 'Max') : L('Jenga', 'Build')}</button>
+      </div>
+      {HOUSE_UPGRADES.features.map((f) => {
+        const owned = have.has(f.id) || (f.id === 'pool' && b.pool);
+        return (
+          <div key={f.id} className="item">
+            <span className="em">{f.emoji}</span>
+            <div className="grow">
+              <div className="t">{L(f.name[0], f.name[1])}</div>
+              <div className="s">{fmtTsh(f.price)}{f.energy ? ` · ⚡ +${f.energy}` : ''}{f.income ? ` · ${L('kodi', 'rent')} +${f.income * 100}%` : ''}</div>
+            </div>
+            <button className="btn btn-green btn-sm" disabled={owned || me.money < f.price} onClick={() => go({ kind: 'feature', id: f.id }, `${f.emoji} ${L('Imeongezwa!', 'Added!')}`)}>{owned ? '✓' : L('Nunua', 'Buy')}</button>
+          </div>
+        );
+      })}
+      <div className="item">
+        <span className="em">🎨</span>
+        <div className="grow">
+          <div className="t">{L('Paka rangi upya', 'Repaint')} · {fmtTsh(HOUSE_UPGRADES.paintPrice)}</div>
+          <div className="swatches" style={{ marginTop: 6 }}>{HOUSE_UPGRADES.paints.map((c) => <button key={c} className={`swatch ${(up.color || b.color) === c ? 'on' : ''}`} style={{ background: c, width: 28, height: 28 }} onClick={() => go({ kind: 'paint', color: c }, L('🎨 Rangi mpya!', '🎨 Fresh paint!'))} aria-label={c} />)}</div>
+        </div>
+      </div>
+    </>
   );
 }
 

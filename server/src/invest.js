@@ -28,7 +28,10 @@ export function plotValue(row, t = now()) {
   const days = Math.max(0, (t - row.bought_at) / DAY);
   const land = plot.price * (1 + Math.min(INVEST.landGrowthCap, days * INVEST.landGrowthPerDay));
   const b = row.building && buildingById[row.building];
-  return Math.round(land + (b ? b.price * INVEST.buildingResale : 0));
+  // Upgrades (extra storeys, features) add what was spent on them.
+  let spent = 0;
+  try { spent = JSON.parse(row.upgrades || '{}').spent || 0; } catch {}
+  return Math.round(land + (b ? b.price * INVEST.buildingResale + spent * INVEST.buildingResale : 0));
 }
 
 export const buyPlotRemote = db.transaction((userId, plotId) => {

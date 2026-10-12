@@ -375,7 +375,10 @@ export const DetailedDistricts = memo(function DetailedDistricts({ items, faceOf
 export const districtGlass = () => mats().glass;
 
 /** A facade box (bottom at y=0) for landmarks, with the window tile repeating per bay/floor. */
-export function facadeBox(w, h, d, bay = 2.6, floor = 3.4) {
-  const g = box(0, 0, 0, w, h, d, '#ffffff', bay, floor);
+export function facadeBox(w, h, d, bay = 2.6, floor = 3.4, color = '#ffffff') {
+  const g = box(0, 0, 0, w, h, d, color, bay, floor);
   return g.index ? g.toNonIndexed() : g;
 }
+
+/** A district facade material by kind (residential, commercial, glass, colonial, stone). */
+export const districtMat = (kind) => mats()[kind];

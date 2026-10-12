@@ -265,6 +265,35 @@ export const BUILDINGS = [
   { id: 'hoteli', name: 'Hoteli ya Ufukweni', price: 320_000_000, incomePerHour: 1_300_000, energyBonus: 30, color: '#f0fdfa', floors: 4, pool: true },
 ];
 export const buildingById = Object.fromEntries(BUILDINGS.map((b) => [b.id, b]));
+// Upgrading a house you've built: extra storeys and features. Rentals earn +25% per extra storey.
+export const HOUSE_UPGRADES = {
+  maxFloors: { banda: 2, kisasa: 3, villa: 3, ghorofa: 6, hoteli: 4 },
+  floorCostPct: 0.35, // of the building's price, per storey
+  floorIncome: 0.25,
+  floorEnergy: 5,
+  features: [
+    { id: 'wall', emoji: '🧱', name: ['Ukuta wa uzio na geti', 'Compound wall & gate'], price: 1_500_000, value: 0.8 },
+    { id: 'garden', emoji: '🌳', name: ['Bustani na miti', 'Garden & trees'], price: 800_000, value: 0.8, energy: 3 },
+    { id: 'solar', emoji: '☀️', name: ['Sola juu ya paa', 'Rooftop solar'], price: 2_500_000, value: 0.8, income: 0.1 },
+    { id: 'garage', emoji: '🚗', name: ['Gereji', 'Garage'], price: 3_000_000, value: 0.8 },
+    { id: 'pool', emoji: '🏊', name: ['Bwawa la kuogelea', 'Swimming pool'], price: 6_000_000, value: 0.8, energy: 5 },
+    { id: 'terrace', emoji: '🌇', name: ['Terrace ya juu', 'Rooftop terrace'], price: 2_000_000, value: 0.8, energy: 2 },
+  ],
+  paintPrice: 300_000,
+  paints: ['#fef3c7', '#fde68a', '#fecaca', '#bfdbfe', '#bbf7d0', '#e9d5ff', '#fed7aa', '#f5f5f4', '#cbd5e1', '#99f6e4'],
+};
+export const houseFeatureById = Object.fromEntries(HOUSE_UPGRADES.features.map((f) => [f.id, f]));
+/** A built plot's numbers after upgrades: income per hour, energy bonus, floors. */
+export function houseStats(b, up = {}) {
+  const extra = up.floors || 0;
+  const feats = (up.features || []).map((id) => houseFeatureById[id]).filter(Boolean);
+  const incomeMult = 1 + extra * HOUSE_UPGRADES.floorIncome + feats.reduce((n, f) => n + (f.income || 0), 0);
+  return {
+    floors: b.floors + extra,
+    incomePerHour: Math.round((b.incomePerHour || 0) * incomeMult),
+    energyBonus: b.energyBonus + extra * HOUSE_UPGRADES.floorEnergy + feats.reduce((n, f) => n + (f.energy || 0), 0),
+  };
+}
 
 // ------------------------------------------------------------------ plots
 function plotGrid(prefix, area, xs, zs, price, size = 10) {

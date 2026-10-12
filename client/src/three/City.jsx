@@ -9,7 +9,7 @@ import {
 import { mat, geo, emojiTexture, labelTexture, bubbleTexture, windowTexture, adTexture, mapLabelTexture } from './textures.js';
 import { Vehicle, Boat, Plane, Car } from './Vehicle.jsx';
 import { Avatar } from './Avatar.jsx';
-import { DetailedDistricts, zoneOf, ZONES, districtGlass, facadeBox } from './Districts.jsx';
+import { DetailedDistricts, zoneOf, ZONES, districtGlass, facadeBox, districtMat } from './Districts.jsx';
 import { houseMat, towerGlowMat, fluffyCrown, Streets, RoofTanks, LedScreens, StreetNames, shopGlassMat, neonMat } from './CityDecor.jsx';
 import { L, loc } from '../i18n.js';
 import { trafficCars, local } from '../net.js';
@@ -1131,21 +1131,41 @@ const Places = memo(function Places({ onPlace, businesses, showLabels, mapMode }
 });
 
 // --------------------------------------------------------------- plots
-function House({ b, size }) {
+function House({ b, size, up = {} }) {
   const s = size * 0.62;
   const fh = 2.6;
-  const H = b.floors * fh;
+  const floors = b.floors + (up.floors || 0);
+  const H = floors * fh;
+  const color = up.color || b.color;
+  const f = new Set(up.features || []);
+  const pool = b.pool || f.has('pool');
+  // Rental blocks and hotels look like towers; homes stay homes however many storeys they get.
+  const tower = b.id === 'ghorofa' || b.id === 'hoteli';
   return (
     <group>
-      <Box w={s} h={H} d={s} m={b.floors > 2 ? towerFacade(b.color) : mat(b.color)} />
-      {b.floors <= 2 ? (
+      {tower ? <Box w={s} h={H} d={s} m={towerFacade(color)} /> : <mesh geometry={facadeBox(s, H, s, 2.6, fh, color)} material={districtMat('residential')} castShadow />}
+      {/* storey lines so added floors read clearly */}
+      {Array.from({ length: Math.max(0, floors - 1) }, (_, i) => <Box key={'fl' + i} w={s + 0.12} h={0.14} d={s + 0.12} color="#e7e5e4" y={(i + 1) * fh - 0.07} />)}
+      {f.has('wall') && [[0, -size / 2 + 0.3, size - 0.6, 0.3], [-size / 2 + 0.3, 0, 0.3, size - 0.6], [size / 2 - 0.3, 0, 0.3, size - 0.6], [-size * 0.3, size / 2 - 0.3, size * 0.38, 0.3], [size * 0.3, size / 2 - 0.3, size * 0.38, 0.3]].map(([x, z, w, d], i) => <Box key={'w' + i} w={w} h={1.6} d={d} color="#f1ece2" x={x} z={z} />)}
+      {f.has('wall') && <Box w={size * 0.22} h={1.4} d={0.15} color="#1f2937" z={size / 2 - 0.3} />}
+      {f.has('garden') && [[-1, 1], [1, 1], [-1, -1]].map(([sx, sz], i) => (
+        <group key={'g' + i} position={[sx * size * 0.36, 0, sz * size * 0.36]}>
+          <mesh geometry={geo('cyl', 0.12, 0.16, 1.4, 6)} material={mat('#7c5a3a')} position={[0, 0.7, 0]} />
+          <mesh geometry={geo('sphere', 0.8, 8, 6)} material={mat('#3f9b4a')} position={[0, 1.8, 0]} />
+        </group>
+      ))}
+      {f.has('garden') && <Box w={size * 0.9} h={0.04} d={size * 0.25} color="#7fb069" z={size * 0.33} y={0.08} />}
+      {f.has('garage') && <group position={[s / 2 + 1.4, 0, s / 4]}><Box w={2.6} h={2.2} d={3.2} color={color} /><Box w={2.8} h={0.2} d={3.4} color="#64748b" y={2.2} /><Box w={2} h={1.7} d={0.08} color="#9ca3af" z={1.62} /></group>}
+      {f.has('solar') && Array.from({ length: 4 }, (_, i) => <mesh key={'s' + i} geometry={geo('box', s * 0.36, 0.06, s * 0.2)} material={mat('#1e3a8a', { emissive: '#1d4ed8', emissiveIntensity: 0.15 })} position={[(i % 2 ? 1 : -1) * s * 0.2, H + (tower ? 0.6 : 0.7), (i < 2 ? -1 : 1) * s * 0.14]} rotation={[-0.25, 0, 0]} />)}
+      {f.has('terrace') && tower && <group position={[0, H + 0.5, 0]}><Box w={s * 0.3} h={0.05} d={s * 0.3} color="#a16207" x={-s * 0.2} /><mesh geometry={geo('cone', 0.9, 0.5, 8)} material={mat('#ef4444')} position={[s * 0.2, 1.8, 0]} /><mesh geometry={geo('cyl', 0.04, 0.04, 1.8, 5)} material={mat('#e5e7eb')} position={[s * 0.2, 0.9, 0]} /></group>}
+      {!tower ? (
         <mesh geometry={geo('cone', s * 0.78, 2.2, 4)} material={mat('#b45309')} position={[0, H + 1.1, 0]} rotation={[0, Math.PI / 4, 0]} />
       ) : (
         <Box w={s + 0.4} h={0.5} d={s + 0.4} color="#64748b" y={H} />
       )}
       <Box w={1.4} h={2.1} d={0.15} color="#7c2d12" z={s / 2} />
-      {b.pool && <Box w={s * 0.6} h={0.1} d={1.8} color="#38bdf8" z={s / 2 + 1.6} x={-0.5} y={0.05} />}
-      {b.floors <= 2 && <Box w={size - 0.6} h={0.9} d={0.25} color="#f8fafc" z={size / 2 - 0.3} />}
+      {pool && <Box w={s * 0.6} h={0.1} d={1.8} color="#38bdf8" z={s / 2 + 1.6} x={-0.5} y={0.05} />}
+      {!tower && !f.has('wall') && <Box w={size - 0.6} h={0.9} d={0.25} color="#f8fafc" z={size / 2 - 0.3} />}
     </group>
   );
 }
@@ -1166,7 +1186,7 @@ const Plots = memo(function Plots({ plots, onPlot, myUsername }) {
           <planeGeometry args={[p.size, p.size]} />
         </mesh>
         {b ? (
-          <House b={b} size={p.size} />
+          <House b={b} size={p.size} up={st.up} />
         ) : (
           <group>
             {[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz], i) => (
@@ -1176,7 +1196,7 @@ const Plots = memo(function Plots({ plots, onPlot, myUsername }) {
         )}
         <Marker
           emoji={b ? (mine ? '🏡' : '🏠') : st ? '🚧' : '🏷️'}
-          y={b ? b.floors * 2.6 + 4.5 : 3}
+          y={b ? (b.floors + (st?.up?.floors || 0)) * 2.6 + 4.5 : 3}
           scale={2.4}
           label={st ? `@${st.owner}` : `TSh ${fmtShort(p.price)}`}
           ring={mine ? '#f5b800' : undefined}

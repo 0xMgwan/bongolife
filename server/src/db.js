@@ -156,6 +156,7 @@ CREATE TABLE IF NOT EXISTS arrests (
 CREATE INDEX IF NOT EXISTS arrests_user ON arrests(user_id);
 `);
 addColumn('users', 'jail', 'TEXT');
+addColumn('plots', 'upgrades', 'TEXT'); // { floors, features[], color, spent }
 // Players can opt out of "what's new" emails (Settings, or the unsubscribe link in each email).
 addColumn('users', 'email_updates', 'INTEGER NOT NULL DEFAULT 1');
 addColumn('users', 'name_changed_at', 'INTEGER');

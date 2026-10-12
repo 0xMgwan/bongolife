@@ -3,7 +3,7 @@ import {
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST, industryById, COMPANY,
   furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
-  jobLocks, HIRING,
+  jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats,
 } from '../../shared/world.js';
 import * as hiring from './hiring.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
@@ -29,7 +29,7 @@ const q = {
   plot: db.prepare('SELECT * FROM plots WHERE id = ?'),
   insertPlot: db.prepare('INSERT INTO plots (id, owner_id, building, bought_at, last_collect) VALUES (?, ?, NULL, ?, ?)'),
   buildPlot: db.prepare('UPDATE plots SET building = ?, last_collect = ? WHERE id = ?'),
-  allPlots: db.prepare('SELECT p.id, p.building, u.username, u.name FROM plots p JOIN users u ON u.id = p.owner_id'),
+  allPlots: db.prepare('SELECT p.id, p.building, p.upgrades, u.username, u.name FROM plots p JOIN users u ON u.id = p.owner_id'),
   bizOf: db.prepare('SELECT * FROM businesses WHERE owner_id = ?'),
   biz: db.prepare('SELECT * FROM businesses WHERE id = ?'),
   insertBiz: db.prepare('INSERT INTO businesses (id, owner_id, bought_at, last_collect) VALUES (?, ?, ?, ?)'),
@@ -59,7 +59,8 @@ export function pendingIncome(userId, t = now()) {
   let total = 0;
   for (const p of q.plotsOf.all(userId)) {
     const b = p.building && buildingById[p.building];
-    if (b?.incomePerHour) total += accrued(p.last_collect, b.incomePerHour, t);
+    const per = b ? houseStats(b, parseUp(p.upgrades)).incomePerHour : 0;
+    if (per) total += accrued(p.last_collect, per, t);
   }
   for (const b of q.bizOf.all(userId)) {
     const place = placeById[b.id];
@@ -121,7 +122,7 @@ export const mayorRef = { current: null };
 
 export function worldState() {
   return {
-    plots: Object.fromEntries(q.allPlots.all().map((p) => [p.id, { building: p.building, owner: p.username, ownerName: p.name }])),
+    plots: Object.fromEntries(q.allPlots.all().map((p) => [p.id, { building: p.building, owner: p.username, ownerName: p.name, up: parseUp(p.upgrades) }])),
     businesses: Object.fromEntries(q.allBiz.all().map((b) => [b.id, { owner: b.username, ownerName: b.name }])),
     event: liveEvent(),
     mayor: (() => {
@@ -524,6 +525,7 @@ export const buyPlot = db.transaction((userId, plotId) => {
   q.insertPlot.run(plotId, userId, now(), now());
 });
 
+export const parseUp = (s) => { try { return s ? JSON.parse(s) : {}; } catch { return {}; } };
 export const buildOnPlot = db.transaction((userId, plotId, buildingId) => {
   const user = getUser(userId);
   const row = q.plot.get(plotId);
@@ -537,6 +539,40 @@ export const buildOnPlot = db.transaction((userId, plotId, buildingId) => {
   const cost = discount(user, b.price - (old ? Math.round(old.price * 0.5) : 0));
   addMoney(userId, -cost, 'purchase', `Ujenzi: ${b.name} — ${plot.name}`);
   q.buildPlot.run(buildingId, now(), plotId);
+});
+
+/** Add a storey, buy a feature, or repaint the house on your plot. */
+export const upgradeHouse = db.transaction((userId, plotId, { kind, id, color }) => {
+  const row = q.plot.get(plotId);
+  if (!row || row.owner_id !== userId) throw new GameError(['Hiki si kiwanja chako.', "This isn't your plot."], 403);
+  const b = row.building && buildingById[row.building];
+  if (!b) throw new GameError(['Jenga nyumba kwanza.', 'Build a house first.']);
+  const up = parseUp(row.upgrades);
+  const user = getUser(userId);
+  if (kind === 'floor') {
+    const max = HOUSE_UPGRADES.maxFloors[b.id] ?? b.floors;
+    if (b.floors + (up.floors || 0) >= max) throw new GameError([`Ghorofa za juu kabisa kwa ${b.name} ni ${max}.`, `${b.nameEn || b.name} can have at most ${max} storeys.`]);
+    const cost = discount(user, Math.round((b.price * HOUSE_UPGRADES.floorCostPct) / 1000) * 1000);
+    addMoney(userId, -cost, 'purchase', `🏗️ Ghorofa mpya — ${plotById[plotId].name}`);
+    up.floors = (up.floors || 0) + 1;
+    up.spent = (up.spent || 0) + cost;
+  } else if (kind === 'feature') {
+    const f = houseFeatureById[id];
+    if (!f) throw new GameError(['Haipo.', 'Unknown upgrade.'], 404);
+    up.features ||= [];
+    if (up.features.includes(f.id) || (f.id === 'pool' && b.pool)) throw new GameError(['Tayari unayo.', 'You already have this.']);
+    const cost = discount(user, f.price);
+    addMoney(userId, -cost, 'purchase', `${f.emoji} ${f.name[0]} — ${plotById[plotId].name}`);
+    up.features.push(f.id);
+    up.spent = (up.spent || 0) + Math.round(cost * f.value);
+  } else if (kind === 'paint') {
+    if (!HOUSE_UPGRADES.paints.includes(color)) throw new GameError(['Rangi si sahihi.', 'Invalid colour.']);
+    addMoney(userId, -HOUSE_UPGRADES.paintPrice, 'purchase', `🎨 Rangi mpya — ${plotById[plotId].name}`);
+    up.color = color;
+  } else throw new GameError(['Haijulikani', 'Unknown action']);
+  db.prepare('UPDATE plots SET upgrades = ? WHERE id = ?').run(JSON.stringify(up), plotId);
+  bumpStats(userId, ['house_upgrades']);
+  return up;
 });
 
 export const buyBusiness = db.transaction((userId, placeId) => {
@@ -556,7 +592,10 @@ export function homeActivity(userId, plotId, act) {
   if (!row || row.owner_id !== userId || !row.building) throw new GameError(['Hii si nyumba yako.', 'This isn\'t your house.'], 403);
   requireNearPos(user, plotById[plotId].pos, 14);
   const b = buildingById[row.building];
-  const effects = act === 'lala' ? { energy: 70 + b.energyBonus, fun: b.pool ? 15 : 0 } : act === 'oga' ? { hygiene: 100 } : null;
+  const up = parseUp(row.upgrades);
+  const stats = houseStats(b, up);
+  const pool = b.pool || (up.features || []).includes('pool');
+  const effects = act === 'lala' ? { energy: 70 + stats.energyBonus, fun: pool ? 15 : 0 } : act === 'oga' ? { hygiene: 100 } : null;
   if (!effects) throw new GameError(['Shughuli haipo', 'Activity not found']);
   saveFields(userId, { needs: applyNeeds(user.needs, effects) });
 }

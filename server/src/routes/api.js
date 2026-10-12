@@ -422,6 +422,11 @@ api.post('/plots/:id/build', (req, res) => {
   worldChanged();
   res.json({ me: game.playerState(req.user.id) });
 });
+api.post('/plots/:id/upgrade', (req, res) => {
+  game.upgradeHouse(req.user.id, req.params.id, { kind: str(req.body.kind, 10), id: str(req.body.id, 12), color: str(req.body.color, 9) });
+  worldChanged();
+  res.json({ me: game.playerState(req.user.id) });
+});
 api.post('/business/:id/buy', (req, res) => {
   game.buyBusiness(req.user.id, req.params.id);
   worldChanged();
