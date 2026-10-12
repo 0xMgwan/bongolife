@@ -25,6 +25,7 @@ import { WelcomeFlow, RadioPill } from './Welcome.jsx';
 import { VoiceBar } from './VoiceBar.jsx';
 import { IncomingCall, CallBar } from './Calls.jsx';
 import { CameraOverlay, openCamera } from './Camera.jsx';
+import { WatchParty, WatchInvite } from './WatchParty.jsx';
 import { startBuild } from './BuildBar.jsx';
 import { MentionText, MentionSuggest } from './Mentions.jsx';
 
@@ -905,6 +906,8 @@ export function HUD() {
       <PushPrompt />
       <WelcomeFlow />
       <CameraOverlay />
+      <WatchInvite />
+      <WatchParty />
       <CallBar />
       <IncomingCall />
       {!riding && <RadioPill />}

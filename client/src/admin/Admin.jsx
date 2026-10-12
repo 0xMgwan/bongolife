@@ -465,6 +465,20 @@ function Settings() {
           {flag('adsEnabled', 'New ads', 'Allow players to buy billboard ads.')}
         </div>
         <div className="panel">
+          <h2>⚽ Watch party matches</h2>
+          <div className="small muted" style={{ marginBottom: 6 }}>Matches players can watch together (Phone → Mechi). Paste YouTube links or embeddable streams you have the rights to show. Set SCOREBAT_TOKEN on the server to add ScoreBat highlights automatically.</div>
+          {(form.watchLinks || []).map((l, i) => (
+            <div key={i} className="toolbar" style={{ marginBottom: 6 }}>
+              <input className="in" style={{ flex: 2, minWidth: 140 }} placeholder="Simba vs Yanga" value={l.title} onChange={(e) => setForm({ ...form, watchLinks: form.watchLinks.map((x, k) => (k === i ? { ...x, title: e.target.value } : x)) })} />
+              <input className="in" style={{ flex: 3, minWidth: 180 }} placeholder="https://youtube.com/watch?v=…" value={l.url} onChange={(e) => setForm({ ...form, watchLinks: form.watchLinks.map((x, k) => (k === i ? { ...x, url: e.target.value } : x)) })} />
+              <label className="small"><input type="checkbox" checked={!!l.live} onChange={(e) => setForm({ ...form, watchLinks: form.watchLinks.map((x, k) => (k === i ? { ...x, live: e.target.checked } : x)) })} /> Live</label>
+              <button className="btn btn-outline" onClick={() => setForm({ ...form, watchLinks: form.watchLinks.filter((_, k) => k !== i) })}>✕</button>
+            </div>
+          ))}
+          <div className="toolbar" style={{ marginBottom: 16 }}>
+            <button className="btn btn-outline" onClick={() => setForm({ ...form, watchLinks: [...(form.watchLinks || []), { title: '', url: '', live: false }] })}>+ Add match</button>
+            <button className="btn btn-green" onClick={() => save({ watchLinks: form.watchLinks || [] })}>Save matches</button>
+          </div>
           <h2>📻 Default radio station</h2>
           <div className="small muted" style={{ marginBottom: 6 }}>Plays first when players open the game. Paste the station's https stream link (e.g. from its website's “Listen live” player).</div>
           <input className="in" style={{ width: '100%', marginBottom: 6 }} placeholder="Name, e.g. 102.9 FM" value={form.radioDefault?.name || ''} onChange={(e) => setForm({ ...form, radioDefault: { ...(form.radioDefault || {}), name: e.target.value } })} maxLength={40} />

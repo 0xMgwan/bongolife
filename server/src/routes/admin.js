@@ -506,6 +506,7 @@ admin.put('/settings', (req, res) => {
   const patch = {};
   for (const k of ['maintenance', 'signupsEnabled', 'topupsEnabled', 'chatEnabled', 'adsEnabled']) if (k in req.body) patch[k] = !!req.body[k];
   for (const k of ['announcement', 'announcementEn', 'eventOverride', 'eventOverrideEn']) if (k in req.body) patch[k] = str(req.body[k], 160);
+  if (Array.isArray(req.body.watchLinks)) patch.watchLinks = req.body.watchLinks.slice(0, 20).map((l) => ({ title: str(l.title, 80), url: str(l.url, 400), competition: str(l.competition, 40), live: !!l.live })).filter((l) => /^https:\/\//.test(l.url));
   if (req.body.radioDefault) {
     const url = str(req.body.radioDefault.url, 400);
     if (url && !/^https:\/\//.test(url)) throw new GameError('The radio stream link must start with https:// (browsers block http streams).');

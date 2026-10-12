@@ -16,6 +16,7 @@ import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef } from 
 import { settleElection, currentMayor } from './election.js';
 import { isBlocked } from './crime.js';
 import { attachVoice, leaveVoice } from './voice.js';
+import { attachWatch, leaveWatch } from './watch.js';
 import { shopRentTick } from './company.js';
 import { addInvite, canVisit } from './social.js';
 import * as chat from './chat.js';
@@ -287,6 +288,7 @@ io.on('connection', (socket) => {
 
   // Walking around inside a venue/room: relay your spot to everyone in the same room.
   attachVoice(socket, uid, p);
+  attachWatch(socket, uid, p);
 
   socket.on('scene:pos', (d = {}) => {
     const x = Number(d.x), z = Number(d.z), ry = Number(d.ry);
@@ -310,7 +312,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    if (p.sockets.size <= 1) leaveVoice(uid);
+    if (p.sockets.size <= 1) { leaveVoice(uid); leaveWatch(uid); }
     if (p.home) socket.to(`home:${p.home}`).emit('home:leave', { id: uid });
     p.sockets.delete(socket.id);
     if (p.sockets.size) return;

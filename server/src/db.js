@@ -299,6 +299,8 @@ if (!db.prepare('SELECT COUNT(*) n FROM phone_apps').get().n) {
 export const DEFAULT_SETTINGS = {
   // The latest "what's new" (set when an update email goes out): { title, titleEn, body, bodyEn, at }
   latestUpdate: null,
+  // Matches for watch parties that the admin adds: [{ title, url, competition, live }]
+  watchLinks: [],
   // The station the in-game radio starts on: { name, url, city, tag } (an https stream link).
   radioDefault: { name: 'Play FM 102.9', url: 'https://dc4.serverse.com/proxy/nrgzanzibar/stream', city: 'Dar es Salaam', tag: ['Muziki · Dar es Salaam', 'Music · Dar es Salaam'] },
   maintenance: false,

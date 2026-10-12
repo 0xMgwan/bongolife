@@ -27,6 +27,7 @@ import * as company from '../company.js';
 import * as hiring from '../hiring.js';
 import * as live from '../live.js';
 import * as gist from '../gist.js';
+import * as watch from '../watch.js';
 import * as chat from '../chat.js';
 import * as love from '../love.js';
 import * as music from '../music.js';
@@ -930,6 +931,9 @@ api.post('/gist/:id/like', rateLimit('gistlike', 120, 60 * 60_000), (req, res) =
 api.get('/gist/:id/comments', (req, res) => res.json(gist.comments(req.params.id)));
 api.post('/gist/:id/comments', rateLimit('gistc', 60, 60 * 60_000), (req, res) => res.json(gist.comment(req.user.id, req.params.id, req.body.text)));
 api.delete('/gist/:id', (req, res) => { gist.removePost(req.user.id, req.params.id, req.user.isAdmin); res.json({ ok: true }); });
+// Watch parties: the match list (+ how many are watching each), snacks.
+api.get('/watch', wrap(async (_req, res) => { const counts = watch.watchCounts(); res.json({ matches: (await watch.matches()).map((m) => ({ ...m, watching: counts[m.id] || 0 })), snacks: watch.SNACKS }); }));
+api.post('/watch/snack', rateLimit('snack', 60, 60 * 60_000), (req, res) => { const r = watch.buySnack(req.user.id, str(req.body.id, 12), str(req.body.to, 30) || null); res.json({ ...r, me: game.playerState(req.user.id) }); });
 api.get('/shops', (req, res) => res.json(company.openShops(req.user.id)));
 api.post('/shops/:id/buy', (req, res) => {
   crime.assertFree(getUser(req.user.id));

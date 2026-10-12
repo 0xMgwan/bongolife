@@ -9,6 +9,7 @@ import { Mali } from './apps/Mali.jsx';
 import { Kazi } from './apps/Kazi.jsx';
 import { Redio } from './apps/Redio.jsx';
 import { Gist } from './apps/Gist.jsx';
+import { Mechi } from './WatchParty.jsx';
 import { Ramani } from './apps/Ramani.jsx';
 import { Matangazo } from './apps/Matangazo.jsx';
 import { Viongozi } from './apps/Viongozi.jsx';
@@ -35,6 +36,7 @@ export const APPS = [
   { id: 'kazi', name: 'Kazi', nameEn: 'Jobs', icon: '💼', g: ['#34d399', '#059669'], C: Kazi },
   { id: 'redio', name: 'Redio', nameEn: 'Radio', icon: '📻', g: ['#fb923c', '#c2410c'], C: Redio },
   { id: 'gist', name: 'Gist', nameEn: 'Gist', icon: '📸', g: ['#f472b6', '#be185d'], C: Gist },
+  { id: 'mechi', name: 'Mechi', nameEn: 'Matches', icon: '⚽', g: ['#4ade80', '#166534'], C: Mechi },
   { id: 'wekeza', name: 'Wekeza', nameEn: 'Invest', icon: '📈', g: ['#4ade80', '#15803d'], C: Wekeza },
   { id: 'kampuni', name: 'Kampuni', nameEn: 'Company', icon: '🏢', g: ['#93c5fd', '#1e40af'], C: Kampuni },
   { id: 'maduka', name: 'Maduka', nameEn: 'Shops', icon: '🛍️', g: ['#fda4af', '#e11d48'], C: Maduka },
