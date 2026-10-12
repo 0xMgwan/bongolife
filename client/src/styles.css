@@ -1703,3 +1703,8 @@ html, body { background: #1e2a47; }
 .radio-row b { display: block; font-size: 15px; }
 .radio-row small { color: #6b655b; font-size: 12px; }
 .radio-row .rr-play { font-size: 16px; }
+
+/* Keyboard open (see --kb in main.jsx): lift the chat input and the DM reply above it. */
+:root { --kb: 0px; }
+.kb-open .chat-dock { bottom: calc(var(--kb) + 10px); z-index: 60; transition: bottom .18s ease-out; }
+.kb-open .dm-pop { top: auto; bottom: calc(var(--kb) + 10px); z-index: 60; }
