@@ -1,6 +1,6 @@
 // Investing: land that grows in value, buying/selling through agents, and haulage trucks.
 import { db, getUser, addMoney, GameError, now } from './db.js';
-import { INVEST, PLOTS, plotById, buildingById, placeById } from '../../shared/world.js';
+import { INVEST, PLOTS, plotById, buildingById, placeById, cityAt } from '../../shared/world.js';
 
 const DAY = 86_400_000;
 const T = INVEST.truck;
@@ -120,8 +120,8 @@ export function portfolio(userId) {
   });
   const businesses = q.bizOf.all(userId).map((b) => ({ id: b.id, ...placeById[b.id].business, name: placeById[b.id].name, icon: placeById[b.id].icon }));
   const taken = new Set(q.owned.all().map((r) => r.id));
-  const forSale = PLOTS.filter((p) => !taken.has(p.id)).map((p) => ({ id: p.id, name: p.name, district: p.district, price: p.price, agentPrice: Math.round(p.price * (1 + INVEST.remoteBuyFee)) }));
-  const bizForSale = Object.values(placeById).filter((p) => p.business && !db.prepare('SELECT 1 FROM businesses WHERE id = ?').get(p.id)).map((p) => ({ id: p.id, name: p.name, nameEn: p.nameEn, icon: p.icon, district: p.district, ...p.business }));
+  const forSale = PLOTS.filter((p) => !taken.has(p.id)).map((p) => ({ id: p.id, name: p.name, district: p.district, city: p.city, price: p.price, agentPrice: Math.round(p.price * (1 + INVEST.remoteBuyFee)) }));
+  const bizForSale = Object.values(placeById).filter((p) => p.business && !db.prepare('SELECT 1 FROM businesses WHERE id = ?').get(p.id)).map((p) => ({ id: p.id, name: p.name, nameEn: p.nameEn, icon: p.icon, district: p.district, city: cityAt(p.pos[0], p.pos[1])?.id || 'dar', ...p.business }));
   const value = plots.reduce((s, p) => s + p.value, 0) + trucks.length * T.resale + businesses.reduce((s, b) => s + b.price, 0);
   return {
     value,

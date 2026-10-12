@@ -5,7 +5,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { Server } from 'socket.io';
 import { bumpStats } from './story.js';
-import { NEED_TICK_SECONDS, isWater, moodOf, placeById, EVENT_LIMITS, HANGOUT_PLACES } from '../../shared/world.js';
+import { NEED_TICK_SECONDS, isWater, moodOf, placeById, EVENT_LIMITS, HANGOUT_PLACES, luxuryById } from '../../shared/world.js';
 import { db, getUser, saveFields, now, UPLOAD_DIR, getSettings } from './db.js';
 import { verifyToken } from './auth.js';
 import { registerInteractions } from './interact.js';
@@ -20,6 +20,7 @@ import { attachWatch, leaveWatch } from './watch.js';
 import { shopRentTick } from './company.js';
 import { addInvite, canVisit } from './social.js';
 import * as chat from './chat.js';
+import * as luxury from './luxury.js';
 
 const PORT = Number(process.env.PORT) || 8787;
 const app = express();
@@ -126,7 +127,7 @@ io.on('connection', (socket) => {
     if (Math.hypot(d.x - p.x, d.z - p.z) > 40) return socket.emit('teleport', { pos: [p.x, p.z] });
     if (p.inside && d.m) {
       // Walking away means you left the venue.
-      p.inside = null;
+      p.inside = null; p.host = null;
       broadcast('player:inside', { id: uid, inside: null });
     }
     if (isWater(d.x, d.z)) return;
@@ -137,8 +138,9 @@ io.on('connection', (socket) => {
     pendingMoves.set(uid, [uid, +p.x.toFixed(2), +p.z.toFixed(2), +p.ry.toFixed(2), p.m]);
   });
 
-  socket.on('chat', (text) => {
-    text = cleanText(text);
+  socket.on('chat', (payload) => {
+    const text = cleanText(typeof payload === 'string' ? payload : payload?.text);
+    const replyId = Number(payload?.replyTo) || null;
     if (!text) return;
     const t = now();
     if (!getSettings().chatEnabled) return socket.emit('toast', { text: ['Chat imefungwa kwa muda.', 'Chat is temporarily disabled.'] });
@@ -147,7 +149,14 @@ io.on('connection', (socket) => {
     if (t - p.lastChat < 1200) return socket.emit('toast', { text: ['Pole pole na meseji 😅', 'Slow down with the messages 😅'] });
     p.lastChat = t;
     const info = insertMsg.run(uid, null, text, t);
-    broadcast('chat', { mid: info.lastInsertRowid, id: uid, username: p.username, name: p.name, text, at: t });
+    // Replying to another street message: keep a short quote of it.
+    let reply = null;
+    const orig = replyId && db.prepare('SELECT m.id, m.body, m.to_id, m.group_id, m.deleted_at, u.username FROM messages m JOIN users u ON u.id = m.from_id WHERE m.id = ?').get(replyId);
+    if (orig && !orig.to_id && !orig.group_id && !orig.deleted_at) {
+      db.prepare('UPDATE messages SET reply_to = ? WHERE id = ?').run(orig.id, info.lastInsertRowid);
+      reply = { id: orig.id, from: orig.username, body: orig.body.slice(0, 80) };
+    }
+    broadcast('chat', { mid: info.lastInsertRowid, id: uid, username: p.username, name: p.name, text, at: t, reply, reactions: {} });
     // @mentions: ping each mentioned player (once per message, never yourself or someone who blocked you).
     const named = [...new Set((text.match(/@([a-z0-9_.]{3,24})/gi) || []).map((m) => m.slice(1).toLowerCase()))].slice(0, 5);
     for (const n of named) {
@@ -180,8 +189,17 @@ io.on('connection', (socket) => {
     const j = getUser(uid)?.jail;
     if (j && (p.inside === 'polisi' || p.inside === 'mahakama') && placeId !== p.inside) return socket.emit('player:inside', { id: uid, inside: p.inside });
     let inside = null;
+    let host = null;
+    const priv = typeof placeId === 'string' && /^(yacht|jet):(\d+)$/.exec(placeId);
     if (placeId === 'home') inside = 'home';
-    else if (placeId && placeById[placeId]) {
+    else if (priv) {
+      // Boarding a yacht/jet: yours, or one you were invited aboard. Works from anywhere.
+      host = Number(priv[2]);
+      if (!luxury.canBoard(uid, host, priv[1])) return socket.emit('inside:denied', placeId);
+      const boat = luxury.flagship(host, priv[1]);
+      if (luxury.aboard(host, priv[1]).length >= (luxuryById[boat.model]?.guests || 8) && uid !== host) return socket.emit('inside:denied', placeId);
+      inside = priv[1];
+    } else if (placeId && placeById[placeId] && !placeById[placeId].private) {
       const pl = placeById[placeId];
       const dx = Math.max(Math.abs(p.x - pl.pos[0]) - pl.size[0] / 2, 0);
       const dz = Math.max(Math.abs(p.z - pl.pos[1]) - pl.size[1] / 2, 0);
@@ -189,10 +207,13 @@ io.on('connection', (socket) => {
       inside = placeId;
     }
     if (inside !== 'home') leaveHome();
-    if (p.inside === inside) return;
+    const boat = host && luxury.flagship(host, inside);
+    const msg = { id: uid, inside, host, model: boat?.model || null, color: boat?.color || null, hostName: host ? getUser(host)?.username : null };
+    if (p.inside === inside && (p.host || null) === host) return socket.emit('player:inside', msg);
     leaveVoice(uid); // walking out of a room ends its voice chat
     p.inside = inside;
-    broadcast('player:inside', { id: uid, inside });
+    p.host = host;
+    broadcast('player:inside', msg);
   });
 
   // ---- invites & home visits
@@ -298,12 +319,13 @@ io.on('connection', (socket) => {
     p.lastScenePos = t;
     const room = p.inside || (p.busy && p.busy.endsAt > t ? p.busy.placeId : null);
     if (!room) return;
+    const host = p.host || null;
     const mode = typeof d.mode === 'string' && d.mode.length <= 10 ? d.mode : null;
     const out = { id: uid, x, z, ry, m: !!d.m, mode };
     for (const [id, o] of online) {
       if (id === uid) continue;
       const theirs = o.inside || (o.busy && o.busy.endsAt > t ? o.busy.placeId : null);
-      if (theirs === room) emitTo(id, 'scene:pos', out);
+      if (theirs === room && (o.host || null) === host) emitTo(id, 'scene:pos', out);
     }
   });
 

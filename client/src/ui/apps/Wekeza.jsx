@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fmtTsh, fmtShort, buildingById, placeById } from '@shared/world.js';
+import { fmtTsh, fmtShort, buildingById, placeById, CITIES } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { api } from '../../api.js';
 import { AppHead } from '../Phone.jsx';
@@ -16,6 +16,7 @@ export function Wekeza({ back, close, open }) {
   const run = useStore((s) => s.run);
   const [d, setD] = useState(null);
   const [showAll, setShowAll] = useState(false);
+  const [city, setCity] = useState('all');
   const load = () => api('/invest').then(setD).catch(() => {});
   useEffect(() => { load(); }, []);
   const act = async (path, confirm, ok) => {
@@ -26,7 +27,17 @@ export function Wekeza({ back, close, open }) {
   if (!d) return (<><AppHead title={L('Wekeza', 'Invest')} onBack={back} /><div className="app-body"><div className="small muted" style={{ padding: 12 }}>{L('Inapakia…', 'Loading…')}</div></div></>);
   const landGain = d.plots.reduce((s, p) => s + p.gain, 0);
   const T = d.truck;
-  const sale = showAll ? d.forSale : d.forSale.slice(0, 6);
+  const inCity = (x) => city === 'all' || x.city === city;
+  const landSale = d.forSale.filter(inCity);
+  const bizSale = d.bizForSale.filter(inCity);
+  const sale = showAll ? landSale : landSale.slice(0, 6);
+  const cityTabs = (
+    <div className="chips inv-tabs" style={{ margin: '4px 0 8px' }}>
+      {[{ id: 'all', icon: '🌍', name: L('Zote', 'All') }, ...CITIES].map((c) => (
+        <button key={c.id} className={`chip ${city === c.id ? 'on' : ''}`} onClick={() => { setCity(c.id); setShowAll(false); }}>{c.icon} {c.id === 'dar' ? 'Dar' : c.name}</button>
+      ))}
+    </div>
+  );
   return (
     <>
       <AppHead title={L('Wekeza', 'Invest')} onBack={back} />
@@ -99,15 +110,21 @@ export function Wekeza({ back, close, open }) {
         {d.businesses.map((b) => (
           <div key={b.id} className="inv-row"><span className="em">{b.icon}</span><div className="grow"><b>{b.label || b.name}</b><small>{fmtTsh(b.incomePerHour * 24)}/{L('siku', 'day')}</small></div></div>
         ))}
-        {d.bizForSale.slice(0, 6).map((b) => (
+        <div className="section-t">{L('BIASHARA ZINAZOUZWA', 'BUSINESSES FOR SALE')}</div>
+        {cityTabs}
+        {(city === 'all' ? bizSale.slice(0, 6) : bizSale).map((b) => (
           <div key={b.id} className="inv-row sale">
             <span className="em">{b.icon}</span>
-            <div className="grow"><b>{b.label || loc(placeById[b.id])}</b><small>{fmtTsh(b.incomePerHour * 24)}/{L('siku', 'day')} · {b.district}</small></div>
+            <div className="grow"><b>{L(b.label, b.labelEn || b.label) || loc(placeById[b.id])}</b><small>{fmtTsh(b.incomePerHour * 24)}/{L('siku', 'day')} · {b.district}</small></div>
             <button className="btn btn-ghost btn-sm" onClick={() => { close?.(); goToPlace(b.id); }}>{fmtShort(b.price)} →</button>
           </div>
         ))}
 
+        {city === 'all' && bizSale.length > 6 && <button className="btn btn-ghost btn-block btn-sm" onClick={() => setCity('znz')}>{L('Zanzibar na Arusha pia → chagua mji', 'Zanzibar & Arusha too → pick a city')}</button>}
+        {!bizSale.length && <div className="box small muted">{L('Zote zimeshanunuliwa hapa.', 'All sold here.')}</div>}
+
         <div className="section-t">{L('NUNUA ARDHI', 'BUY LAND')}</div>
+        {cityTabs}
         {sale.map((p) => (
           <div key={p.id} className="inv-row sale">
             <span className="em">🌱</span>
@@ -115,7 +132,8 @@ export function Wekeza({ back, close, open }) {
             <button className="btn btn-green btn-sm" disabled={me.money < p.agentPrice} onClick={() => act(`/invest/plots/${p.id}/buy`, { icon: '🌱', title: L(`Nunua ${p.name}?`, `Buy ${p.name}?`), text: L(`${fmtTsh(p.agentPrice)} kupitia dalali. Thamani hupanda kila siku unayokishikilia.`, `${fmtTsh(p.agentPrice)} through an agent. It grows in value every day you hold it.`), ok: L('Nunua', 'Buy') }, () => L('🌱 Kiwanja ni chako!', '🌱 The plot is yours!'))}>{fmtShort(p.agentPrice)}</button>
           </div>
         ))}
-        {d.forSale.length > 6 && <button className="btn btn-ghost btn-block btn-sm" onClick={() => setShowAll(!showAll)}>{showAll ? L('Onyesha machache', 'Show fewer') : L(`Onyesha vyote (${d.forSale.length})`, `Show all (${d.forSale.length})`)}</button>}
+        {landSale.length > 6 && <button className="btn btn-ghost btn-block btn-sm" onClick={() => setShowAll(!showAll)}>{showAll ? L('Onyesha machache', 'Show fewer') : L(`Onyesha vyote (${landSale.length})`, `Show all (${landSale.length})`)}</button>}
+        {!landSale.length && <div className="box small muted">{L('Hakuna ardhi iliyobaki hapa.', 'No land left here.')}</div>}
       </div>
     </>
   );

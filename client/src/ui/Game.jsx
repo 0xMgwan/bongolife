@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { plotById, placeById } from '@shared/world.js';
 import { activeScene } from '../scene.js';
+import { UserActions } from './UserActions.jsx';
 import GameScene from '../three/GameScene.jsx';
 import { walkTo, goToPlace } from '../nav.js';
 import { L, loc } from '../i18n.js';
@@ -168,6 +169,7 @@ export default function Game() {
       <HomeUI />
       <Sheets />
       <Phone />
+      <UserActions />
       <SocialModals />
       <PresenceAlerts />
       <DmPop />

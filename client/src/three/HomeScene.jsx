@@ -217,7 +217,7 @@ function Guest({ g }) {
     ref.current.rotation.y = p.ry;
   });
   return (
-    <group ref={ref}>
+    <group ref={ref} onClick={(e) => { if (e.delta > 10) return; e.stopPropagation(); useStore.setState({ sheet: { type: 'player', id: g.username } }); }}>
       <Body appearance={g.appearance} motion={motion} />
       <Overhead id={g.id} username={g.username} height={1.95} />
     </group>

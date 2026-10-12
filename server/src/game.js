@@ -3,7 +3,7 @@ import {
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST, industryById, COMPANY,
   furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
-  jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats,
+  jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats, luxuryById, LUXURY_RESALE,
 } from '../../shared/world.js';
 import * as hiring from './hiring.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
@@ -93,6 +93,9 @@ export function netWorth(userId) {
     for (const c of db.prepare('SELECT industry, balance FROM companies WHERE owner_id = ?').all(userId)) worth += (industryById[c.industry]?.cost || 0) * COMPANY.sellBack + c.balance;
   } catch { /* table created on first import of company.js */ }
   for (const b of q.bizOf.all(userId)) worth += placeById[b.id]?.business?.price || 0;
+  try {
+    for (const r of db.prepare('SELECT model FROM luxury WHERE user_id = ?').all(userId)) worth += (luxuryById[r.model]?.price || 0) * LUXURY_RESALE;
+  } catch { /* table created when luxury.js loads */ }
   return Math.round(worth);
 }
 
@@ -404,7 +407,7 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
     fields.x = x;
     fields.z = z;
     const p = online.get(userId);
-    if (p) Object.assign(p, { x, z, inside: null });
+    if (p) Object.assign(p, { x, z, inside: null, host: null });
     result.teleport = [x, z];
     const city = cityById[busy.to];
     result.title = [`${m.emoji} Karibu ${city.name}!`, `${m.emoji} Welcome to ${city.name}!`];
@@ -669,7 +672,7 @@ export const travel = db.transaction((userId, placeId, mode) => {
   if (p) {
     Object.assign(p, { x: dest[0], z: dest[1] });
     if (p.inside) {
-      p.inside = null;
+      p.inside = null; p.host = null;
       broadcast('player:inside', { id: userId, inside: null });
     }
   }
@@ -727,7 +730,7 @@ export const ambulance = db.transaction((userId) => {
   addMoney(userId, -Math.min(cost, u.money), 'travel', 'Gari la wagonjwa 🚑');
   saveFields(userId, { x: pos[0], z: pos[1] });
   const p = online.get(userId);
-  if (p) Object.assign(p, { x: pos[0], z: pos[1], inside: null });
+  if (p) Object.assign(p, { x: pos[0], z: pos[1], inside: null, host: null });
   return { pos };
 });
 

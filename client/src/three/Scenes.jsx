@@ -19,6 +19,7 @@ import { useStore } from '../store.js';
 import { L, loc } from '../i18n.js';
 import { MoneyRain } from './MoneyRain.jsx';
 import { SceneWalker, FloorCatcher, Hotspots, livePerson } from './SceneWalk.jsx';
+import { Yacht, Jet } from './Luxury.jsx';
 
 export const SCENE_ORIGIN = [4000, 0, 4000];
 /** Scenes flagged `dynamic` drive the camera themselves through this (scene-local coords). */
@@ -139,12 +140,15 @@ function useScenePeople(placeId, scene) {
   const roster = useStore((s) => s.roster);
   return useMemo(() => {
     const now = Date.now();
+    // Yachts/jets are private rooms: only people aboard the same owner's one.
+    const host = useStore.getState().insideHost;
+    if (placeId === 'yacht' || placeId === 'jet') return [...remotes.values()].filter((r) => r.inside === placeId && r.host === host);
     return [...remotes.values()].filter((r) => r.inside === placeId || (r.busy && r.busy.endsAt > now && r.busy.placeId === placeId));
   }, [roster, placeId, scene]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /** One person in a scene: avatar + name tag + optional prop, with a fixed pose. */
-function Person({ slot, appearance, mode, id, username, height = 1.95, prop }) {
+export function Person({ slot, appearance, mode, id, username, height = 1.95, prop }) {
   const motion = useRef({ mode });
   motion.current.mode = mode;
   const [x, y, z, ry] = slot;
@@ -157,8 +161,14 @@ function Person({ slot, appearance, mode, id, username, height = 1.95, prop }) {
     const live = livePerson(g.current, id, useStore.getState().me?.id, mode);
     motion.current.mode = live || mode;
   });
+  // Tap someone in the room to see their card (chat, tip, call…).
+  const tap = id != null && username ? (e) => {
+    if (e.delta > 10 || id === useStore.getState().me?.id) return;
+    e.stopPropagation();
+    useStore.setState({ sheet: { type: 'player', id: username } });
+  } : undefined;
   return (
-    <group ref={g} position={[x, y, z]} rotation={[0, ry, 0]}>
+    <group ref={g} position={[x, y, z]} rotation={[0, ry, 0]} onClick={tap}>
       <Body appearance={appearance} motion={motion} />
       {username && <Overhead id={id} username={username} height={mode === 'sleep' ? 0.9 : mode === 'sit' || mode === 'eat' || mode === 'cheer' ? 1.55 : height} />}
       {prop}
@@ -166,7 +176,7 @@ function Person({ slot, appearance, mode, id, username, height = 1.95, prop }) {
   );
 }
 
-const NPC_LOOKS = Array.from({ length: 24 }, (_, i) => {
+export const NPC_LOOKS = Array.from({ length: 24 }, (_, i) => {
   const r = rng(1000 + i * 77);
   const a = randomAppearance();
   return { ...a, skin: Math.floor(r() * 6) };
@@ -176,7 +186,7 @@ const NPC_LOOKS = Array.from({ length: 24 }, (_, i) => {
  * Generic crowd renderer: local player at `localSlot`, real players next, then NPCs
  * until `crowd` is reached. `modeFor(kind, busy)` picks each person's pose.
  */
-function Crowd({ me, myBusy, people, slots, localSlot, crowd, modeFor, extra }) {
+export function Crowd({ me, myBusy, people, slots, localSlot, crowd, modeFor, extra }) {
   const used = [];
   const out = [];
   const take = () => {
@@ -2804,6 +2814,8 @@ export const SCENES = {
   shop: { C: Shop, camera: { pos: [0, 7.5, 10.5], look: [0, 0.6, -0.5] }, bg: '#1c1917', light: 1 },
   hospital: { C: Hospital, camera: { pos: [0, 8.5, 12], look: [0, 0.6, -2.2] }, bg: '#0f172a', light: 1 },
   classroom: { C: Classroom, camera: { pos: [0, 5.5, 9], look: [0, 1.6, -4] }, bg: '#1c1917', light: 0.9 },
+  yacht: { C: Yacht, camera: { pos: [6.5, 9, 16], look: [0, 0.8, -1] }, bg: '#8fd0f5', light: 1.1 },
+  jet: { C: Jet, camera: { pos: [6, 12, 11], look: [0, 0, -1.2] }, bg: '#7cc4f2', light: 1.1 },
 };
 
 // Set pieces where you stay put (vehicles, the cells).

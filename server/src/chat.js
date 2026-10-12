@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { db, getUser, GameError, now, UPLOAD_DIR } from './db.js';
-import { emitTo } from './presence.js';
+import { emitTo, broadcast } from './presence.js';
 import { isBlocked } from './crime.js';
 
 const col = (table, name, def) => {
@@ -147,6 +147,7 @@ export function sendVoice(userId, { to, groupId, replyTo, duration }, file) {
 /** Can this user see this message? */
 function canSee(userId, m) {
   if (!m) return false;
+  if (!m.to_id && !m.group_id) return true; // street chat is public
   if (m.group_id) return !!q.member.get(m.group_id, userId);
   return m.from_id === userId || m.to_id === userId;
 }
@@ -167,6 +168,11 @@ export function react(userId, messageId, emoji) {
   const had = db.prepare('SELECT emoji FROM msg_reactions WHERE message_id = ? AND user_id = ?').get(m.id, userId);
   if (had?.emoji === emoji || !CHAT.reactions.includes(emoji)) db.prepare('DELETE FROM msg_reactions WHERE message_id = ? AND user_id = ?').run(m.id, userId);
   else db.prepare('INSERT OR REPLACE INTO msg_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)').run(m.id, userId, emoji);
+  if (!m.to_id && !m.group_id) {
+    const out = shape(m);
+    broadcast('chat:react', { mid: m.id, reactions: out.reactions });
+    return out;
+  }
   return fanout(m, 'msg:update');
 }
 export function edit(userId, messageId, text) {

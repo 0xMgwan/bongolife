@@ -29,6 +29,7 @@ import * as live from '../live.js';
 import * as gist from '../gist.js';
 import * as watch from '../watch.js';
 import * as chat from '../chat.js';
+import * as luxury from '../luxury.js';
 import * as love from '../love.js';
 import * as music from '../music.js';
 import * as venue from '../venue.js';
@@ -539,13 +540,28 @@ api.post('/wallet/send', (req, res) => {
   res.json({ to: to.username, me: game.playerState(req.user.id) });
 });
 
+// --------------------------------------------------------- yachts & jets
+api.get('/luxury', (req, res) => res.json(luxury.view(req.user.id)));
+api.post('/luxury/buy', (req, res) => res.json({ ...luxury.buy(req.user.id, str(req.body.model, 20), str(req.body.color, 10)), me: game.playerState(req.user.id) }));
+api.post('/luxury/:id/sell', (req, res) => res.json({ ...luxury.sell(req.user.id, req.params.id), me: game.playerState(req.user.id) }));
+api.post('/luxury/:id/rename', (req, res) => res.json(luxury.rename(req.user.id, req.params.id, str(req.body.name, 30))));
+api.post('/luxury/invite', rateLimit('luxinv', 30, 60_000), (req, res) => res.json(luxury.invite(req.user.id, str(req.body.to, 30), req.body.kind === 'jet' ? 'jet' : 'yacht')));
+api.post('/luxury/travel', (req, res) => res.json(luxury.travel(req.user.id, req.body.kind === 'jet' ? 'jet' : 'yacht', str(req.body.city, 5))));
+
 // --------------------------------------------------------- messages
 const userBrief = db.prepare('SELECT id, username, name, appearance FROM users WHERE id = ?');
 api.get('/messages/public', (_req, res) => {
   const rows = db.prepare(
-    'SELECT m.id, m.body, m.created_at, u.username, u.name FROM messages m JOIN users u ON u.id = m.from_id WHERE m.to_id IS NULL AND m.group_id IS NULL AND m.deleted_at IS NULL ORDER BY m.id DESC LIMIT 60',
+    'SELECT m.id, m.body, m.created_at, m.reply_to, u.username, u.name FROM messages m JOIN users u ON u.id = m.from_id WHERE m.to_id IS NULL AND m.group_id IS NULL AND m.deleted_at IS NULL ORDER BY m.id DESC LIMIT 60',
   ).all();
-  res.json(rows.reverse());
+  const rx = db.prepare('SELECT r.emoji, u.username FROM msg_reactions r JOIN users u ON u.id = r.user_id WHERE r.message_id = ?');
+  const quote = db.prepare('SELECT m.id, m.body, u.username FROM messages m JOIN users u ON u.id = m.from_id WHERE m.id = ? AND m.deleted_at IS NULL');
+  res.json(rows.reverse().map((r) => {
+    const reactions = {};
+    for (const x of rx.all(r.id)) (reactions[x.emoji] ||= []).push(x.username);
+    const q = r.reply_to && quote.get(r.reply_to);
+    return { ...r, reactions, reply: q ? { id: q.id, from: q.username, body: q.body.slice(0, 80) } : null };
+  }));
 });
 api.get('/messages/threads', (req, res) => {
   const me = req.user.id;

@@ -26,6 +26,8 @@ import { VoiceBar } from './VoiceBar.jsx';
 import { IncomingCall, CallBar } from './Calls.jsx';
 import { CameraOverlay, openCamera } from './Camera.jsx';
 import { WatchParty, WatchInvite } from './WatchParty.jsx';
+import { openUserActions } from './UserActions.jsx';
+import { LuxInvite } from './apps/Anasa.jsx';
 import { startBuild } from './BuildBar.jsx';
 import { MentionText, MentionSuggest } from './Mentions.jsx';
 
@@ -852,7 +854,7 @@ function ChatDock() {
   return (
     <>
       <div className="feed">
-        {recent.map((m) => <div key={`${m.mid ?? m.id}-${m.at}`}><b>@{m.username}</b> <MentionText text={m.text} /></div>)}
+        {recent.map((m) => <div key={`${m.mid ?? m.id}-${m.at}`}><b className="feed-name" onClick={() => openUserActions(m.username)}>@{m.username}</b> <MentionText text={m.text} /></div>)}
       </div>
       {(
         <div className={`chat-dock ${open ? '' : 'closed'}`} aria-hidden={!open}>
@@ -907,11 +909,12 @@ export function HUD() {
       <WelcomeFlow />
       <CameraOverlay />
       <WatchInvite />
+      <LuxInvite />
       <WatchParty />
       <CallBar />
       <IncomingCall />
       {!riding && <RadioPill />}
-      {scene && scene.placeId && !['flight', 'heli', 'road', 'ferry', 'safari'].includes(scene.key) && <VoiceBar room={scene.placeId} />}
+      {scene && scene.placeId && !['flight', 'heli', 'road', 'ferry', 'safari'].includes(scene.key) && <VoiceBar room={useStore.getState().insideHost && (scene.placeId === 'yacht' || scene.placeId === 'jet') ? `${scene.placeId}~${useStore.getState().insideHost}` : scene.placeId} />}
       {!shop && !riding && !clean && (
         <SidePop items={[
           ...(world?.event && town && !scene ? [{ key: 'event', tone: 'green', text: loc(world.event, 'text') }] : []),

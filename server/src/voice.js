@@ -13,7 +13,7 @@ export const CALL_MAX = 6;
 const RING_MS = 35_000;
 const rooms = new Map(); // key -> Set(userId)   key = 'place:<id>' | 'call:<id>'
 const calls = new Map(); // callId -> { id, host, invited: Set, ringing: Map(uid -> timer), joined: boolean }
-const roomOf = (p) => p.inside || (p.busy && p.busy.endsAt > now() ? p.busy.placeId : null);
+const roomOf = (p) => (p.inside && p.host ? `${p.inside}~${p.host}` : p.inside) || (p.busy && p.busy.endsAt > now() ? p.busy.placeId : null);
 const nameOf = (id) => online.get(id)?.username || getUser(id)?.username || '?';
 const areFriends = (a, b) => !!db.prepare('SELECT 1 FROM contacts x JOIN contacts y ON y.user_id = x.contact_id AND y.contact_id = x.user_id WHERE x.user_id = ? AND x.contact_id = ?').get(a, b);
 

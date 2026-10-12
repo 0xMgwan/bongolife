@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { placeById, fmtShort, fmtTsh, NEEDS, findJob, DATE_SPOTS } from '@shared/world.js';
+import { placeById, fmtShort, fmtTsh, NEEDS, findJob, DATE_SPOTS, luxuryById } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { local, remotes, sendChat, setInside } from '../net.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
@@ -7,6 +7,7 @@ import { placeDoor } from '../three/Players.jsx';
 import { L, loc } from '../i18n.js';
 import { sfx } from '../audio.js';
 import { share } from './share.js';
+import { LuxControls } from './apps/Anasa.jsx';
 
 // Nightlife venues where you can make it rain / tip (matches server/src/venue.js).
 const RAIN_VENUES = ['club', 'lounge', 'bar', 'singeli', 'kendwa', 'casino', 'viavia', 'nyamachoma'];
@@ -32,7 +33,9 @@ export function PlaceDock({ me, placeId, onHome, onMap }) {
   useEffect(() => { setOpen(false); }, [placeId]);
   void roster;
   const p = placeById[placeId];
-  const here = 1 + [...remotes.values()].filter((r) => r.inside === placeId || r.busy?.placeId === placeId || (!r.inside && Math.hypot(r.tx - p.pos[0], r.tz - p.pos[1]) < Math.max(...p.size))).length;
+  const boat = useStore((s) => s.boat);
+  const host = useStore.getState().insideHost;
+  const here = 1 + [...remotes.values()].filter((r) => (p.private ? r.inside === placeId && r.host === host : r.inside === placeId || r.busy?.placeId === placeId || (!r.inside && Math.hypot(r.tx - p.pos[0], r.tz - p.pos[1]) < Math.max(...p.size)))).length;
   const near = (() => {
     const d = placeDoor(placeId);
     return Math.hypot(d[0] - local.x, d[1] - local.z) < 20 || useStore.getState().inside === placeId;
@@ -85,8 +88,8 @@ export function PlaceDock({ me, placeId, onHome, onMap }) {
       <div className="pd-row">
         <button className="pd-me" onClick={() => useStore.getState().openPhone('kabati')}>{avatarEmoji(me.appearance)}</button>
         <button className="pd-name" onClick={() => useStore.setState({ sheet: { type: 'place', id: placeId } })}>
-          <b>{p.icon} {loc(p)}</b>
-          <small>{busyLabel || `👥 ${here} ${L('hapa', 'here')} · ${p.district}`}</small>
+          <b>{p.icon} {p.private && boat?.model ? luxuryById[boat.model]?.name : loc(p)}</b>
+          <small>{busyLabel || (p.private ? `👥 ${here} ${L('ndani', 'aboard')} · ${boat?.hostName ? `@${boat.hostName}` : ''}` : `👥 ${here} ${L('hapa', 'here')} · ${p.district}`)}</small>
         </button>
         <span className="pd-money">💵 {fmtShort(me.money)}</span>
         {isIn && <button className="pd-btn pd-exit" aria-label={L('Toka nje', 'Leave')} onClick={() => { sfx('close'); setInside(null); }}>🚪</button>}
@@ -105,6 +108,7 @@ export function PlaceDock({ me, placeId, onHome, onMap }) {
           <div>{(money === 'rain' ? RAIN_AMOUNTS : TIP_AMOUNTS).map((a) => <button key={a} disabled={me.money < a} onClick={() => throwMoney(money, a)}>{fmtShort(a)}</button>)}</div>
         </div>
       )}
+      {p.private && <LuxControls kind={placeId} />}
       {(cats.length > 0 || canEnter || dates.length > 0 || nightlife) && (
         <div className="pd-chips">
           {cats.length > 0 && <button className={`pd-up ${openCat ? 'on' : ''}`} onClick={() => setOpen(openCat ? false : cats[0].key)} aria-label={L('Zaidi', 'More')}>{openCat ? '⌄' : '˄'}</button>}

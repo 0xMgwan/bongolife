@@ -308,7 +308,17 @@ export const PLOTS = [
   ...plotGrid('mbz', 'Mbezi', [-100, -86, -72], [-108, -122], 14_000_000),
   ...plotGrid('knd', 'Kinondoni', [0, 14], [-108, -122], 18_000_000),
   ...plotGrid('tmk', 'Temeke', [-40, -28], [52, 66, 80], 9_000_000),
+  // Zanzibar
+  ...plotGrid('nwv', 'Nungwi', [1650, 1663, 1676, 1689], [-92], 80_000_000, 11),
+  ...plotGrid('pje', 'Paje', [1688, 1701], [-45, -31, -17], 55_000_000),
+  ...plotGrid('fmb', 'Fumba', [1598, 1611], [22, 36], 25_000_000),
+  ...plotGrid('mtw', 'Matemwe', [1646, 1659, 1672], [-40, -54], 40_000_000),
+  // Arusha
+  ...plotGrid('njr', 'Njiro', [-1695, -1682], [15, 29, 43], 20_000_000),
+  ...plotGrid('kjg', 'Kijenge', [-1520, -1507], [15, 29, 43], 35_000_000),
+  ...plotGrid('usa', 'Usa River', [-1635, -1622, -1609], [75, 89], 15_000_000),
 ];
+for (const p of PLOTS) { p.district = p.area; p.city = cityAt(p.pos[0], p.pos[1])?.id || 'dar'; }
 export const plotById = Object.fromEntries(PLOTS.map((p) => [p.id, p]));
 export const ALLOWED_BUILDINGS = {
   Kigamboni: ['banda', 'kisasa', 'villa', 'hoteli'],
@@ -316,6 +326,13 @@ export const ALLOWED_BUILDINGS = {
   Mbezi: ['banda', 'kisasa', 'ghorofa', 'villa'],
   Kinondoni: ['banda', 'kisasa', 'ghorofa'],
   Temeke: ['banda', 'kisasa', 'ghorofa'],
+  Nungwi: ['kisasa', 'villa', 'hoteli'],
+  Paje: ['banda', 'kisasa', 'villa', 'hoteli'],
+  Fumba: ['banda', 'kisasa', 'villa', 'ghorofa'],
+  Matemwe: ['banda', 'kisasa', 'villa', 'hoteli'],
+  Njiro: ['banda', 'kisasa', 'villa', 'ghorofa'],
+  Kijenge: ['kisasa', 'villa', 'ghorofa', 'hoteli'],
+  'Usa River': ['banda', 'kisasa', 'villa'],
 };
 
 // ----------------------------------------------------------------- places
@@ -837,6 +854,29 @@ const CAREER_JOBS = {
 };
 for (const p of PLACES) if (CAREER_JOBS[p.id]) p.jobs = [...(p.jobs || []), ...CAREER_JOBS[p.id]];
 export const placeById = Object.fromEntries(PLACES.map((p) => [p.id, p]));
+
+// ------------------------------------------------------------ yachts & private jets
+// Bought from the Anasa (Luxury) app. Each owner's yacht/jet is a private room: the owner and
+// whoever they invite aboard. The interior scene is shared code; who you see is per owner.
+export const LUXURY = [
+  { id: 'yacht-s', kind: 'yacht', tier: 1, name: 'Azimut 60 Flybridge', price: 900_000_000, guests: 8, emoji: '🛥️', blurb: ['Yacht ya mita 18: deki ya juu, jakuzi na baa.', '18 m yacht: flybridge, jacuzzi and a bar.'] },
+  { id: 'yacht-m', kind: 'yacht', tier: 2, name: 'Sunseeker 95 Yacht', price: 2_500_000_000, guests: 12, emoji: '🛥️', blurb: ['Mita 29, deki tatu, DJ booth na jet ski.', '29 m, three decks, DJ booth and a jet ski.'] },
+  { id: 'yacht-l', kind: 'yacht', tier: 3, name: 'Lürssen 60m Superyacht', price: 7_500_000_000, guests: 20, emoji: '🛳️', blurb: ['Superyacht yenye helipad, bwawa la kuogelea na sinema.', 'A superyacht with a helipad, pool and cinema.'] },
+  { id: 'jet-s', kind: 'jet', tier: 1, name: 'Cessna Citation CJ4', price: 1_500_000_000, guests: 8, emoji: '🛩️', blurb: ['Jet ndogo ya kifahari — viti vya ngozi na baa.', 'A light jet — leather seats and a bar.'] },
+  { id: 'jet-m', kind: 'jet', tier: 2, name: 'Bombardier Challenger 650', price: 4_000_000_000, guests: 12, emoji: '✈️', blurb: ['Kabini pana, sofa na meza ya chakula.', 'A wide cabin with a sofa and dining table.'] },
+  { id: 'jet-l', kind: 'jet', tier: 3, name: 'Gulfstream G700', price: 9_500_000_000, guests: 16, emoji: '✈️', blurb: ['Chumba cha kulala, bafu na sebule ya kifahari angani.', 'A bedroom, shower and a lounge in the sky.'] },
+];
+export const luxuryById = Object.fromEntries(LUXURY.map((l) => [l.id, l]));
+export const LUXURY_RESALE = 0.6;
+export const LUXURY_COLORS = ['#f8fafc', '#0f172a', '#1e3a8a', '#7f1d1d', '#14532d', '#d4af37'];
+// Where a yacht can sail to / a jet can fly to, per city (a place id to arrive at).
+export const LUXURY_PORTS = { yacht: { dar: 'slipway', znz: 'zn-port' }, jet: { dar: 'airport', znz: 'zn-airport', aru: 'kia' } };
+const PRIVATE_PLACES = [
+  { id: 'yacht', private: true, name: 'Yacht', nameEn: 'Yacht', type: 'yacht', icon: '🛥️', district: 'Bahari ya Hindi', pos: [0, 0], size: [1, 1], h: 0, color: '#f8fafc', activities: [], blurb: 'Yacht binafsi.' },
+  { id: 'jet', private: true, name: 'Private Jet', nameEn: 'Private jet', type: 'jet', icon: '🛩️', district: 'Angani', pos: [0, 0], size: [1, 1], h: 0, color: '#f8fafc', activities: [], blurb: 'Ndege binafsi.' },
+];
+for (const p of PRIVATE_PLACES) placeById[p.id] = p;
+export const isPrivatePlace = (id) => id === 'yacht' || id === 'jet';
 export const jobById = Object.fromEntries(PLACES.flatMap((p) => (p.jobs || []).map((j) => [j.id, j])));
 
 /** What's still missing before a player can take this job: [[icon, sw, en], …]. Vehicles are checked separately. */
@@ -1499,7 +1539,7 @@ export const EVENT_LIMITS = { titleMax: 40, descMax: 140, maxActivePerHost: 3, m
 export const EVENT_PLACES = ['home', 'club', 'bar', 'lounge', 'singeli', 'nyamachoma', 'serena', 'coco', 'kigbeach', 'slipway', 'waterpark', 'karting', 'golf', 'makumbusho', 'uwanja', 'mall', 'masakigrill', 'studio'];
 // Venues without their own walk-in interior use this scene while a party is live there.
 // Every place has an inside: explicit venues first, then the closest interior for its type.
-const TYPE_SCENES = { market: 'market', terminal: 'stand', mall: 'shop', shop: 'shop', stonetown: 'shop', restaurant: 'dining', food: 'dining', fish: 'dining', grill: 'grill', bar: 'bar', club: 'club', lounge: 'club', hotel: 'rooftop', gesti: 'room', beach: 'beach', waterpark: 'waterpark', golf: 'golf', karting: 'karting', slipway: 'dhow', stage: 'concert', stadium: 'stadium', studio: 'studio', gym: 'gym', salon: 'salon', office: 'office', tower: 'office', bank: 'bank', hospital: 'hospital', campus: 'classroom', police: 'police', court: 'court', casino: 'casino', safari: 'safari', mountain: 'hike', forest: 'safari', museum: 'ngoma' };
+const TYPE_SCENES = { yacht: 'yacht', jet: 'jet', market: 'market', terminal: 'stand', mall: 'shop', shop: 'shop', stonetown: 'shop', restaurant: 'dining', food: 'dining', fish: 'dining', grill: 'grill', bar: 'bar', club: 'club', lounge: 'club', hotel: 'rooftop', gesti: 'room', beach: 'beach', waterpark: 'waterpark', golf: 'golf', karting: 'karting', slipway: 'dhow', stage: 'concert', stadium: 'stadium', studio: 'studio', gym: 'gym', salon: 'salon', office: 'office', tower: 'office', bank: 'bank', hospital: 'hospital', campus: 'classroom', police: 'police', court: 'court', casino: 'casino', safari: 'safari', mountain: 'hike', forest: 'safari', museum: 'ngoma' };
 /** The interior scene for a place, or null for open-air landmarks (ports, airports…). */
 export function venueOf(placeId) {
   const p = placeById[placeId];
@@ -1685,6 +1725,19 @@ export const VIBES = {
   shine: { emoji: '👞', name: ['Ng\'arisha viatu', 'Shoe shine'], cost: 1_000, effects: { hygiene: 3, fun: 1 }, cd: 60, mode: 'sit' },
   coffee: { emoji: '☕', name: ['Kahawa na kashata', 'Coffee & kashata'], cost: 500, effects: { energy: 3, social: 1 }, cd: 30, mode: 'eat' },
   fish: { emoji: '🐟', name: ['Nunua samaki wa kukaanga', 'Buy fried fish'], cost: 2_000, effects: { hunger: 7 }, cd: 30, mode: 'eat' },
+  // yachts & jets
+  sunbathe: { emoji: '😎', name: ['Ota jua', 'Sunbathe'], effects: { fun: 5, energy: 3 }, cd: 25, mode: 'sleep' },
+  jacuzzi: { emoji: '🛁', name: ['Jakuzi', 'Jacuzzi'], effects: { fun: 6, hygiene: 6, energy: 2 }, cd: 30, mode: 'swim' },
+  angling: { emoji: '🎣', name: ['Vua samaki', 'Go fishing'], effects: { fun: 5 }, cd: 45, reward: [0, 40_000], mode: 'idle' },
+  champagne: { emoji: '🍾', name: ['Fungua champagne', 'Pop champagne'], cost: 50_000, effects: { fun: 8, social: 4 }, cd: 40, mode: 'eat' },
+  chef: { emoji: '🦞', name: ['Chakula cha mpishi', "Chef's dinner"], cost: 80_000, effects: { hunger: 30, fun: 3 }, cd: 60, mode: 'eat' },
+  decks: { emoji: '🎧', name: ['Piga muziki (DJ)', 'Play DJ'], effects: { fun: 6, social: 3 }, cd: 30, mode: 'dance' },
+  jetski: { emoji: '🌊', name: ['Endesha jet ski', 'Ride the jet ski'], effects: { fun: 9, energy: -4 }, cd: 45, mode: 'cheer' },
+  helm: { emoji: '🧭', name: ['Shika usukani', 'Take the helm'], effects: { fun: 4 }, cd: 30, mode: 'pose' },
+  nap: { emoji: '🛏️', name: ['Lala kitandani', 'Nap in the bedroom'], effects: { energy: 25 }, cd: 90, mode: 'sleep' },
+  movie: { emoji: '🎬', name: ['Tazama filamu', 'Watch a film'], effects: { fun: 6, energy: 2 }, cd: 45, mode: 'sit' },
+  cockpit: { emoji: '👨🏾‍✈️', name: ['Tembelea cockpit', 'Visit the cockpit'], effects: { fun: 4 }, cd: 40, mode: 'pose' },
+  lounge: { emoji: '🛋️', name: ['Pumzika sofani', 'Relax on the sofa'], effects: { energy: 6, fun: 2 }, cd: 30, mode: 'sit' },
 };
 export const VIBE_DAILY = 40; // per player per day across all hotspots
 

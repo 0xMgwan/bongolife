@@ -21,6 +21,7 @@ import { L, loc, isEn } from '../i18n.js';
 import { useSlideSelect } from './useSlideSelect.js';
 import { TogetherRow } from './Together.jsx';
 import { ask } from './Confirm.jsx';
+import { TipRow } from './UserActions.jsx';
 
 const jt = (j, n) => (isEn() ? jobTitleEn(j, n) : jobTitle(j, n));
 
@@ -380,6 +381,7 @@ function distTo(username) {
 /** Someone you tapped in town: chat, friend, invite, interact, rob, report, block. */
 function PlayerSheet({ username, onClose }) {
   const [p, setP] = useState(null);
+  const [tipOpen, setTipOpen] = useState(false);
   const [, tick] = useState(0);
   const run = useStore((s) => s.run);
   const me = useStore((s) => s.me);
@@ -435,8 +437,9 @@ function PlayerSheet({ username, onClose }) {
       <button className="btn btn-green btn-block" style={{ marginTop: 12 }} disabled={blocked} onClick={() => openPhone('dm', p.username)}>💬 {L('Chat', 'Chat')}</button>
       <div className="row" style={{ marginTop: 8, gap: 8 }}>
         <button className="btn btn-white grow" style={{ border: '1px solid var(--line)' }} onClick={() => run('/contacts', { method: 'POST', body: { username: p.username } }).then((r) => r && toast(r.find((c) => c.username === p.username)?.mutual ? L(`🤝 Sasa wewe na @${p.username} ni marafiki!`, `🤝 You and @${p.username} are now friends!`) : L(`📨 Ombi la urafiki limetumwa kwa @${p.username}`, `📨 Friend request sent to @${p.username}`)))}>➕ {L('Rafiki', 'Add friend')}</button>
-        <button className="btn btn-white grow" style={{ border: '1px solid var(--line)' }} onClick={() => openPhone('pesa', { send: p.username })}>💸 {L('Tuma pesa', 'Send money')}</button>
+        <button className="btn btn-white grow" style={{ border: '1px solid var(--line)' }} onClick={() => setTipOpen(!tipOpen)}>💸 {L('Tuma pesa / tip', 'Send money / tip')}</button>
       </div>
+      {tipOpen && !blocked && <div style={{ marginTop: 8 }}><TipRow username={p.username} onSent={() => setTipOpen(false)} /></div>}
       {p.friend && !blocked && (
         <button className="btn btn-dark btn-block" style={{ marginTop: 8 }} onClick={() => { callFriends([p.username]); onClose(); }}>📞 {p.online ? L('Piga simu', 'Call') : L('Piga simu (hayupo online)', 'Call (offline)')}</button>
       )}

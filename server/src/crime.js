@@ -24,7 +24,7 @@ function moveTo(userId, placeId) {
   saveFields(userId, { x, z });
   const p = online.get(userId);
   if (p) {
-    Object.assign(p, { x, z, inside: placeId });
+    Object.assign(p, { x, z, inside: placeId, host: null });
     broadcast('player:inside', { id: userId, inside: placeId });
     emitTo(userId, 'teleport', { pos: [x, z] });
   }

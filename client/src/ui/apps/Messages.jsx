@@ -9,6 +9,7 @@ import { AppHead } from '../Phone.jsx';
 import { L } from '../../i18n.js';
 import { inviteHome, visitHome } from '../social.js';
 import { MentionText, MentionSuggest } from '../Mentions.jsx';
+import { openUserActions } from '../UserActions.jsx';
 
 // "::hello" style system lines from quick interactions.
 const NUDGES = { hello: ['amesalimia 👋', 'said hello 👋'], gist: ['anataka stori 💬', 'wants to gist 💬'], joke: ['amepiga utani 😂', 'cracked a joke 😂'], 'joke:fail': ['alijaribu utani 😬', 'tried a joke 😬'], shade: ['amepiga kijembe 😒', 'threw shade 😒'] };
@@ -229,10 +230,12 @@ export function useVoiceRecorder(onDone) {
 }
 
 // ------------------------------------------------------------ conversation
-function Bubble({ m, mine, showName, onMenu, onReply, onReact, myName }) {
+function Bubble({ m, mine, showName, onMenu, onReply, onReact, myName, onName }) {
   const [dx, setDx] = useState(0);
   const g = useRef(null);
   const press = useRef(null);
+  const lastTap = useRef(0);
+  const tapTimer = useRef(null);
   if (m.kind === 'system') return <div className="nudge-line">👥 {L(`@${m.from} ameunda kikundi`, `@${m.from} created the group`)}</div>;
   const nudge = nudgeText(m.body || '', m.from);
   if (nudge) return <div className="nudge-line">{nudge} · {ago(m.created_at)}</div>;
@@ -250,7 +253,12 @@ function Bubble({ m, mine, showName, onMenu, onReply, onReact, myName }) {
   const up = () => {
     clearTimeout(press.current);
     if (g.current && g.current.dx > 55 && !m.deleted) onReply(m);
-    else if (g.current && Math.abs(g.current.dx) < 8 && press.current !== null) onMenu(m);
+    else if (g.current && Math.abs(g.current.dx) < 8 && press.current !== null && !m.deleted) {
+      // Double-tap = ❤️; a single tap opens the menu (reactions, reply…).
+      const t = Date.now();
+      if (t - lastTap.current < 300) { clearTimeout(tapTimer.current); lastTap.current = 0; onReact(m, '❤️'); }
+      else { lastTap.current = t; tapTimer.current = setTimeout(() => onMenu(m), 280); }
+    }
     g.current = null;
     setDx(0);
   };
@@ -264,10 +272,10 @@ function Bubble({ m, mine, showName, onMenu, onReply, onReact, myName }) {
         onPointerDown={down} onPointerMove={moveP} onPointerUp={up} onPointerCancel={() => { clearTimeout(press.current); g.current = null; setDx(0); }}
         onContextMenu={(e) => { e.preventDefault(); onMenu(m); }}
       >
-        {showName && !mine && <b className="bubble-from">@{m.from}</b>}
+        {showName && !mine && <b className={`bubble-from ${onName ? 'tap' : ''}`} onPointerDown={(e) => onName && e.stopPropagation()} onClick={(e) => { if (onName) { e.stopPropagation(); onName(m.from); } }}>@{m.from}</b>}
         {m.fwd && !m.deleted && <span className="fwd">↪️ {L('Imetumwa tena', 'Forwarded')}</span>}
         {m.reply && !m.deleted && <span className="quote"><b>@{m.reply.from}</b>{m.reply.deleted ? L('Ujumbe umefutwa', 'Message deleted') : m.reply.body}</span>}
-        {m.deleted ? <i>🚫 {L('Ujumbe huu umefutwa', 'This message was deleted')}</i> : m.kind === 'voice' ? <VoicePlayer m={m} /> : m.body}
+        {m.deleted ? <i>🚫 {L('Ujumbe huu umefutwa', 'This message was deleted')}</i> : m.kind === 'voice' ? <VoicePlayer m={m} /> : <MentionText text={m.body} />}
         <small>{ago(m.created_at)}{m.edited_at && !m.deleted ? ` · ${L('imehaririwa', 'edited')}` : ''}{mine && !m.group_id ? ` · ${m.read_at ? '✓✓' : '✓'}` : ''}</small>
       </div>
       {rx.length > 0 && (
@@ -492,41 +500,66 @@ export function GroupChat({ arg: groupId, back }) {
   );
 }
 
-export function Mtaa({ back, open }) {
+export function Mtaa({ back }) {
   const feed = useStore((s) => s.publicFeed);
-  const myName = useStore((s) => s.me?.username);
+  const me = useStore((s) => s.me);
+  const run = useStore((s) => s.run);
   const [text, setText] = useState('');
+  const [reply, setReply] = useState(null);
+  const [menu, setMenu] = useState(null);
   const end = useRef();
+  const input = useRef();
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'end' });
   }, [feed.length]);
   const send = (e) => {
     e.preventDefault();
-    if (text.trim()) sendChat(text.trim());
+    if (text.trim()) sendChat(text.trim(), reply?.id || null);
     setText('');
+    setReply(null);
   };
+  // Street messages in the same shape as DMs so they get the same bubbles.
+  const msgs = feed.map((m) => ({ id: m.mid ?? m.id, from: m.username, from_id: m.username === me.username ? me.id : -1, group_id: 'street', body: m.text, created_at: m.at, kind: 'text', reactions: m.reactions || {}, reply: m.reply || null }));
+  const react = async (m, emoji) => {
+    setMenu(null);
+    const r = await run(`/messages/${m.id}/react`, { method: 'POST', body: { emoji } });
+    if (r?.msg) useStore.setState((s) => ({ publicFeed: s.publicFeed.map((x) => ((x.mid ?? x.id) === m.id ? { ...x, reactions: r.msg.reactions } : x)) }));
+  };
+  const startReply = (m) => { setMenu(null); setReply(m); setTimeout(() => input.current?.focus(), 30); };
   return (
     <>
       <AppHead title={L('Mtaa · Chat ya wote', 'Street · Public chat')} onBack={back} />
       <div className="app-body" style={{ background: '#eef2f6' }}>
         <div className="msgs">
-          {feed.map((m) => (
-            <div key={`${m.mid ?? m.id}-${m.at}`} className={`bubble ${m.username === myName ? 'me' : ''}`}>
-              {m.username !== myName && (
-                <button className="bold small" style={{ display: 'block', color: 'var(--green-d)' }} onClick={() => open('dm', m.username)}>@{m.username}</button>
-              )}
-              <MentionText text={m.text} />
-              <small>{ago(m.at)}</small>
-            </div>
+          {msgs.map((m) => (
+            <Bubble key={m.id} m={m} mine={m.from === me.username} showName myName={me.username} onMenu={setMenu} onReply={startReply} onReact={react} onName={openUserActions} />
           ))}
           <div ref={end} />
         </div>
       </div>
+      {reply && (
+        <div className="reply-bar">
+          <span>↩️ @{reply.from}: {(reply.body || '').slice(0, 60)}</span>
+          <button onClick={() => setReply(null)} aria-label={L('Funga', 'Close')}>✕</button>
+        </div>
+      )}
       <MentionSuggest text={text} setText={setText} />
       <form className="composer" onSubmit={send}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder={L('Niaje wanangu… (@jina kumtaja mtu)', 'Hey everyone… (@name to mention)')} maxLength={200} enterKeyHint="send" />
+        <input ref={input} value={text} onChange={(e) => setText(e.target.value)} placeholder={L('Niaje wanangu… (@jina kumtaja mtu)', 'Hey everyone… (@name to mention)')} maxLength={200} enterKeyHint="send" />
         <button className="btn btn-green btn-sm" disabled={!text.trim()}>{L('Tuma', 'Send')}</button>
       </form>
+      {menu && (
+        <div className="modal-wrap confirm-wrap" onClick={() => setMenu(null)}>
+          <div className="msg-menu" onClick={(e) => e.stopPropagation()}>
+            <div className="rx-bar">{REACTIONS.map((e) => <button key={e} onClick={() => react(menu, e)}>{e}</button>)}</div>
+            <div className="mm-list">
+              <button onClick={() => startReply(menu)}>↩️ {L('Jibu', 'Reply')}</button>
+              <button onClick={() => { navigator.clipboard?.writeText(menu.body).catch(() => {}); setMenu(null); useStore.getState().toast(L('Imenakiliwa', 'Copied')); }}>📋 {L('Nakili', 'Copy')}</button>
+              {menu.from !== me.username && <button onClick={() => { const u = menu.from; setMenu(null); openUserActions(u); }}>👤 @{menu.from} · {L('wasifu, ujumbe, tip', 'profile, message, tip')}</button>}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -20,7 +20,7 @@ export function resetSceneWalk(key) {
   scenePeers.clear();
 }
 
-const BOUNDS = { default: [-10, 10, -7, 9], market: [-15, 15, -8, 11], stand: [-15, 15, -0.5, 11], plaza: [-14, 14, -0.5, 11], terminal: [-14, 14, 0.8, 11], stadium: [-14, 14, -6, 14], beach: [-12, 12, -8, 9], club: [-10, 10, -7, 8], flight: [-2, 2, -6, 6] };
+const BOUNDS = { default: [-10, 10, -7, 9], market: [-15, 15, -8, 11], stand: [-15, 15, -0.5, 11], plaza: [-14, 14, -0.5, 11], terminal: [-14, 14, 0.8, 11], stadium: [-14, 14, -6, 14], beach: [-12, 12, -8, 9], club: [-10, 10, -7, 8], flight: [-2, 2, -6, 6], yacht: [-3.3, 3.3, -2.5, 7.6], jet: [-0.85, 0.85, -7.8, 6.1] };
 const SPEED = 4.2;
 
 // Hotspots per scene: [x, z, vibe]. Scenes not listed get a couple of generic ones.
@@ -57,6 +57,8 @@ const SPOTS = {
   room: [[0, 1.5, 'rest']],
   karting: [[0, 6, 'cheer'], [4, 6, 'photo']],
   police: [], court: [], flight: [], heli: [], ferry: [[0, 3, 'photo']], road: [],
+  yacht: [[1.0, 4.9, 'sunbathe'], [-2.3, 1.7, 'jacuzzi'], [2.1, 0.2, 'champagne'], [0, -1.6, 'decks'], [-1.8, -1.6, 'chef'], [2.9, 6.6, 'angling'], [-2.9, 6.6, 'jetski'], [1.9, -2.2, 'helm'], [-0.9, 5.6, 'selfie']],
+  jet: [[0.3, -7.3, 'champagne'], [0, -4.4, 'chef'], [0, -8.1, 'cockpit'], [-0.4, 1.0, 'lounge'], [0.45, 2.1, 'movie'], [0, 4.4, 'nap']],
 };
 const spotsFor = (key) => SPOTS[key] ?? [[-3, 3, 'greet'], [3, 3, 'selfie']];
 

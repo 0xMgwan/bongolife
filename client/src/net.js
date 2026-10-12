@@ -84,23 +84,29 @@ export function connect() {
       bump();
     }
   });
-  socket.on('player:inside', ({ id, inside }) => {
-    if (id === st().myId) return useStore.setState({ inside });
+  socket.on('player:inside', ({ id, inside, host, model, color, hostName }) => {
+    if (id === st().myId) return useStore.setState({ inside, insideHost: host || null, boat: host ? { model, color, hostName, hostId: host } : null });
     const r = remotes.get(id);
     if (r) {
       r.inside = inside;
+      r.host = host || null;
       bump();
     }
   });
-  socket.on('inside:denied', () => {
-    useStore.setState({ inside: null });
-    st().toast(L('Sogea karibu na mlango kwanza.', 'Get closer to the entrance first.'), 'err');
+  socket.on('inside:denied', (placeId) => {
+    useStore.setState({ inside: null, insideHost: null, boat: null });
+    if (/^(yacht|jet):/.test(placeId || '')) st().toast(L('Huwezi kupanda — mwaliko umeisha au imejaa.', "Can't board — the invite expired or it's full."), 'err');
+    else st().toast(L('Sogea karibu na mlango kwanza.', 'Get closer to the entrance first.'), 'err');
   });
+  socket.on('lux:invite', (d) => { sfx('notify'); useStore.setState({ luxInvite: d }); });
   socket.on('moves', (list) => {
     for (const [id, x, z, ry, m] of list) {
       const r = remotes.get(id);
       if (r) { r.tx = x; r.tz = z; r.tr = ry; r.m = m; }
     }
+  });
+  socket.on('chat:react', ({ mid, reactions }) => {
+    useStore.setState((s) => ({ publicFeed: s.publicFeed.map((m) => ((m.mid ?? m.id) === mid ? { ...m, reactions } : m)) }));
   });
   socket.on('chat', (msg) => {
     if (st().me?.blocked?.includes(msg.username)) return;
@@ -347,8 +353,14 @@ export function replyInvite(fromId, accept) {
 }
 
 /** Walk into a venue (placeId) or back out (null). */
+/** Board your own (or a friend's) yacht/jet — from anywhere. */
+export function boardLuxury(kind, hostId) {
+  useStore.setState({ inside: kind, insideHost: hostId, phone: null, sheet: null, luxInvite: null, cityView: 'follow' });
+  local.target = null;
+  socket?.emit('inside', `${kind}:${hostId}`);
+}
 export function setInside(placeId) {
-  useStore.setState({ inside: placeId });
+  useStore.setState({ inside: placeId, ...(placeId === 'yacht' || placeId === 'jet' ? {} : { insideHost: null, boat: null }) });
   local.target = null;
   sendMove(true); // the server checks you're at the door, so send where you are first
   socket?.emit('inside', placeId);
@@ -368,8 +380,8 @@ export function sendMove(force = false) {
   socket.emit('move', { x: local.x, z: local.z, ry: local.ry, m: local.moving ? (local.running ? 2 : 1) : 0 });
 }
 
-export function sendChat(text) {
-  socket?.emit('chat', text);
+export function sendChat(text, replyTo = null) {
+  socket?.emit('chat', replyTo ? { text, replyTo } : text);
 }
 const TOGETHER_EMOJI = { highfive: '✋', fistbump: '👊', hug: '🤗', dance: '💃', treat: '🍹', selfie: '🤳', fight: '🥊' };
 /** Ask someone nearby to do a together-interaction; resolves with { ok } or { error }. */
