@@ -1908,3 +1908,19 @@ body.cam-flash::after { content: ''; position: fixed; inset: 0; background: #fff
 .gym-steps span.now { background: #f5b800; color: #111; font-weight: 800; }
 .gym-steps span.ok { background: #dcfce7; color: #166534; }
 .gym-left { text-align: center; font-weight: 900; font-size: 28px; }
+/* home upgrades */
+.home-up { display: grid; gap: 8px; max-height: 52vh; overflow-y: auto; padding: 2px; }
+.hu-cur { background: #0f172a; color: #fff; border-radius: 14px; padding: 10px 12px; display: grid; gap: 2px; }
+.hu-cur small { color: #cbd5e1; }
+.hu-lv { display: flex; gap: 10px; align-items: center; background: #fff; border: 1.5px solid var(--line); border-radius: 14px; padding: 9px 10px; }
+.hu-lv > span { font-size: 26px; } .hu-lv b { display: block; font-size: 14px; } .hu-lv small { color: #6b655b; font-size: 12px; }
+.hu-lv.next { border-color: #f5b800; box-shadow: 0 0 0 2px rgba(245,184,0,.3); }
+.hu-lv.done { opacity: .7; }
+.hu-t { font-weight: 800; font-size: 13px; margin-top: 4px; }
+.hu-sw { display: flex; flex-wrap: wrap; gap: 8px; }
+.hu-sw button { width: 30px; height: 30px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1.5px #d6d3d1; }
+.hu-sw button.on { box-shadow: 0 0 0 3px #111; }
+.hu-fl { display: flex; flex-wrap: wrap; gap: 6px; }
+.hu-fl button { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1.5px solid var(--line); border-radius: 999px; padding: 5px 10px 5px 5px; font-weight: 700; font-size: 12.5px; }
+.hu-fl button.on { border-color: #111; }
+.hu-fl i { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #d6d3d1; }

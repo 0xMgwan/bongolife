@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fmtTsh, fmtShort, buildingById, placeById, CITIES } from '@shared/world.js';
+import { fmtTsh, fmtShort, buildingById, placeById, CITIES, HOME_LEVELS } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { api } from '../../api.js';
 import { AppHead } from '../Phone.jsx';
@@ -65,6 +65,12 @@ export function Wekeza({ back, close, open }) {
           <span className="em">🏢</span>
           <span className="grow"><b>{L('Anzisha kampuni: kuanzia 1.5M', 'Start a company: from 1.5M')}</b><small>{L('Wafanyakazi, bei, wateja kila jioni', 'Staff, prices, customers every evening')}</small></span>
           <span className="go">{L('Fungua', 'Open')}</span>
+        </button>
+
+        <button className="co-start" style={{ marginTop: 10 }} onClick={() => { close?.(); useStore.setState({ phone: null, tab: 'shop', catTab: 'upgrade', placing: null }); }}>
+          <span className="em">{HOME_LEVELS[me.homeLevel || 0].emoji}</span>
+          <span className="grow"><b>{L('Kwangu', 'My home')}: {L(HOME_LEVELS[me.homeLevel || 0].name, HOME_LEVELS[me.homeLevel || 0].nameEn)}</b><small>{L('Panua nyumba, paka rangi, badilisha sakafu', 'Make it bigger, repaint, new floors')}</small></span>
+          <span className="go">🏗️ {L('Boresha', 'Upgrade')}</span>
         </button>
 
         <div className="section-t">{L('ARDHI YAKO', 'YOUR LAND')}</div>

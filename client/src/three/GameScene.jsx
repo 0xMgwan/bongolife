@@ -9,7 +9,7 @@ import { ActivityScene, SCENES, SCENE_ORIGIN, sceneCam, sceneFocus } from './Sce
 import { Effects } from './Effects.jsx';
 import { cameraHook } from '../ui/Camera.jsx';
 import { setCityNight } from './CityDecor.jsx';
-import { HomeScene, HOME_ORIGIN } from './HomeScene.jsx';
+import { HomeScene, HOME_ORIGIN, homeView } from './HomeScene.jsx';
 import { livePartyAt } from '../ui/events.js';
 import { MapPins } from './MapPins.jsx';
 import { useStore } from '../store.js';
@@ -170,13 +170,16 @@ function CameraRig({ mode, sceneKey }) {
     }
     if (mode === 'home') {
       // Build mode glides the camera over to the yard beside the house.
-      const want = useStore.getState().building ? 14 : 0;
+      const build = useStore.getState().building;
+      const want = build ? 14 : homeView.cx;
       view.homeFx = (view.homeFx ?? 0) + (want - (view.homeFx ?? 0)) * Math.min(1, dt * 4);
+      view.homeFz = (view.homeFz ?? 0) + ((build ? 0 : homeView.cz) - (view.homeFz ?? 0)) * Math.min(1, dt * 4);
       const ox = HOME_ORIGIN[0] + view.homeFx;
-      const dist = view.homeDist;
+      const oz = HOME_ORIGIN[2] + view.homeFz;
+      const dist = view.homeDist + homeView.extra;
       const flat = Math.cos(view.homePitch) * dist;
-      camera.position.set(ox + Math.sin(view.homeYaw) * flat, 1 + Math.sin(view.homePitch) * dist, HOME_ORIGIN[2] + Math.cos(view.homeYaw) * flat);
-      camera.lookAt(ox, 0.5, HOME_ORIGIN[2]);
+      camera.position.set(ox + Math.sin(view.homeYaw) * flat, 1 + Math.sin(view.homePitch) * dist, oz + Math.cos(view.homeYaw) * flat);
+      camera.lookAt(ox, 0.5, oz);
       return;
     }
     const a = 1 - Math.exp(-dt * 6);

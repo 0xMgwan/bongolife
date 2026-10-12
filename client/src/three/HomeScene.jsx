@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { HOME, furnitureById, footprint, homeFits } from '@shared/world.js';
+import { HOME, furnitureById, footprint, homeFits, homeBounds, HOME_FLOORS, HOME_LEVELS } from '@shared/world.js';
 import { mat, geo } from './textures.js';
 import { FurnitureModel } from './Furniture.jsx';
 import { Body, Overhead } from './Players.jsx';
@@ -24,6 +24,17 @@ const unitBox = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
 const WALL_MAT = new THREE.MeshPhongMaterial({ color: WALL, shininess: 8, specular: new THREE.Color('#111111') });
 const CAP_MAT = new THREE.MeshPhongMaterial({ color: '#e7e5e4', shininess: 20 });
 const SKIRT_MAT = new THREE.MeshPhongMaterial({ color: '#0f5e4f', shininess: 10 });
+
+/** The home's centre and extra camera distance for its size (read by the camera rig). */
+export const homeView = { cx: 0, cz: 0, extra: 0 };
+/** Which home is on screen: yours, or the host's when visiting. */
+export function homeLayout(me, visiting) {
+  const level = (visiting ? visiting.host.homeLevel : me?.homeLevel) || 0;
+  const style = (visiting ? visiting.host.homeStyle : me?.homeStyle) || {};
+  return { level, style, b: homeBounds(level), room: !!HOME_LEVELS[level]?.room };
+}
+const wallMats = new Map();
+const wallMat = (c) => wallMats.get(c) || (wallMats.set(c, new THREE.MeshPhongMaterial({ color: c, shininess: 8, specular: new THREE.Color('#111111') })), wallMats.get(c));
 
 /** Player position inside the home (local units), kept outside React. */
 export const homeAvatar = { x: 0, z: 2, ry: Math.PI, target: null };
@@ -77,22 +88,31 @@ function Floor({ x1, x2, z1, z2, a, b, y = 0.005, kind = 'tile' }) {
   );
 }
 
-// Wall segments [x1, z1, x2, z2] — doors are simply gaps between segments.
-const WALLS = [
-  [-6, -5, 6, -5], [-6, -5, -6, 5], [6, -5, 6, 5], [-6, 5, 1.8, 5], [3.2, 5, 6, 5], // outer, front door gap
-  [-2, 1.5, -2, 2.2], [-2, 3.2, -2, 5], [-6, 1.5, -2, 1.5], // bathroom
-  [1.5, -5, 1.5, -3.2], [1.5, -2.2, 1.5, -1], [1.5, -1, 6, -1], // bedroom
-];
-function Walls() {
-  return WALLS.map(([x1, z1, x2, z2], i) => {
+// Wall segments [x1, z1, x2, z2] — doors are simply gaps between segments. The outer shell follows
+// the home's size; the original bathroom/bedroom keep their walls when the home grows.
+function wallsFor({ b, room }) {
+  const W = [
+    [b.x1, b.z1, b.x2, b.z1], [b.x1, b.z1, b.x1, b.z2], [b.x2, b.z1, b.x2, b.z2], [b.x1, b.z2, 1.8, b.z2], [3.2, b.z2, b.x2, b.z2], // outer, front door gap
+    [-2, 1.5, -2, 2.2], [-2, 3.2, -2, 5], [-6, 1.5, -2, 1.5], // bathroom
+    [1.5, -5, 1.5, -3.2], [1.5, -2.2, 1.5, -1], [1.5, -1, 6, -1], // bedroom
+  ];
+  if (b.x1 < -6) W.push([-6, 1.5, -6, 5]); // bathroom's old outer wall
+  if (b.z1 < -5) W.push([1.5, -5, 6, -5]); // bedroom's old outer wall
+  if (room) W.push([b.x1 + 5, b.z1, b.x1 + 5, b.z1 + 2.2], [b.x1 + 5, b.z1 + 3.2, b.x1 + 5, b.z1 + 4.5], [b.x1, b.z1 + 4.5, b.x1 + 5, b.z1 + 4.5]); // a second bedroom
+  return W;
+}
+function Walls({ layout }) {
+  const { b } = layout;
+  const m = wallMat(layout.style.wall || WALL);
+  return wallsFor(layout).map(([x1, z1, x2, z2], i) => {
     const len = Math.hypot(x2 - x1, z2 - z1);
-    const back = z1 === -5 && z2 === -5 || x1 === -6 && x2 === -6;
+    const back = (z1 === b.z1 && z2 === b.z1) || (x1 === b.x1 && x2 === b.x1);
     const h = back ? 2.2 : 1.3;
     const sx = x1 === x2 ? 0.16 : len + 0.16;
     const sz = z1 === z2 ? 0.16 : len + 0.16;
     return (
       <group key={i} position={[(x1 + x2) / 2, 0, (z1 + z2) / 2]}>
-        <mesh geometry={unitBox} material={WALL_MAT} scale={[sx, h, sz]} />
+        <mesh geometry={unitBox} material={m} scale={[sx, h, sz]} />
         {/* light cap on top of the wall, like a real cut-away doll house */}
         <mesh geometry={unitBox} material={CAP_MAT} position={[0, h, 0]} scale={[sx + 0.04, 0.07, sz + 0.04]} />
         <mesh geometry={unitBox} material={SKIRT_MAT} position={[0, 0, 0]} scale={[sx + 0.03, 0.12, sz + 0.03]} />
@@ -101,13 +121,13 @@ function Walls() {
   });
 }
 
-function Garden() {
+function Garden({ b }) {
   return (
     <group>
-      {/* Wide enough for the yard on the east side. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[5, -0.04, 0]} material={mat('#c7dca6')}><circleGeometry args={[22, 56]} /></mesh>
+      {/* Wide enough for the yard on the east side (and a grown home on the west). */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[5, -0.04, 0]} material={mat('#c7dca6')}><circleGeometry args={[28, 56]} /></mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2.5, -0.03, 6.6]} material={mat('#d6d3d1')}><planeGeometry args={[1.6, 3.2]} /></mesh>
-      {[[-9, -6], [9, -8], [-10, 5], [6, 8.5]].map(([x, z], i) => (
+      {[[b.x1 - 3, b.z1 - 1], [9, -8], [b.x1 - 4, 5], [6, 8.5]].map(([x, z], i) => (
         <group key={i} position={[x, 0, z]}>
           <mesh geometry={geo('cyl', 0.15, 0.2, 1.4, 6)} material={mat('#7c5a3a')} position={[0, 0.7, 0]} />
           <mesh geometry={geo('sphere', 1, 7, 5)} material={mat('#3f9b4a')} position={[0, 1.9, 0]} />
@@ -255,11 +275,11 @@ function Driveway({ vehicles, mine }) {
   );
 }
 
-function Ghost({ items }) {
+function Ghost({ items, b }) {
   const placing = useStore((s) => s.placing);
   if (!placing) return null;
   const others = items.filter((i) => i.id !== placing.id);
-  const ok = homeFits(placing.def, placing.x, placing.z, placing.rot, others);
+  const ok = homeFits(placing.def, placing.x, placing.z, placing.rot, others, b);
   const [w, d] = footprint(placing.def, placing.rot);
   return (
     <group position={[placing.x, 0.02, placing.z]}>
@@ -279,6 +299,11 @@ export function snapCenter(v, size, half) {
   const off = (size % 2) / 2;
   return Math.max(-half + size / 2, Math.min(half - size / 2, Math.round(v - off) + off));
 }
+/** Snap an item's centre to the grid inside [lo, hi] (the home's walls on that axis). */
+export function snapIn(v, size, lo, hi) {
+  const off = (size % 2) / 2;
+  return Math.max(lo + size / 2, Math.min(hi - size / 2, Math.round(v - off) + off));
+}
 
 export function HomeScene({ me }) {
   const own = useStore((s) => s.homeItems);
@@ -292,6 +317,12 @@ export function HomeScene({ me }) {
   const myYard = useStore((s) => s.yard);
   const hostYard = useStore((s) => s.visitYard);
   const host = visiting?.host?.username;
+  const layout = homeLayout(me, visiting);
+  const { b } = layout;
+  homeView.cx = (b.x1 + b.x2) / 2;
+  homeView.cz = (b.z1 + b.z2) / 2;
+  homeView.extra = layout.level * 4;
+  const floor = HOME_FLOORS.find((f) => f.id === layout.style.floor) || HOME_FLOORS[0];
   useEffect(() => {
     useStore.setState({ visitYard: null });
     if (host) api(`/yard/${encodeURIComponent(host)}`).then((y) => useStore.setState({ visitYard: y })).catch(() => {});
@@ -303,29 +334,30 @@ export function HomeScene({ me }) {
     const p = useStore.getState().placing;
     if (!p) return;
     const [w, d] = footprint(p.def, p.rot);
-    useStore.setState({ placing: { ...p, x: snapCenter(pt[0], w, HOME.w / 2), z: snapCenter(pt[1], d, HOME.d / 2) } });
+    useStore.setState({ placing: { ...p, x: snapIn(pt[0], w, b.x1, b.x2), z: snapIn(pt[1], d, b.z1, b.z2) } });
   };
   const onFloorClick = (e) => {
     if (e.delta > 10 && !useStore.getState().placing) return;
     e.stopPropagation();
     const pt = floorPoint(e);
     if (useStore.getState().placing) return moveGhost(pt);
-    homeAvatar.target = [Math.max(-5.6, Math.min(5.6, pt[0])), Math.max(-4.6, Math.min(4.6, pt[1]))];
+    homeAvatar.target = [Math.max(b.x1 + 0.4, Math.min(b.x2 - 0.4, pt[0])), Math.max(b.z1 + 0.4, Math.min(b.z2 - 0.4, pt[1]))];
     homeAvatar.arrive = null;
   };
 
   return (
     <group position={HOME_ORIGIN}>
       <Shadows light={[6, 12, 7]} size={14} intensity={0.7}>
-      <Garden />
-      <Floor x1={-6} x2={6} z1={-5} z2={5} a="#ece6d8" b="#e2dac8" />
+      <Garden b={b} />
+      <Floor x1={b.x1} x2={b.x2} z1={b.z1} z2={b.z2} a={floor.a} b={floor.b} kind={floor.kind} />
       <Floor x1={1.5} x2={6} z1={-5} z2={-1} a="#b98552" b="#a8744a" y={0.008} kind="wood" />
       <Floor x1={-6} x2={-2} z1={1.5} z2={5} a="#e0ecf7" b="#cfe0f0" y={0.008} kind="small" />
-      <Walls />
+      {layout.room && <Floor x1={b.x1} x2={b.x1 + 5} z1={b.z1} z2={b.z1 + 4.5} a="#c7a27a" b="#b8916a" y={0.008} kind="wood" />}
+      <Walls layout={layout} />
       {/* invisible click/drag surface for walking and placing */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.02, 0]}
+        position={[(b.x1 + b.x2) / 2, 0.02, (b.z1 + b.z2) / 2]}
         visible={false}
         onClick={onFloorClick}
         onPointerDown={(e) => { if (useStore.getState().placing) { dragging.current = true; e.stopPropagation(); moveGhost(floorPoint(e)); } }}
@@ -333,7 +365,7 @@ export function HomeScene({ me }) {
         onPointerUp={() => (dragging.current = false)}
         onPointerLeave={() => (dragging.current = false)}
       >
-        <planeGeometry args={[HOME.w, HOME.d]} />
+        <planeGeometry args={[b.x2 - b.x1, b.z2 - b.z1]} />
       </mesh>
       {items.map((it) => {
         const def = furnitureById[it.item];
@@ -357,7 +389,7 @@ export function HomeScene({ me }) {
         );
       })}
       <Yard yard={visiting ? hostYard : myYard} mine={!visiting} origin={HOME_ORIGIN} />
-      <Ghost items={items} />
+      <Ghost items={items} b={b} />
       <Sim me={me} items={items} />
       <Guests />
       {party && <PartyDecor event={party} home />}

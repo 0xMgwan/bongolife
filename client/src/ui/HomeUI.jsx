@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { furnitureThumb, cachedThumb } from '../three/thumbs.jsx';
-import { FURNITURE, FURNITURE_CATS, HOME, furnitureById, footprint, homeFits, fmtTsh, fmtShort, NEEDS } from '@shared/world.js';
+import { FURNITURE, FURNITURE_CATS, HOME, furnitureById, footprint, homeFits, fmtTsh, fmtShort, NEEDS, homeBounds, HOME_LEVELS, HOME_WALLS, HOME_FLOORS, HOME_STYLE_PRICE } from '@shared/world.js';
+import { ask } from './Confirm.jsx';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
 import { L, loc } from '../i18n.js';
 import { sfx } from '../audio.js';
-import { snapCenter, homeAvatar } from '../three/HomeScene.jsx';
+import { snapIn, homeAvatar } from '../three/HomeScene.jsx';
 import { view } from '../net.js';
 
 const stars = (n) => '★'.repeat(n);
@@ -49,18 +50,22 @@ export function Thumb({ def, size = 64 }) {
 /** Buy mode: category chips + item cards. Picking one starts placement. */
 function Catalogue() {
   const me = useStore((s) => s.me);
-  const [cat, setCat] = useState('sleep');
+  const [cat, setCat] = useState(() => useStore.getState().catTab || 'sleep');
+  useEffect(() => { useStore.setState({ catTab: null }); }, []);
+  const b = homeBounds(me.homeLevel);
+  const cx = Math.round((b.x1 + b.x2) / 2);
+  const cz = Math.round((b.z1 + b.z2) / 2);
   const [hidden, setHidden] = useState(false);
   const pick = (def) => {
     const [w, d] = footprint(def, 0);
     // Start near the middle, nudged to a free spot if possible.
     const items = useStore.getState().homeItems;
-    let spot = { x: snapCenter(0, w, HOME.w / 2), z: snapCenter(0, d, HOME.d / 2) };
-    outer: for (let r = 0; r < 6; r++)
-      for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r, r], [-r, -r]]) {
-        const x = snapCenter(dx, w, HOME.w / 2);
-        const z = snapCenter(dz, d, HOME.d / 2);
-        if (homeFits(def, x, z, 0, items)) { spot = { x, z }; break outer; }
+    let spot = { x: snapIn(cx, w, b.x1, b.x2), z: snapIn(cz, d, b.z1, b.z2) };
+    outer: for (let r = 0; r < 9; r++)
+      for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r, r], [-r, -r], [r, -r], [-r, r]]) {
+        const x = snapIn(cx + dx, w, b.x1, b.x2);
+        const z = snapIn(cz + dz, d, b.z1, b.z2);
+        if (homeFits(def, x, z, 0, items, b)) { spot = { x, z }; break outer; }
       }
     sfx('pop');
     useStore.setState({ placing: { def, ...spot, rot: 0 } });
@@ -80,11 +85,12 @@ function Catalogue() {
           <button className="cat-x" onClick={() => setHidden(true)} aria-label={L('Ficha', 'Hide')}>✕</button>
         </div>
         <div className="cat-chips">
+          <button className={`chip ${cat === 'upgrade' ? 'on-yellow' : ''}`} onClick={() => setCat('upgrade')}>🏗️ {L('Boresha nyumba', 'Upgrade home')}</button>
           {FURNITURE_CATS.map((c) => (
             <button key={c.id} className={`chip ${cat === c.id ? 'on-yellow' : ''}`} onClick={() => setCat(c.id)}>{c.icon} {loc(c)}</button>
           ))}
         </div>
-        <div className="cat-grid" key={cat}>
+        {cat === 'upgrade' ? <HomeUpgrade /> : <div className="cat-grid" key={cat}>
           {/* Just the item floating, its price and a Select button; the name is for screen readers. */}
           {FURNITURE.filter((f) => f.cat === cat).map((f, i) => {
             const broke = me.money < f.price;
@@ -96,9 +102,57 @@ function Catalogue() {
               </div>
             );
           })}
-        </div>
+        </div>}
       </div>
     </>
+  );
+}
+
+/** Bigger home levels, wall paint and floors. */
+function HomeUpgrade() {
+  const me = useStore((s) => s.me);
+  const run = useStore((s) => s.run);
+  const level = me.homeLevel || 0;
+  const style = me.homeStyle || {};
+  const next = HOME_LEVELS[level + 1];
+  const cur = HOME_LEVELS[level];
+  const sz = (lv) => { const b = homeBounds(lv); return `${b.x2 - b.x1}×${b.z2 - b.z1}m`; };
+  const up = async () => {
+    if (!(await ask({ icon: next.emoji, title: L(`Hamia ${next.name}?`, `Move up to a ${next.nameEn}?`), text: L(`${fmtTsh(next.price)} · ${sz(next.level)} · vitu vyako vinabaki pale pale.`, `${fmtTsh(next.price)} · ${sz(next.level)} · your furniture stays where it is.`), ok: L('Boresha', 'Upgrade') }))) return;
+    const r = await run('/home/upgrade', { method: 'POST', body: { level: next.level } });
+    if (r) { sfx('levelup'); useStore.getState().toast(L(`${next.emoji} Karibu ${next.name}! Nafasi zaidi ya kupamba.`, `${next.emoji} Welcome to your ${next.nameEn}! More room to decorate.`)); }
+  };
+  const restyle = async (body) => {
+    const r = await run('/home/style', { method: 'POST', body });
+    if (r) sfx('cash');
+  };
+  return (
+    <div className="home-up">
+      <div className="hu-cur">
+        <b>{cur.emoji} {L(cur.name, cur.nameEn)} · {sz(level)}</b>
+        <small>{cur.comfort ? L(`Kupumzika nyumbani kunaleta +${Math.round(cur.comfort * 100)}%`, `Resting at home gives +${Math.round(cur.comfort * 100)}%`) : L('Nyumba ya kuanzia', 'Your starter home')}</small>
+      </div>
+      {HOME_LEVELS.slice(1).map((lv) => (
+        <div key={lv.level} className={`hu-lv ${lv.level <= level ? 'done' : lv.level === level + 1 ? 'next' : ''}`}>
+          <span>{lv.emoji}</span>
+          <div className="grow">
+            <b>{L(lv.name, lv.nameEn)} · {sz(lv.level)}</b>
+            <small>+{Math.round(lv.comfort * 100)}% {L('kupumzika', 'rest')}{lv.room ? L(' · chumba cha ziada', ' · extra bedroom') : ''}</small>
+          </div>
+          {lv.level <= level ? <b className="green">✓</b> : lv.level === level + 1
+            ? <button className="btn btn-green btn-sm" disabled={me.money < lv.price} onClick={up}>{fmtShort(lv.price)}</button>
+            : <small className="muted">{fmtShort(lv.price)}</small>}
+        </div>
+      ))}
+      <div className="hu-t">🎨 {L('Rangi ya kuta', 'Wall colour')} · {fmtShort(HOME_STYLE_PRICE.wall)}</div>
+      <div className="hu-sw">
+        {HOME_WALLS.map((c) => <button key={c} className={(style.wall || HOME_WALLS[0]) === c ? 'on' : ''} style={{ background: c }} disabled={me.money < HOME_STYLE_PRICE.wall} onClick={() => restyle({ wall: c })} aria-label={c} />)}
+      </div>
+      <div className="hu-t">🧱 {L('Sakafu', 'Floor')} · {fmtShort(HOME_STYLE_PRICE.floor)}</div>
+      <div className="hu-fl">
+        {HOME_FLOORS.map((f) => <button key={f.id} className={(style.floor || 'tile') === f.id ? 'on' : ''} disabled={me.money < HOME_STYLE_PRICE.floor} onClick={() => restyle({ floor: f.id })}><i style={{ background: `linear-gradient(135deg, ${f.a} 50%, ${f.b} 50%)` }} />{L(f.name, f.nameEn)}</button>)}
+      </div>
+    </div>
   );
 }
 
@@ -110,7 +164,8 @@ function PlacePanel() {
   const [busy, setBusy] = useState(false);
   const { def } = placing;
   const others = items.filter((i) => i.id !== placing.id);
-  const fits = homeFits(def, placing.x, placing.z, placing.rot, others);
+  const b = homeBounds(me.homeLevel);
+  const fits = homeFits(def, placing.x, placing.z, placing.rot, others, b);
   // Arrows are screen-relative: pick the grid axis closest to that screen direction.
   const nudgeScreen = (sx, sy) => {
     const yaw = view.homeYaw;
@@ -121,12 +176,12 @@ function PlacePanel() {
   };
   const nudge = (dx, dz) => {
     const [w, d] = footprint(def, placing.rot);
-    useStore.setState({ placing: { ...placing, x: snapCenter(placing.x + dx, w, HOME.w / 2), z: snapCenter(placing.z + dz, d, HOME.d / 2) } });
+    useStore.setState({ placing: { ...placing, x: snapIn(placing.x + dx, w, b.x1, b.x2), z: snapIn(placing.z + dz, d, b.z1, b.z2) } });
   };
   const rotate = () => {
     const rot = (placing.rot + 1) % 4;
     const [w, d] = footprint(def, rot);
-    useStore.setState({ placing: { ...placing, rot, x: snapCenter(placing.x, w, HOME.w / 2), z: snapCenter(placing.z, d, HOME.d / 2) } });
+    useStore.setState({ placing: { ...placing, rot, x: snapIn(placing.x, w, b.x1, b.x2), z: snapIn(placing.z, d, b.z1, b.z2) } });
   };
   const place = async () => {
     setBusy(true);

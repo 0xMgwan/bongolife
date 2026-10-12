@@ -3,7 +3,7 @@ import {
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST, industryById, COMPANY,
   furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
-  jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats, luxuryById, LUXURY_RESALE,
+  jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats, luxuryById, LUXURY_RESALE, HOME_LEVELS, homeBounds, HOME_WALLS, HOME_FLOORS, HOME_STYLE_PRICE,
 } from '../../shared/world.js';
 import * as hiring from './hiring.js';
 import * as health from './health.js';
@@ -225,10 +225,39 @@ export const buyFurniture = db.transaction((userId, { item, x, z, rot }) => {
   const def = furnitureById[item];
   if (!def) throw new GameError(['Kitu hicho hakipo.', 'That item does not exist.'], 404);
   x = snap(x); z = snap(z); rot = turn(rot);
-  if (!homeFits(def, x, z, rot, hq.items.all(userId))) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
+  if (!homeFits(def, x, z, rot, hq.items.all(userId), homeBounds(getUser(userId).homeLevel))) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
   if (hq.count.get(userId).n >= 80) throw new GameError(['Nyumba imejaa vitu.', 'Your home is full.']);
   if (def.price) addMoney(userId, -discount(getUser(userId), def.price), 'purchase', `Fanicha: ${def.name}`);
   hq.insert.run(userId, item, x, z, rot, now());
+});
+
+/** Move up to a bigger home (Studio → Apartment → Family house → Mansion). */
+export const upgradeHome = db.transaction((userId, level) => {
+  const u = getUser(userId);
+  const next = HOME_LEVELS[Number(level)];
+  if (!next || next.level !== (u.homeLevel || 0) + 1) throw new GameError(['Panda ngazi moja kwa wakati.', 'Upgrade one level at a time.']);
+  addMoney(userId, -next.price, 'purchase', `${next.emoji} Kwangu: ${next.name}`);
+  saveFields(userId, { homeLevel: next.level });
+  return next;
+});
+/** Repaint the walls / lay a new floor. */
+export const styleHome = db.transaction((userId, { wall, floor }) => {
+  const u = getUser(userId);
+  const style = { ...(u.homeStyle || {}) };
+  let cost = 0;
+  if (wall && wall !== style.wall) {
+    if (!HOME_WALLS.includes(wall)) throw new GameError(['Rangi haipo', 'Unknown colour']);
+    style.wall = wall;
+    cost += HOME_STYLE_PRICE.wall;
+  }
+  if (floor && floor !== style.floor) {
+    if (!HOME_FLOORS.some((f) => f.id === floor)) throw new GameError(['Sakafu haipo', 'Unknown floor']);
+    style.floor = floor;
+    cost += HOME_STYLE_PRICE.floor;
+  }
+  if (cost) addMoney(userId, -cost, 'purchase', '🎨 Kwangu: rangi/sakafu');
+  saveFields(userId, { homeStyle: style });
+  return style;
 });
 
 export const moveFurniture = db.transaction((userId, id, { x, z, rot }) => {
@@ -236,7 +265,7 @@ export const moveFurniture = db.transaction((userId, id, { x, z, rot }) => {
   if (!row) throw new GameError(['Kitu hicho si chako.', "That's not your item."], 404);
   x = snap(x); z = snap(z); rot = turn(rot);
   const others = hq.items.all(userId).filter((o) => o.id !== row.id);
-  if (!homeFits(furnitureById[row.item], x, z, rot, others)) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
+  if (!homeFits(furnitureById[row.item], x, z, rot, others, homeBounds(getUser(userId).homeLevel))) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
   hq.move.run(x, z, rot, row.id);
 });
 
@@ -349,7 +378,10 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
 
   if (busy.kind === 'home') {
     const def = furnitureById[busy.item];
-    fields.needs = applyNeeds(user.needs, def?.use?.effects || {});
+    // A bigger, nicer home makes resting there count for more.
+    const comfort = 1 + (HOME_LEVELS[user.homeLevel || 0]?.comfort || 0);
+    const eff = Object.fromEntries(Object.entries(def?.use?.effects || {}).map(([k, v]) => [k, v > 0 ? Math.round(v * comfort) : v]));
+    fields.needs = applyNeeds(user.needs, eff);
     if (def?.use?.fame) {
       fields.fame = user.fame + def.use.fame;
       result.lines.push([`⭐ Umaarufu +${def.use.fame}`, `⭐ Fame +${def.use.fame}`]);

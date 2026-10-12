@@ -349,7 +349,7 @@ api.get('/visit/:username', (req, res) => {
   if (!host) throw new GameError(['Mtumiaji hayupo', 'User not found'], 404);
   if (!canVisit(req.user.id, host.id)) throw new GameError(['Hujaalikwa nyumbani kwa mtu huyu.', "You haven't been invited to this home."], 403, 'not_invited');
   const vehicles = db.prepare('SELECT id, model, color FROM vehicles WHERE user_id = ?').all(host.id);
-  res.json({ host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance, vehicles }, items: game.homeItems(host.id) });
+  res.json({ host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance, vehicles, homeLevel: host.homeLevel, homeStyle: host.homeStyle }, items: game.homeItems(host.id) });
 });
 // ---- build mode: your yard of blocks
 const intOf = (v) => (Number.isInteger(v) ? v : Number.parseInt(v, 10));
@@ -371,6 +371,14 @@ api.delete('/yard/blocks', rateLimit('yard', 240, 60_000), (req, res) => {
 });
 
 
+api.post('/home/upgrade', (req, res) => {
+  const lvl = game.upgradeHome(req.user.id, req.body.level);
+  res.json({ level: lvl, me: game.playerState(req.user.id) });
+});
+api.post('/home/style', (req, res) => {
+  game.styleHome(req.user.id, { wall: str(req.body.wall, 10) || null, floor: str(req.body.floor, 12) || null });
+  res.json({ me: game.playerState(req.user.id) });
+});
 api.post('/home/items', (req, res) => {
   game.buyFurniture(req.user.id, { item: str(req.body.item, 30), x: req.body.x, z: req.body.z, rot: req.body.rot });
   res.json({ items: game.homeItems(req.user.id), me: game.playerState(req.user.id) });

@@ -1439,9 +1439,30 @@ export const STARTER_HOME = [
 ];
 /** Footprint of an item after rotation, as [w, d]. */
 export const footprint = (def, rot) => (rot % 2 ? [def.size[1], def.size[0]] : def.size);
-export function homeFits(def, x, z, rot, others = []) {
+// Upgrading Kwangu: each level grows the home to the back (-z) and left (-x) — the door,
+// driveway and yard stay put — adds rooms, and makes resting at home more effective.
+export const HOME_LEVELS = [
+  { level: 0, emoji: '🛏️', name: 'Chumba kimoja', nameEn: 'Studio', price: 0, grow: [0, 0], comfort: 0 },
+  { level: 1, emoji: '🏢', name: 'Apartment', nameEn: 'Apartment', price: 8_000_000, grow: [3, 2], comfort: 0.1 },
+  { level: 2, emoji: '🏡', name: 'Nyumba ya familia', nameEn: 'Family house', price: 30_000_000, grow: [6, 4], comfort: 0.2, room: true },
+  { level: 3, emoji: '🏰', name: 'Jumba la kifahari', nameEn: 'Mansion', price: 120_000_000, grow: [9, 6], comfort: 0.35, room: true },
+];
+export const homeBounds = (level = 0) => {
+  const [gx, gz] = HOME_LEVELS[level]?.grow || [0, 0];
+  return { x1: -HOME.w / 2 - gx, x2: HOME.w / 2, z1: -HOME.d / 2 - gz, z2: HOME.d / 2 };
+};
+export const HOME_WALLS = ['#15806b', '#1e3a8a', '#7c2d12', '#374151', '#9d174d', '#b45309', '#e7e5e4', '#0f766e'];
+export const HOME_FLOORS = [
+  { id: 'tile', name: 'Vigae', nameEn: 'Tiles', a: '#ece6d8', b: '#e2dac8', kind: 'tile' },
+  { id: 'marble', name: 'Marumaru', nameEn: 'Marble', a: '#f8fafc', b: '#e5e7eb', kind: 'tile' },
+  { id: 'wood', name: 'Mbao', nameEn: 'Wood', a: '#b98552', b: '#a8744a', kind: 'wood' },
+  { id: 'dark', name: 'Mbao nyeusi', nameEn: 'Dark wood', a: '#5b3a1f', b: '#4a2f19', kind: 'wood' },
+  { id: 'terrazzo', name: 'Terrazzo', nameEn: 'Terrazzo', a: '#d6d3d1', b: '#cbd5e1', kind: 'small' },
+];
+export const HOME_STYLE_PRICE = { wall: 400_000, floor: 1_500_000 };
+export function homeFits(def, x, z, rot, others = [], b = homeBounds(0)) {
   const [w, d] = footprint(def, rot);
-  if (Math.abs(x) + w / 2 > HOME.w / 2 + 1e-6 || Math.abs(z) + d / 2 > HOME.d / 2 + 1e-6) return false;
+  if (x - w / 2 < b.x1 - 1e-6 || x + w / 2 > b.x2 + 1e-6 || z - d / 2 < b.z1 - 1e-6 || z + d / 2 > b.z2 + 1e-6) return false;
   return !others.some((o) => {
     const od = furnitureById[o.item];
     if (!od) return false;
