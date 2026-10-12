@@ -104,7 +104,7 @@ export function Body({ appearance, vehicle, motion }) {
   const seat = riderOffset(v.kind);
   return (
     <group>
-      <Vehicle kind={v.kind} body={v.body || vehicle.body} lux={v.lux} color={vehicle.color} />
+      <Vehicle kind={v.kind} body={v.body || vehicle.body} lux={v.lux} model={vehicle.model} color={vehicle.color} />
       {seat && (
         <group position={seat}>
           <Avatar appearance={appearance} motion={{ current: { mode: 'sit' } }} />
@@ -435,7 +435,7 @@ export function ParkedCar({ me }) {
   };
   return (
     <group ref={g} onClick={drive}>
-      <Vehicle kind={v.kind} body={v.body} lux={v.lux} color={pick.color} />
+      <Vehicle kind={v.kind} body={v.body} lux={v.lux} model={v.id} color={pick.color} />
     </group>
   );
 }

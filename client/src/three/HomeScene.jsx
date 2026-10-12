@@ -247,7 +247,7 @@ function Driveway({ vehicles, mine }) {
         const d = vehicleById[v.model];
         return (
           <group key={v.id} position={[-1.8 - i * 3, 0, 8.2]} rotation={[0, Math.PI, 0]} scale={0.9} onClick={driveOut(v)}>
-            <Vehicle kind={d.kind} body={d.body} lux={d.lux} color={v.color} />
+            <Vehicle kind={d.kind} body={d.body} lux={d.lux} model={d.id} color={v.color} />
           </group>
         );
       })}

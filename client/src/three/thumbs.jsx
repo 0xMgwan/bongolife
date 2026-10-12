@@ -82,5 +82,5 @@ function thumb(key, el) {
 /** PNG data URL of a furniture item's 3D model. */
 export const furnitureThumb = (def) => thumb(`f:${def.id}`, <FurnitureModel def={def} />);
 /** PNG data URL of a vehicle in a given colour. */
-export const vehicleThumb = (v, color) => thumb(`v:${v.id}:${color}`, <Vehicle kind={v.kind} body={v.body} lux={v.lux} color={color} />);
+export const vehicleThumb = (v, color) => thumb(`v:${v.id}:${color}`, <Vehicle kind={v.kind} body={v.body} lux={v.lux} model={v.id} color={color} />);
 export const cachedThumb = (key) => cache.get(key) || null;

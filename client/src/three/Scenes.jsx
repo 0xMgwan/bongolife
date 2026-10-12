@@ -2031,7 +2031,7 @@ function Road({ me, myBusy }) {
         <mesh geometry={geo('cone', 28, 17, 10)} material={mat('#f8fafc')} position={[0, 46, 0]} />
       </group>
       <group ref={v} position={[1.6, 0, 0]} rotation={[0, Math.PI, 0]}>
-        {def ? <Car body={def.body} color={car.color} lux={def.lux} /> : <VehicleS kind="bus" color="#1d4ed8" />}
+        {def ? <Car body={def.body} color={car.color} lux={def.lux} model={def.id} /> : <VehicleS kind="bus" color="#1d4ed8" />}
       </group>
     </group>
   );

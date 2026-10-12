@@ -245,13 +245,13 @@ export const VEHICLES = [
   { id: 'prado', name: 'Toyota Land Cruiser Prado', kind: 'suv', body: 'suv', tier: 3, price: 95_000_000, speed: 2.8, emoji: '🚙', color: '#f8fafc' },
   { id: 'bmw-x5', name: 'BMW X5', kind: 'suv', body: 'suv', tier: 4, price: 140_000_000, speed: 2.9, emoji: '🚙', color: '#1e3a8a', lux: true },
   { id: 'v8', name: 'Land Cruiser V8', kind: 'suv', body: 'suv-big', tier: 4, price: 170_000_000, speed: 2.9, emoji: '🛻', color: '#111827' },
-  { id: 'range', name: 'Range Rover Vogue', kind: 'suv', body: 'suv-big', tier: 4, price: 280_000_000, speed: 3.0, emoji: '🚙', color: '#14532d', lux: true },
+  { id: 'range', name: 'Range Rover Vogue', kind: 'suv', body: 'range', tier: 4, price: 280_000_000, speed: 3.0, emoji: '🚙', color: '#14532d', lux: true },
   { id: 'benz-s', name: 'Mercedes-Benz S-Class', kind: 'car', body: 'luxury', tier: 5, price: 320_000_000, speed: 3.0, emoji: '🚘', color: '#0f172a', lux: true },
   { id: 'porsche', name: 'Porsche 911 Carrera', kind: 'car', body: 'sports', tier: 5, price: 380_000_000, speed: 3.4, emoji: '🏎️', color: '#facc15', lux: true },
   { id: 'gwagon', name: 'Mercedes-AMG G63 (G-Wagon)', kind: 'suv', body: 'boxy', tier: 5, price: 450_000_000, speed: 3.1, emoji: '🚙', color: '#111827', lux: true },
   { id: 'urus', name: 'Lamborghini Urus', kind: 'suv', body: 'suv-sport', tier: 6, price: 650_000_000, speed: 3.4, emoji: '🏎️', color: '#f97316', lux: true },
   { id: 'aventador', name: 'Lamborghini Aventador', kind: 'car', body: 'sports', tier: 6, price: 950_000_000, speed: 3.7, emoji: '🏎️', color: '#84cc16', lux: true },
-  { id: 'cullinan', name: 'Rolls-Royce Cullinan', kind: 'suv', body: 'suv-big', tier: 6, price: 1_400_000_000, speed: 3.1, emoji: '👑', color: '#f5f5f4', lux: true },
+  { id: 'cullinan', name: 'Rolls-Royce Cullinan', kind: 'suv', body: 'rolls', tier: 6, price: 1_400_000_000, speed: 3.1, emoji: '👑', color: '#f5f5f4', lux: true },
 ];
 export const vehicleById = Object.fromEntries(VEHICLES.map((v) => [v.id, v]));
 export const VEHICLE_COLORS = ['#e5e7eb', '#f5f5f4', '#94a3b8', '#111827', '#0f172a', '#dc2626', '#1d4ed8', '#1e3a8a', '#16a34a', '#14532d', '#84cc16', '#facc15', '#f97316', '#7c3aed'];

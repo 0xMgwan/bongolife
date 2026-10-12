@@ -1314,7 +1314,7 @@ function Traffic({ cityId = 'dar', lowEnd = false }) {
   useEffect(() => () => { trafficCars.length = 0; }, []);
   return state.map((s, i) => (
     <group key={`${cityId}-${i}`} ref={(el) => (refs.current[i] = el)}>
-      <Vehicle kind={s.kind} color={s.color} body={s.kind === 'car' ? (i % 3 === 0 ? 'sedan' : 'hatch') : s.kind === 'suv' && i % 2 ? 'suv-big' : undefined} />
+      <Vehicle lite kind={s.kind} color={s.color} body={s.kind === 'car' ? (i % 3 === 0 ? 'sedan' : 'hatch') : s.kind === 'suv' && i % 2 ? 'suv-big' : undefined} />
       {s.kind === 'bus' && <RouteBoard i={i} />}
     </group>
   ));

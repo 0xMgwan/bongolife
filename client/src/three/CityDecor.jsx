@@ -18,6 +18,7 @@ export function setCityNight(v) {
     if (g.kind === 'emissive') g.mat.emissiveIntensity = g.base * v;
     else if (g.kind === 'opacity') g.mat.opacity = g.base * v;
     else if (g.kind === 'color') g.mat.color.copy(g.day).lerp(g.night, v);
+    else if (g.kind === 'env') g.mat.envMapIntensity = g.base * (1 - 0.75 * v);
   }
 }
 export const cityNight = night;
