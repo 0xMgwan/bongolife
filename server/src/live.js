@@ -70,34 +70,78 @@ async function directory() {
 }
 
 // ------------------------------------------------------------------ welcome voice
-// Natural Tanzanian voices from Azure Speech (free tier: 0.5M characters/month):
-//   AZURE_SPEECH_KEY, AZURE_SPEECH_REGION (e.g. westeurope). Optional AZURE_VOICE_SW / AZURE_VOICE_EN.
-// Without a key the client falls back to the device's own voice.
-export const voiceReady = () => !!(process.env.AZURE_SPEECH_KEY && process.env.AZURE_SPEECH_REGION);
-const VOICE = { sw: () => process.env.AZURE_VOICE_SW || 'sw-TZ-RehemaNeural', en: () => process.env.AZURE_VOICE_EN || 'en-TZ-ImaniNeural' };
+// A natural voice reads the welcome. Providers (first one configured wins):
+//   ElevenLabs — ELEVENLABS_API_KEY (+ ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL_SW / _EN)
+//   Azure      — AZURE_SPEECH_KEY + AZURE_SPEECH_REGION
+// The welcome is spoken in short phrases ('Karibu Bongo!', the weather, the news, the sign-off);
+// each phrase is generated once and kept on disk, so repeat welcomes cost nothing.
+// Without a provider the app uses the device's own voice.
+import fsp from 'node:fs/promises';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { DATA_DIR } from './db.js';
+
+const provider = () => (process.env.ELEVENLABS_API_KEY ? 'eleven' : process.env.AZURE_SPEECH_KEY && process.env.AZURE_SPEECH_REGION ? 'azure' : null);
+export const voiceReady = () => !!provider();
 const xml = (s) => String(s).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
 
-export function welcomeText({ name, w, news, returning, lang }) {
-  const first = String(name || '').split(' ')[0] || 'Mbongo';
-  if (lang === 'en') return `${returning ? 'Welcome back' : 'Welcome'} to Bongo, ${first}! Today in ${w.name} it's ${w.text[1].toLowerCase()}, ${w.temp} degrees. ${news ? `What's new: ${news.titleEn || news.title}. ` : ''}Enjoy the streets — the radio's coming on now.`;
-  return `${returning ? 'Karibu tena' : 'Karibu'} Bongo, ${first}! Leo ${w.name} kuna ${w.text[0].toLowerCase()}, nyuzi ${w.temp}. ${news ? `Habari mpya: ${news.title}. ` : ''}Furahia mtaa — redio inaanza sasa.`;
+/** The welcome as separate phrases (no names, so phrases are shared by everyone and cached). */
+export function welcomePhrases({ w, news, returning, lang }) {
+  if (lang === 'en') return [returning ? 'Welcome back to Bongo!' : 'Welcome to Bongo!', `Today in ${w.name} it's ${w.text[1].toLowerCase()}, ${w.temp} degrees.`, news ? `What's new: ${news.titleEn || news.title}.` : null, "Enjoy the streets. The radio's coming on now."].filter(Boolean);
+  return [returning ? 'Karibu tena Bongo!' : 'Karibu Bongo!', `Leo ${w.name} kuna ${w.text[0].toLowerCase()}, nyuzi ${w.temp}.`, news ? `Habari mpya: ${news.title}.` : null, 'Furahia mtaa. Redio inaanza sasa.'].filter(Boolean);
 }
 
-const ttsCache = new Map(); // text -> Buffer (small LRU)
-export async function speak(text, lang) {
-  if (ttsCache.has(text)) return ttsCache.get(text);
-  const voice = VOICE[lang === 'en' ? 'en' : 'sw']();
+async function eleven(text, lang) {
+  const voice = process.env.ELEVENLABS_VOICE_ID || 'EXAVITQu4vr4xnSDxMaL';
+  const models = lang === 'en' ? [process.env.ELEVENLABS_MODEL_EN || 'eleven_multilingual_v2'] : [process.env.ELEVENLABS_MODEL_SW || 'eleven_v3', 'eleven_multilingual_v2'];
+  let last = null;
+  for (const model of models) {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_64`, {
+      method: 'POST',
+      headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY, 'content-type': 'application/json', accept: 'audio/mpeg' },
+      body: JSON.stringify({ text, model_id: model, voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.35, use_speaker_boost: true } }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (r.ok) return Buffer.from(await r.arrayBuffer());
+    last = `${r.status} ${(await r.text().catch(() => '')).slice(0, 200)}`;
+    console.error('[voice] elevenlabs', model, last);
+  }
+  throw new Error(`elevenlabs ${last}`);
+}
+async function azure(text, lang) {
+  const voice = lang === 'en' ? process.env.AZURE_VOICE_EN || 'en-TZ-ImaniNeural' : process.env.AZURE_VOICE_SW || 'sw-TZ-RehemaNeural';
   const locale = voice.split('-').slice(0, 2).join('-');
-  const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${locale}"><voice name="${voice}"><mstts:express-as style="cheerful"><prosody rate="-4%">${xml(text)}</prosody></mstts:express-as></voice></speak>`;
+  const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${locale}"><voice name="${voice}"><prosody rate="-4%">${xml(text)}</prosody></voice></speak>`;
   const r = await fetch(`https://${process.env.AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`, {
     method: 'POST',
     headers: { 'Ocp-Apim-Subscription-Key': process.env.AZURE_SPEECH_KEY, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3', 'User-Agent': 'BongoLife' },
     body: ssml,
     signal: AbortSignal.timeout(10_000),
   });
-  if (!r.ok) throw new Error(`tts ${r.status}`);
-  const buf = Buffer.from(await r.arrayBuffer());
-  ttsCache.set(text, buf);
-  if (ttsCache.size > 200) ttsCache.delete(ttsCache.keys().next().value);
-  return buf;
+  if (!r.ok) throw new Error(`azure ${r.status}`);
+  return Buffer.from(await r.arrayBuffer());
+}
+
+const VOICE_DIR = path.join(DATA_DIR, 'voice');
+const pending = new Map();
+/** One phrase as MP3, from the disk cache or freshly generated. */
+export async function phrase(text, lang) {
+  const p = provider();
+  const id = crypto.createHash('sha1').update([p, process.env.ELEVENLABS_VOICE_ID || '', process.env.ELEVENLABS_MODEL_SW || '', lang, text].join('|')).digest('hex');
+  const file = path.join(VOICE_DIR, `${id}.mp3`);
+  try { return await fsp.readFile(file); } catch {}
+  if (pending.has(id)) return pending.get(id);
+  const job = (async () => {
+    const buf = p === 'eleven' ? await eleven(text, lang) : await azure(text, lang);
+    await fsp.mkdir(VOICE_DIR, { recursive: true });
+    await fsp.writeFile(file, buf);
+    return buf;
+  })().finally(() => pending.delete(id));
+  pending.set(id, job);
+  return job;
+}
+/** The whole welcome: phrases joined into one MP3 (same format, so frames concatenate cleanly). */
+export async function welcomeAudio(opts) {
+  const parts = await Promise.all(welcomePhrases(opts).map((t) => phrase(t, opts.lang)));
+  return Buffer.concat(parts);
 }

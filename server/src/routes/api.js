@@ -180,15 +180,14 @@ api.use((req, _res, next) => {
 
 // Push notifications: save / remove this device, or send a test.
 // Spoken welcome in a natural Tanzanian voice (Azure). 404 = not configured → the app uses the device voice.
-api.get('/voice/welcome', rateLimit('voice-welcome', 6, 60 * 60_000), wrap(async (req, res) => {
+api.get('/voice/welcome', rateLimit('voice-welcome', 10, 60 * 60_000), wrap(async (req, res) => {
   if (!live.voiceReady()) return res.status(404).json({ error: 'voice off' });
   const lang = req.query.lang === 'en' ? 'en' : 'sw';
   const city = ['dar', 'znz', 'aru'].includes(req.query.city) ? req.query.city : 'dar';
   const w = await live.weather(city);
   const latest = getSettings().latestUpdate;
   const news = latest && Date.now() - latest.at < 14 * 86_400_000 ? latest : null;
-  const text = live.welcomeText({ name: req.user.name, w, news, returning: req.query.returning === '1', lang });
-  const audio = await live.speak(text, lang);
+  const audio = await live.welcomeAudio({ w, news, returning: req.query.returning === '1', lang });
   res.set('Content-Type', 'audio/mpeg').set('Cache-Control', 'private, max-age=600').send(audio);
 }));
 api.post('/me/push', (req, res) => {
