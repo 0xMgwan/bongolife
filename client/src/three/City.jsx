@@ -1030,6 +1030,40 @@ function PlaceModel({ place, owner }) {
           <Sign text={loc(place)} w={w} y={3.6} z={d / 2 + 0.05} />
         </group>
       );
+    case 'gym':
+      return (
+        <group>
+          {/* dark body, full-height glass front with machines visible inside */}
+          <Box w={w} h={h} d={d} color="#1f2937" />
+          <Box w={w + 0.5} h={0.5} d={d + 0.5} color={c} y={h} />
+          <mesh geometry={unitBox} material={districtGlass()} position={[0, 0.3, d / 2 + 0.02]} scale={[w * 0.9, h - 1.2, 0.1]} />
+          <Box w={w * 0.9} h={0.25} d={0.15} color={c} y={h - 0.9} z={d / 2 + 0.08} />
+          {[-0.3, 0, 0.3].map((f, i) => (
+            <group key={i} position={[f * w, 0, d / 2 - 1.2]}>
+              <Box w={0.8} h={0.25} d={1.6} color="#111827" />
+              <Box w={0.1} h={1.2} d={0.1} color="#9ca3af" z={0.7} />
+              <Box w={0.7} h={0.08} d={0.3} color="#22d3ee" y={1.2} z={0.7} />
+            </group>
+          ))}
+          <group position={[w * 0.35, 0, d / 2 - 2.8]}>
+            <Box w={1.6} h={0.06} d={0.06} color="#cbd5e1" y={1.1} />
+            {[-0.75, 0.75].map((x) => <mesh key={x} geometry={geo('cyl', 0.3, 0.3, 0.12, 14)} material={mat('#111827')} position={[x, 1.1, 0]} rotation={[0, 0, Math.PI / 2]} />)}
+          </group>
+          {/* entrance canopy + roof dumbbell sign */}
+          <Box w={3.6} h={0.15} d={1.8} color={c} y={2.6} z={d / 2 + 0.9} />
+          <Box w={2.2} h={2.4} d={0.2} color="#111827" z={d / 2 + 0.06} x={-w * 0.3} />
+          <group position={[0, h + 1.6, 0]}>
+            <Box w={3.2} h={0.3} d={0.3} color="#e5e7eb" y={-0.15} />
+            {[-1.6, 1.6].map((x) => <mesh key={x} geometry={geo('cyl', 0.9, 0.9, 0.5, 16)} material={mat(c, { emissive: c, emissiveIntensity: 0.35 })} position={[x, 0, 0]} rotation={[0, 0, Math.PI / 2]} />)}
+          </group>
+          {/* outdoor pull-up bars */}
+          <group position={[w / 2 + 1.6, 0, d / 2 - 1]}>
+            {[-0.8, 0.8].map((z) => <Box key={z} w={0.1} h={2.4} d={0.1} color="#64748b" z={z} />)}
+            <Box w={0.08} h={0.08} d={1.7} color="#cbd5e1" y={2.3} />
+          </group>
+          <Sign text={loc(place)} w={w} y={h - 0.5} z={d / 2 + 0.16} />
+        </group>
+      );
     default:
       return (
         <group>

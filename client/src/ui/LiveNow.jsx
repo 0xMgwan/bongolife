@@ -47,7 +47,7 @@ export function LiveNow({ onClose }) {
   const go = (username) => { onClose(); goToPlayer(username); };
   const invite = () => share({
     title: 'Bongo Life 🇹🇿',
-    text: L('Njoo tuishi maisha ya Dar pamoja kwenye Bongo Life! Ukijiunga kwa link yangu unapata TSh 20,000 za bure 🎁', 'Come live the Dar life with me on Bongo Life! Join with my link and get TSh 20,000 free 🎁'),
+    text: L('Njoo tuishi maisha ya Dar pamoja kwenye Bongo Life! Ukijiunga kwa link yangu unapata TSh 80,000 za bure 🎁', 'Come live the Dar life with me on Bongo Life! Join with my link and get TSh 80,000 free 🎁'),
   });
 
   return (

@@ -452,6 +452,18 @@ export const PLACES = [
     jobs: [{ id: 'trainer', title: 'Personal Trainer', titles: ['Trainer', 'Senior Trainer', 'Coach'], secs: 45, pay: 22_000, energy: 14 }],
   },
   {
+    id: 'gym-znz', name: 'Zanzibar Fitness Club', district: 'Mwera', type: 'gym', icon: '🏋️', pos: Z(45, -15), size: [12, 10], h: 7, color: '#2dd4bf',
+    blurb: 'Gym ya kisasa ya Unguja — vyuma, ndondi na yoga.',
+    activities: [{ id: 'mazoezi-znz', name: 'Fanya mazoezi', cost: 5_000, secs: 20, effects: { fun: 15, energy: -18, hygiene: -15, social: 8 }, emoji: '💪' }],
+    jobs: [{ id: 'trainer-znz', title: 'Personal Trainer', titles: ['Trainer', 'Senior Trainer', 'Coach'], secs: 45, pay: 22_000, energy: 14 }],
+  },
+  {
+    id: 'gym-aru', name: 'Arusha Peak Gym', district: 'Arusha CBD', type: 'gym', icon: '🏋️', pos: A(35, 40), size: [12, 10], h: 7, color: '#f97316',
+    blurb: 'Fanya mazoezi kwa mwonekano wa Mlima Meru.',
+    activities: [{ id: 'mazoezi-aru', name: 'Fanya mazoezi', cost: 5_000, secs: 20, effects: { fun: 15, energy: -18, hygiene: -15, social: 8 }, emoji: '💪' }],
+    jobs: [{ id: 'trainer-aru', title: 'Personal Trainer', titles: ['Trainer', 'Senior Trainer', 'Coach'], secs: 45, pay: 22_000, energy: 14 }],
+  },
+  {
     id: 'chuo', name: 'Chuo Kikuu cha Dar', district: 'Mlimani', type: 'campus', icon: '🎓', pos: [-35, -112], size: [20, 12], h: 10, color: '#fdba74',
     blurb: 'Soma kozi upate elimu — inafungua kazi za benki na tech.',
     activities: [
@@ -1002,7 +1014,7 @@ export const electionPeriod = (t = Date.now()) => Math.floor((t + WEEK_OFF) / WE
 export const electionEnds = (p) => (p + 1) * WEEK_MS - WEEK_OFF;
 
 // Invite friends: both sides earn once the new player finishes their first shift.
-export const REFERRAL = { newPlayer: 20_000, referrer: 30_000, maxPaid: 50 };
+export const REFERRAL = { newPlayer: 80_000, referrer: 100_000, maxPaid: 50 };
 // Every new player gets a used car to drive around in.
 export const STARTER_CAR = 'ist';
 export const CAR_KINDS = ['car', 'van', 'suv'];
@@ -1112,6 +1124,8 @@ const EN = {
       ogelea: 'Swim in the ocean', mihogo: 'Roast cassava', madafu: 'Fresh coconut', 'piga-stori': 'Hang out with friends' }],
     mall: ['Mlimani City', 'Mall, cinema, food court — a classy day out.', { sinema: 'Watch a movie', burger: 'Burger & juice', window: 'Window shopping' }],
     gym: ['Mlimani Gym', 'Build muscle, lose the belly.', { mazoezi: 'Work out' }],
+    'gym-znz': ['Zanzibar Fitness Club', "Unguja's modern gym — weights, boxing and yoga.", { 'mazoezi-znz': 'Work out' }],
+    'gym-aru': ['Arusha Peak Gym', 'Train with a view of Mount Meru.', { 'mazoezi-aru': 'Work out' }],
     chuo: ['University of Dar', 'Take courses to gain education — unlocks banking and tech jobs.', {
       kozi: 'Take a course (Education +1)', maktaba: 'Study in the library' }],
     club: ['1245 Club', 'Nightclub — Bongo Flava, Amapiano and Singeli till sunrise.', {
@@ -1171,6 +1185,8 @@ const EN = {
     karani: ['Office Clerk', ['Clerk', 'Officer', 'Manager', 'CEO']],
     cashier: ['Supermarket Cashier', ['Cashier', 'Supervisor', 'Store Manager']],
     trainer: ['Personal Trainer', ['Trainer', 'Senior Trainer', 'Coach']],
+    'trainer-znz': ['Personal Trainer', ['Trainer', 'Senior Trainer', 'Coach']],
+    'trainer-aru': ['Personal Trainer', ['Trainer', 'Senior Trainer', 'Coach']],
     dj: ['DJ', ['Rookie DJ', 'Resident DJ', 'Elements DJ', 'Champion DJ']],
     mhudumu: ['Bar Attendant', ['Waiter', 'Bartender', 'Bar Manager']],
     msanii: ['Artist', ['Upcoming artist', 'Street artist', 'Bongo Flava star', 'Legend']],
@@ -1270,6 +1286,8 @@ const ACTIVITY_SCENES = {
   coco: { ogelea: 'beach', 'piga-stori': 'beach', mihogo: 'beach', madafu: 'beach' },
   kigbeach: { ogelea2: 'beach', pumzika: 'beach' },
   gym: { mazoezi: 'gym' },
+  'gym-znz': { 'mazoezi-znz': 'gym' },
+  'gym-aru': { 'mazoezi-aru': 'gym' },
   chuo: { kozi: 'classroom', maktaba: 'classroom' },
   hospitali: { matibabu: 'hospital', pima: 'hospital', 'pumzika-wodini': 'hospital' },
   airport: { zanzibar: 'flight', arusha: 'flight', mwanza: 'flight', nairobi: 'flight', dubai: 'flight' },
@@ -1549,7 +1567,7 @@ export const AFYA = {
 // ---------------------------------------------------------------- Gym (fitness)
 // Fitness 0–100: workouts raise it, it slips if you stop training, and fit players move faster.
 export const GYM = {
-  places: ['gym', 'zn-hotel', 'ar-hotel'], // where gym workouts count (Mlimani gym + hotel gyms)
+  places: ['gym', 'gym-znz', 'gym-aru', 'zn-hotel', 'ar-hotel'], // where gym workouts count (city gyms + hotel gyms)
   memberships: [
     { id: 'day', emoji: '🎟️', name: 'Pasi ya siku', nameEn: 'Day pass', price: 5_000, days: 1, gain: 0 },
     { id: 'month', emoji: '💪', name: 'Uanachama wa mwezi', nameEn: 'Monthly membership', price: 80_000, days: 30, gain: 0 },

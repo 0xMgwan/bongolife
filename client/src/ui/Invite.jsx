@@ -13,7 +13,7 @@ export function InviteCard({ compact }) {
   const url = shareUrl();
   const go = () => share({
     title: 'Bongo Life 🇹🇿',
-    text: L('Njoo tuishi maisha ya Dar pamoja kwenye Bongo Life! Ukijiunga kwa link yangu unapata TSh 20,000 za bure 🎁', 'Come live the Dar life with me on Bongo Life! Join with my link and get TSh 20,000 free 🎁'),
+    text: L('Njoo tuishi maisha ya Dar pamoja kwenye Bongo Life! Ukijiunga kwa link yangu unapata TSh 80,000 za bure 🎁', 'Come live the Dar life with me on Bongo Life! Join with my link and get TSh 80,000 free 🎁'),
   });
   return (
     <div className="invite-card">
@@ -24,8 +24,8 @@ export function InviteCard({ compact }) {
       {!compact && (
         <div className="small" style={{ margin: '6px 0 10px', opacity: 0.9 }}>
           {L(
-            `Rafiki anapata TSh ${(r?.rules.newPlayer ?? 20000).toLocaleString()} akijiunga. Wewe unapata TSh ${(r?.rules.referrer ?? 30000).toLocaleString()} akimaliza shifti yake ya kwanza.`,
-            `Your friend gets TSh ${(r?.rules.newPlayer ?? 20000).toLocaleString()} when they join. You get TSh ${(r?.rules.referrer ?? 30000).toLocaleString()} when they finish their first shift.`,
+            `Rafiki anapata TSh ${(r?.rules.newPlayer ?? 80000).toLocaleString()} akijiunga. Wewe unapata TSh ${(r?.rules.referrer ?? 100000).toLocaleString()} akimaliza shifti yake ya kwanza.`,
+            `Your friend gets TSh ${(r?.rules.newPlayer ?? 80000).toLocaleString()} when they join. You get TSh ${(r?.rules.referrer ?? 100000).toLocaleString()} when they finish their first shift.`,
           )}
         </div>
       )}

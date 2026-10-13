@@ -125,7 +125,7 @@ export function AuthCard({ username = '', onAuthed, lockTab }) {
             <input className="field" placeholder="neema_dar" value={f.username} onChange={up('username')} autoCapitalize="none" autoCorrect="off" autoComplete="username" maxLength={20} />
           </div>
           {signup && <div className="hint">{L('Hili ndilo jina la Sim wako ndani ya Bongo Life.', "This is your Sim's name in Bongo Life.")}</div>}
-          {signup && pendingRef() && <div className="ref-note">🎁 {L(`Umealikwa na @${pendingRef()} — utapata TSh 20,000 za ziada!`, `Invited by @${pendingRef()} — you get an extra TSh 20,000!`)}</div>}
+          {signup && pendingRef() && <div className="ref-note">🎁 {L(`Umealikwa na @${pendingRef()} — utapata TSh 80,000 za ziada!`, `Invited by @${pendingRef()} — you get an extra TSh 80,000!`)}</div>}
           <div className="label">Password</div>
           <div className="at">
             <input className="field" style={{ paddingLeft: 20, paddingRight: 48 }} type={show ? 'text' : 'password'} value={f.password} onChange={up('password')} autoComplete={signup ? 'new-password' : 'current-password'} />
