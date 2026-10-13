@@ -5,7 +5,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { Server } from 'socket.io';
 import { bumpStats } from './story.js';
-import { NEED_TICK_SECONDS, isWater, moodOf, placeById, EVENT_LIMITS, HANGOUT_PLACES, luxuryById } from '../../shared/world.js';
+import { NEED_TICK_SECONDS, isWater, moodOf, placeById, EVENT_LIMITS, HANGOUT_PLACES, luxuryById, plotById, ENTERABLE_BUILDINGS } from '../../shared/world.js';
 import { db, getUser, saveFields, now, UPLOAD_DIR, getSettings } from './db.js';
 import { verifyToken } from './auth.js';
 import { registerInteractions } from './interact.js';
@@ -195,7 +195,17 @@ io.on('connection', (socket) => {
     let inside = null;
     let host = null;
     const priv = typeof placeId === 'string' && /^(yacht|jet):(\d+)$/.exec(placeId);
+    const blk = typeof placeId === 'string' && /^block:([\w-]+)$/.exec(placeId);
     if (placeId === 'home') inside = 'home';
+    else if (blk) {
+      // Walking into an apartment block / hostel / hotel on a plot: be near it (owners can pop in from anywhere).
+      const plot = plotById[blk[1]];
+      const row = plot && db.prepare('SELECT owner_id, building FROM plots WHERE id = ?').get(plot.id);
+      if (!row || !ENTERABLE_BUILDINGS.includes(row.building)) return socket.emit('inside:denied', placeId);
+      if (row.owner_id !== uid && Math.hypot(p.x - plot.pos[0], p.z - plot.pos[1]) > plot.size / 2 + 16) return socket.emit('inside:denied', placeId);
+      inside = 'block';
+      host = `blk-${plot.id}`;
+    }
     else if (priv) {
       // Boarding a yacht/jet: yours, or one you were invited aboard. Works from anywhere.
       host = Number(priv[2]);
@@ -211,8 +221,8 @@ io.on('connection', (socket) => {
       inside = placeId;
     }
     if (inside !== 'home') leaveHome();
-    const boat = host && luxury.flagship(host, inside);
-    const msg = { id: uid, inside, host, model: boat?.model || null, color: boat?.color || null, hostName: host ? getUser(host)?.username : null };
+    const boat = typeof host === 'number' && luxury.flagship(host, inside);
+    const msg = { id: uid, inside, host, model: boat?.model || null, color: boat?.color || null, hostName: typeof host === 'number' ? getUser(host)?.username : null, plotId: inside === 'block' ? host.slice(4) : null };
     if (p.inside === inside && (p.host || null) === host) return socket.emit('player:inside', msg);
     leaveVoice(uid); // walking out of a room ends its voice chat
     p.inside = inside;
@@ -326,7 +336,7 @@ io.on('connection', (socket) => {
     if (!room) return;
     const host = p.host || null;
     const mode = typeof d.mode === 'string' && d.mode.length <= 10 ? d.mode : null;
-    const out = { id: uid, x, z, ry, m: !!d.m, mode };
+    const out = { id: uid, x, z, ry, m: !!d.m, mode, y: Number.isFinite(Number(d.y)) ? Math.max(0, Math.min(60, Number(d.y))) : 0 };
     for (const [id, o] of online) {
       if (id === uid) continue;
       const theirs = o.inside || (o.busy && o.busy.endsAt > t ? o.busy.placeId : null);

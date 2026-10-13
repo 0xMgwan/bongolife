@@ -21,6 +21,7 @@ import { MoneyRain } from './MoneyRain.jsx';
 import { SceneWalker, FloorCatcher, Hotspots, livePerson } from './SceneWalk.jsx';
 import { Yacht, Jet } from './Luxury.jsx';
 import { Showroom } from './Showroom.jsx';
+import { Apartments } from './Apartments.jsx';
 
 export const SCENE_ORIGIN = [4000, 0, 4000];
 /** Scenes flagged `dynamic` drive the camera themselves through this (scene-local coords). */
@@ -143,7 +144,7 @@ function useScenePeople(placeId, scene) {
     const now = Date.now();
     // Yachts/jets are private rooms: only people aboard the same owner's one.
     const host = useStore.getState().insideHost;
-    if (placeId === 'yacht' || placeId === 'jet') return [...remotes.values()].filter((r) => r.inside === placeId && r.host === host);
+    if (placeId === 'yacht' || placeId === 'jet' || placeId === 'block') return [...remotes.values()].filter((r) => r.inside === placeId && r.host === host);
     return [...remotes.values()].filter((r) => r.inside === placeId || (r.busy && r.busy.endsAt > now && r.busy.placeId === placeId));
   }, [roster, placeId, scene]); // eslint-disable-line react-hooks/exhaustive-deps
 }
@@ -2816,6 +2817,7 @@ export const SCENES = {
   hospital: { C: Hospital, camera: { pos: [0, 8.5, 12], look: [0, 0.6, -2.2] }, bg: '#0f172a', light: 1 },
   classroom: { C: Classroom, camera: { pos: [0, 5.5, 9], look: [0, 1.6, -4] }, bg: '#1c1917', light: 0.9 },
   yacht: { C: Yacht, camera: { pos: [6.5, 9, 16], look: [0, 0.8, -1] }, bg: '#8fd0f5', light: 1.1 },
+  block: { C: Apartments, dynamic: true, bg: '#bae6fd', light: 1.05 },
   showroom: { C: Showroom, camera: { pos: [0, 14, 21], look: [0, 0, -2] }, bg: '#0f172a', light: 1 },
   jet: { C: Jet, camera: { pos: [6, 12, 11], look: [0, 0, -1.2] }, bg: '#7cc4f2', light: 1.1 },
 };

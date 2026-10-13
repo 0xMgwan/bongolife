@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   adPriceTzs, NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
   outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
-  jobLocks, HOUSE_UPGRADES, houseStats, liftSeats,
+  jobLocks, HOUSE_UPGRADES, houseStats, liftSeats, ENTERABLE_BUILDINGS,
 } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
@@ -10,7 +10,7 @@ import { avatarEmoji } from '../three/Avatar.jsx';
 import { callFriends } from './Calls.jsx';
 import { AvatarPreview } from './Creator.jsx';
 import { sfx } from '../audio.js';
-import { setInside, remotes, local } from '../net.js';
+import { setInside, remotes, local, enterBlock } from '../net.js';
 import { inviteHome, goToPlayer } from './social.js';
 import { sendHangout } from '../net.js';
 import { livePartyAt, joinParty } from './events.js';
@@ -257,6 +257,9 @@ function PlotSheet({ id, onClose }) {
             {me.money < plot.price ? L(`Unahitaji ${fmtTsh(plot.price - me.money)} zaidi`, `You need ${fmtTsh(plot.price - me.money)} more`) : L('Nunua kiwanja', 'Buy plot')}
           </button>
         </div>
+      )}
+      {current && ENTERABLE_BUILDINGS.includes(current.id) && (
+        <button className="btn btn-dark btn-block" style={{ marginBottom: 10 }} onClick={() => { enterBlock(id); onClose(); }}>🚪 {L('Ingia ndani ya jengo', 'Go inside the building')}</button>
       )}
       {st && !mine && (
         <div className="box">

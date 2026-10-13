@@ -1006,10 +1006,13 @@ export const LUXURY_COLORS = ['#f8fafc', '#0f172a', '#1e3a8a', '#7f1d1d', '#1453
 export const LUXURY_PORTS = { yacht: { dar: 'slipway', znz: 'zn-port', pwa: 'pw-jetty' }, jet: { dar: 'airport', znz: 'zn-airport', aru: 'kia' } };
 const PRIVATE_PLACES = [
   { id: 'yacht', private: true, name: 'Yacht', nameEn: 'Yacht', type: 'yacht', icon: '🛥️', district: 'Bahari ya Hindi', pos: [0, 0], size: [1, 1], h: 0, color: '#f8fafc', activities: [], blurb: 'Yacht binafsi.' },
+  { id: 'block', private: true, name: 'Jengo la Ghorofa', nameEn: 'Apartment block', type: 'block', icon: '🏢', district: 'Plot', pos: [0, 0], size: [1, 1], h: 0, color: '#e2e8f0', activities: [], blurb: 'Ndani ya jengo.' },
   { id: 'jet', private: true, name: 'Private Jet', nameEn: 'Private jet', type: 'jet', icon: '🛩️', district: 'Angani', pos: [0, 0], size: [1, 1], h: 0, color: '#f8fafc', activities: [], blurb: 'Ndege binafsi.' },
 ];
 for (const p of PRIVATE_PLACES) placeById[p.id] = p;
-export const isPrivatePlace = (id) => id === 'yacht' || id === 'jet';
+export const isPrivatePlace = (id) => id === 'yacht' || id === 'jet' || id === 'block';
+// Plot buildings you can walk inside, floor by floor.
+export const ENTERABLE_BUILDINGS = ['ghorofa', 'hostel', 'hoteli', 'wazee'];
 export const jobById = Object.fromEntries(PLACES.flatMap((p) => (p.jobs || []).map((j) => [j.id, j])));
 
 /** What's still missing before a player can take this job: [[icon, sw, en], …]. Vehicles are checked separately. */
@@ -1825,7 +1828,7 @@ export const EVENT_PLACES = ['home', 'club', 'bar', 'lounge', 'singeli', 'nyamac
   'bagamoyo-old', 'pw-jetty', 'pw-soko'];
 // Venues without their own walk-in interior use this scene while a party is live there.
 // Every place has an inside: explicit venues first, then the closest interior for its type.
-const TYPE_SCENES = { yacht: 'yacht', jet: 'jet', market: 'market', terminal: 'stand', mall: 'shop', shop: 'shop', stonetown: 'shop', restaurant: 'dining', food: 'dining', fish: 'dining', grill: 'grill', bar: 'bar', club: 'club', lounge: 'club', hotel: 'rooftop', gesti: 'room', beach: 'beach', waterpark: 'waterpark', golf: 'golf', karting: 'karting', slipway: 'dhow', stage: 'concert', stadium: 'stadium', studio: 'studio', gym: 'gym', salon: 'salon', office: 'office', tower: 'office', bank: 'bank', hospital: 'hospital', campus: 'classroom', police: 'police', court: 'court', casino: 'casino', safari: 'safari', mountain: 'hike', forest: 'safari', museum: 'ngoma' };
+const TYPE_SCENES = { block: 'block', yacht: 'yacht', jet: 'jet', market: 'market', terminal: 'stand', mall: 'shop', shop: 'shop', stonetown: 'shop', restaurant: 'dining', food: 'dining', fish: 'dining', grill: 'grill', bar: 'bar', club: 'club', lounge: 'club', hotel: 'rooftop', gesti: 'room', beach: 'beach', waterpark: 'waterpark', golf: 'golf', karting: 'karting', slipway: 'dhow', stage: 'concert', stadium: 'stadium', studio: 'studio', gym: 'gym', salon: 'salon', office: 'office', tower: 'office', bank: 'bank', hospital: 'hospital', campus: 'classroom', police: 'police', court: 'court', casino: 'casino', safari: 'safari', mountain: 'hike', forest: 'safari', museum: 'ngoma' };
 /** The interior scene for a place, or null for open-air landmarks (ports, airports…). */
 export function venueOf(placeId) {
   const p = placeById[placeId];

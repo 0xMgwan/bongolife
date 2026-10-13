@@ -919,7 +919,7 @@ export function HUD() {
       <CallBar />
       <IncomingCall />
       {!riding && <RadioPill />}
-      {scene && scene.placeId && !['flight', 'heli', 'road', 'ferry', 'safari'].includes(scene.key) && <VoiceBar room={useStore.getState().insideHost && (scene.placeId === 'yacht' || scene.placeId === 'jet') ? `${scene.placeId}~${useStore.getState().insideHost}` : scene.placeId} />}
+      {scene && scene.placeId && !['flight', 'heli', 'road', 'ferry', 'safari'].includes(scene.key) && <VoiceBar room={useStore.getState().insideHost && (scene.placeId === 'yacht' || scene.placeId === 'jet' || scene.placeId === 'block') ? `${scene.placeId}~${useStore.getState().insideHost}` : scene.placeId} />}
       {!shop && !riding && !clean && (
         <SidePop items={[
           ...(world?.event && town && !scene ? [{ key: 'event', tone: 'green', text: loc(world.event, 'text') }] : []),
@@ -962,7 +962,7 @@ export function HUD() {
         <button className="jump-btn" onClick={() => jump()} aria-label={L('Ruka', 'Jump')}>⬆️<span>{L('Ruka', 'Jump')}</span></button>
       )}
       <RideBanner />
-      {touch && (walking || (tab === 'home' && !useStore.getState().placing) || (scene && !riding && !['flight', 'heli', 'road', 'police', 'court', 'ferry', 'safari'].includes(scene.key))) && <Joystick />}
+      {touch && (walking || (tab === 'home' && !useStore.getState().placing) || scene?.key === 'block' || (scene && !riding && !['flight', 'heli', 'road', 'police', 'court', 'ferry', 'safari'].includes(scene.key))) && <Joystick />}
       {town && <ChatDock />}
       {!shop && <NeedsPanel me={me} />}
       {!shop && <BottomNav me={me} />}

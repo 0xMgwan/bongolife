@@ -11,7 +11,7 @@ import { sfx } from '../audio.js';
 import { sceneFocus } from './Scenes.jsx';
 
 /** Your own spot in the room. Inactive = the scene places you (seat, bar stool…). */
-export const sceneMe = { active: false, x: 0, z: 0, ry: 0, moving: false, target: null, arrive: null, pose: null, poseUntil: 0, key: null };
+export const sceneMe = { active: false, x: 0, z: 0, y: 0, ry: 0, moving: false, target: null, arrive: null, pose: null, poseUntil: 0, key: null };
 /** Other players' spots in the room: id -> { x, z, ry, m, mode, at, cx, cz, cr } */
 export const scenePeers = new Map();
 
@@ -229,7 +229,7 @@ export function livePerson(group, id, myId, fallbackMode) {
       sceneMe.x = p.x; sceneMe.z = p.z; sceneMe.ry = group.rotation.y;
       return null;
     }
-    group.position.set(sceneMe.x, 0, sceneMe.z);
+    group.position.set(sceneMe.x, sceneMe.y || 0, sceneMe.z);
     group.rotation.y = sceneMe.ry;
     if (sceneMe.moving) return 'walk';
     if (sceneMe.pose && performance.now() < sceneMe.poseUntil) return sceneMe.pose;
@@ -238,10 +238,11 @@ export function livePerson(group, id, myId, fallbackMode) {
   const peer = id != null && scenePeers.get(id);
   if (!peer || performance.now() - peer.at > 60_000) return null;
   // Ease towards the last reported spot.
-  if (peer.cx == null) { peer.cx = peer.x; peer.cz = peer.z; }
+  if (peer.cx == null) { peer.cx = peer.x; peer.cz = peer.z; peer.cy = peer.y || 0; }
   peer.cx += (peer.x - peer.cx) * 0.18;
   peer.cz += (peer.z - peer.cz) * 0.18;
-  group.position.set(peer.cx, 0, peer.cz);
+  peer.cy += ((peer.y || 0) - peer.cy) * 0.18;
+  group.position.set(peer.cx, peer.cy, peer.cz);
   group.rotation.y = peer.ry;
   if (peer.m) return 'walk';
   if (peer.mode && performance.now() - peer.at < 3500) return peer.mode;

@@ -84,8 +84,8 @@ export function connect() {
       bump();
     }
   });
-  socket.on('player:inside', ({ id, inside, host, model, color, hostName }) => {
-    if (id === st().myId) return useStore.setState({ inside, insideHost: host || null, boat: host ? { model, color, hostName, hostId: host } : null });
+  socket.on('player:inside', ({ id, inside, host, model, color, hostName, plotId }) => {
+    if (id === st().myId) return useStore.setState({ inside, insideHost: host || null, boat: host && !plotId ? { model, color, hostName, hostId: host } : null, block: plotId ? { plotId } : null });
     const r = remotes.get(id);
     if (r) {
       r.inside = inside;
@@ -396,6 +396,12 @@ export const leaveLift = () => { useStore.setState({ liftWaiting: null }); socke
 export const cancelPickup = (id) => { useStore.setState((s) => ({ liftPickups: (s.liftPickups || []).filter((x) => x.id !== id) })); socket?.emit('lift:cancel', { id }); };
 export const wherePickup = (id) => liftEmit('lift:where', { id });
 
+/** Walk into the apartment block / hostel / hotel on a plot. */
+export function enterBlock(plotId) {
+  useStore.setState({ inside: 'block', insideHost: `blk-${plotId}`, block: { plotId }, phone: null, sheet: null, cityView: 'follow' });
+  local.target = null;
+  socket?.emit('inside', `block:${plotId}`);
+}
 /** Board your own (or a friend's) yacht/jet — from anywhere. */
 export function boardLuxury(kind, hostId) {
   useStore.setState({ inside: kind, insideHost: hostId, phone: null, sheet: null, luxInvite: null, cityView: 'follow' });
@@ -403,7 +409,7 @@ export function boardLuxury(kind, hostId) {
   socket?.emit('inside', `${kind}:${hostId}`);
 }
 export function setInside(placeId) {
-  useStore.setState({ inside: placeId, ...(placeId === 'yacht' || placeId === 'jet' ? {} : { insideHost: null, boat: null }) });
+  useStore.setState({ inside: placeId, ...(placeId === 'yacht' || placeId === 'jet' || placeId === 'block' ? {} : { insideHost: null, boat: null, block: null }) });
   local.target = null;
   sendMove(true); // the server checks you're at the door, so send where you are first
   socket?.emit('inside', placeId);
