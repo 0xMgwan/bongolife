@@ -1031,39 +1031,7 @@ function PlaceModel({ place, owner }) {
         </group>
       );
     case 'gym':
-      return (
-        <group>
-          {/* dark body, full-height glass front with machines visible inside */}
-          <Box w={w} h={h} d={d} color="#1f2937" />
-          <Box w={w + 0.5} h={0.5} d={d + 0.5} color={c} y={h} />
-          <mesh geometry={unitBox} material={districtGlass()} position={[0, 0.3, d / 2 + 0.02]} scale={[w * 0.9, h - 1.2, 0.1]} />
-          <Box w={w * 0.9} h={0.25} d={0.15} color={c} y={h - 0.9} z={d / 2 + 0.08} />
-          {[-0.3, 0, 0.3].map((f, i) => (
-            <group key={i} position={[f * w, 0, d / 2 - 1.2]}>
-              <Box w={0.8} h={0.25} d={1.6} color="#111827" />
-              <Box w={0.1} h={1.2} d={0.1} color="#9ca3af" z={0.7} />
-              <Box w={0.7} h={0.08} d={0.3} color="#22d3ee" y={1.2} z={0.7} />
-            </group>
-          ))}
-          <group position={[w * 0.35, 0, d / 2 - 2.8]}>
-            <Box w={1.6} h={0.06} d={0.06} color="#cbd5e1" y={1.1} />
-            {[-0.75, 0.75].map((x) => <mesh key={x} geometry={geo('cyl', 0.3, 0.3, 0.12, 14)} material={mat('#111827')} position={[x, 1.1, 0]} rotation={[0, 0, Math.PI / 2]} />)}
-          </group>
-          {/* entrance canopy + roof dumbbell sign */}
-          <Box w={3.6} h={0.15} d={1.8} color={c} y={2.6} z={d / 2 + 0.9} />
-          <Box w={2.2} h={2.4} d={0.2} color="#111827" z={d / 2 + 0.06} x={-w * 0.3} />
-          <group position={[0, h + 1.6, 0]}>
-            <Box w={3.2} h={0.3} d={0.3} color="#e5e7eb" y={-0.15} />
-            {[-1.6, 1.6].map((x) => <mesh key={x} geometry={geo('cyl', 0.9, 0.9, 0.5, 16)} material={mat(c, { emissive: c, emissiveIntensity: 0.35 })} position={[x, 0, 0]} rotation={[0, 0, Math.PI / 2]} />)}
-          </group>
-          {/* outdoor pull-up bars */}
-          <group position={[w / 2 + 1.6, 0, d / 2 - 1]}>
-            {[-0.8, 0.8].map((z) => <Box key={z} w={0.1} h={2.4} d={0.1} color="#64748b" z={z} />)}
-            <Box w={0.08} h={0.08} d={1.7} color="#cbd5e1" y={2.3} />
-          </group>
-          <Sign text={loc(place)} w={w} y={h - 0.5} z={d / 2 + 0.16} />
-        </group>
-      );
+      return <GymBuilding place={place} />;
     default:
       return (
         <group>
@@ -1163,6 +1131,93 @@ const Places = memo(function Places({ onPlace, businesses, showLabels, mapMode }
     );
   });
 });
+
+// --------------------------------------------------------------- gyms
+// Hollow building with a clear glass front so you can see people training inside.
+const GYM_GLASS = new THREE.MeshPhongMaterial({ color: '#cfe8ff', transparent: true, opacity: 0.18, shininess: 140, specular: new THREE.Color('#ffffff'), depthWrite: false });
+const GYM_FLOOR = new THREE.MeshLambertMaterial({ color: '#94a3b8' });
+const GYM_LIGHT = new THREE.MeshBasicMaterial({ color: '#fff7d6', toneMapped: false });
+const GYM_LIFT = { current: { mode: 'lift' } };
+const GYM_RUN = { current: { moving: true, mode: 'run', speed: 1.2 } };
+const GYM_PEOPLE = [
+  { body: 'man', skin: 2, hair: 'kiduku', hairColor: 0, outfit: 'gym', accent: 1 },
+  { body: 'woman', skin: 3, hair: 'mkia', hairColor: 0, outfit: 'gym', accent: 3 },
+  { body: 'man', skin: 4, hair: 'kipara', hairColor: 0, outfit: 'gym', accent: 0 },
+  { body: 'woman', skin: 1, hair: 'misuko', hairColor: 1, outfit: 'gym', accent: 5 },
+];
+function Treadmill({ x, z, runner }) {
+  return (
+    <group position={[x, 0, z]}>
+      <Box w={0.9} h={0.22} d={1.9} color="#111827" />
+      <Box w={0.8} h={0.03} d={1.6} color="#475569" y={0.22} />
+      {[-0.42, 0.42].map((sx) => <Box key={sx} w={0.07} h={1.25} d={0.07} color="#9ca3af" x={sx} z={-0.85} />)}
+      <Box w={0.95} h={0.32} d={0.12} color="#1f2937" y={1.2} z={-0.85} />
+      <Box w={0.5} h={0.18} d={0.02} m={mat('#22d3ee', { emissive: '#22d3ee', emissiveIntensity: 1 })} y={1.27} z={-0.78} />
+      {runner && <group position={[0, 0.24, 0]} rotation-y={Math.PI}><Avatar appearance={runner} motion={GYM_RUN} /></group>}
+    </group>
+  );
+}
+function GymBuilding({ place }) {
+  const [w, d] = place.size;
+  const h = place.h;
+  const c = place.color;
+  const t = 0.3; // wall thickness
+  return (
+    <group>
+      {/* shell: floor, back + side walls, roof, front pillars — the front is glass */}
+      <mesh geometry={unitBox} material={GYM_FLOOR} scale={[w, 0.1, d]} />
+      <Box w={w} h={h} d={t} color="#e2e8f0" z={-d / 2 + t / 2} />
+      {[-1, 1].map((sx) => <Box key={sx} w={t} h={h} d={d} color="#e2e8f0" x={sx * (w / 2 - t / 2)} />)}
+      <Box w={w + 0.5} h={0.5} d={d + 0.5} color={c} y={h} />
+      {[-1, 0, 1].map((k) => <Box key={k} w={0.25} h={h} d={0.25} color="#111827" x={k * (w / 2 - 0.2)} z={d / 2 - 0.15} />)}
+      <mesh geometry={unitBox} material={GYM_GLASS} position={[0, 0.1, d / 2 - 0.1]} scale={[w - 0.4, h - 0.2, 0.06]} />
+      {/* accent wall + mirror + ceiling light strips */}
+      <Box w={w - 0.8} h={h * 0.55} d={0.06} color={c} y={h * 0.25} z={-d / 2 + t + 0.04} />
+      <Box w={w * 0.5} h={1.6} d={0.04} m={mat('#dbeafe', { emissive: '#93c5fd', emissiveIntensity: 0.25 })} y={0.6} z={-d / 2 + t + 0.1} />
+      {[-0.3, 0, 0.3].map((f) => <mesh key={f} geometry={unitBox} material={GYM_LIGHT} position={[f * w, h - 0.15, 0]} scale={[0.15, 0.06, d - 1]} />)}
+      <pointLight color="#fff4d6" intensity={7} distance={w + 6} position={[0, h - 0.8, 0.5]} />
+      {/* treadmills along the glass, two of them with runners */}
+      {[-0.32, -0.12, 0.08].map((f, i) => <Treadmill key={i} x={f * w} z={d / 2 - 1.6} runner={i !== 1 ? GYM_PEOPLE[i] : null} />)}
+      {/* squat rack with a lifter */}
+      <group position={[w * 0.3, 0, -d * 0.12]}>
+        {[-0.7, 0.7].map((x) => [-0.4, 0.4].map((z) => <Box key={`${x}${z}`} w={0.1} h={2.3} d={0.1} color="#64748b" x={x} z={z} />))}
+        <Box w={1.6} h={0.08} d={0.95} color="#64748b" y={2.25} />
+        <Box w={2} h={0.06} d={0.06} color="#cbd5e1" y={1.55} />
+        {[-0.95, 0.95].map((x) => <mesh key={x} geometry={geo('cyl', 0.32, 0.32, 0.12, 16)} material={mat('#111827')} position={[x, 1.55, 0]} rotation={[0, 0, Math.PI / 2]} />)}
+        <group position={[0, 0.05, 0.1]} rotation-y={Math.PI}><Avatar appearance={GYM_PEOPLE[2]} motion={GYM_LIFT} /></group>
+      </group>
+      {/* bench press + dumbbell rack */}
+      <group position={[-w * 0.25, 0, -d * 0.12]}>
+        <Box w={0.45} h={0.45} d={1.4} color="#111827" />
+        <Box w={1.7} h={0.05} d={0.05} color="#cbd5e1" y={1.05} z={-0.4} />
+        {[-0.85, 0.85].map((x) => <mesh key={x} geometry={geo('cyl', 0.26, 0.26, 0.1, 14)} material={mat('#1f2937')} position={[x, 1.05, -0.4]} rotation={[0, 0, Math.PI / 2]} />)}
+      </group>
+      <group position={[0, 0, -d / 2 + t + 0.6]}>
+        <Box w={w * 0.4} h={0.7} d={0.5} color="#374151" />
+        {Array.from({ length: 8 }, (_, i) => <Box key={i} w={0.3} h={0.14} d={0.14} color={i % 2 ? '#f5b800' : '#111827'} x={-w * 0.17 + i * (w * 0.34 / 7)} y={0.72} />)}
+      </group>
+      {/* punching bag with a boxer */}
+      <group position={[-w * 0.36, 0, d * 0.1]}>
+        <Box w={0.05} h={0.6} d={0.05} color="#9ca3af" y={h - 0.7} />
+        <mesh geometry={geo('cyl', 0.3, 0.3, 1.2, 14)} material={mat('#b91c1c')} position={[0, h - 1.4, 0]} />
+        <group position={[0.75, 0, 0]} rotation-y={-Math.PI / 2}><Avatar appearance={GYM_PEOPLE[3]} motion={GYM_LIFT} /></group>
+      </group>
+      {/* entrance canopy + roof dumbbell sign */}
+      <Box w={2.2} h={0.12} d={1} color={c} y={2.6} z={d / 2 + 0.5} x={w * 0.36} />
+      <Box w={1.6} h={2.3} d={0.08} color="#111827" z={d / 2 - 0.05} x={w * 0.36} />
+      <group position={[0, h + 1.6, 0]}>
+        <Box w={3.2} h={0.3} d={0.3} color="#e5e7eb" y={-0.15} />
+        {[-1.6, 1.6].map((x) => <mesh key={x} geometry={geo('cyl', 0.9, 0.9, 0.5, 16)} material={mat(c, { emissive: c, emissiveIntensity: 0.35 })} position={[x, 0, 0]} rotation={[0, 0, Math.PI / 2]} />)}
+      </group>
+      {/* outdoor pull-up bars */}
+      <group position={[w / 2 + 1.6, 0, d / 2 - 1]}>
+        {[-0.8, 0.8].map((z) => <Box key={z} w={0.1} h={2.4} d={0.1} color="#64748b" z={z} />)}
+        <Box w={0.08} h={0.08} d={1.7} color="#cbd5e1" y={2.3} />
+      </group>
+      <Sign text={loc(place)} w={w} y={h + 0.75} z={d / 2 + 0.3} />
+    </group>
+  );
+}
 
 // --------------------------------------------------------------- plots
 // Special builds: farm, container home, hostel, eco resort, home of tomorrow.
