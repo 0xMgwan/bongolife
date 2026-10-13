@@ -1,6 +1,6 @@
 // Live outside data for the game: real weather per city (Open-Meteo, no key) and the list of
 // Tanzanian radio streams (radio-browser.info directory), both cached in memory.
-const CITY_COORDS = { dar: [-6.79, 39.28, 'Dar es Salaam'], znz: [-6.16, 39.19, 'Zanzibar'], aru: [-3.37, 36.68, 'Arusha'] };
+const CITY_COORDS = { dar: [-6.79, 39.28, 'Dar es Salaam'], znz: [-6.16, 39.19, 'Zanzibar'], aru: [-3.37, 36.68, 'Arusha'], pwa: [-6.44, 38.9, 'Bagamoyo'] };
 // WMO weather codes → [emoji, sw, en]
 const WMO = [
   [[0], '☀️', 'Jua kali', 'Sunny'], [[1], '🌤️', 'Jua na mawingu kidogo', 'Mostly sunny'], [[2], '⛅', 'Mawingu kiasi', 'Partly cloudy'],

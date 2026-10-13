@@ -191,7 +191,7 @@ api.use((req, _res, next) => {
 api.get('/voice/welcome', rateLimit('voice-welcome', 10, 60 * 60_000), wrap(async (req, res) => {
   if (!live.voiceReady()) return res.status(404).json({ error: 'voice off' });
   const lang = req.query.lang === 'en' ? 'en' : 'sw';
-  const city = ['dar', 'znz', 'aru'].includes(req.query.city) ? req.query.city : 'dar';
+  const city = ['dar', 'znz', 'aru', 'pwa'].includes(req.query.city) ? req.query.city : 'dar';
   const w = await live.weather(city);
   const latest = getSettings().latestUpdate;
   const news = latest && Date.now() - latest.at < 14 * 86_400_000 ? latest : null;

@@ -4,14 +4,15 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { HOME_FEATURES, furnitureById } from '@shared/world.js';
+import { HOME_FEATURES, furnitureById, HOME_STAIRS, HOME_UPPER, HOME_UP_Y } from '@shared/world.js';
 import { mat, geo, emojiTexture, labelTexture } from './textures.js';
 import { FurnitureModel } from './Furniture.jsx';
 import { useStore } from '../store.js';
 import { L } from '../i18n.js';
 import { sfx } from '../audio.js';
+import { walkHome } from './HomeScene.jsx';
 
-export const UP_Y = 2.45; // second-storey floor height
+export const UP_Y = HOME_UP_Y; // second-storey floor height
 const unit = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
 const B = ({ p, s, c, m, r }) => <mesh geometry={unit} material={m || mat(c)} position={p} scale={s} rotation={r} />;
 const WATER = new THREE.MeshPhongMaterial({ color: '#22b8e6', shininess: 120, specular: '#e0f7ff', emissive: '#0369a1', emissiveIntensity: 0.25, transparent: true, opacity: 0.9 });
@@ -108,56 +109,74 @@ function Jacuzzi() {
     </group>
   );
 }
-function SpiralStair({ x }) {
+// The second storey: a glass floor over the back half of the original home (so the rooms
+// below stay visible), cut-away low walls, a master suite and a lounge, an indoor staircase, and
+// with the terrace add-on an open deck at the front edge.
+const GLASS_FLOOR = new THREE.MeshPhongMaterial({ color: '#dbeafe', transparent: true, opacity: 0.28, shininess: 140, specular: new THREE.Color('#ffffff'), depthWrite: false, side: THREE.DoubleSide });
+const FRAME = mat('#e7e5e4');
+function Staircase() {
+  const { x1, x2, z1, z2 } = HOME_STAIRS;
+  const n = 12;
+  const len = z2 - z1;
   return (
-    <group position={[x, 0, 5.8]}>
-      <mesh geometry={geo('cyl', 0.06, 0.06, UP_Y + 1, 6)} material={mat('#e5e7eb')} position={[0, (UP_Y + 1) / 2, 0]} />
-      {Array.from({ length: 12 }, (_, i) => <B key={i} p={[Math.cos(i * 0.6) * 0.45, (i / 12) * UP_Y, Math.sin(i * 0.6) * 0.45]} s={[0.8, 0.06, 0.32]} r={[0, -i * 0.6, 0]} m={DECK} />)}
+    <group>
+      {Array.from({ length: n }, (_, i) => {
+        const z = z2 - (i + 0.5) * (len / n);
+        return <B key={i} p={[(x1 + x2) / 2, ((i + 1) / n) * UP_Y - 0.12, z]} s={[x2 - x1, 0.12, len / n + 0.02]} m={DECK} />;
+      })}
+      <B p={[x2 + 0.03, 0, (z1 + z2) / 2]} s={[0.06, 0.06, len]} c="#78716c" />
+      {/* glass side rail */}
+      <mesh position={[x2 + 0.04, UP_Y / 2 + 0.45, (z1 + z2) / 2]} rotation={[Math.atan2(UP_Y, len), 0, 0]}>
+        <boxGeometry args={[0.03, 0.9, Math.hypot(len, UP_Y)]} />
+        <primitive object={GLASS} attach="material" />
+      </mesh>
     </group>
   );
 }
-
-/** The second storey, shown in the upstairs view: master suite, lounge, optional open terrace. */
-function Upstairs({ b, wallMat, terrace }) {
+function Upstairs({ wallMat, terrace }) {
   const bed = furnitureById['bed-king'];
   const sofa = furnitureById['sofa-3'];
   const tv = furnitureById['tv-65'];
   const rug = furnitureById.rug;
   const plant = furnitureById.plant;
-  const back = (x1, z1, x2, z2, h) => {
+  const U = HOME_UPPER;
+  const w = U.x2 - U.x1;
+  const d = U.z2 - U.z1;
+  const wall = (x1, z1, x2, z2, h) => {
     const len = Math.hypot(x2 - x1, z2 - z1);
-    return <B p={[(x1 + x2) / 2, UP_Y, (z1 + z2) / 2]} s={[x1 === x2 ? 0.16 : len, h, z1 === z2 ? 0.16 : len]} m={wallMat} />;
+    return <B p={[(x1 + x2) / 2, UP_Y, (z1 + z2) / 2]} s={[x1 === x2 ? 0.14 : len, h, z1 === z2 ? 0.14 : len]} m={wallMat} />;
   };
-  const roomZ = terrace ? 1.6 : b.z2;
   return (
     <group>
-      <B p={[(b.x1 + b.x2) / 2, UP_Y - 0.2, (b.z1 + b.z2) / 2]} s={[b.x2 - b.x1 + 0.2, 0.2, b.z2 - b.z1 + 0.2]} c="#d6c7ad" />
-      <B p={[(b.x1 + b.x2) / 2, UP_Y + 0.001, (b.z1 + roomZ) / 2]} s={[b.x2 - b.x1, 0.01, roomZ - b.z1]} c="#e9e2d3" />
-      {back(b.x1, b.z1, b.x2, b.z1, 2.2)}
-      {back(b.x1, b.z1, b.x1, b.z2, 2.2)}
-      {back(b.x2, b.z1, b.x2, b.z2, 1.1)}
-      {back(1.5, b.z1, 1.5, -2.2, 1.1)}
-      {back(1.5, -1, b.x2, -1, 1.1)}
-      {terrace ? (
+      {/* glass floor with a light frame, leaving the stair opening */}
+      <mesh geometry={unit} material={GLASS_FLOOR} position={[(U.x1 + HOME_STAIRS.x1) / 2, UP_Y - 0.06, (U.z1 + U.z2) / 2]} scale={[HOME_STAIRS.x1 - U.x1, 0.06, d]} />
+      <mesh geometry={unit} material={GLASS_FLOOR} position={[(HOME_STAIRS.x2 + U.x2) / 2, UP_Y - 0.06, (U.z1 + U.z2) / 2]} scale={[U.x2 - HOME_STAIRS.x2, 0.06, d]} />
+      <mesh geometry={unit} material={GLASS_FLOOR} position={[(HOME_STAIRS.x1 + HOME_STAIRS.x2) / 2, UP_Y - 0.06, (U.z1 + U.z2 - 0.8) / 2]} scale={[HOME_STAIRS.x2 - HOME_STAIRS.x1, 0.06, d - 0.8]} />
+      <B p={[0, UP_Y - 0.12, U.z2]} s={[w, 0.12, 0.14]} m={FRAME} />
+      <B p={[0, UP_Y - 0.12, U.z1]} s={[w, 0.12, 0.14]} m={FRAME} />
+      {[U.x1, U.x2].map((x) => <B key={x} p={[x, UP_Y - 0.12, (U.z1 + U.z2) / 2]} s={[0.14, 0.12, d]} m={FRAME} />)}
+      {/* cut-away walls: tall at the back, low elsewhere; glass rail along the front edge */}
+      {wall(U.x1, U.z1, U.x2, U.z1, 2.2)}
+      {wall(U.x1, U.z1, U.x1, U.z2, 1)}
+      {wall(U.x2, U.z1, U.x2, U.z2, 1)}
+      {wall(1.5, U.z1, 1.5, -2.4, 1)}
+      {terrace ? null : <B p={[0, UP_Y, U.z2]} s={[w, 0.9, 0.04]} m={GLASS} />}
+      {terrace && (
         <>
-          <B p={[(b.x1 + b.x2) / 2, UP_Y + 0.002, (roomZ + b.z2) / 2]} s={[b.x2 - b.x1, 0.02, b.z2 - roomZ]} m={DECK} />
-          <B p={[(b.x1 + b.x2) / 2, UP_Y, b.z2]} s={[b.x2 - b.x1, 0.9, 0.05]} m={GLASS} />
-          {back(b.x1, roomZ, 0.6, roomZ, 1.1)}
-          {back(2.4, roomZ, b.x2, roomZ, 1.1)}
-          <Lounger p={[-1, UP_Y, 3.6]} ry={Math.PI} />
-          <Lounger p={[-2.2, UP_Y, 3.6]} ry={Math.PI} />
-          <B p={[3.8, UP_Y, 3.4]} s={[0.6, 1.1, 0.6]} c="#111827" />
-          {Array.from({ length: 12 }, (_, i) => <mesh key={i} geometry={geo('sphere', 0.06, 6, 4)} material={LIGHT} position={[b.x1 + 0.5 + i * ((b.x2 - b.x1 - 1) / 11), UP_Y + 2 - Math.sin((i / 11) * Math.PI) * 0.4, roomZ + 0.1]} />)}
+          <B p={[(U.x1 + HOME_STAIRS.x1 - 0.1) / 2, UP_Y - 0.1, (U.z2 + U.terrace) / 2]} s={[HOME_STAIRS.x1 - 0.1 - U.x1, 0.1, U.terrace - U.z2]} m={DECK} />
+          <B p={[(HOME_STAIRS.x2 + 0.1 + U.x2) / 2, UP_Y - 0.1, (U.z2 + U.terrace) / 2]} s={[U.x2 - HOME_STAIRS.x2 - 0.1, 0.1, U.terrace - U.z2]} m={DECK} />
+          <B p={[0, UP_Y, U.terrace]} s={[w, 0.9, 0.04]} m={GLASS} />
+          <Lounger p={[-2.4, UP_Y, 0.8]} ry={Math.PI / 2} />
+          <B p={[4.6, UP_Y, 0.8]} s={[0.5, 1, 0.5]} c="#111827" />
+          {Array.from({ length: 10 }, (_, i) => <mesh key={i} geometry={geo('sphere', 0.06, 6, 4)} material={LIGHT} position={[U.x1 + 0.5 + i * ((w - 1) / 9), UP_Y + 1.7 - Math.sin((i / 9) * Math.PI) * 0.35, U.terrace]} />)}
         </>
-      ) : (
-        <B p={[(b.x1 + b.x2) / 2, UP_Y, b.z2]} s={[b.x2 - b.x1, 1.1, 0.16]} m={wallMat} />
       )}
       {bed && <group position={[3.6, UP_Y, -3.2]}><FurnitureModel def={bed} /></group>}
       {sofa && <group position={[-3.5, UP_Y, -2.2]}><FurnitureModel def={sofa} /></group>}
-      {tv && <group position={[-3.5, UP_Y, -4.4]} rotation={[0, 0, 0]}><FurnitureModel def={tv} /></group>}
+      {tv && <group position={[-3.5, UP_Y, -4.4]}><FurnitureModel def={tv} /></group>}
       {rug && <group position={[-3.5, UP_Y, -3.2]}><FurnitureModel def={rug} /></group>}
-      {plant && <group position={[b.x1 + 0.6, UP_Y, b.z1 + 0.6]}><FurnitureModel def={plant} /></group>}
-      <pointLight color="#fff7ed" intensity={2.5} distance={14} position={[0, UP_Y + 5, -1]} />
+      {plant && <group position={[U.x1 + 0.6, UP_Y, U.z1 + 0.6]}><FurnitureModel def={plant} /></group>}
+      <Staircase />
     </group>
   );
 }
@@ -184,24 +203,31 @@ function Spot({ act, feature, onUse }) {
   );
 }
 
-export function HomeAddons({ features = [], b, upstairs, wallMat, onUse }) {
+export function HomeAddons({ features = [], wallMat, onUse }) {
   const has = (id) => features.includes(id);
   return (
     <group>
-      {has('pool') && !upstairs && <Pool />}
-      {has('bbq') && !upstairs && <Bbq />}
+      {has('pool') && <Pool />}
+      {has('bbq') && <Bbq />}
       {has('balcony') && <Balcony />}
-      {has('cinema') && !upstairs && <GardenCinema />}
-      {has('jacuzzi') && !upstairs && <Jacuzzi />}
-      {has('storey') && !upstairs && <SpiralStair x={b.x1 - 0.9} />}
-      {has('storey') && upstairs && <Upstairs b={b} wallMat={wallMat} terrace={has('rooftop')} />}
-      {HOME_FEATURES.filter((f) => has(f.id)).flatMap((f) => f.acts.filter((a) => !!a.up === !!upstairs || f.id === 'balcony').map((a) => <Spot key={`${f.id}${a.id}`} act={a} feature={f} onUse={onUse} />))}
+      {has('cinema') && <GardenCinema />}
+      {has('jacuzzi') && <Jacuzzi />}
+      {has('storey') && <Upstairs wallMat={wallMat} terrace={has('rooftop')} />}
+      {HOME_FEATURES.filter((f) => has(f.id)).flatMap((f) => f.acts.map((a) => <Spot key={`${f.id}${a.id}`} act={a} feature={f} onUse={onUse} />))}
     </group>
   );
 }
 
-/** Use a spot: the API applies the effect, your Sim strikes the pose for a few seconds. */
-export async function doAddon(feature, act) {
+/** Use a spot: walk there (upstairs via the stairs), then the API applies the effect and your
+ * Sim strikes the pose for a few seconds. */
+export function doAddon(feature, act) {
+  const [x, y, z] = act.spot;
+  const go = () => runAddon(feature, act);
+  if (act.up) return walkHome(x, z + 0.6, 1, go);
+  if (y < 0.5 && feature.id !== 'balcony') return walkHome(x, z + 0.8, 0, go);
+  return go();
+}
+async function runAddon(feature, act) {
   const st = useStore.getState();
   const r = await st.run('/home/feature/use', { method: 'POST', body: { feature: feature.id, act: act.id } });
   if (!r) return;

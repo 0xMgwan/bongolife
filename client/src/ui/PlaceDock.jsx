@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { placeById, fmtShort, fmtTsh, NEEDS, findJob, DATE_SPOTS, luxuryById } from '@shared/world.js';
+import { placeById, fmtShort, fmtTsh, NEEDS, findJob, DATE_SPOTS, luxuryById, CITIES, TRIP_MODES, tripKey, ARRIVAL_PLACE, cityAt } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { local, remotes, sendChat, setInside } from '../net.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
@@ -188,6 +188,26 @@ function dockCategories(placeId, p, me, near, { start, game }) {
   if (groups.do.length) cats.push({ key: 'do', emoji: p.icon, name: L('Mambo ya kufanya', 'Things to do'), items: groups.do });
   if (groups.drinks.length) cats.push({ key: 'drinks', emoji: '🍹', name: L('Vinywaji', 'Drinks'), items: groups.drinks });
   if (groups.food.length) cats.push({ key: 'food', emoji: '🍽️', name: L('Chakula', 'Food'), items: groups.food });
+  // Any airport: real flights to other cities (lands you at their airport).
+  if (p.type === 'airport') {
+    const here = cityAt(p.pos[0], p.pos[1])?.id || 'dar';
+    const flights = CITIES.filter((c) => c.id !== here && TRIP_MODES.flight.price[tripKey(here, c.id)] && ARRIVAL_PLACE[c.id]?.flight);
+    if (flights.length) {
+      cats.unshift({
+        key: 'departures', emoji: '🛫', name: L('Safari za ndege', 'Departures'),
+        items: flights.map((c) => ({
+          key: `fly-${c.id}`, emoji: c.icon, name: L(`Ruka hadi ${c.name}`, `Fly to ${c.name}`),
+          price: fmtTsh(TRIP_MODES.flight.price[tripKey(here, c.id)]), time: `${TRIP_MODES.flight.secs}s`,
+          tags: [[L('Unatua uwanja wa ndege', 'Lands at the airport'), 'social']],
+          disabled: busy || me.money < TRIP_MODES.flight.price[tripKey(here, c.id)],
+          go: async () => {
+            const r = await useStore.getState().run('/trip', { method: 'POST', body: { placeId: ARRIVAL_PLACE[c.id].flight, mode: 'flight', insured: false } });
+            if (r) useStore.getState().toast(L(`🛫 Unapanda ndege kwenda ${c.name}…`, `🛫 Boarding your flight to ${c.name}…`));
+          },
+        })),
+      });
+    }
+  }
   if (p.jobs?.length) {
     cats.push({
       key: 'work', emoji: '💼', name: L('Kazi', 'Work'),

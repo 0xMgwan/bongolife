@@ -227,7 +227,7 @@ export const buyFurniture = db.transaction((userId, { item, x, z, rot }) => {
   const def = furnitureById[item];
   if (!def) throw new GameError(['Kitu hicho hakipo.', 'That item does not exist.'], 404);
   x = snap(x); z = snap(z); rot = turn(rot);
-  if (!homeFits(def, x, z, rot, hq.items.all(userId), homeBounds(getUser(userId).homeLevel))) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
+  if (!homeFits(def, x, z, rot, hq.items.all(userId), homeBounds(getUser(userId).homeLevel, getUser(userId).homeFeatures))) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
   if (hq.count.get(userId).n >= 80) throw new GameError(['Nyumba imejaa vitu.', 'Your home is full.']);
   if (def.price) addMoney(userId, -discount(getUser(userId), def.price), 'purchase', `Fanicha: ${def.name}`);
   hq.insert.run(userId, item, x, z, rot, now());
@@ -301,7 +301,7 @@ export const moveFurniture = db.transaction((userId, id, { x, z, rot }) => {
   if (!row) throw new GameError(['Kitu hicho si chako.', "That's not your item."], 404);
   x = snap(x); z = snap(z); rot = turn(rot);
   const others = hq.items.all(userId).filter((o) => o.id !== row.id);
-  if (!homeFits(furnitureById[row.item], x, z, rot, others, homeBounds(getUser(userId).homeLevel))) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
+  if (!homeFits(furnitureById[row.item], x, z, rot, others, homeBounds(getUser(userId).homeLevel, getUser(userId).homeFeatures))) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
   hq.move.run(x, z, rot, row.id);
 });
 

@@ -52,7 +52,7 @@ function Catalogue() {
   const me = useStore((s) => s.me);
   const [cat, setCat] = useState(() => useStore.getState().catTab || 'sleep');
   useEffect(() => { useStore.setState({ catTab: null }); }, []);
-  const b = homeBounds(me.homeLevel);
+  const b = homeBounds(me.homeLevel, me.homeFeatures);
   const cx = Math.round((b.x1 + b.x2) / 2);
   const cz = Math.round((b.z1 + b.z2) / 2);
   const [hidden, setHidden] = useState(false);
@@ -185,7 +185,7 @@ function PlacePanel() {
   const [busy, setBusy] = useState(false);
   const { def } = placing;
   const others = items.filter((i) => i.id !== placing.id);
-  const b = homeBounds(me.homeLevel);
+  const b = homeBounds(me.homeLevel, me.homeFeatures);
   const fits = homeFits(def, placing.x, placing.z, placing.rot, others, b);
   // Arrows are screen-relative: pick the grid axis closest to that screen direction.
   const nudgeScreen = (sx, sy) => {
@@ -310,14 +310,10 @@ export function HomeUI() {
   const placing = useStore((s) => s.placing);
   const me = useStore((s) => s.me);
   const visiting = useStore((s) => s.visiting);
-  const upstairs = useStore((s) => s.homeUpstairs);
   if (tab !== 'home' && tab !== 'shop') return null;
-  const hasStorey = ((visiting ? visiting.host.homeFeatures : me.homeFeatures) || []).includes('storey');
   return (
     <>
-      {tab === 'home' && hasStorey && (
-        <button className="floor-btn" onClick={() => { sfx('click'); useStore.setState({ homeUpstairs: !upstairs }); }}>{upstairs ? `⬇️ ${L('Chini', 'Downstairs')}` : `⬆️ ${L('Juu', 'Upstairs')}`}</button>
-      )}
+
       {tab === 'shop' && (
         <div className="buy-top">
           <span className="pill">🛋️ {L('Duka · Panga nyumba', 'Buy mode')}</span>

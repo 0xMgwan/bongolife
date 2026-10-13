@@ -86,7 +86,7 @@ export function Matukio({ back }) {
               options={EVENT_PLACES.map((id) => {
                 if (id === 'home') return { value: id, label: L('🏠 Kwangu (pati ya nyumbani)', '🏠 My place (house party)') };
                 const c = cityAt(...placeById[id].pos)?.id;
-                return { value: id, label: `${placeLabel(id)}${c === 'znz' ? ' · Zanzibar' : c === 'aru' ? ' · Arusha' : ''}` };
+                return { value: id, label: `${placeLabel(id)}${c === 'znz' ? ' · Zanzibar' : c === 'aru' ? ' · Arusha' : c === 'pwa' ? ' · Pwani' : ''}` };
               })}
             />
             <input className="field ev-when" type="datetime-local" value={form.at} min={localInput(Date.now() + EVENT_LIMITS.minLeadMs)} onChange={(e) => setForm({ ...form, at: e.target.value })} required />

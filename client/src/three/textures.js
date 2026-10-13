@@ -249,6 +249,45 @@ export function fabricTexture(pattern, color) {
           ctx.arc(x * 32 + (y % 2) * 16 + 8, y * 32 + 16, 6, 0, Math.PI * 2);
           ctx.fill();
         }
+    } else if (pattern === 'denim') {
+      ctx.globalAlpha = 0.18;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      for (let i = -h; i < w; i += 4) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + h, h); ctx.stroke(); }
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(0, 60, w, 1.5);
+      ctx.globalAlpha = 1;
+    } else if (pattern === 'camo') {
+      const cols = ['#3f6212', '#365314', '#78350f', '#1c1917'];
+      for (let i = 0; i < 40; i++) {
+        ctx.fillStyle = cols[i % 4];
+        ctx.beginPath();
+        ctx.ellipse((i * 53) % w, (i * 37) % h, 10 + (i % 5) * 3, 6 + (i % 3) * 3, i, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (pattern === 'floral') {
+      for (let y = 0; y < 4; y++)
+        for (let x = 0; x < 4; x++) {
+          const cx = x * 32 + (y % 2) * 16 + 10;
+          const cy = y * 32 + 14;
+          ctx.fillStyle = alt;
+          for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(cx + Math.cos(k * 1.26) * 5, cy + Math.sin(k * 1.26) * 5, 4, 0, Math.PI * 2); ctx.fill(); }
+          ctx.fillStyle = '#fde047';
+          ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#16a34a';
+          ctx.fillRect(cx + 6, cy + 5, 6, 2);
+        }
+    } else if (pattern === 'ankara') {
+      for (let y = 0; y < 4; y++)
+        for (let x = 0; x < 4; x++) {
+          const ox = x * 32;
+          const oy = y * 32;
+          ctx.fillStyle = (x + y) % 2 ? dark : alt;
+          ctx.beginPath(); ctx.moveTo(ox, oy + 32); ctx.lineTo(ox + 16, oy); ctx.lineTo(ox + 32, oy + 32); ctx.fill();
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath(); ctx.arc(ox + 16, oy + 22, 3, 0, Math.PI * 2); ctx.fill();
+        }
     } else if (pattern === 'check') {
       ctx.fillStyle = 'rgba(255,255,255,.35)';
       for (let i = 0; i < 8; i++) {

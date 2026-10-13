@@ -44,11 +44,18 @@ export const CITIES = [
     beaches: [{ x1: -78, z1: -60, x2: -70, z2: 70 }, { x1: -20, z1: -118, x2: 90, z2: -110 }, { x1: 110, z1: -60, x2: 118, z2: 60 }],
   },
   { id: 'aru', name: 'Arusha', icon: '⛰️', center: [-1600, 0], half: 120, ground: '#a9c48c' },
+  {
+    id: 'pwa', name: 'Pwani', icon: '🏭', center: [0, -1600], half: 120, ground: '#c5c9a4',
+    // Kibaha & Mlandizi industrial parks, Mapinga retirement homes, old Bagamoyo on the coast.
+    land: [{ x1: -120, z1: -120, x2: 96, z2: 120 }, { x1: 96, z1: -110, x2: 104, z2: 110 }],
+    beaches: [{ x1: 96, z1: -110, x2: 104, z2: 110 }],
+  },
 ];
 export const cityById = Object.fromEntries(CITIES.map((c) => [c.id, c]));
 export const cityAt = (x, z) => CITIES.find((c) => Math.abs(x - c.center[0]) <= c.half && Math.abs(z - c.center[1]) <= c.half) || null;
 const Z = (x, z) => [1600 + x, z];
 const A = (x, z) => [-1600 + x, z];
+const P = (x, z) => [x, -1600 + z];
 
 export function isWater(x, z) {
   const c = cityAt(x, z);
@@ -91,6 +98,12 @@ export const ROADS = [
   [...A(-110, -60), ...A(110, -60), 6, 'Barabara ya Nairobi'],
   [...A(-60, -110), ...A(-60, 110), 6, 'Barabara ya Njiro'],
   [...A(60, -110), ...A(60, 110), 6, 'Barabara ya Moshi'],
+  // Pwani
+  [...P(-115, 0), ...P(95, 0), 7, 'Barabara ya Bagamoyo'],
+  [...P(-115, -60), ...P(95, -60), 6, 'Barabara ya Mlandizi'],
+  [...P(-115, 60), ...P(95, 60), 6, 'Barabara ya Mapinga'],
+  [...P(-40, -115), ...P(-40, 115), 7, 'Barabara ya Viwanda'],
+  [...P(30, -115), ...P(30, 115), 6, 'Barabara ya Kibaha'],
   [...A(-110, 60), ...A(110, 60), 6, 'Barabara ya Dodoma'],
 ];
 
@@ -108,6 +121,10 @@ export const DISTRICTS = [
   { id: 'michamvi', name: 'Michamvi', pos: Z(85, 15) },
   { id: 'arusha-cbd', name: 'Arusha CBD', pos: A(18, -15) },
   { id: 'njiro', name: 'Njiro', pos: A(-80, 20) },
+  { id: 'kibaha', name: 'Kibaha Industrial', pos: P(-80, -30) },
+  { id: 'mlandizi', name: 'Mlandizi', pos: P(-80, 30) },
+  { id: 'mapinga', name: 'Mapinga', pos: P(65, -88) },
+  { id: 'bagamoyo', name: 'Bagamoyo', pos: P(55, 30) },
   { id: 'kariakoo', name: 'Kariakoo', pos: [7, 18] },
   { id: 'posta', name: 'Posta', pos: [52, 0] },
   { id: 'sinza', name: 'Sinza', pos: [-82, -66] },
@@ -213,6 +230,40 @@ export const OUTFITS = [
   { id: 'gauni-kitenge-refu', name: 'Gauni Refu la Kitenge', nameEn: 'Kitenge Maxi Gown', price: 180_000, for: 'woman', top: '#be123c', pattern: 'kitenge', bottom: '#be123c', bottomPattern: 'kitenge', bottomType: 'maxi', sleeves: 'short' },
   { id: 'suti', name: 'Suti ya Kibosile', nameEn: 'Boss Suit', price: 250_000, for: 'all', top: '#0f172a', bottom: '#0f172a', bottomType: 'pants', sleeves: 'long', extra: 'tie' },
   { id: 'gauni-sendoff', name: 'Gauni la Send-off', nameEn: 'Send-off Gown', price: 400_000, for: 'woman', top: '#a21caf', pattern: 'kitenge', bottom: '#a21caf', bottomPattern: 'kitenge', bottomType: 'maxi', sleeves: 'none' },
+  // ---- more wardrobe: everyday, street, sport, culture, work and big nights
+  { id: 'tee-black', name: 'T-shirt Nyeusi', nameEn: 'Black Tee', price: 15_000, for: 'all', top: '#111827', bottom: '#1e3a8a', bottomPattern: 'denim', bottomType: 'pants', sleeves: 'short' },
+  { id: 'tee-mustard', name: 'T-shirt ya Haradali', nameEn: 'Mustard Tee & Chinos', price: 25_000, for: 'all', top: '#ca8a04', bottom: '#1f2937', bottomType: 'pants', sleeves: 'short' },
+  { id: 'tank-shorts', name: 'Singlet na Kaptula', nameEn: 'Tank & Shorts', price: 20_000, for: 'all', top: '#f8fafc', bottom: '#0369a1', bottomType: 'shorts', sleeves: 'none' },
+  { id: 'cargo', name: 'Suruali ya Cargo', nameEn: 'Cargo Fit', price: 55_000, for: 'all', top: '#365314', bottom: '#78716c', bottomType: 'pants', sleeves: 'short' },
+  { id: 'camo', name: 'Kamuflaji', nameEn: 'Camo Street', price: 70_000, for: 'all', top: '#111827', bottom: '#3f6212', bottomPattern: 'camo', bottomType: 'pants', sleeves: 'short' },
+  { id: 'denim-jacket', name: 'Jaketi la Jinsi', nameEn: 'Denim Jacket', price: 95_000, for: 'all', top: '#1e40af', pattern: 'denim', bottom: '#111827', bottomType: 'pants', sleeves: 'long' },
+  { id: 'bomber', name: 'Jaketi la Bomber', nameEn: 'Bomber Jacket', price: 110_000, for: 'all', top: '#365314', bottom: '#1f2937', bottomType: 'pants', sleeves: 'long' },
+  { id: 'hoodie-red', name: 'Hoodie Nyekundu', nameEn: 'Red Hoodie', price: 60_000, for: 'all', top: '#b91c1c', bottom: '#111827', bottomType: 'pants', sleeves: 'long' },
+  { id: 'hoodie-sky', name: 'Hoodie ya Bluu', nameEn: 'Sky Hoodie', price: 60_000, for: 'all', top: '#38bdf8', bottom: '#e5e7eb', bottomType: 'pants', sleeves: 'long' },
+  { id: 'track-red', name: 'Tracksuit Nyekundu', nameEn: 'Red Tracksuit', price: 80_000, for: 'all', top: '#dc2626', pattern: 'stripes', bottom: '#dc2626', bottomType: 'pants', sleeves: 'long' },
+  { id: 'track-black', name: 'Tracksuit Nyeusi', nameEn: 'Black Tracksuit', price: 80_000, for: 'all', top: '#111827', pattern: 'stripes', bottom: '#111827', bottomType: 'pants', sleeves: 'long' },
+  { id: 'jezi-taifa', name: 'Jezi ya Taifa Stars', nameEn: 'Taifa Stars Jersey', price: 45_000, for: 'all', top: '#16a34a', pattern: 'jersey', bottom: '#1e3a8a', bottomType: 'shorts', sleeves: 'short' },
+  { id: 'jezi-azam', name: 'Jezi ya Azam', nameEn: 'Azam FC Jersey', price: 45_000, for: 'all', top: '#38bdf8', pattern: 'jersey', bottom: '#0c4a6e', bottomType: 'shorts', sleeves: 'short' },
+  { id: 'ankara-shirt', name: 'Shati la Ankara', nameEn: 'Ankara Shirt', price: 65_000, for: 'all', top: '#f97316', pattern: 'ankara', bottom: '#111827', bottomType: 'pants', sleeves: 'short' },
+  { id: 'ankara-blue', name: 'Ankara ya Bluu', nameEn: 'Blue Ankara Set', price: 120_000, for: 'all', top: '#1d4ed8', pattern: 'ankara', bottom: '#1d4ed8', bottomPattern: 'ankara', bottomType: 'pants', sleeves: 'long' },
+  { id: 'kitenge-shirt', name: 'Shati la Kitenge', nameEn: 'Kitenge Shirt', price: 70_000, for: 'all', top: '#059669', pattern: 'kitenge', bottom: '#f5f5f4', bottomType: 'pants', sleeves: 'short' },
+  { id: 'shuka-maasai', name: 'Shuka la Kimasai', nameEn: 'Maasai Shuka', price: 50_000, for: 'all', top: '#dc2626', pattern: 'shuka', bottom: '#dc2626', bottomPattern: 'shuka', bottomType: 'robe', sleeves: 'none' },
+  { id: 'kanzu-white', name: 'Kanzu Nyeupe', nameEn: 'White Kanzu', price: 90_000, for: 'man', top: '#f8fafc', bottom: '#f8fafc', bottomType: 'robe', sleeves: 'long', head: 'kofia' },
+  { id: 'blazer-navy', name: 'Blazer ya Kibluu', nameEn: 'Navy Blazer', price: 180_000, for: 'all', top: '#1e3a8a', bottom: '#e7e5e4', bottomType: 'pants', sleeves: 'long' },
+  { id: 'suti-cream', name: 'Suti ya Krimu', nameEn: 'Cream Suit', price: 300_000, for: 'all', top: '#f5e6c8', bottom: '#f5e6c8', bottomType: 'pants', sleeves: 'long', extra: 'tie' },
+  { id: 'suti-wine', name: 'Suti ya Mvinyo', nameEn: 'Wine Suit', price: 320_000, for: 'all', top: '#7f1d1d', bottom: '#7f1d1d', bottomType: 'pants', sleeves: 'long', extra: 'tie' },
+  { id: 'scrubs-blue', name: 'Sare za Daktari', nameEn: 'Doctor Scrubs', price: 30_000, for: 'all', top: '#1d4ed8', bottom: '#1e40af', bottomType: 'pants', sleeves: 'short' },
+  { id: 'crop-jeans', name: 'Crop Top na Jinsi', nameEn: 'Crop Top & Jeans', price: 55_000, for: 'woman', top: '#f472b6', bottom: '#1e40af', bottomPattern: 'denim', bottomType: 'pants', sleeves: 'none' },
+  { id: 'sundress', name: 'Gauni la Jua', nameEn: 'Floral Sundress', price: 75_000, for: 'woman', top: '#fde68a', pattern: 'floral', bottom: '#fde68a', bottomPattern: 'floral', bottomType: 'dress', sleeves: 'none' },
+  { id: 'floral-maxi', name: 'Maxi ya Maua', nameEn: 'Floral Maxi', price: 110_000, for: 'woman', top: '#be185d', pattern: 'floral', bottom: '#be185d', bottomPattern: 'floral', bottomType: 'maxi', sleeves: 'short' },
+  { id: 'pencil-skirt', name: 'Sketi ya Ofisi', nameEn: 'Pencil Skirt & Blouse', price: 90_000, for: 'woman', top: '#f8fafc', bottom: '#111827', bottomType: 'skirt', sleeves: 'long' },
+  { id: 'jumpsuit', name: 'Jumpsuit', nameEn: 'Jumpsuit', price: 95_000, for: 'woman', top: '#0f766e', bottom: '#0f766e', bottomType: 'pants', sleeves: 'none' },
+  { id: 'kanga-dress', name: 'Gauni la Kanga', nameEn: 'Kanga Dress', price: 40_000, for: 'woman', top: '#7c3aed', pattern: 'kanga', bottom: '#7c3aed', bottomPattern: 'kanga', bottomType: 'dress', sleeves: 'short' },
+  { id: 'abaya', name: 'Abaya', nameEn: 'Abaya', price: 85_000, for: 'woman', top: '#111827', bottom: '#111827', bottomType: 'maxi', sleeves: 'long', head: 'hijab' },
+  { id: 'ankara-gown', name: 'Gauni la Ankara', nameEn: 'Ankara Gown', price: 160_000, for: 'woman', top: '#ea580c', pattern: 'ankara', bottom: '#ea580c', bottomPattern: 'ankara', bottomType: 'maxi', sleeves: 'short' },
+  { id: 'party-red', name: 'Gauni la Pati', nameEn: 'Red Party Dress', price: 200_000, for: 'woman', top: '#dc2626', bottom: '#dc2626', bottomType: 'dress', sleeves: 'none' },
+  { id: 'wedding-gown', name: 'Shela la Harusi', nameEn: 'Wedding Gown', price: 900_000, for: 'woman', top: '#ffffff', bottom: '#ffffff', bottomType: 'maxi', sleeves: 'none' },
+  { id: 'tux', name: 'Tuxedo', nameEn: 'Tuxedo', price: 600_000, for: 'all', top: '#020617', bottom: '#020617', bottomType: 'pants', sleeves: 'long', extra: 'tie' },
 ];
 export const outfitById = Object.fromEntries(OUTFITS.map((o) => [o.id, o]));
 export const outfitFits = (o, body) => !o.for || o.for === 'all' || o.for === body;
@@ -272,15 +323,28 @@ export const BUILDINGS = [
     blurb: ['Vitanda vya wasafiri — kipato cha kila saa.', 'Bunks for backpackers — steady hourly income.'] },
   { id: 'resort', kind: 'resort', name: 'Eco Resort ya Makuti', price: 220_000_000, incomePerHour: 950_000, energyBonus: 35, color: '#fef3c7', floors: 1, pool: true,
     blurb: ['Bungalow za makuti kuzunguka bwawa — watalii wanalipa vizuri.', 'Thatched bungalows around a pool — tourists pay well.'] },
+  // Industry: warehouses and factories earn big — Pwani's industrial parks, plus light industry in a few Dar/Arusha areas.
+  { id: 'ghala', kind: 'factory', variant: 'warehouse', name: 'Ghala la Usafirishaji', price: 60_000_000, incomePerHour: 270_000, energyBonus: 0, color: '#2563eb', floors: 1,
+    blurb: ['Ghala kubwa la mizigo na malori — kipato cha kila saa.', 'A big logistics warehouse with trucks — steady hourly income.'] },
+  { id: 'kiwanda-chakula', kind: 'factory', variant: 'food', name: 'Kiwanda cha Vyakula', price: 120_000_000, incomePerHour: 540_000, energyBonus: 0, color: '#16a34a', floors: 1,
+    blurb: ['Juisi, unga na vyakula vya kusindika — matangi na silo.', 'Juices, flour and packaged food — tanks and silos.'] },
+  { id: 'kiwanda-nguo', kind: 'factory', variant: 'textile', name: 'Kiwanda cha Nguo', price: 150_000_000, incomePerHour: 680_000, energyBonus: 0, color: '#c026d3', floors: 1,
+    blurb: ['Vitenge, kanga na sare — paa la msumeno na mashine.', 'Vitenge, kanga and uniforms — sawtooth roof and looms.'] },
+  { id: 'sola', kind: 'solar', name: 'Shamba la Umeme wa Jua', price: 200_000_000, incomePerHour: 820_000, energyBonus: 0, color: '#1e3a8a', floors: 1,
+    blurb: ['Paneli za sola zinazouza umeme kwa TANESCO.', 'Solar panels selling power to the grid.'] },
+  { id: 'kiwanda-saruji', kind: 'factory', variant: 'cement', name: 'Kiwanda cha Saruji', price: 400_000_000, incomePerHour: 1_750_000, energyBonus: 0, color: '#78716c', floors: 1,
+    blurb: ['Silo ndefu, mkanda wa kusafirisha na moshi — biashara nzito.', 'Tall silos, conveyors and a stack — heavy industry, heavy profits.'] },
+  { id: 'wazee', kind: 'retire', name: 'Makazi ya Wazee', price: 90_000_000, incomePerHour: 380_000, energyBonus: 15, color: '#fef3c7', floors: 1,
+    blurb: ['Makazi tulivu ya wastaafu — bustani, kibanda na huduma.', 'A calm retirement home — gardens, a gazebo and care staff.'] },
   { id: 'kesho', kind: 'future', name: 'Nyumba ya Kesho', price: 260_000_000, incomePerHour: 0, energyBonus: 60, color: '#f8fafc', floors: 2,
     blurb: ['Nyumba-janja ya baadaye: kuba la kioo, taa za LED, sola na pedi ya drone.', 'A smart home from the future: glass dome, LED rings, solar canopy and a drone pad.'] },
 ];
-const BUILDING_EMOJI = { banda: '🏠', kisasa: '🏡', ghorofa: '🏢', villa: '🏖️', hoteli: '🏨', shamba: '🌽', kontena: '📦', hostel: '🛏️', resort: '🌴', kesho: '🛸' };
+const BUILDING_EMOJI = { ghala: '📦', 'kiwanda-chakula': '🏭', 'kiwanda-nguo': '🧵', sola: '☀️', 'kiwanda-saruji': '🏗️', wazee: '👵🏾', banda: '🏠', kisasa: '🏡', ghorofa: '🏢', villa: '🏖️', hoteli: '🏨', shamba: '🌽', kontena: '📦', hostel: '🛏️', resort: '🌴', kesho: '🛸' };
 for (const b of BUILDINGS) b.emoji = BUILDING_EMOJI[b.id];
 export const buildingById = Object.fromEntries(BUILDINGS.map((b) => [b.id, b]));
 // Upgrading a house you've built: extra storeys and features. Rentals earn +25% per extra storey.
 export const HOUSE_UPGRADES = {
-  maxFloors: { banda: 2, kisasa: 3, villa: 3, ghorofa: 6, hoteli: 4, shamba: 1, kontena: 3, hostel: 5, resort: 1, kesho: 3 },
+  maxFloors: { banda: 2, kisasa: 3, villa: 3, ghorofa: 6, hoteli: 4, shamba: 1, kontena: 3, hostel: 5, resort: 1, kesho: 3, ghala: 1, 'kiwanda-chakula': 1, 'kiwanda-nguo': 1, sola: 1, 'kiwanda-saruji': 1, wazee: 2 },
   floorCostPct: 0.35, // of the building's price, per storey
   floorIncome: 0.25,
   floorEnergy: 5,
@@ -330,22 +394,32 @@ export const PLOTS = [
   ...plotGrid('njr', 'Njiro', [-1695, -1682], [15, 29, 43], 20_000_000),
   ...plotGrid('kjg', 'Kijenge', [-1520, -1507], [15, 29, 43], 35_000_000),
   ...plotGrid('usa', 'Usa River', [-1635, -1622, -1609], [75, 89], 15_000_000),
+  // Pwani: industrial parks (big 14 m plots), retirement homes and coastal Bagamoyo
+  ...plotGrid('kbh', 'Kibaha', [-100, -82, -64], [-1648, -1630, -1612], 40_000_000, 14),
+  ...plotGrid('kbc', 'Kibaha', [-25, -7, 11], [-1646, -1628], 45_000_000, 14),
+  ...plotGrid('mld', 'Mlandizi', [-100, -82, -64], [-1587, -1569, -1552], 30_000_000, 14),
+  ...plotGrid('mpg', 'Mapinga', [45, 58, 71, 84], [-1675, -1690, -1705], 15_000_000, 11),
+  ...plotGrid('bgm', 'Bagamoyo', [42, 55, 68], [-1585, -1570, -1555], 20_000_000, 11),
 ];
 for (const p of PLOTS) { p.district = p.area; p.city = cityAt(p.pos[0], p.pos[1])?.id || 'dar'; }
 export const plotById = Object.fromEntries(PLOTS.map((p) => [p.id, p]));
 export const ALLOWED_BUILDINGS = {
   Kigamboni: ['banda', 'kisasa', 'villa', 'hoteli', 'kontena', 'resort', 'kesho'],
   Masaki: ['kisasa', 'villa', 'ghorofa', 'hoteli', 'kesho', 'kontena'],
-  Mbezi: ['banda', 'kisasa', 'ghorofa', 'villa', 'shamba', 'kontena', 'hostel'],
-  Kinondoni: ['banda', 'kisasa', 'ghorofa', 'hostel', 'kontena'],
-  Temeke: ['banda', 'kisasa', 'ghorofa', 'shamba', 'hostel', 'kontena'],
+  Mbezi: ['banda', 'kisasa', 'ghorofa', 'villa', 'shamba', 'kontena', 'hostel', 'ghala', 'kiwanda-chakula', 'wazee'],
+  Kinondoni: ['banda', 'kisasa', 'ghorofa', 'hostel', 'kontena', 'ghala', 'wazee'],
+  Temeke: ['banda', 'kisasa', 'ghorofa', 'shamba', 'hostel', 'kontena', 'ghala', 'kiwanda-nguo', 'kiwanda-chakula'],
   Nungwi: ['kisasa', 'villa', 'hoteli', 'resort', 'hostel', 'kesho'],
   Paje: ['banda', 'kisasa', 'villa', 'hoteli', 'resort', 'hostel', 'kontena'],
-  Fumba: ['banda', 'kisasa', 'villa', 'ghorofa', 'shamba', 'kesho'],
+  Fumba: ['banda', 'kisasa', 'villa', 'ghorofa', 'shamba', 'kesho', 'ghala'],
   Matemwe: ['banda', 'kisasa', 'villa', 'hoteli', 'resort'],
-  Njiro: ['banda', 'kisasa', 'villa', 'ghorofa', 'shamba', 'hostel'],
+  Njiro: ['banda', 'kisasa', 'villa', 'ghorofa', 'shamba', 'hostel', 'ghala', 'kiwanda-chakula', 'wazee'],
   Kijenge: ['kisasa', 'villa', 'ghorofa', 'hoteli', 'kesho', 'hostel'],
-  'Usa River': ['banda', 'kisasa', 'villa', 'shamba', 'resort'],
+  'Usa River': ['banda', 'kisasa', 'villa', 'shamba', 'resort', 'wazee'],
+  Kibaha: ['ghala', 'kiwanda-nguo', 'kiwanda-chakula', 'kiwanda-saruji', 'sola', 'shamba'],
+  Mlandizi: ['ghala', 'kiwanda-nguo', 'kiwanda-chakula', 'kiwanda-saruji', 'sola', 'shamba'],
+  Mapinga: ['wazee', 'banda', 'kisasa', 'villa', 'kontena'],
+  Bagamoyo: ['wazee', 'kisasa', 'villa', 'hostel', 'resort', 'banda'],
 };
 
 // ----------------------------------------------------------------- places
@@ -842,6 +916,40 @@ export const PLACES = [
     blurb: 'Lango la safari na Kilimanjaro.',
     activities: [{ id: 'heli-kili', name: 'Ziara ya helikopta — Kilimanjaro', cost: 1_500_000, secs: 40, effects: { fun: 80 }, emoji: '🚁', fame: 6 }],
   },
+  // ----------------------------------------------------------------- Pwani
+  {
+    id: 'pw-stendi', name: 'Stendi ya Bagamoyo', district: 'Kibaha', type: 'terminal', icon: '🚌', pos: P(0, 18), size: [14, 10], h: 5, color: '#e5e7eb',
+    blurb: 'Mabasi kwenda Dar na Arusha — lango la Pwani.',
+    activities: [{ id: 'chai-stendi', name: 'Chai na maandazi', cost: 1_500, secs: 10, effects: { hunger: 15, energy: 5 }, emoji: '☕' }],
+  },
+  {
+    id: 'pw-industrial', name: 'Kibaha Industrial Park', district: 'Kibaha', type: 'office', icon: '🏭', pos: P(-75, 85), size: [16, 12], h: 9, color: '#94a3b8',
+    blurb: 'Ofisi kuu ya viwanda — kazi za viwandani na ushauri wa kujenga kiwanda.',
+    activities: [{ id: 'ziara-kiwanda', name: 'Ziara ya viwanda', cost: 10_000, secs: 20, effects: { fun: 10, social: 5 }, emoji: '🏭' }],
+    jobs: [
+      { id: 'opereta', title: 'Opereta wa mashine', titles: ['Opereta', 'Opereta mkuu', 'Msimamizi wa zamu', 'Meneja wa kiwanda'], secs: 60, pay: 30_000, energy: 14 },
+      { id: 'fundi-mitambo', title: 'Fundi mitambo', titles: ['Fundi', 'Fundi mkuu', 'Mhandisi wa mitambo'], secs: 70, pay: 55_000, energy: 14, requires: { elimu: 1 } },
+      { id: 'dereva-lori', title: 'Dereva wa lori', titles: ['Dereva', 'Dereva mzoefu', 'Msimamizi wa usafirishaji'], secs: 60, pay: 35_000, energy: 12 },
+    ],
+  },
+  {
+    id: 'bagamoyo-old', name: 'Mji Mkongwe wa Bagamoyo', district: 'Bagamoyo', type: 'museum', icon: '🏛️', pos: P(62, 88), size: [16, 12], h: 6, color: '#e7d7b8',
+    blurb: 'Magofu ya Kaole, ngome ya zamani na Chuo cha Sanaa cha Bagamoyo.',
+    activities: [
+      { id: 'kaole', name: 'Tembelea magofu ya Kaole', cost: 15_000, secs: 25, effects: { fun: 20, social: 5 }, emoji: '🏛️', fame: 1 },
+      { id: 'sanaa', name: 'Onyesho la Chuo cha Sanaa', cost: 20_000, secs: 30, effects: { fun: 30, social: 10 }, emoji: '🥁' },
+    ],
+  },
+  {
+    id: 'pw-jetty', name: 'Gati la Bagamoyo', district: 'Bagamoyo', type: 'port', icon: '⛵', pos: P(86, 35), size: [8, 12], h: 3, color: '#e2e8f0',
+    blurb: 'Boti kwenda Zanzibar na samaki wabichi.',
+    activities: [{ id: 'samaki-pw', name: 'Nunua samaki wa kukaanga', cost: 3_000, secs: 10, effects: { hunger: 25 }, emoji: '🐟' }],
+  },
+  {
+    id: 'pw-soko', name: 'Soko la Mlandizi', district: 'Mlandizi', type: 'market', icon: '🧺', pos: P(0, 88), size: [14, 10], h: 5, color: '#fca5a5',
+    blurb: 'Matunda, mboga na mchele kwa bei ya jumla.',
+    activities: [{ id: 'matunda-pw', name: 'Nunua matunda', cost: 2_000, secs: 10, effects: { hunger: 18 }, emoji: '🍍' }],
+  },
   // ----------------------------------------------------------------- Dar
   {
     id: 'casino', name: 'Le Grande Casino', district: 'Kisutu', type: 'casino', icon: '🎰', pos: [-1, 50], size: [12, 10], h: 8, color: '#111827',
@@ -895,7 +1003,7 @@ export const luxuryById = Object.fromEntries(LUXURY.map((l) => [l.id, l]));
 export const LUXURY_RESALE = 0.6;
 export const LUXURY_COLORS = ['#f8fafc', '#0f172a', '#1e3a8a', '#7f1d1d', '#14532d', '#d4af37'];
 // Where a yacht can sail to / a jet can fly to, per city (a place id to arrive at).
-export const LUXURY_PORTS = { yacht: { dar: 'slipway', znz: 'zn-port' }, jet: { dar: 'airport', znz: 'zn-airport', aru: 'kia' } };
+export const LUXURY_PORTS = { yacht: { dar: 'slipway', znz: 'zn-port', pwa: 'pw-jetty' }, jet: { dar: 'airport', znz: 'zn-airport', aru: 'kia' } };
 const PRIVATE_PLACES = [
   { id: 'yacht', private: true, name: 'Yacht', nameEn: 'Yacht', type: 'yacht', icon: '🛥️', district: 'Bahari ya Hindi', pos: [0, 0], size: [1, 1], h: 0, color: '#f8fafc', activities: [], blurb: 'Yacht binafsi.' },
   { id: 'jet', private: true, name: 'Private Jet', nameEn: 'Private jet', type: 'jet', icon: '🛩️', district: 'Angani', pos: [0, 0], size: [1, 1], h: 0, color: '#f8fafc', activities: [], blurb: 'Ndege binafsi.' },
@@ -1096,7 +1204,7 @@ const EN = {
     'gauni-sendoff': 'Send-off Gown', gym: 'Gym Wear',
   },
   vehicles: { baiskeli: 'Bicycle' },
-  buildings: { banda: 'Simple House', kisasa: 'Modern House', ghorofa: 'Apartment Block', villa: 'Luxury Villa', hoteli: 'Beach Hotel', shamba: 'Modern Farm', kontena: 'Container Home', hostel: 'Backpackers Hostel', resort: 'Thatched Eco Resort', kesho: 'Home of Tomorrow' },
+  buildings: { banda: 'Simple House', kisasa: 'Modern House', ghorofa: 'Apartment Block', villa: 'Luxury Villa', hoteli: 'Beach Hotel', shamba: 'Modern Farm', kontena: 'Container Home', hostel: 'Backpackers Hostel', resort: 'Thatched Eco Resort', kesho: 'Home of Tomorrow', ghala: 'Logistics Warehouse', 'kiwanda-chakula': 'Food Processing Plant', 'kiwanda-nguo': 'Textile Mill', sola: 'Solar Farm', 'kiwanda-saruji': 'Cement Plant', wazee: 'Retirement Home' },
   billboards: { 'bb-ferry': 'Kivukoni Ferry', 'bb-stadium': 'National Stadium', 'bb-kigamboni': 'Nyerere Bridge' },
   travel: { bajaji: 'Bajaji (tuk-tuk)', daladala: 'Daladala (minibus)', taxi: 'Ride-hail taxi', boda: 'Bodaboda (moto taxi)', gari: 'My car' },
   events: [
@@ -1124,6 +1232,11 @@ const EN = {
       ogelea: 'Swim in the ocean', mihogo: 'Roast cassava', madafu: 'Fresh coconut', 'piga-stori': 'Hang out with friends' }],
     mall: ['Mlimani City', 'Mall, cinema, food court — a classy day out.', { sinema: 'Watch a movie', burger: 'Burger & juice', window: 'Window shopping' }],
     gym: ['Mlimani Gym', 'Build muscle, lose the belly.', { mazoezi: 'Work out' }],
+    'pw-stendi': ['Bagamoyo Bus Stand', 'Coaches to Dar and Arusha — the gateway to Pwani.', { 'chai-stendi': 'Chai & maandazi' }],
+    'pw-industrial': ['Kibaha Industrial Park', 'The industrial park office — factory jobs and advice on building one.', { 'ziara-kiwanda': 'Factory tour' }],
+    'bagamoyo-old': ['Old Bagamoyo', 'The Kaole ruins, the old fort and the Bagamoyo College of Arts.', { kaole: 'Visit the Kaole ruins', sanaa: 'Arts college show' }],
+    'pw-jetty': ['Bagamoyo Jetty', 'Boats to Zanzibar and fresh fish.', { 'samaki-pw': 'Buy fried fish' }],
+    'pw-soko': ['Mlandizi Market', 'Fruit, vegetables and rice at wholesale prices.', { 'matunda-pw': 'Buy fruit' }],
     'gym-znz': ['Zanzibar Fitness Club', "Unguja's modern gym — weights, boxing and yoga.", { 'mazoezi-znz': 'Work out' }],
     'gym-aru': ['Arusha Peak Gym', 'Train with a view of Mount Meru.', { 'mazoezi-aru': 'Work out' }],
     chuo: ['University of Dar', 'Take courses to gain education — unlocks banking and tech jobs.', {
@@ -1187,6 +1300,9 @@ const EN = {
     trainer: ['Personal Trainer', ['Trainer', 'Senior Trainer', 'Coach']],
     'trainer-znz': ['Personal Trainer', ['Trainer', 'Senior Trainer', 'Coach']],
     'trainer-aru': ['Personal Trainer', ['Trainer', 'Senior Trainer', 'Coach']],
+    opereta: ['Machine Operator', ['Operator', 'Senior Operator', 'Shift Supervisor', 'Plant Manager']],
+    'fundi-mitambo': ['Plant Technician', ['Technician', 'Senior Technician', 'Plant Engineer']],
+    'dereva-lori': ['Truck Driver', ['Driver', 'Senior Driver', 'Logistics Supervisor']],
     dj: ['DJ', ['Rookie DJ', 'Resident DJ', 'Elements DJ', 'Champion DJ']],
     mhudumu: ['Bar Attendant', ['Waiter', 'Bartender', 'Bar Manager']],
     msanii: ['Artist', ['Upcoming artist', 'Street artist', 'Bongo Flava star', 'Legend']],
@@ -1478,9 +1594,15 @@ export const HOME_LEVELS = [
   { level: 2, emoji: '🏡', name: 'Nyumba ya familia', nameEn: 'Family house', price: 30_000_000, grow: [6, 4], comfort: 0.2, room: true },
   { level: 3, emoji: '🏰', name: 'Jumba la kifahari', nameEn: 'Mansion', price: 120_000_000, grow: [9, 6], comfort: 0.35, room: true },
 ];
-export const homeBounds = (level = 0) => {
+// Second storey: a glass-floored upper level over the back of the original home, reached by a
+// staircase that rises toward the back (-z). Furniture can't go on the stairs.
+export const HOME_UP_Y = 2.45;
+export const HOME_STAIRS = { x1: 0.2, x2: 1.2, z1: 0, z2: 2.8 };
+export const HOME_UPPER = { x1: -6, x2: 6, z1: -5, z2: 0, terrace: 1.6 };
+export const homeStairY = (z) => HOME_UP_Y * Math.max(0, Math.min(1, (HOME_STAIRS.z2 - z) / (HOME_STAIRS.z2 - HOME_STAIRS.z1)));
+export const homeBounds = (level = 0, features = []) => {
   const [gx, gz] = HOME_LEVELS[level]?.grow || [0, 0];
-  return { x1: -HOME.w / 2 - gx, x2: HOME.w / 2, z1: -HOME.d / 2 - gz, z2: HOME.d / 2 };
+  return { x1: -HOME.w / 2 - gx, x2: HOME.w / 2, z1: -HOME.d / 2 - gz, z2: HOME.d / 2, blocks: features?.includes?.('storey') ? [HOME_STAIRS] : [] };
 };
 export const HOME_WALLS = ['#15806b', '#1e3a8a', '#7c2d12', '#374151', '#9d174d', '#b45309', '#e7e5e4', '#0f766e'];
 export const HOME_FLOORS = [
@@ -1510,14 +1632,15 @@ export const HOME_FEATURES = [
     acts: [{ id: 'master', emoji: '🛌', name: ['Lala chumba kikuu', 'Sleep in the master suite'], effects: { energy: 40 }, health: 3, cd: 10 * 60_000, mode: 'sleep', spot: [3.6, 3.05, -2.6, 0], up: true },
       { id: 'lounge', emoji: '🛋️', name: ['Pumzika sebule ya juu', 'Relax in the upstairs lounge'], effects: { fun: 8, social: 2, energy: 3 }, mode: 'sit', spot: [-3.5, 2.45, -2.2, 0], up: true }] },
   { id: 'rooftop', emoji: '🌃', name: 'Terrace ya juu', nameEn: 'Upstairs terrace', price: 6_000_000, requires: 'storey',
-    acts: [{ id: 'stars', emoji: '🌃', name: ['Tazama nyota', 'Stargaze'], effects: { fun: 8, energy: 3 }, mode: 'sleep', spot: [-1, 2.85, 3.4, Math.PI], up: true },
-      { id: 'party', emoji: '🎶', name: ['Pati ya terrace', 'Terrace party'], effects: { fun: 12, social: 8, energy: -5 }, mode: 'dance', spot: [2.4, 2.45, 3.4, Math.PI], up: true }] },
+    acts: [{ id: 'stars', emoji: '🌃', name: ['Tazama nyota', 'Stargaze'], effects: { fun: 8, energy: 3 }, mode: 'sleep', spot: [-2.4, 2.85, 0.8, Math.PI], up: true },
+      { id: 'party', emoji: '🎶', name: ['Pati ya terrace', 'Terrace party'], effects: { fun: 12, social: 8, energy: -5 }, mode: 'dance', spot: [3.6, 2.45, 0.8, Math.PI], up: true }] },
 ];
 export const homeFeatureById = Object.fromEntries(HOME_FEATURES.map((f) => [f.id, f]));
 export const HOME_ACT_CD = 2 * 60_000;
 export function homeFits(def, x, z, rot, others = [], b = homeBounds(0)) {
   const [w, d] = footprint(def, rot);
   if (x - w / 2 < b.x1 - 1e-6 || x + w / 2 > b.x2 + 1e-6 || z - d / 2 < b.z1 - 1e-6 || z + d / 2 > b.z2 + 1e-6) return false;
+  if ((b.blocks || []).some((k) => x + w / 2 > k.x1 + 1e-6 && x - w / 2 < k.x2 - 1e-6 && z + d / 2 > k.z1 + 1e-6 && z - d / 2 < k.z2 - 1e-6)) return false;
   return !others.some((o) => {
     const od = furnitureById[o.item];
     if (!od) return false;
@@ -1624,15 +1747,15 @@ export const POLICE_ID = 'polisi';
 export const tripKey = (a, b) => [a, b].sort().join('-');
 export const TRIP_MODES = {
   flight: { emoji: '✈️', name: 'Ndege', nameEn: 'Flight', secs: 60, ins: 10_000, risk: 1 / 8, price: { 'dar-znz': 95_000, 'aru-dar': 260_000, 'aru-znz': 320_000 }, note: ['Teksi hadi uwanja imejumuishwa', 'Cab to the airport included'] },
-  heli: { emoji: '🚁', name: 'Helikopta', nameEn: 'Helicopter', secs: 40, ins: 60_000, risk: 1 / 12, price: { 'dar-znz': 1_800_000, 'aru-dar': 4_500_000, 'aru-znz': 5_000_000 }, note: ['Kutoka mlangoni hadi mlangoni', 'Door to door'] },
-  ferry: { emoji: '⛴️', name: 'Boti ya Azam', nameEn: 'Azam fast ferry', secs: 70, ins: 5_000, risk: 1 / 7, price: { 'dar-znz': 40_000 }, note: ['Kivukoni hadi Bandari ya Zanzibar', 'Kivukoni to Zanzibar Port'] },
-  bus: { emoji: '🚌', name: 'Basi la abiria', nameEn: 'Coach', secs: 80, ins: 5_000, risk: 1 / 6, price: { 'aru-dar': 45_000 }, note: ['Magufuli hadi stendi kuu ya Arusha', 'Magufuli terminal to Arusha'] },
-  car: { emoji: '🚗', name: 'Endesha gari lako', nameEn: 'Drive', secs: 75, ins: 20_000, risk: 1 / 5, own: true, price: { 'aru-dar': 70_000 }, note: ['Mafuta tu, lakini utafika umechoka', "Fuel only, but you'll arrive tired"] },
+  heli: { emoji: '🚁', name: 'Helikopta', nameEn: 'Helicopter', secs: 40, ins: 60_000, risk: 1 / 12, price: { 'dar-znz': 1_800_000, 'aru-dar': 4_500_000, 'aru-znz': 5_000_000, 'dar-pwa': 900_000, 'pwa-znz': 1_500_000, 'aru-pwa': 4_200_000 }, note: ['Kutoka mlangoni hadi mlangoni', 'Door to door'] },
+  ferry: { emoji: '⛴️', name: 'Boti ya Azam', nameEn: 'Azam fast ferry', secs: 70, ins: 5_000, risk: 1 / 7, price: { 'dar-znz': 40_000, 'pwa-znz': 30_000 }, note: ['Kivukoni hadi Bandari ya Zanzibar', 'Kivukoni to Zanzibar Port'] },
+  bus: { emoji: '🚌', name: 'Basi la abiria', nameEn: 'Coach', secs: 80, ins: 5_000, risk: 1 / 6, price: { 'aru-dar': 45_000, 'dar-pwa': 6_000, 'aru-pwa': 42_000 }, note: ['Magufuli hadi stendi kuu ya Arusha', 'Magufuli terminal to Arusha'] },
+  car: { emoji: '🚗', name: 'Endesha gari lako', nameEn: 'Drive', secs: 75, ins: 20_000, risk: 1 / 5, own: true, price: { 'aru-dar': 70_000, 'dar-pwa': 12_000, 'aru-pwa': 65_000 }, note: ['Mafuta tu, lakini utafika umechoka', "Fuel only, but you'll arrive tired"] },
 };
 // What a flight looks like on arrival in each city.
-export const CITY_ARRIVAL = { znz: { dest: 'ZANZIBAR', ground: '#0e7490', land: '#fde68a' }, aru: { dest: 'ARUSHA · KILIMANJARO', ground: '#4d7c0f', land: '#a3e635' }, dar: { dest: 'DAR ES SALAAM', ground: '#0e7490', land: '#86efac' } };
+export const CITY_ARRIVAL = { znz: { dest: 'ZANZIBAR', ground: '#0e7490', land: '#fde68a' }, aru: { dest: 'ARUSHA · KILIMANJARO', ground: '#4d7c0f', land: '#a3e635' }, dar: { dest: 'DAR ES SALAAM', ground: '#0e7490', land: '#86efac' }, pwa: { dest: 'PWANI · BAGAMOYO', ground: '#0e7490', land: '#c5c9a4' } };
 // Where you arrive in each city, by mode.
-export const ARRIVAL_PLACE = { dar: { flight: 'airport', heli: 'airport', ferry: 'ferry', bus: 'stendi', car: 'stendi' }, znz: { flight: 'zn-airport', heli: 'zn-airport', ferry: 'zn-port' }, aru: { flight: 'kia', heli: 'kia', bus: 'ar-bus', car: 'ar-bus' } };
+export const ARRIVAL_PLACE = { dar: { flight: 'airport', heli: 'airport', ferry: 'ferry', bus: 'stendi', car: 'stendi' }, znz: { flight: 'zn-airport', heli: 'zn-airport', ferry: 'zn-port' }, aru: { flight: 'kia', heli: 'kia', bus: 'ar-bus', car: 'ar-bus' }, pwa: { heli: 'pw-stendi', bus: 'pw-stendi', car: 'pw-stendi', ferry: 'pw-jetty' } };
 
 // ---------------------------------------------------------------- casino
 // Game money only (it can never be cashed out). House edge keeps it a money sink.
@@ -1697,7 +1820,9 @@ export const EVENT_PLACES = ['home', 'club', 'bar', 'lounge', 'singeli', 'nyamac
   // Zanzibar
   'forodhani', 'nungwi', 'kendwa', 'therock', 'zn-hotel', 'stonetown', 'darajani', 'spice',
   // Arusha
-  'viavia', 'ar-hotel', 'clocktower', 'maasai', 'coffee', 'safari'];
+  'viavia', 'ar-hotel', 'clocktower', 'maasai', 'coffee', 'safari',
+  // Pwani
+  'bagamoyo-old', 'pw-jetty', 'pw-soko'];
 // Venues without their own walk-in interior use this scene while a party is live there.
 // Every place has an inside: explicit venues first, then the closest interior for its type.
 const TYPE_SCENES = { yacht: 'yacht', jet: 'jet', market: 'market', terminal: 'stand', mall: 'shop', shop: 'shop', stonetown: 'shop', restaurant: 'dining', food: 'dining', fish: 'dining', grill: 'grill', bar: 'bar', club: 'club', lounge: 'club', hotel: 'rooftop', gesti: 'room', beach: 'beach', waterpark: 'waterpark', golf: 'golf', karting: 'karting', slipway: 'dhow', stage: 'concert', stadium: 'stadium', studio: 'studio', gym: 'gym', salon: 'salon', office: 'office', tower: 'office', bank: 'bank', hospital: 'hospital', campus: 'classroom', police: 'police', court: 'court', casino: 'casino', safari: 'safari', mountain: 'hike', forest: 'safari', museum: 'ngoma' };

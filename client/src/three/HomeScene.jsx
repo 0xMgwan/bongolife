@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { HOME, furnitureById, footprint, homeFits, homeBounds, HOME_FLOORS, HOME_LEVELS } from '@shared/world.js';
+import { HOME, furnitureById, footprint, homeFits, homeBounds, HOME_FLOORS, HOME_LEVELS, HOME_UP_Y, HOME_STAIRS, HOME_UPPER, homeStairY } from '@shared/world.js';
 import { mat, geo, labelTexture } from './textures.js';
 import { FurnitureModel } from './Furniture.jsx';
 import { Body, Overhead } from './Players.jsx';
@@ -12,7 +12,7 @@ import { PartyDecor } from './Party.jsx';
 import { Shadows } from './Shadows.jsx';
 import { livePartyAt } from '../ui/events.js';
 import { vehicleById } from '@shared/world.js';
-import { local } from '../net.js';
+import { local, input, view } from '../net.js';
 import { useStore } from '../store.js';
 import { homeGuests, sendHomePos } from '../net.js';
 import { api } from '../api.js';
@@ -33,13 +33,29 @@ export function homeLayout(me, visiting) {
   const level = (visiting ? visiting.host.homeLevel : me?.homeLevel) || 0;
   const style = (visiting ? visiting.host.homeStyle : me?.homeStyle) || {};
   const features = (visiting ? visiting.host.homeFeatures : me?.homeFeatures) || [];
-  return { level, style, b: homeBounds(level), room: !!HOME_LEVELS[level]?.room, features };
+  return { level, style, b: homeBounds(level, features), room: !!HOME_LEVELS[level]?.room, features, storey: features.includes('storey') };
 }
 const wallMats = new Map();
 const wallMat = (c) => wallMats.get(c) || (wallMats.set(c, new THREE.MeshPhongMaterial({ color: c, shininess: 8, specular: new THREE.Color('#111111') })), wallMats.get(c));
 
 /** Player position inside the home (local units), kept outside React. */
-export const homeAvatar = { x: 0, z: 2, ry: Math.PI, target: null };
+export const homeAvatar = { x: 0, z: 2, y: 0, ry: Math.PI, target: null, path: null };
+
+// ---- walking inside: stairs, the upper floor, joystick/WASD
+const onStairs = (x, z) => x >= HOME_STAIRS.x1 - 0.1 && x <= HOME_STAIRS.x2 + 0.1 && z >= HOME_STAIRS.z1 - 0.2 && z <= HOME_STAIRS.z2 + 0.2;
+const inUpper = (x, z, terrace) => x >= HOME_UPPER.x1 + 0.3 && x <= HOME_UPPER.x2 - 0.3 && z >= HOME_UPPER.z1 + 0.3 && z <= (terrace ? HOME_UPPER.terrace : HOME_UPPER.z2) - 0.15;
+const STAIR_BOTTOM = [(HOME_STAIRS.x1 + HOME_STAIRS.x2) / 2, HOME_STAIRS.z2 + 0.45, 0];
+const STAIR_TOP = [(HOME_STAIRS.x1 + HOME_STAIRS.x2) / 2, HOME_STAIRS.z1 - 0.4, HOME_UP_Y];
+if (import.meta.env.DEV) window.__home = { get avatar() { return homeAvatar; }, walk: (...a) => walkHome(...a) };
+/** Walk to a spot on a floor (0 ground, 1 upstairs), taking the stairs when the floor changes. */
+export function walkHome(x, z, floor = 0, arrive = null) {
+  const h = homeAvatar;
+  const up = h.y > HOME_UP_Y / 2;
+  const goal = [x, z, floor ? HOME_UP_Y : 0];
+  h.path = up === !!floor ? [goal] : up ? [STAIR_TOP, STAIR_BOTTOM, goal] : [STAIR_BOTTOM, STAIR_TOP, goal];
+  h.target = null;
+  h.arrive = arrive;
+}
 
 /** Floor textures: big ceramic tiles with grout, wooden planks, small bathroom tiles. */
 function checker(a, b, repeat, kind = 'tile') {
@@ -170,56 +186,100 @@ function poseFor(item, def, act) {
   return { x, z, y: 0, ry: r + Math.PI, mode: act === 'snack' ? 'eat' : 'lift' };
 }
 
-function Sim({ me, items, floorY = 0 }) {
+function Sim({ me, items, layout }) {
   const g = useRef();
   const motion = useRef({ mode: 'idle' });
   const busy = me.busy && me.busy.endsAt > Date.now() && me.busy.kind === 'home' ? me.busy : null;
   const item = busy && items.find((i) => i.id === busy.itemId);
   const pose = item && furnitureById[item.item] ? poseFor(item, furnitureById[item.item], busy.id) : null;
+  const lay = useRef(layout);
+  lay.current = layout;
   useFrame((_, dt) => {
+    dt = Math.min(dt, 0.1);
     const h = homeAvatar;
+    const { b, storey } = lay.current;
+    const terrace = lay.current.features.includes('rooftop');
+    // Old-style target (ground floor) → a path, so stairs are handled.
+    if (h.target) { const [tx, tz] = h.target; const cb = h.arrive; walkHome(tx, tz, 0, cb); }
+    const k = input.keys;
+    let jx = input.jx;
+    let jz = input.jz;
+    if (k.has('w') || k.has('arrowup')) jz -= 1;
+    if (k.has('s') || k.has('arrowdown')) jz += 1;
+    if (k.has('a') || k.has('arrowleft')) jx -= 1;
+    if (k.has('d') || k.has('arrowright')) jx += 1;
+    const manual = Math.hypot(jx, jz) > 0.08 && !useStore.getState().placing;
     // Using a home add-on (pool, balcony, upstairs bed…): hold that pose for a few seconds.
     const hp = homePose.pose;
-    if (hp && hp.until > Date.now() && !h.target) {
+    if (hp && hp.until > Date.now() && !h.path && !manual) {
       g.current.position.set(hp.x, hp.y, hp.z);
       g.current.rotation.y = hp.ry;
       motion.current.mode = hp.mode;
       sendHomePos(hp.x, hp.z, hp.ry, hp.mode, hp.y);
       return;
     }
-    if (hp && (hp.until <= Date.now() || h.target)) homePose.pose = null;
-    if (pose) {
+    if (hp && (hp.until <= Date.now() || h.path || manual)) { homePose.pose = null; }
+    if (pose && !manual) {
       g.current.position.set(pose.x, pose.y, pose.z);
       g.current.rotation.y = pose.ry;
       motion.current.mode = pose.mode;
       h.x = pose.x;
       h.z = pose.z;
-      h.target = null;
+      h.y = 0;
+      h.path = null;
       sendHomePos(pose.x, pose.z, pose.ry, pose.mode, pose.y);
       return;
     }
     let moving = false;
-    if (h.target) {
-      const dx = h.target[0] - h.x;
-      const dz = h.target[1] - h.z;
+    if (manual) {
+      // Joystick / WASD, relative to the camera. Walls and the floor edge stop you; the stairs
+      // carry you between floors.
+      h.path = null;
+      const c = Math.cos(view.homeYaw);
+      const sn = Math.sin(view.homeYaw);
+      const dx = jx * c + jz * sn;
+      const dz = -jx * sn + jz * c;
+      const len = Math.hypot(dx, dz);
+      const step = 3 * dt * Math.min(1, len);
+      const nx = h.x + (dx / len) * step;
+      const nz = h.z + (dz / len) * step;
+      const up = h.y > HOME_UP_Y / 2;
+      let ok = false;
+      let ny = h.y;
+      if (storey && onStairs(nx, nz) && Math.abs(homeStairY(nz) - h.y) < 0.8) { ok = true; ny = homeStairY(nz); }
+      else if (up) { ok = storey && inUpper(nx, nz, terrace); ny = HOME_UP_Y; }
+      else { ok = nx > b.x1 + 0.3 && nx < b.x2 - 0.3 && nz > b.z1 + 0.3 && nz < b.z2 - 0.3; ny = 0; }
+      if (ok) { h.x = nx; h.z = nz; h.y = ny; }
+      h.ry = Math.atan2(dx, dz);
+      moving = true;
+    } else if (h.path?.length) {
+      const [tx, tz, ty] = h.path[0];
+      const dx = tx - h.x;
+      const dz = tz - h.z;
       const d = Math.hypot(dx, dz);
       if (d < 0.08) {
-        h.target = null;
-        const cb = h.arrive;
-        h.arrive = null;
-        cb?.();
+        h.y = ty;
+        h.path.shift();
+        if (!h.path.length) {
+          h.path = null;
+          const cb = h.arrive;
+          h.arrive = null;
+          cb?.();
+        }
       } else {
-        const step = Math.min(d, 3.2 * Math.min(dt, 0.1));
+        const step = Math.min(d, 3.2 * dt);
         h.x += (dx / d) * step;
         h.z += (dz / d) * step;
+        // Height follows the stairs; elsewhere ease toward the waypoint's floor.
+        h.y = storey && onStairs(h.x, h.z) && Math.abs(ty - h.y) > 0.01 ? homeStairY(h.z) : h.y + (ty - h.y) * Math.min(1, step / Math.max(d, 0.001));
         h.ry = Math.atan2(dx, dz);
         moving = true;
       }
     }
     motion.current.mode = moving ? 'walk' : 'idle';
-    g.current.position.set(h.x, floorY, h.z);
+    g.current.position.set(h.x, h.y, h.z);
     g.current.rotation.y = h.ry;
-    sendHomePos(h.x, h.z, h.ry, motion.current.mode, floorY || undefined);
+    sendHomePos(h.x, h.z, h.ry, motion.current.mode, h.y || undefined);
   });
   return (
     <group ref={g}>
@@ -371,8 +431,7 @@ export function HomeScene({ me }) {
   homeView.cz = (b.z1 + b.z2) / 2 + (garden ? 10 : 0);
   homeView.extra = layout.level * 4 + (garden ? 8 : 0);
   const floor = HOME_FLOORS.find((f) => f.id === layout.style.floor) || HOME_FLOORS[0];
-  const upstairs = useStore((s) => s.homeUpstairs) && layout.features.includes('storey');
-  const floorY = upstairs ? UP_Y : 0;
+  const terrace = layout.features.includes('rooftop');
   useEffect(() => {
     useStore.setState({ visitYard: null });
     if (host) api(`/yard/${encodeURIComponent(host)}`).then((y) => useStore.setState({ visitYard: y })).catch(() => {});
@@ -391,8 +450,14 @@ export function HomeScene({ me }) {
     e.stopPropagation();
     const pt = floorPoint(e);
     if (useStore.getState().placing) return moveGhost(pt);
-    homeAvatar.target = [Math.max(b.x1 + 0.4, Math.min(b.x2 - 0.4, pt[0])), Math.max(b.z1 + 0.4, Math.min(b.z2 - 0.4, pt[1]))];
-    homeAvatar.arrive = null;
+    walkHome(Math.max(b.x1 + 0.4, Math.min(b.x2 - 0.4, pt[0])), Math.max(b.z1 + 0.4, Math.min(b.z2 - 0.4, pt[1])), 0);
+  };
+  // Tapping the glass upper floor walks you up the stairs (placing furniture stays downstairs).
+  const onUpperClick = (e) => {
+    if (useStore.getState().placing || e.delta > 10) return;
+    e.stopPropagation();
+    const [x, z] = floorPoint(e);
+    walkHome(Math.max(HOME_UPPER.x1 + 0.4, Math.min(HOME_UPPER.x2 - 0.4, x)), Math.max(HOME_UPPER.z1 + 0.4, Math.min((terrace ? HOME_UPPER.terrace : HOME_UPPER.z2) - 0.3, z)), 1);
   };
 
   return (
@@ -407,7 +472,7 @@ export function HomeScene({ me }) {
       {/* invisible click/drag surface for walking and placing */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[(b.x1 + b.x2) / 2, floorY + 0.02, (b.z1 + b.z2) / 2]}
+        position={[(b.x1 + b.x2) / 2, 0.02, (b.z1 + b.z2) / 2]}
         visible={false}
         onClick={onFloorClick}
         onPointerDown={(e) => { if (useStore.getState().placing) { dragging.current = true; e.stopPropagation(); moveGhost(floorPoint(e)); } }}
@@ -417,10 +482,15 @@ export function HomeScene({ me }) {
       >
         <planeGeometry args={[b.x2 - b.x1, b.z2 - b.z1]} />
       </mesh>
-      <HomeAddons features={layout.features} b={b} upstairs={upstairs} wallMat={wallMat(layout.style.wall || WALL)} onUse={doAddon} />
+      {layout.storey && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, HOME_UP_Y + 0.03, (HOME_UPPER.z1 + (terrace ? HOME_UPPER.terrace : HOME_UPPER.z2)) / 2]} visible={false} onClick={onUpperClick}>
+          <planeGeometry args={[HOME_UPPER.x2 - HOME_UPPER.x1, (terrace ? HOME_UPPER.terrace : HOME_UPPER.z2) - HOME_UPPER.z1]} />
+        </mesh>
+      )}
+      <HomeAddons features={layout.features} b={b} wallMat={wallMat(layout.style.wall || WALL)} onUse={doAddon} />
       {items.map((it) => {
         const def = furnitureById[it.item];
-        if (!def || placing?.id === it.id || upstairs) return null;
+        if (!def || placing?.id === it.id) return null;
         return (
           <group
             key={it.id}
@@ -441,8 +511,8 @@ export function HomeScene({ me }) {
       })}
       <Yard yard={visiting ? hostYard : myYard} mine={!visiting} origin={HOME_ORIGIN} />
       <Ghost items={items} b={b} />
-      <Sim me={me} items={items} floorY={floorY} />
-      {!visiting && !upstairs && me.npcPartner && me.npcPartner.status !== 'couple' && <Spouse npc={me.npcPartner} b={b} />}
+      <Sim me={me} items={items} layout={layout} />
+      {!visiting && me.npcPartner && me.npcPartner.status !== 'couple' && <Spouse npc={me.npcPartner} b={b} />}
       <Guests />
       {party && <PartyDecor event={party} home />}
       <Driveway vehicles={visiting ? visiting.host.vehicles : me.vehicles} mine={!visiting} />

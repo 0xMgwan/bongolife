@@ -88,6 +88,9 @@ const LIP = new THREE.MeshPhongMaterial({ color: '#6b2f24', shininess: 40 });
 const IRIS = new THREE.MeshPhongMaterial({ color: '#3b2314', shininess: 80 });
 const EYE_W = new THREE.MeshPhongMaterial({ color: '#f8fafc', shininess: 60 });
 const SOLE = mat('#e7e5e4');
+const SOLE_DARK = mat('#9ca3af');
+const SNEAKER = new THREE.MeshPhongMaterial({ color: '#f8fafc', shininess: 30 });
+const BELT = mat('#1c1917');
 
 // Torso as a lathe: hips → waist → chest → rounded shoulders. Cached per body type.
 const torsoCache = new Map();
@@ -95,7 +98,7 @@ function torsoGeo(woman) {
   if (!torsoCache.has(woman)) {
     const pts = woman
       ? [[0.001, 0], [0.165, 0.0], [0.175, 0.05], [0.15, 0.2], [0.165, 0.33], [0.175, 0.44], [0.17, 0.52], [0.13, 0.58], [0.06, 0.62], [0.001, 0.625]]
-      : [[0.001, 0], [0.17, 0.0], [0.175, 0.06], [0.17, 0.2], [0.19, 0.36], [0.205, 0.47], [0.2, 0.53], [0.15, 0.59], [0.06, 0.625], [0.001, 0.63]];
+      : [[0.001, 0], [0.165, 0.0], [0.168, 0.06], [0.158, 0.2], [0.188, 0.34], [0.215, 0.46], [0.21, 0.53], [0.15, 0.59], [0.06, 0.625], [0.001, 0.63]];
     torsoCache.set(woman, new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), 22));
   }
   return torsoCache.get(woman);
@@ -121,7 +124,9 @@ export function Avatar({ appearance, motion, scale = 1 }) {
   const sleeves = outfit.sleeves || 'short';
   const hijab = outfit.head === 'hijab';
   const kofia = outfit.head === 'kofia' && a.hair !== 'kilemba';
-  const sw = woman ? 0.36 : 0.42; // shoulder width
+  const sw = woman ? 0.37 : 0.46; // shoulder width
+  // Real-world proportions (~7.5 heads tall): long legs, hips at ~1 m, a smaller head.
+  const HIP = 0.98;
   const brow = useMemo(() => mat(hairColor), [hairColor]);
 
   const legL = useRef();
@@ -307,23 +312,24 @@ export function Avatar({ appearance, motion, scale = 1 }) {
   });
 
   const legMat = bareLegs ? skin : bottomMat;
-  const shoeMat = woman && (bt === 'dress' || bt === 'skirt' || bt === 'maxi') ? mat('#7c2d12') : SHOE;
-  const thigh = 0.36;
-  const shin = 0.4;
+  const formal = ['suti', 'ofisi-sketi', 'kanzu', 'kanzu-eid', 'kaunda'].includes(outfit.id);
+  const shoeMat = woman && (bt === 'dress' || bt === 'skirt' || bt === 'maxi') ? mat('#7c2d12') : formal ? SHOE : SNEAKER;
+  const thigh = 0.43;
+  const shin = 0.43;
   return (
     <group scale={scale}>
       <mesh geometry={geo('circle', 0.42, 20)} material={shadowMat} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} />
       <group ref={body}>
         {/* legs: hip → knee → ankle */}
         {[[-1, legL, kneeL], [1, legR, kneeR]].map(([s, ref, knee]) => (
-          <group key={s} ref={ref} position={[s * 0.1, 0.9, 0]}>
-            <mesh geometry={geo('capsule', woman ? 0.085 : 0.09, thigh - 0.08, 6, 14)} material={bt === 'shorts' ? bottomMat : legMat} position={[0, -thigh / 2, 0]} />
+          <group key={s} ref={ref} position={[s * (woman ? 0.095 : 0.105), HIP, 0]}>
+            <mesh geometry={geo('capsule', woman ? 0.085 : 0.092, thigh - 0.08, 6, 14)} material={bt === 'shorts' ? bottomMat : legMat} position={[0, -thigh / 2, 0]} />
             <group ref={knee} position={[0, -thigh, 0]}>
-              <mesh geometry={geo('capsule', 0.072, shin - 0.06, 6, 14)} material={legMat} position={[0, -shin / 2, 0]} />
+              <mesh geometry={geo('capsule', 0.068, shin - 0.06, 6, 14)} material={legMat} position={[0, -shin / 2, 0]} />
               {/* shoe: rounded toe + sole */}
               <group position={[0, -shin - 0.06, 0.05]}>
                 <mesh geometry={geo('capsule', 0.065, 0.13, 6, 12)} material={shoeMat} rotation={[Math.PI / 2, 0, 0]} scale={[1, 1, 0.75]} />
-                <mesh geometry={geo('box', 0.11, 0.022, 0.25)} material={SOLE} position={[0, -0.05, 0.01]} />
+                <mesh geometry={geo('box', 0.115, 0.03, 0.26)} material={shoeMat === SNEAKER ? SOLE_DARK : SOLE} position={[0, -0.05, 0.01]} />
               </group>
             </group>
           </group>
@@ -331,39 +337,43 @@ export function Avatar({ appearance, motion, scale = 1 }) {
         {/* hips / skirts / robes */}
         {(bt === 'pants' || bt === 'shorts') && (
           <group>
-            <mesh geometry={geo('cyl', woman ? 0.18 : 0.172, woman ? 0.165 : 0.155, 0.17, 20)} material={bottomMat} position={[0, 0.9, 0]} scale={[1, 1, 0.66]} />
-            <mesh geometry={geo('sphere', 0.1, 14, 10)} material={bottomMat} position={[0, 0.82, 0]} scale={[1.3, 0.7, 0.9]} />
+            <mesh geometry={geo('cyl', woman ? 0.18 : 0.172, woman ? 0.165 : 0.155, 0.17, 20)} material={bottomMat} position={[0, HIP, 0]} scale={[1, 1, 0.66]} />
+            <mesh geometry={geo('sphere', 0.1, 14, 10)} material={bottomMat} position={[0, HIP - 0.08, 0]} scale={[1.3, 0.7, 0.9]} />
+            {/* belt */}
+            {bt === 'pants' && !woman && <mesh geometry={geo('cyl', 0.176, 0.176, 0.03, 20)} material={BELT} position={[0, HIP + 0.075, 0]} scale={[1, 1, 0.66]} />}
           </group>
         )}
-        {bt === 'skirt' && <mesh geometry={geo('cyl', 0.18, 0.28, 0.44, 22)} material={bottomMat} position={[0, 0.8, 0]} scale={[1, 1, 0.8]} />}
-        {bt === 'dress' && <mesh geometry={geo('cyl', 0.18, 0.33, 0.66, 22)} material={bottomMat} position={[0, 0.72, 0]} scale={[1, 1, 0.8]} />}
-        {longSkirt && <mesh geometry={geo('cyl', 0.18, bt === 'maxi' ? 0.3 : 0.24, 0.9, 22)} material={bottomMat} position={[0, 0.55, 0]} scale={[1, 1, 0.8]} />}
-        {robe && <mesh geometry={geo('cyl', 0.2, 0.3, 1.32, 22)} material={topMat} position={[0, 0.78, 0]} scale={[1, 1, 0.8]} />}
+        {bt === 'skirt' && <mesh geometry={geo('cyl', 0.18, 0.28, 0.48, 22)} material={bottomMat} position={[0, HIP - 0.12, 0]} scale={[1, 1, 0.8]} />}
+        {bt === 'dress' && <mesh geometry={geo('cyl', 0.18, 0.33, 0.72, 22)} material={bottomMat} position={[0, HIP - 0.2, 0]} scale={[1, 1, 0.8]} />}
+        {longSkirt && <mesh geometry={geo('cyl', 0.18, bt === 'maxi' ? 0.3 : 0.24, 1.0, 22)} material={bottomMat} position={[0, HIP - 0.42, 0]} scale={[1, 1, 0.8]} />}
+        {robe && <mesh geometry={geo('cyl', 0.2, 0.3, 1.42, 22)} material={topMat} position={[0, HIP - 0.13, 0]} scale={[1, 1, 0.8]} />}
         {/* torso */}
-        <mesh geometry={torsoGeo(woman)} material={topMat} position={[0, 0.9, 0]} scale={[sw / 0.4, 1, 0.64]} />
+        <mesh geometry={torsoGeo(woman)} material={topMat} position={[0, HIP, 0]} scale={[sw / 0.4, 1, woman ? 0.64 : 0.6]} />
+        {/* shirt hem hanging just over the waistband */}
+        {bt !== 'robe' && sleeves !== 'none' && !longSkirt && <mesh geometry={geo('cyl', sw * 0.43, sw * 0.44, 0.06, 20, 1, true)} material={topMat} position={[0, HIP + 0.03, 0]} scale={[1, 1, woman ? 0.68 : 0.64]} />}
         {woman && (
-          <group position={[0, 1.28, 0.06]}>
-            <mesh geometry={geo('sphere', 0.07, 16, 12)} material={topMat} position={[-0.068, 0, 0]} scale={[1, 0.9, 0.75]} />
-            <mesh geometry={geo('sphere', 0.07, 16, 12)} material={topMat} position={[0.068, 0, 0]} scale={[1, 0.9, 0.75]} />
+          <group position={[0, HIP + 0.4, 0.055]}>
+            <mesh geometry={geo('sphere', 0.064, 16, 12)} material={topMat} position={[-0.066, 0, 0]} scale={[1, 0.85, 0.6]} />
+            <mesh geometry={geo('sphere', 0.064, 16, 12)} material={topMat} position={[0.066, 0, 0]} scale={[1, 0.85, 0.6]} />
           </group>
         )}
         {/* collar / neckline */}
-        {sleeves !== 'none' && !robe && <mesh geometry={geo('torus', 0.075, 0.018, 8, 18)} material={topMat} position={[0, 1.515, 0]} rotation={[Math.PI / 2, 0, 0]} />}
+        {sleeves !== 'none' && !robe && <mesh geometry={geo('torus', 0.068, 0.016, 8, 18)} material={topMat} position={[0, HIP + 0.615, 0]} rotation={[Math.PI / 2, 0, 0]} />}
         {outfit.extra === 'tie' && (
-          <group position={[0, 1.33, 0.118]}>
+          <group position={[0, HIP + 0.43, 0.118]}>
             <mesh geometry={geo('box', 0.11, 0.28, 0.01)} material={WHITE} />
             <mesh geometry={geo('box', 0.045, 0.24, 0.012)} material={mat('#b91c1c')} position={[0, -0.03, 0.004]} />
           </group>
         )}
         {/* arms: shoulder → elbow → hand */}
         {[[-1, armL, elbowL], [1, armR, elbowR]].map(([s, ref, elbow]) => (
-          <group key={s} ref={ref} position={[s * (sw / 2 + 0.035), 1.46, 0]}>
-            <mesh geometry={geo('sphere', 0.06, 14, 10)} material={sleeves === 'none' ? skin : topMat} position={[-s * 0.012, -0.01, 0]} />
-            <mesh geometry={geo('capsule', 0.058, 0.2, 6, 12)} material={sleeves === 'none' ? skin : topMat} position={[0, -0.13, 0]} />
-            {sleeves === 'short' && <mesh geometry={geo('cyl', 0.062, 0.064, 0.08, 14, 1, true)} material={topMat} position={[0, -0.16, 0]} />}
-            <group ref={elbow} position={[0, -0.27, 0]}>
-              <mesh geometry={geo('capsule', 0.05, 0.2, 6, 12)} material={sleeves === 'long' ? topMat : skin} position={[0, -0.12, 0]} />
-              <group position={[0, -0.29, 0.005]}>
+          <group key={s} ref={ref} position={[s * (sw / 2 + 0.012), HIP + 0.55, 0]}>
+            <mesh geometry={geo('sphere', woman ? 0.052 : 0.06, 14, 10)} material={sleeves === 'none' ? skin : topMat} position={[-s * 0.012, -0.01, 0]} />
+            <mesh geometry={geo('capsule', woman ? 0.054 : 0.06, 0.24, 6, 12)} material={sleeves === 'none' ? skin : topMat} position={[0, -0.15, 0]} />
+            {sleeves === 'short' && <mesh geometry={geo('cyl', 0.066, 0.07, 0.09, 14, 1, true)} material={topMat} position={[0, -0.2, 0]} />}
+            <group ref={elbow} position={[0, -0.31, 0]}>
+              <mesh geometry={geo('capsule', 0.048, 0.24, 6, 12)} material={sleeves === 'long' ? topMat : skin} position={[0, -0.14, 0]} />
+              <group position={[0, -0.33, 0.005]}>
                 <mesh geometry={geo('sphere', 0.052, 12, 10)} material={skin} scale={[0.85, 1.2, 0.6]} />
                 <mesh geometry={geo('capsule', 0.016, 0.04, 4, 6)} material={skin} position={[-s * 0.03, 0.0, 0.03]} rotation={[0.4, 0, -s * 0.5]} />
               </group>
@@ -371,8 +381,8 @@ export function Avatar({ appearance, motion, scale = 1 }) {
           </group>
         ))}
         {/* neck + head */}
-        <mesh geometry={geo('cyl', 0.058, 0.066, 0.13, 12)} material={skin} position={[0, 1.55, 0]} />
-        <group ref={head} position={[0, 1.71, 0]}>
+        <mesh geometry={geo('cyl', 0.052, 0.062, 0.15, 12)} material={skin} position={[0, HIP + 0.67, 0]} />
+        <group ref={head} position={[0, HIP + 0.83, 0]} scale={0.86}>
           <mesh geometry={geo('sphere', 0.162, 24, 18)} material={skin} scale={[0.95, 1.12, 1]} />
           {/* jaw / chin */}
           <mesh geometry={geo('sphere', 0.12, 18, 12)} material={skin} position={[0, -0.075, 0.04]} scale={[1, 0.85, 0.95]} />

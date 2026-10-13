@@ -962,7 +962,7 @@ export function HUD() {
         <button className="jump-btn" onClick={() => jump()} aria-label={L('Ruka', 'Jump')}>⬆️<span>{L('Ruka', 'Jump')}</span></button>
       )}
       <RideBanner />
-      {touch && (walking || (scene && !riding && !['flight', 'heli', 'road', 'police', 'court', 'ferry', 'safari'].includes(scene.key))) && <Joystick />}
+      {touch && (walking || (tab === 'home' && !useStore.getState().placing) || (scene && !riding && !['flight', 'heli', 'road', 'police', 'court', 'ferry', 'safari'].includes(scene.key))) && <Joystick />}
       {town && <ChatDock />}
       {!shop && <NeedsPanel me={me} />}
       {!shop && <BottomNav me={me} />}

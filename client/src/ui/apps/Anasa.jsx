@@ -106,7 +106,7 @@ export function LuxControls({ kind }) {
     const x = local.x;
     return CITIES.find((c) => Math.abs(x - c.center[0]) <= c.half)?.id || 'dar';
   })();
-  const ports = { yacht: ['dar', 'znz'], jet: ['dar', 'znz', 'aru'] }[kind].filter((c) => c !== here);
+  const ports = { yacht: ['dar', 'znz', 'pwa'], jet: ['dar', 'znz', 'aru'] }[kind].filter((c) => c !== here);
   const inviteOpen = async () => {
     const list = await api('/contacts').catch(() => []);
     setFriends(list.filter((c) => c.mutual));
