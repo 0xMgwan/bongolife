@@ -29,6 +29,7 @@ import { WatchParty, WatchInvite } from './WatchParty.jsx';
 import { openUserActions } from './UserActions.jsx';
 import { LuxInvite } from './apps/Anasa.jsx';
 import { LiftAsk, LiftBar } from './Lift.jsx';
+import { ShowroomPanel } from './ShowroomPanel.jsx';
 import { startBuild } from './BuildBar.jsx';
 import { MentionText, MentionSuggest } from './Mentions.jsx';
 
@@ -913,6 +914,7 @@ export function HUD() {
       <LuxInvite />
       <LiftAsk />
       <LiftBar />
+      <ShowroomPanel />
       <WatchParty />
       <CallBar />
       <IncomingCall />
@@ -948,12 +950,13 @@ export function HUD() {
           )}
           <button onClick={() => (town ? setZoom(getZoom() * 0.8) : (view.homeDist = Math.max(14, view.homeDist * 0.8)))} aria-label="Zoom in">＋</button>
           <button onClick={() => (town ? setZoom(getZoom() * 1.25) : (view.homeDist = Math.min(48, view.homeDist * 1.25)))} aria-label="Zoom out">－</button>
+          {/* In the same column as the zoom buttons so it can never cover them. */}
+          {walking && (
+            <button className={`drive-btn ${vehicle ? 'on' : ''}`} onClick={() => { sfx(vehicle ? 'click' : 'horn'); toggleVehicle(); }}>
+              {vehicle ? <>🚶 {L('Shuka', 'Get out')}</> : anyVehicle ? <>{vehicleById[anyVehicle.model]?.emoji} {L('Endesha', 'Drive')}</> : <>🚗 {L('Nunua gari', 'Get a ride')}</>}
+            </button>
+          )}
         </div>
-      )}
-      {walking && (
-        <button className={`drive-btn ${vehicle ? 'on' : ''}`} onClick={() => { sfx(vehicle ? 'click' : 'horn'); toggleVehicle(); }}>
-          {vehicle ? <>🚶 {L('Shuka', 'Get out')}</> : anyVehicle ? <>{vehicleById[anyVehicle.model]?.emoji} {L('Endesha', 'Drive')}</> : <>🚗 {L('Nunua gari', 'Get a ride')}</>}
-        </button>
       )}
       {walking && !vehicle && (
         <button className="jump-btn" onClick={() => jump()} aria-label={L('Ruka', 'Jump')}>⬆️<span>{L('Ruka', 'Jump')}</span></button>

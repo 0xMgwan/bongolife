@@ -1131,7 +1131,181 @@ const Places = memo(function Places({ onPlace, businesses, showLabels, mapMode }
 });
 
 // --------------------------------------------------------------- plots
+// Special builds: farm, container home, hostel, eco resort, home of tomorrow.
+function SignBoard({ text, y, z, w = 3, bg = '#111827', fg = '#ffffff' }) {
+  const t = useMemo(() => labelTexture(text, { size: 56, bold: 900, bg, fg }), [text, bg, fg]);
+  return (
+    <mesh position={[0, y, z]}>
+      <planeGeometry args={[w, w / t.aspect]} />
+      <meshBasicMaterial map={t.texture} transparent />
+    </mesh>
+  );
+}
+function Palm({ x, z, h = 4 }) {
+  return (
+    <group position={[x, 0, z]}>
+      <mesh geometry={geo('cyl', 0.12, 0.18, h, 6)} material={mat('#9a7b4f')} position={[0, h / 2, 0]} rotation={[0, 0, 0.1]} />
+      <mesh geometry={geo('cone', 1.4, 0.6, 7)} material={mat('#2f9e57')} position={[0.2, h, 0]} />
+    </group>
+  );
+}
+function Farm({ size, color }) {
+  const half = size / 2;
+  return (
+    <group>
+      <Box w={size - 0.4} h={0.06} d={size - 0.4} color="#7c5a3a" y={0.1} />
+      {Array.from({ length: 6 }, (_, r) => (
+        <group key={r} position={[-half + 1.2 + r * ((size - 4) / 5), 0, 1]}>
+          <Box w={0.5} h={0.12} d={size * 0.55} color="#5b3d22" y={0.12} />
+          {Array.from({ length: 7 }, (_, k) => (
+            <mesh key={k} geometry={geo('cone', 0.22, r % 3 === 2 ? 0.6 : 1.1, 5)} material={mat(r % 3 === 2 ? '#dc2626' : r % 2 ? '#65a30d' : '#16a34a')} position={[0, r % 3 === 2 ? 0.45 : 0.7, -size * 0.25 + k * (size * 0.5 / 6)]} />
+          ))}
+        </group>
+      ))}
+      {/* barn */}
+      <group position={[half - 2.2, 0, -half + 1.8]}>
+        <Box w={3} h={2.2} d={2.6} color={color} />
+        <mesh geometry={geo('cyl', 1.5, 1.5, 2.6, 3)} material={mat('#7f1d1d')} position={[0, 2.2, 0]} rotation={[Math.PI / 2, Math.PI / 2, 0]} scale={[1, 1, 0.55]} />
+        <Box w={1.2} h={1.5} d={0.06} color="#f8fafc" z={1.31} />
+      </group>
+      {/* water tank */}
+      <group position={[-half + 1.4, 0, -half + 1.4]}>
+        {[[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]].map(([x, z], i) => <Box key={i} w={0.1} h={2.6} d={0.1} color="#78716c" x={x} z={z} />)}
+        <mesh geometry={geo('cyl', 0.7, 0.7, 1.1, 12)} material={mat('#1d4ed8')} position={[0, 3.1, 0]} />
+      </group>
+      {/* tractor */}
+      <group position={[half - 1.6, 0, half - 1.4]} rotation={[0, -0.6, 0]}>
+        <Box w={1} h={0.7} d={1.6} color="#16a34a" y={0.35} />
+        <Box w={0.8} h={0.7} d={0.7} color="#16a34a" y={1.05} z={-0.3} />
+        {[[-0.55, -0.45, 0.45], [0.55, -0.45, 0.45], [-0.5, 0.55, 0.3], [0.5, 0.55, 0.3]].map(([x, z, r], i) => <mesh key={i} geometry={geo('cyl', r, r, 0.25, 12)} material={mat('#111827')} position={[x, r, z]} rotation={[0, 0, Math.PI / 2]} />)}
+      </group>
+    </group>
+  );
+}
+const CONTAINER_COLS = ['#f97316', '#1d4ed8', '#16a34a', '#dc2626', '#facc15', '#0f766e'];
+function Containers({ size, floors, color }) {
+  const out = [];
+  for (let f = 0; f < floors; f++)
+    for (let i = 0; i < 2; i++) {
+      const c = f === 0 && i === 0 ? color : CONTAINER_COLS[(f * 2 + i + 1) % CONTAINER_COLS.length];
+      const x = (i ? 1.3 : -1.3) + (f % 2 ? 0.6 : 0);
+      out.push(
+        <group key={`${f}${i}`} position={[x, f * 2.6, f % 2 ? -0.4 : 0]} rotation={[0, f % 2 ? 0.12 : 0, 0]}>
+          <Box w={2.4} h={2.55} d={6} color={c} />
+          {Array.from({ length: 9 }, (_, k) => <Box key={k} w={2.46} h={2.3} d={0.06} color="#00000022" m={mat('#000000', { transparent: true, opacity: 0.12 })} y={0.12} z={-2.7 + k * 0.68} />)}
+          <Box w={2.0} h={1.8} d={0.06} m={districtGlass()} y={0.4} z={3.01} />
+        </group>,
+      );
+    }
+  const H = floors * 2.6;
+  return (
+    <group>
+      {out}
+      {/* rooftop deck */}
+      <Box w={3.2} h={0.08} d={3} color="#a16207" y={H} x={0.6} />
+      {[-1, 1].map((sx) => <Box key={sx} w={0.05} h={0.9} d={3} color="#e5e7eb" y={H} x={0.6 + sx * 1.6} />)}
+      <mesh geometry={geo('cone', 0.9, 0.5, 8)} material={mat('#ef4444')} position={[0.6, H + 1.9, 0]} />
+      <mesh geometry={geo('cyl', 0.04, 0.04, 1.9, 5)} material={mat('#e5e7eb')} position={[0.6, H + 0.95, 0]} />
+      {/* stairs */}
+      {Array.from({ length: Math.max(1, floors - 1) * 6 }, (_, k) => <Box key={k} w={0.8} h={0.12} d={0.35} color="#475569" x={-3.1} y={k * 0.43} z={-2.4 + k * 0.32} />)}
+    </group>
+  );
+}
+function Hostel({ size, floors, color }) {
+  const s = size * 0.62;
+  const fh = 2.6;
+  const H = floors * fh;
+  return (
+    <group>
+      <mesh geometry={facadeBox(s, H, s * 0.7, 1.4, fh, color)} material={districtMat('residential')} />
+      {Array.from({ length: floors }, (_, i) => <Box key={i} w={s + 0.3} h={0.12} d={s * 0.7 + 0.5} color={['#facc15', '#22d3ee', '#f472b6'][i % 3]} y={(i + 1) * fh - 0.1} />)}
+      <Box w={s + 0.6} h={0.4} d={s * 0.7 + 0.6} color="#1f2937" y={H} />
+      <SignBoard text="🎒 BACKPACKERS HOSTEL" y={H + 1} z={s * 0.35 + 0.05} w={s * 0.95} bg="#7c3aed" />
+      <Box w={1.6} h={2.1} d={0.15} color="#1f2937" z={s * 0.35} />
+      {/* hammocks + bikes in the yard */}
+      {[-1, 1].map((sx) => (
+        <group key={sx} position={[sx * s * 0.45, 0, s * 0.35 + 1.8]}>
+          <Box w={0.08} h={1.4} d={0.08} color="#7c5a3a" x={-0.9} /><Box w={0.08} h={1.4} d={0.08} color="#7c5a3a" x={0.9} />
+          <mesh geometry={geo('sphere', 0.9, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)} material={mat(sx > 0 ? '#f97316' : '#22c55e')} position={[0, 1.1, 0]} scale={[1, 0.4, 0.4]} />
+        </group>
+      ))}
+      <Palm x={-s * 0.6} z={-s * 0.3} />
+    </group>
+  );
+}
+function Resort({ size }) {
+  const r = size * 0.32;
+  return (
+    <group>
+      <Box w={size * 0.42} h={0.08} d={size * 0.32} color="#22d3ee" y={0.08} m={mat('#38bdf8', { emissive: '#0ea5e9', emissiveIntensity: 0.2 })} />
+      <Box w={size * 0.46} h={0.06} d={size * 0.36} color="#f5e6c8" y={0.06} />
+      {[0, 1, 2, 3].map((i) => {
+        const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+        return (
+          <group key={i} position={[Math.cos(a) * r * 1.15, 0, Math.sin(a) * r * 1.15]}>
+            <mesh geometry={geo('cyl', 1.1, 1.1, 1.8, 10)} material={mat('#fef3c7')} position={[0, 0.9, 0]} />
+            <mesh geometry={geo('cone', 1.7, 1.6, 10)} material={mat('#a16207')} position={[0, 2.6, 0]} />
+            <Box w={0.6} h={1.3} d={0.08} color="#7c2d12" z={1.08} />
+          </group>
+        );
+      })}
+      {[-1, 1].map((sx) => <group key={sx} position={[sx * 1.2, 0, size * 0.22]}><Box w={0.6} h={0.25} d={1.6} color="#f8fafc" /></group>)}
+      <Palm x={size * 0.38} z={0} h={4.5} /><Palm x={-size * 0.38} z={0} h={4} /><Palm x={0} z={-size * 0.4} h={5} />
+    </group>
+  );
+}
+const ledMat = mat('#67e8f9', { emissive: '#22d3ee', emissiveIntensity: 1.2 });
+function Future({ size, floors }) {
+  const r = size * 0.3;
+  const drone = useRef();
+  useFrame(({ clock }) => {
+    if (!drone.current) return;
+    const t = clock.elapsedTime;
+    drone.current.position.set(Math.cos(t * 0.6) * r * 0.9, floors * 1.6 + 3 + Math.sin(t * 2) * 0.3, Math.sin(t * 0.6) * r * 0.9);
+    drone.current.rotation.y = -t * 0.6;
+  });
+  return (
+    <group>
+      {/* glowing ground ring */}
+      <mesh geometry={geo('torus', r + 0.6, 0.06, 6, 40)} material={ledMat} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.15, 0]} />
+      {/* stacked floors: white pods with LED bands */}
+      {Array.from({ length: floors }, (_, i) => (
+        <group key={i} position={[0, i * 1.6, 0]}>
+          <mesh geometry={geo('cyl', r * (1 - i * 0.12), r * (1 - i * 0.08), 1.5, 32)} material={mat('#f8fafc')} position={[0, 0.75, 0]} />
+          <mesh geometry={geo('cyl', r * (1 - i * 0.12) + 0.02, r * (1 - i * 0.08) + 0.02, 0.7, 32, 1, true)} material={districtGlass()} position={[0, 0.85, 0]} />
+          <mesh geometry={geo('torus', r * (1 - i * 0.1) + 0.05, 0.05, 6, 40)} material={ledMat} rotation={[Math.PI / 2, 0, 0]} position={[0, 1.5, 0]} />
+        </group>
+      ))}
+      {/* glass dome + solar canopy */}
+      <mesh geometry={geo('sphere', r * (1 - floors * 0.1), 24, 12, 0, Math.PI * 2, 0, Math.PI / 2)} material={districtGlass()} position={[0, floors * 1.6, 0]} />
+      <mesh geometry={geo('cyl', r * 1.25, r * 1.25, 0.08, 6)} material={mat('#1e3a8a', { emissive: '#1d4ed8', emissiveIntensity: 0.25 })} position={[r * 0.3, floors * 1.6 + r * 0.75, 0]} rotation={[0.08, 0, 0.12]} />
+      {/* glass lift tube */}
+      <mesh geometry={geo('cyl', 0.45, 0.45, floors * 1.6 + 1, 16)} material={districtGlass()} position={[r + 0.3, (floors * 1.6 + 1) / 2, 0]} />
+      {/* drone pad + drone */}
+      <group position={[-r - 0.6, 0, r * 0.6]}>
+        <mesh geometry={geo('cyl', 1, 1, 0.1, 24)} material={mat('#334155')} position={[0, 0.1, 0]} />
+        <mesh geometry={geo('torus', 0.85, 0.04, 6, 24)} material={ledMat} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.17, 0]} />
+      </group>
+      <group ref={drone}>
+        <Box w={0.5} h={0.12} d={0.5} color="#111827" />
+        {[[-0.35, -0.35], [0.35, -0.35], [-0.35, 0.35], [0.35, 0.35]].map(([x, z], i) => <mesh key={i} geometry={geo('cyl', 0.18, 0.18, 0.02, 10)} material={ledMat} position={[x, 0.12, z]} />)}
+      </group>
+      {/* sleek car pod */}
+      <mesh geometry={geo('sphere', 0.8, 16, 10)} material={mat('#e5e7eb')} position={[r * 0.4, 0.45, r + 1.6]} scale={[1, 0.5, 1.8]} />
+    </group>
+  );
+}
+
 function House({ b, size, up = {} }) {
+  if (b.kind) {
+    const floors = b.floors + (up.floors || 0);
+    const color = up.color || b.color;
+    if (b.kind === 'farm') return <Farm size={size} color={color} />;
+    if (b.kind === 'container') return <Containers size={size} floors={floors} color={color} />;
+    if (b.kind === 'hostel') return <Hostel size={size} floors={floors} color={color} />;
+    if (b.kind === 'resort') return <Resort size={size} />;
+    if (b.kind === 'future') return <Future size={size} floors={floors} />;
+  }
   const s = size * 0.62;
   const fh = 2.6;
   const floors = b.floors + (up.floors || 0);

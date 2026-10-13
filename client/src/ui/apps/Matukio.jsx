@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { EVENT_LIMITS, EVENT_PLACES, placeById } from '@shared/world.js';
+import { EVENT_LIMITS, EVENT_PLACES, placeById, cityAt } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { api } from '../../api.js';
 import { AppHead } from '../Phone.jsx';
@@ -83,10 +83,14 @@ export function Matukio({ back }) {
               title={L('Wapi?', 'Where?')}
               value={form.placeId}
               onChange={(v) => setForm({ ...form, placeId: v })}
-              options={EVENT_PLACES.map((id) => ({ value: id, label: id === 'home' ? L('🏠 Kwangu (pati ya nyumbani)', '🏠 My place (house party)') : placeLabel(id) }))}
+              options={EVENT_PLACES.map((id) => {
+                if (id === 'home') return { value: id, label: L('🏠 Kwangu (pati ya nyumbani)', '🏠 My place (house party)') };
+                const c = cityAt(...placeById[id].pos)?.id;
+                return { value: id, label: `${placeLabel(id)}${c === 'znz' ? ' · Zanzibar' : c === 'aru' ? ' · Arusha' : ''}` };
+              })}
             />
-            <input className="field" type="datetime-local" value={form.at} min={localInput(Date.now() + EVENT_LIMITS.minLeadMs)} onChange={(e) => setForm({ ...form, at: e.target.value })} required />
-            <div className="small muted">{L('Waliojiandikisha wataweza kuja nyumbani kwako na watapata taarifa tukio likianza.', "Everyone who RSVPs can come to your place and gets a ping when it starts.")}</div>
+            <input className="field ev-when" type="datetime-local" value={form.at} min={localInput(Date.now() + EVENT_LIMITS.minLeadMs)} onChange={(e) => setForm({ ...form, at: e.target.value })} required />
+            <div className="small muted">{form.placeId === 'home' ? L('Waliojiandikisha wataweza kuja nyumbani kwako na watapata taarifa tukio likianza.', 'Everyone who RSVPs can come to your place and gets a ping when it starts.') : L('Waliojiandikisha watapata taarifa tukio likianza, popote walipo.', 'Everyone who RSVPs gets a ping when it starts, wherever they are.')}</div>
             <div className="row" style={{ gap: 8 }}>
               <button type="button" className="btn btn-ghost grow" onClick={() => setForm(null)}>{L('Ghairi', 'Cancel')}</button>
               <button className="btn btn-green grow">{L('Tangaza', 'Announce')}</button>

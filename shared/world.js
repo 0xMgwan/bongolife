@@ -263,11 +263,24 @@ export const BUILDINGS = [
   { id: 'ghorofa', name: 'Ghorofa la Kupangisha', price: 85_000_000, incomePerHour: 320_000, energyBonus: 15, color: '#e2e8f0', floors: 6 },
   { id: 'villa', name: 'Villa ya Kifahari', price: 160_000_000, incomePerHour: 0, energyBonus: 40, color: '#fef3c7', floors: 2, pool: true },
   { id: 'hoteli', name: 'Hoteli ya Ufukweni', price: 320_000_000, incomePerHour: 1_300_000, energyBonus: 30, color: '#f0fdfa', floors: 4, pool: true },
+  // `kind` picks a special 3D model; `blurb` explains what it's for.
+  { id: 'shamba', kind: 'farm', name: 'Shamba la Kisasa', price: 12_000_000, incomePerHour: 70_000, energyBonus: 5, color: '#dc2626', floors: 1,
+    blurb: ['Mahindi, nyanya na mboga — mavuno yanauzwa kila saa.', 'Maize, tomatoes and greens — the harvest sells every hour.'] },
+  { id: 'kontena', kind: 'container', name: 'Nyumba ya Makontena', price: 18_000_000, incomePerHour: 0, energyBonus: 22, color: '#f97316', floors: 2,
+    blurb: ['Makontena ya rangi yaliyopangwa kuwa nyumba ya kisasa.', 'Colourful shipping containers stacked into a stylish home.'] },
+  { id: 'hostel', kind: 'hostel', name: 'Hosteli ya Wasafiri', price: 45_000_000, incomePerHour: 190_000, energyBonus: 10, color: '#a855f7', floors: 3,
+    blurb: ['Vitanda vya wasafiri — kipato cha kila saa.', 'Bunks for backpackers — steady hourly income.'] },
+  { id: 'resort', kind: 'resort', name: 'Eco Resort ya Makuti', price: 220_000_000, incomePerHour: 950_000, energyBonus: 35, color: '#fef3c7', floors: 1, pool: true,
+    blurb: ['Bungalow za makuti kuzunguka bwawa — watalii wanalipa vizuri.', 'Thatched bungalows around a pool — tourists pay well.'] },
+  { id: 'kesho', kind: 'future', name: 'Nyumba ya Kesho', price: 260_000_000, incomePerHour: 0, energyBonus: 60, color: '#f8fafc', floors: 2,
+    blurb: ['Nyumba-janja ya baadaye: kuba la kioo, taa za LED, sola na pedi ya drone.', 'A smart home from the future: glass dome, LED rings, solar canopy and a drone pad.'] },
 ];
+const BUILDING_EMOJI = { banda: '🏠', kisasa: '🏡', ghorofa: '🏢', villa: '🏖️', hoteli: '🏨', shamba: '🌽', kontena: '📦', hostel: '🛏️', resort: '🌴', kesho: '🛸' };
+for (const b of BUILDINGS) b.emoji = BUILDING_EMOJI[b.id];
 export const buildingById = Object.fromEntries(BUILDINGS.map((b) => [b.id, b]));
 // Upgrading a house you've built: extra storeys and features. Rentals earn +25% per extra storey.
 export const HOUSE_UPGRADES = {
-  maxFloors: { banda: 2, kisasa: 3, villa: 3, ghorofa: 6, hoteli: 4 },
+  maxFloors: { banda: 2, kisasa: 3, villa: 3, ghorofa: 6, hoteli: 4, shamba: 1, kontena: 3, hostel: 5, resort: 1, kesho: 3 },
   floorCostPct: 0.35, // of the building's price, per storey
   floorIncome: 0.25,
   floorEnergy: 5,
@@ -321,18 +334,18 @@ export const PLOTS = [
 for (const p of PLOTS) { p.district = p.area; p.city = cityAt(p.pos[0], p.pos[1])?.id || 'dar'; }
 export const plotById = Object.fromEntries(PLOTS.map((p) => [p.id, p]));
 export const ALLOWED_BUILDINGS = {
-  Kigamboni: ['banda', 'kisasa', 'villa', 'hoteli'],
-  Masaki: ['kisasa', 'villa', 'ghorofa', 'hoteli'],
-  Mbezi: ['banda', 'kisasa', 'ghorofa', 'villa'],
-  Kinondoni: ['banda', 'kisasa', 'ghorofa'],
-  Temeke: ['banda', 'kisasa', 'ghorofa'],
-  Nungwi: ['kisasa', 'villa', 'hoteli'],
-  Paje: ['banda', 'kisasa', 'villa', 'hoteli'],
-  Fumba: ['banda', 'kisasa', 'villa', 'ghorofa'],
-  Matemwe: ['banda', 'kisasa', 'villa', 'hoteli'],
-  Njiro: ['banda', 'kisasa', 'villa', 'ghorofa'],
-  Kijenge: ['kisasa', 'villa', 'ghorofa', 'hoteli'],
-  'Usa River': ['banda', 'kisasa', 'villa'],
+  Kigamboni: ['banda', 'kisasa', 'villa', 'hoteli', 'kontena', 'resort', 'kesho'],
+  Masaki: ['kisasa', 'villa', 'ghorofa', 'hoteli', 'kesho', 'kontena'],
+  Mbezi: ['banda', 'kisasa', 'ghorofa', 'villa', 'shamba', 'kontena', 'hostel'],
+  Kinondoni: ['banda', 'kisasa', 'ghorofa', 'hostel', 'kontena'],
+  Temeke: ['banda', 'kisasa', 'ghorofa', 'shamba', 'hostel', 'kontena'],
+  Nungwi: ['kisasa', 'villa', 'hoteli', 'resort', 'hostel', 'kesho'],
+  Paje: ['banda', 'kisasa', 'villa', 'hoteli', 'resort', 'hostel', 'kontena'],
+  Fumba: ['banda', 'kisasa', 'villa', 'ghorofa', 'shamba', 'kesho'],
+  Matemwe: ['banda', 'kisasa', 'villa', 'hoteli', 'resort'],
+  Njiro: ['banda', 'kisasa', 'villa', 'ghorofa', 'shamba', 'hostel'],
+  Kijenge: ['kisasa', 'villa', 'ghorofa', 'hoteli', 'kesho', 'hostel'],
+  'Usa River': ['banda', 'kisasa', 'villa', 'shamba', 'resort'],
 };
 
 // ----------------------------------------------------------------- places
@@ -1071,7 +1084,7 @@ const EN = {
     'gauni-sendoff': 'Send-off Gown', gym: 'Gym Wear',
   },
   vehicles: { baiskeli: 'Bicycle' },
-  buildings: { banda: 'Simple House', kisasa: 'Modern House', ghorofa: 'Apartment Block', villa: 'Luxury Villa', hoteli: 'Beach Hotel' },
+  buildings: { banda: 'Simple House', kisasa: 'Modern House', ghorofa: 'Apartment Block', villa: 'Luxury Villa', hoteli: 'Beach Hotel', shamba: 'Modern Farm', kontena: 'Container Home', hostel: 'Backpackers Hostel', resort: 'Thatched Eco Resort', kesho: 'Home of Tomorrow' },
   billboards: { 'bb-ferry': 'Kivukoni Ferry', 'bb-stadium': 'National Stadium', 'bb-kigamboni': 'Nyerere Bridge' },
   travel: { bajaji: 'Bajaji (tuk-tuk)', daladala: 'Daladala (minibus)', taxi: 'Ride-hail taxi', boda: 'Bodaboda (moto taxi)', gari: 'My car' },
   events: [
@@ -1246,7 +1259,7 @@ export function moodLabelEn(m) {
 
 // ------------------------------------------------------------ interiors
 // Venues you can walk into (others see you there), and which scene an activity shows.
-export const ENTERABLE = { posta: 'plaza', ferry: 'terminal', ferrykig: 'terminal', 'zn-port': 'terminal', casino: 'casino', kendwa: 'concert', polisi: 'police', mahakama: 'court', club: 'club', lounge: 'club', bar: 'bar', uwanja: 'stadium', studio: 'studio', singeli: 'concert', kinyozi: 'salon', nyamachoma: 'grill' };
+export const ENTERABLE = { yadi: 'showroom', posta: 'plaza', ferry: 'terminal', ferrykig: 'terminal', 'zn-port': 'terminal', casino: 'casino', kendwa: 'concert', polisi: 'police', mahakama: 'court', club: 'club', lounge: 'club', bar: 'bar', uwanja: 'stadium', studio: 'studio', singeli: 'concert', kinyozi: 'salon', nyamachoma: 'grill' };
 const ACTIVITY_SCENES = {
   gesti: { lala: 'room', oga: 'room', pika: 'room' },
   mamantilie: { chipsi: 'dining', walimaharage: 'dining', ugalisamaki: 'dining', chai: 'dining' },
@@ -1460,6 +1473,30 @@ export const HOME_FLOORS = [
   { id: 'terrazzo', name: 'Terrazzo', nameEn: 'Terrazzo', a: '#d6d3d1', b: '#cbd5e1', kind: 'small' },
 ];
 export const HOME_STYLE_PRICE = { wall: 400_000, floor: 1_500_000 };
+// Build-by-build add-ons for Kwangu. Each has spots where your Sim can do something:
+// spot = [x, y, z, facing] in home coords; `up` = on the second storey (upstairs view).
+export const HOME_FEATURES = [
+  { id: 'bbq', emoji: '🍖', name: 'Bustani na jiko la BBQ', nameEn: 'Garden & BBQ grill', price: 2_500_000,
+    acts: [{ id: 'grill', emoji: '🍖', name: ['Choma nyama', 'Fire up the grill'], effects: { hunger: 25, social: 4 }, mode: 'lift', spot: [3.2, 0, 12.6, Math.PI] },
+      { id: 'garden', emoji: '🌻', name: ['Mwagilia maua', 'Water the flowers'], effects: { fun: 5 }, mode: 'idle', spot: [6.4, 0, 12.8, Math.PI] }] },
+  { id: 'balcony', emoji: '🌇', name: 'Balcony', nameEn: 'Balcony', price: 3_000_000,
+    acts: [{ id: 'chill', emoji: '🌇', name: ['Pumzika balcony', 'Chill on the balcony'], effects: { fun: 6, energy: 4 }, mode: 'sit', spot: [-1.6, 2.45, 5.9, 0] }] },
+  { id: 'cinema', emoji: '🎬', name: 'Sinema ya bustanini', nameEn: 'Garden cinema', price: 5_000_000,
+    acts: [{ id: 'movie', emoji: '🎬', name: ['Tazama filamu', 'Watch a film'], effects: { fun: 12, energy: 3 }, mode: 'sit', spot: [-12.5, 0, 10.4, Math.PI] }] },
+  { id: 'jacuzzi', emoji: '🛁', name: 'Jakuzi la nje', nameEn: 'Outdoor jacuzzi', price: 7_000_000,
+    acts: [{ id: 'soak', emoji: '🛁', name: ['Jiloweke jakuzi', 'Soak in the jacuzzi'], effects: { fun: 8, hygiene: 10, energy: 6 }, health: 2, mode: 'sit', spot: [9.6, -0.15, 11.6, Math.PI] }] },
+  { id: 'pool', emoji: '🏊🏾', name: 'Bwawa la kuogelea', nameEn: 'Swimming pool', price: 12_000_000,
+    acts: [{ id: 'swim', emoji: '🏊🏾', name: ['Ogelea', 'Go for a swim'], effects: { fun: 10, hygiene: 8, energy: -3 }, health: 2, mode: 'swim', spot: [5.4, -0.3, 8.6, Math.PI / 2] },
+      { id: 'sunbathe', emoji: '😎', name: ['Ota jua', 'Sunbathe'], effects: { fun: 5, energy: 6 }, mode: 'sleep', spot: [8.4, 0.35, 8.2, 0] }] },
+  { id: 'storey', emoji: '🏢', name: 'Ghorofa ya pili', nameEn: 'Second storey', price: 15_000_000,
+    acts: [{ id: 'master', emoji: '🛌', name: ['Lala chumba kikuu', 'Sleep in the master suite'], effects: { energy: 40 }, health: 3, cd: 10 * 60_000, mode: 'sleep', spot: [3.6, 3.05, -2.6, 0], up: true },
+      { id: 'lounge', emoji: '🛋️', name: ['Pumzika sebule ya juu', 'Relax in the upstairs lounge'], effects: { fun: 8, social: 2, energy: 3 }, mode: 'sit', spot: [-3.5, 2.45, -2.2, 0], up: true }] },
+  { id: 'rooftop', emoji: '🌃', name: 'Terrace ya juu', nameEn: 'Upstairs terrace', price: 6_000_000, requires: 'storey',
+    acts: [{ id: 'stars', emoji: '🌃', name: ['Tazama nyota', 'Stargaze'], effects: { fun: 8, energy: 3 }, mode: 'sleep', spot: [-1, 2.85, 3.4, Math.PI], up: true },
+      { id: 'party', emoji: '🎶', name: ['Pati ya terrace', 'Terrace party'], effects: { fun: 12, social: 8, energy: -5 }, mode: 'dance', spot: [2.4, 2.45, 3.4, Math.PI], up: true }] },
+];
+export const homeFeatureById = Object.fromEntries(HOME_FEATURES.map((f) => [f.id, f]));
+export const HOME_ACT_CD = 2 * 60_000;
 export function homeFits(def, x, z, rot, others = [], b = homeBounds(0)) {
   const [w, d] = footprint(def, rot);
   if (x - w / 2 < b.x1 - 1e-6 || x + w / 2 > b.x2 + 1e-6 || z - d / 2 < b.z1 - 1e-6 || z + d / 2 > b.z2 + 1e-6) return false;
@@ -1638,7 +1675,11 @@ export const flightPhase = (f) => {
 
 // ---------------------------------------------------------------- events
 export const EVENT_LIMITS = { titleMax: 40, descMax: 140, maxActivePerHost: 3, minLeadMs: 5 * 60_000, maxAheadMs: 7 * 86400_000, windowBeforeMs: 30 * 60_000, windowAfterMs: 3 * 3600_000 };
-export const EVENT_PLACES = ['home', 'club', 'bar', 'lounge', 'singeli', 'nyamachoma', 'serena', 'coco', 'kigbeach', 'slipway', 'waterpark', 'karting', 'golf', 'makumbusho', 'uwanja', 'mall', 'masakigrill', 'studio'];
+export const EVENT_PLACES = ['home', 'club', 'bar', 'lounge', 'singeli', 'nyamachoma', 'serena', 'coco', 'kigbeach', 'slipway', 'waterpark', 'karting', 'golf', 'makumbusho', 'uwanja', 'mall', 'masakigrill', 'studio',
+  // Zanzibar
+  'forodhani', 'nungwi', 'kendwa', 'therock', 'zn-hotel', 'stonetown', 'darajani', 'spice',
+  // Arusha
+  'viavia', 'ar-hotel', 'clocktower', 'maasai', 'coffee', 'safari'];
 // Venues without their own walk-in interior use this scene while a party is live there.
 // Every place has an inside: explicit venues first, then the closest interior for its type.
 const TYPE_SCENES = { yacht: 'yacht', jet: 'jet', market: 'market', terminal: 'stand', mall: 'shop', shop: 'shop', stonetown: 'shop', restaurant: 'dining', food: 'dining', fish: 'dining', grill: 'grill', bar: 'bar', club: 'club', lounge: 'club', hotel: 'rooftop', gesti: 'room', beach: 'beach', waterpark: 'waterpark', golf: 'golf', karting: 'karting', slipway: 'dhow', stage: 'concert', stadium: 'stadium', studio: 'studio', gym: 'gym', salon: 'salon', office: 'office', tower: 'office', bank: 'bank', hospital: 'hospital', campus: 'classroom', police: 'police', court: 'court', casino: 'casino', safari: 'safari', mountain: 'hike', forest: 'safari', museum: 'ngoma' };
@@ -1966,6 +2007,37 @@ export const LOVE_GIFTS = [
 ];
 export const loveGiftById = Object.fromEntries(LOVE_GIFTS.map((g) => [g.id, g]));
 export const LOVE_STATUS = { match: ['Mmeendana', 'Matched'], couple: ['Wapenzi', 'Partners'], engaged: ['Wachumba', 'Engaged'], married: ['Wameoana', 'Married'] };
+
+// ------------------------------------------------------------ love life with game characters
+// Not matched with a real player yet? Date one of these Bongo singles: chat, dates, gifts,
+// partner, proposal, wedding. vibe = what wins them over in chats: 'sweet' | 'fun' | 'chill'.
+export const LOVE_NPCS = [
+  { id: 'neema', name: 'Neema', age: 26, body: 'woman', city: 'Dar', job: ['Daktari', 'Doctor'], vibe: 'sweet', spot: 'dinner', gift: 'bouquet', bio: ['Napenda watu wakarimu na machweo ya Coco.', 'I like kind people and Coco Beach sunsets.'], look: { body: 'woman', skin: 3, hair: 'misuko', hairColor: 0, outfit: 'gauni-kitenge-refu', accent: 2 } },
+  { id: 'zuhura', name: 'Zuhura', age: 24, body: 'woman', city: 'Zanzibar', job: ['Mpiga picha', 'Photographer'], vibe: 'chill', spot: 'getaway', gift: 'perfume', bio: ['Fukwe za Kendwa, kahawa na picha nzuri.', 'Kendwa beaches, coffee and good photos.'], look: { body: 'woman', skin: 4, hair: 'kilemba', hairColor: 0, outfit: 'maxi', accent: 4 } },
+  { id: 'aisha', name: 'Aisha', age: 28, body: 'woman', city: 'Dar', job: ['Mfanyabiashara', 'Entrepreneur'], vibe: 'fun', spot: 'dance', gift: 'watch', bio: ['Boss lady. Singeli Ijumaa, biashara Jumatatu.', 'Boss lady. Singeli on Friday, business on Monday.'], look: { body: 'woman', skin: 2, hair: 'afro', hairColor: 1, outfit: 'blauzi-jeans', accent: 1 } },
+  { id: 'rehema', name: 'Rehema', age: 25, body: 'woman', city: 'Arusha', job: ['Mwongozaji wa safari', 'Safari guide'], vibe: 'fun', spot: 'nyama', gift: 'teddy', bio: ['Simba, twiga na nyama choma — maisha matamu!', 'Lions, giraffes and nyama choma — sweet life!'], look: { body: 'woman', skin: 1, hair: 'mkia', hairColor: 0, outfit: 'kitenge', accent: 3 } },
+  { id: 'faraja', name: 'Faraja', age: 27, body: 'woman', city: 'Dar', job: ['Mwalimu', 'Teacher'], vibe: 'sweet', spot: 'cinema', gift: 'choc', bio: ['Vitabu, sinema na mazungumzo marefu.', 'Books, films and long conversations.'], look: { body: 'woman', skin: 3, hair: 'kibanio', hairColor: 0, outfit: 'ofisi-sketi', accent: 0 } },
+  { id: 'salma', name: 'Salma', age: 23, body: 'woman', city: 'Zanzibar', job: ['Mbunifu wa mitindo', 'Fashion designer'], vibe: 'chill', spot: 'dhow', gift: 'rose', bio: ['Mitindo ya Kiswahili na safari za ngalawa.', 'Swahili fashion and dhow trips.'], look: { body: 'woman', skin: 5, hair: 'misuko', hairColor: 2, outfit: 'gauni-sendoff', accent: 5 } },
+  { id: 'baraka', name: 'Baraka', age: 29, body: 'man', city: 'Dar', job: ['Mhandisi', 'Engineer'], vibe: 'chill', spot: 'coffee', gift: 'watch', bio: ['Kahawa nzuri, gari safi, moyo mtulivu.', 'Good coffee, clean car, calm heart.'], look: { body: 'man', skin: 2, hair: 'kiduku', hairColor: 0, outfit: 'suti', accent: 2 } },
+  { id: 'juma', name: 'Juma', age: 27, body: 'man', city: 'Zanzibar', job: ['Nahodha wa ngalawa', 'Dhow captain'], vibe: 'fun', spot: 'dhow', gift: 'perfume', bio: ['Bahari ni ofisi yangu. Twende tukaogelee!', "The sea is my office. Let's go swimming!"], look: { body: 'man', skin: 4, hair: 'rasta', hairColor: 0, outfit: 'kanzu', accent: 4 } },
+  { id: 'khalid', name: 'Khalid', age: 30, body: 'man', city: 'Dar', job: ['Msanii wa Bongo Flava', 'Bongo Flava artist'], vibe: 'fun', spot: 'dance', gift: 'bouquet', bio: ['Nakuandikia wimbo ukinikubalia 🎤', "I'll write you a song if you say yes 🎤"], look: { body: 'man', skin: 1, hair: 'kofia', hairColor: 0, outfit: 'jaketi-ngozi', accent: 1 } },
+  { id: 'daudi', name: 'Daudi', age: 31, body: 'man', city: 'Arusha', job: ['Mkulima wa kahawa', 'Coffee farmer'], vibe: 'sweet', spot: 'sunset', gift: 'choc', bio: ['Mlima Meru asubuhi, kahawa yangu mchana.', 'Mount Meru mornings, my own coffee by noon.'], look: { body: 'man', skin: 3, hair: 'kipara', hairColor: 0, outfit: 'shati-check', accent: 3 } },
+  { id: 'emma', name: 'Emmanuel', age: 26, body: 'man', city: 'Dar', job: ['Mchezaji wa Simba SC', 'Simba SC footballer'], vibe: 'fun', spot: 'nyama', gift: 'teddy', bio: ['Mpira, gym na familia. Simba nguvu moja!', 'Football, gym and family. Simba nguvu moja!'], look: { body: 'man', skin: 2, hair: 'kiduku', hairColor: 0, outfit: 'jezi-simba', accent: 0 } },
+  { id: 'omari', name: 'Omari', age: 28, body: 'man', city: 'Dar', job: ['Daktari wa meno', 'Dentist'], vibe: 'sweet', spot: 'dinner', gift: 'rose', bio: ['Tabasamu lako ni kazi yangu 😁', 'Your smile is literally my job 😁'], look: { body: 'man', skin: 3, hair: 'afro', hairColor: 0, outfit: 'polo', accent: 5 } },
+];
+export const loveNpcById = Object.fromEntries(LOVE_NPCS.map((n) => [n.id, n]));
+// Chats: they ask, you pick a reply. Their vibe likes one style best.
+export const NPC_CHAT = [
+  { q: ['Unapenda kufanya nini wikendi?', 'What do you like doing on weekends?'], a: { sweet: ['Kukaa na mtu maalum kama wewe 😊', 'Spending time with someone special like you 😊'], fun: ['Kucheza Singeli mpaka asubuhi! 🔊', 'Dancing to Singeli till sunrise! 🔊'], chill: ['Kahawa na machweo ufukweni 🌅', 'Coffee and a beach sunset 🌅'] } },
+  { q: ['Chakula unachopenda zaidi?', 'Your favourite food?'], a: { sweet: ['Chochote tukila pamoja 🥰', 'Anything, as long as we eat together 🥰'], fun: ['Chipsi mayai ya saa nane usiku 😂', 'Chips mayai at 2am 😂'], chill: ['Pilau ya mama, hakuna kama hiyo', "Mum's pilau — nothing beats it"] } },
+  { q: ['Ndoto yako kubwa ni ipi?', "What's your biggest dream?"], a: { sweet: ['Familia yenye furaha na upendo', 'A happy, loving family'], fun: ['Kuzunguka Afrika nzima kwa gari 🚙', 'A road trip across the whole of Africa 🚙'], chill: ['Nyumba ndogo ufukweni Zanzibar', 'A little house on a Zanzibar beach'] } },
+  { q: ['Siku yako imeendaje?', 'How was your day?'], a: { sweet: ['Imekuwa nzuri zaidi sasa unaponiandikia 💕', 'Better now that you texted 💕'], fun: ['Kama sinema ya action — nitakusimulia! 🎬', "Like an action movie — I'll tell you all about it! 🎬"], chill: ['Taratibu tu, nashukuru 🙏🏾', 'Slow and steady, grateful 🙏🏾'] } },
+  { q: ['Wimbo gani unaupenda sasa hivi?', "What song are you loving right now?"], a: { sweet: ['Wimbo wa mapenzi wa Diamond 🎶', 'A Diamond love song 🎶'], fun: ['Singeli mpya — inanichezesha! 💃🏾', 'The new Singeli — it makes me dance! 💃🏾'], chill: ['Taarab ya zamani, inatuliza roho', 'Old-school taarab, it calms the soul'] } },
+  { q: ['Ungenipeleka wapi deti ya kwanza?', 'Where would you take me on a first date?'], a: { sweet: ['Chakula cha jioni chenye mishumaa 🕯️', 'A candlelit dinner 🕯️'], fun: ['Go-kart kisha club! 🏎️', 'Go-karting, then the club! 🏎️'], chill: ['Ngalawa wakati wa machweo ⛵', 'A dhow at sunset ⛵'] } },
+  { q: ['Unaamini katika mapenzi ya kweli?', 'Do you believe in true love?'], a: { sweet: ['Ndiyo — na nadhani nimeanza kuyaona 😉', 'Yes — and I think I might be seeing it 😉'], fun: ['Naamini katika vibes nzuri kwanza 😎', 'I believe in good vibes first 😎'], chill: ['Yanakuja polepole, kama chai nzuri ☕', 'It comes slowly, like good chai ☕'] } },
+  { q: ['Unanikumbuka?', 'Were you thinking about me?'], a: { sweet: ['Kila siku 💭💕', 'Every single day 💭💕'], fun: ['Ndiyo, hasa wakati wa njaa 😂', 'Yes — mostly when I was hungry 😂'], chill: ['Kidogo… sana 😌', 'A little… a lot 😌'] } },
+];
+export const NPC_LOVE = { chatCooldownMs: 3 * 60_000, chatGood: 6, chatOk: 2, likeChance: 0.75, favouriteBonus: 6 };
 
 // ============================================================ music (real tracks)
 // Venues that can play uploaded tracks (admin tags each track with where it plays).

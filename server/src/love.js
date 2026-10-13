@@ -5,6 +5,7 @@ import { LOVE, DATE_SPOTS, dateSpotById, loveGiftById, placeById, NEEDS } from '
 import { online, emitTo, broadcast } from './presence.js';
 import { isBlocked } from './crime.js';
 import { bumpStats } from './story.js';
+import { hasNpcPartner } from './npclove.js';
 
 const DAY = 86_400_000;
 db.exec(`
@@ -151,7 +152,7 @@ export function askPartner(userId, rid) {
   const r = mine(userId, rid);
   if (r.status !== 'match') throw new GameError(['Tayari mko pamoja.', "You're already together."]);
   if (affectionNow(r) < LOVE.coupleAt) throw new GameError([`Mapenzi yafikie ${LOVE.coupleAt} kwanza — nendeni deti.`, `Get affection to ${LOVE.coupleAt} first — go on dates.`]);
-  const mineCouple = relsOf(userId).some((x) => x.id !== r.id && x.status !== 'match');
+  const mineCouple = relsOf(userId).some((x) => x.id !== r.id && x.status !== 'match') || hasNpcPartner(userId);
   if (mineCouple) throw new GameError(['Tayari una mpenzi. Kuwa mwaminifu 😅', 'You already have a partner. Stay loyal 😅']);
   return ask(userId, r, 'couple');
 }

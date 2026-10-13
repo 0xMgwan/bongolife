@@ -74,7 +74,7 @@ export default function Creator() {
   const [uname, setUname] = useState('');
   const [step, setStep] = useState(0);
   const steps = STEPS();
-  const [a, setA] = useState(() => me?.appearance || { ...randomAppearance(), outfit: 'kitenge', body: 'woman', hair: 'misuko' });
+  const [a, setA] = useState(() => me?.appearance || (me?.gender === 'male' ? { ...randomAppearance(), outfit: 'shati', body: 'man', hair: 'kiduku' } : { ...randomAppearance(), outfit: 'kitenge', body: 'woman', hair: 'misuko' }));
   const [trait, setTrait] = useState('mchakarikaji');
   const [spawn, setSpawn] = useState('manzese');
   const [saving, setSaving] = useState(false);

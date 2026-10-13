@@ -72,7 +72,7 @@ export function AuthCard({ username = '', onAuthed, lockTab }) {
   const storeTab = useStore((s) => s.authTab);
   const tab = lockTab || storeTab;
   const set = useStore((s) => s.set);
-  const [f, setF] = useState({ name: '', username, password: '', email: '', agree: false });
+  const [f, setF] = useState({ name: '', username, password: '', email: '', agree: false, gender: '' });
   const [forgot, setForgot] = useState(false);
   const [show, setShow] = useState(false);
   const [err, setErr] = useState('');
@@ -96,7 +96,7 @@ export function AuthCard({ username = '', onAuthed, lockTab }) {
       setBusy(false);
     }
   };
-  const ready = signup ? f.name && f.username && f.password.length >= 6 && f.agree : f.username && f.password;
+  const ready = signup ? f.name && f.username && f.gender && f.password.length >= 6 && f.agree : f.username && f.password;
 
   if (forgot) return <Forgot initial={f.username} onBack={() => setForgot(false)} />;
   return (
@@ -111,6 +111,12 @@ export function AuthCard({ username = '', onAuthed, lockTab }) {
             <>
               <div className="label">{L('Jina lako', 'Your name')}</div>
               <input className="field" placeholder={L('mf. Neema Mushi', 'e.g. Neema Mushi')} value={f.name} onChange={up('name')} autoComplete="name" maxLength={40} />
+              <div className="label">{L('Jinsia', 'Gender')}</div>
+              <div className="row gender-pick" style={{ gap: 8 }}>
+                {[['female', '👩🏾', L('Mwanamke', 'Female')], ['male', '👨🏾', L('Mwanaume', 'Male')]].map(([id, e, n]) => (
+                  <button type="button" key={id} className={`chip grow ${f.gender === id ? 'on' : ''}`} onClick={() => setF({ ...f, gender: id })}>{e} {n}</button>
+                ))}
+              </div>
             </>
           )}
           <div className="label">Username</div>

@@ -95,7 +95,7 @@ const TIERS = [
   [5, '🔥 Watu wazito', '🔥 Big boss'],
   [6, '🏎️ Supercars', '🏎️ Supercars'],
 ];
-function CarPic({ v, color }) {
+export function CarPic({ v, color }) {
   const [url, setUrl] = useState(() => cachedThumb(`v:${v.id}:${color}`));
   useEffect(() => {
     let live = true;
@@ -282,9 +282,10 @@ function PlotSheet({ id, onClose }) {
             const disabled = (current && current.price >= b.price) || me.money < cost;
             return (
               <div key={b.id} className="item">
-                <span className="em">{b.pool ? '🏖️' : b.floors > 2 ? '🏢' : '🏠'}</span>
+                <span className="em">{b.emoji}</span>
                 <div className="grow">
                   <div className="t">{loc(b)}</div>
+                  {b.blurb && <div className="s">{L(b.blurb[0], b.blurb[1])}</div>}
                   <div className="s">{fmtTsh(cost)}{b.incomePerHour ? ` · ${L('kodi', 'rent')} ${fmtTsh(b.incomePerHour)}/${L('saa', 'hr')}` : ''} · ⚡ +{b.energyBonus} {L('ukilala', 'when sleeping')}</div>
                 </div>
                 <button className="btn btn-green btn-sm" disabled={disabled} onClick={() => run(`/plots/${id}/build`, { method: 'POST', body: { building: b.id } })}>
@@ -429,7 +430,7 @@ function PlayerSheet({ username, onClose }) {
       </div>
       <div className="row" style={{ gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
         <span className="pill">💰 {fmtShort(p.netWorth)}</span>
-        {p.love && <span className="pill love-pill">{p.love.status === 'married' ? '💍' : p.love.status === 'engaged' ? '💎' : '❤️'} {L(`${p.love.status === 'married' ? 'Ameoa/olewa na' : p.love.status === 'engaged' ? 'Mchumba wa' : 'Mpenzi wa'} @${p.love.with}`, `${p.love.status === 'married' ? 'Married to' : p.love.status === 'engaged' ? 'Engaged to' : 'Partners with'} @${p.love.with}`)}</span>}
+        {p.love && <span className="pill love-pill">{p.love.status === 'married' ? '💍' : p.love.status === 'engaged' ? '💎' : '❤️'} {L(`${p.love.status === 'married' ? 'Ameoa/olewa na' : p.love.status === 'engaged' ? 'Mchumba wa' : 'Mpenzi wa'} ${p.love.npc ? "" : "@"}${p.love.with}`, `${p.love.status === 'married' ? 'Married to' : p.love.status === 'engaged' ? 'Engaged to' : 'Partners with'} ${p.love.npc ? "" : "@"}${p.love.with}`)}</span>}
         <span className="pill">⭐ {p.fame}</span>
         {p.fitness != null && <span className="pill">💪 {Math.round(p.fitness)}</span>}
         {p.trainer && <span className="pill">🧑🏾‍🏫 {L('Kocha', 'Trainer')} · {fmtShort(p.trainer.price)}/{L('wiki', 'wk')}</span>}

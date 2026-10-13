@@ -8,6 +8,7 @@ import { avatarEmoji } from '../../three/Avatar.jsx';
 import { ask } from '../Confirm.jsx';
 import { L, pick, loc } from '../../i18n.js';
 import { sfx } from '../../audio.js';
+import { BongoSingles } from './PenziNpc.jsx';
 
 function Setup({ s, onSaved, onCancel }) {
   const run = useStore((st) => st.run);
@@ -124,7 +125,7 @@ function RelCard({ r, open, reload }) {
 }
 
 /** Penzi: opt-in dating — discover, match, dates, gifts, partners, proposals, weddings. */
-export function Penzi({ back, open }) {
+export function Penzi({ back, open, close }) {
   const [s, setS] = useState(null);
   const [tab, setTab] = useState('discover');
   const [editing, setEditing] = useState(false);
@@ -150,8 +151,9 @@ export function Penzi({ back, open }) {
         <div className="seg">
           <button className={tab === 'discover' ? 'on' : ''} onClick={() => setTab('discover')}>✨ {L('Gundua', 'Discover')}</button>
           <button className={tab === 'rels' ? 'on' : ''} onClick={() => setTab('rels')}>💞 {L('Mahusiano', 'Matches')} ({rels.length})</button>
+          <button className={tab === 'singles' ? 'on' : ''} onClick={() => setTab('singles')}>🌹 {L('Waseja', 'Singles')}</button>
         </div>
-        {tab === 'discover' ? <Discover s={s} reload={load} /> : (
+        {tab === 'singles' ? <BongoSingles close={close} /> : tab === 'discover' ? <Discover s={s} reload={load} /> : (
           <>
             {rels.length === 0 && <div className="box center small muted" style={{ padding: 20 }}>{L('Bado huna match. Penda mtu kwenye Gundua — mkipendana wote wawili, mtakutana hapa.', 'No matches yet. Like someone in Discover — when it’s mutual, they show up here.')}</div>}
             {rels.map((r) => <RelCard key={r.id} r={r} open={open} reload={load} />)}

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { HOME, furnitureById, footprint, homeFits, homeBounds, HOME_FLOORS, HOME_LEVELS } from '@shared/world.js';
-import { mat, geo } from './textures.js';
+import { mat, geo, labelTexture } from './textures.js';
 import { FurnitureModel } from './Furniture.jsx';
 import { Body, Overhead } from './Players.jsx';
 import { Vehicle } from './Vehicle.jsx';
@@ -17,6 +17,7 @@ import { useStore } from '../store.js';
 import { homeGuests, sendHomePos } from '../net.js';
 import { api } from '../api.js';
 import { Yard } from './Yard.jsx';
+import { HomeAddons, doAddon, homePose, UP_Y } from './HomeAddons.jsx';
 
 export const HOME_ORIGIN = [-4000, 0, 4000];
 const WALL = '#15806b';
@@ -31,7 +32,8 @@ export const homeView = { cx: 0, cz: 0, extra: 0 };
 export function homeLayout(me, visiting) {
   const level = (visiting ? visiting.host.homeLevel : me?.homeLevel) || 0;
   const style = (visiting ? visiting.host.homeStyle : me?.homeStyle) || {};
-  return { level, style, b: homeBounds(level), room: !!HOME_LEVELS[level]?.room };
+  const features = (visiting ? visiting.host.homeFeatures : me?.homeFeatures) || [];
+  return { level, style, b: homeBounds(level), room: !!HOME_LEVELS[level]?.room, features };
 }
 const wallMats = new Map();
 const wallMat = (c) => wallMats.get(c) || (wallMats.set(c, new THREE.MeshPhongMaterial({ color: c, shininess: 8, specular: new THREE.Color('#111111') })), wallMats.get(c));
@@ -127,7 +129,7 @@ function Garden({ b }) {
       {/* Wide enough for the yard on the east side (and a grown home on the west). */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[5, -0.04, 0]} material={mat('#c7dca6')}><circleGeometry args={[28, 56]} /></mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2.5, -0.03, 6.6]} material={mat('#d6d3d1')}><planeGeometry args={[1.6, 3.2]} /></mesh>
-      {[[b.x1 - 3, b.z1 - 1], [9, -8], [b.x1 - 4, 5], [6, 8.5]].map(([x, z], i) => (
+      {[[b.x1 - 3, b.z1 - 1], [9, -8], [b.x1 - 4, 5], [0.5, 15.5]].map(([x, z], i) => (
         <group key={i} position={[x, 0, z]}>
           <mesh geometry={geo('cyl', 0.15, 0.2, 1.4, 6)} material={mat('#7c5a3a')} position={[0, 0.7, 0]} />
           <mesh geometry={geo('sphere', 1, 7, 5)} material={mat('#3f9b4a')} position={[0, 1.9, 0]} />
@@ -168,7 +170,7 @@ function poseFor(item, def, act) {
   return { x, z, y: 0, ry: r + Math.PI, mode: act === 'snack' ? 'eat' : 'lift' };
 }
 
-function Sim({ me, items }) {
+function Sim({ me, items, floorY = 0 }) {
   const g = useRef();
   const motion = useRef({ mode: 'idle' });
   const busy = me.busy && me.busy.endsAt > Date.now() && me.busy.kind === 'home' ? me.busy : null;
@@ -176,6 +178,16 @@ function Sim({ me, items }) {
   const pose = item && furnitureById[item.item] ? poseFor(item, furnitureById[item.item], busy.id) : null;
   useFrame((_, dt) => {
     const h = homeAvatar;
+    // Using a home add-on (pool, balcony, upstairs bed…): hold that pose for a few seconds.
+    const hp = homePose.pose;
+    if (hp && hp.until > Date.now() && !h.target) {
+      g.current.position.set(hp.x, hp.y, hp.z);
+      g.current.rotation.y = hp.ry;
+      motion.current.mode = hp.mode;
+      sendHomePos(hp.x, hp.z, hp.ry, hp.mode, hp.y);
+      return;
+    }
+    if (hp && (hp.until <= Date.now() || h.target)) homePose.pose = null;
     if (pose) {
       g.current.position.set(pose.x, pose.y, pose.z);
       g.current.rotation.y = pose.ry;
@@ -205,14 +217,48 @@ function Sim({ me, items }) {
       }
     }
     motion.current.mode = moving ? 'walk' : 'idle';
-    g.current.position.set(h.x, 0, h.z);
+    g.current.position.set(h.x, floorY, h.z);
     g.current.rotation.y = h.ry;
-    sendHomePos(h.x, h.z, h.ry, motion.current.mode);
+    sendHomePos(h.x, h.z, h.ry, motion.current.mode, floorY || undefined);
   });
   return (
     <group ref={g}>
       <Body appearance={me.appearance} motion={motion} />
       <Overhead id={me.id} username={me.username} height={1.95} getBusy={() => busy} />
+    </group>
+  );
+}
+
+/** Your game-character spouse/fiancé(e) lives at home: strolls between a few spots. */
+function Spouse({ npc, b }) {
+  const g = useRef();
+  const motion = useRef({ mode: 'idle' });
+  const st = useRef({ x: -2, z: 2, i: 0, wait: 2 });
+  const spots = useMemo(() => [[-3, 3], [b.x1 + 2, -2], [0, 0.5], [3, -3], [-1, -3.5]], [b.x1]);
+  const tag = useMemo(() => labelTexture(`${npc.status === 'married' ? '💍' : '💞'} ${npc.name}`, { size: 44, bold: 800, bg: 'rgba(225,29,72,.9)', fg: '#fff' }), [npc.name, npc.status]);
+  useFrame((_, dt) => {
+    const s = st.current;
+    const [tx, tz] = spots[s.i];
+    const dx = tx - s.x;
+    const dz = tz - s.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.1) {
+      motion.current.mode = 'idle';
+      s.wait -= dt;
+      if (s.wait <= 0) { s.i = (s.i + 1) % spots.length; s.wait = 3 + Math.random() * 4; }
+    } else {
+      const step = Math.min(d, 1.6 * Math.min(dt, 0.1));
+      s.x += (dx / d) * step;
+      s.z += (dz / d) * step;
+      motion.current.mode = 'walk';
+      g.current.rotation.y = Math.atan2(dx, dz);
+    }
+    g.current.position.set(s.x, 0, s.z);
+  });
+  return (
+    <group ref={g}>
+      <Body appearance={npc.look} motion={motion} />
+      <sprite position={[0, 2.25, 0]} scale={[0.36 * tag.aspect, 0.36, 1]}><spriteMaterial map={tag.texture} depthWrite={false} /></sprite>
     </group>
   );
 }
@@ -319,10 +365,14 @@ export function HomeScene({ me }) {
   const host = visiting?.host?.username;
   const layout = homeLayout(me, visiting);
   const { b } = layout;
+  // Garden add-ons sit in front of the house: pull the camera back a little to include them.
+  const garden = layout.features.some((f) => ['pool', 'bbq', 'cinema', 'jacuzzi'].includes(f));
   homeView.cx = (b.x1 + b.x2) / 2;
-  homeView.cz = (b.z1 + b.z2) / 2;
-  homeView.extra = layout.level * 4;
+  homeView.cz = (b.z1 + b.z2) / 2 + (garden ? 10 : 0);
+  homeView.extra = layout.level * 4 + (garden ? 8 : 0);
   const floor = HOME_FLOORS.find((f) => f.id === layout.style.floor) || HOME_FLOORS[0];
+  const upstairs = useStore((s) => s.homeUpstairs) && layout.features.includes('storey');
+  const floorY = upstairs ? UP_Y : 0;
   useEffect(() => {
     useStore.setState({ visitYard: null });
     if (host) api(`/yard/${encodeURIComponent(host)}`).then((y) => useStore.setState({ visitYard: y })).catch(() => {});
@@ -357,7 +407,7 @@ export function HomeScene({ me }) {
       {/* invisible click/drag surface for walking and placing */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[(b.x1 + b.x2) / 2, 0.02, (b.z1 + b.z2) / 2]}
+        position={[(b.x1 + b.x2) / 2, floorY + 0.02, (b.z1 + b.z2) / 2]}
         visible={false}
         onClick={onFloorClick}
         onPointerDown={(e) => { if (useStore.getState().placing) { dragging.current = true; e.stopPropagation(); moveGhost(floorPoint(e)); } }}
@@ -367,9 +417,10 @@ export function HomeScene({ me }) {
       >
         <planeGeometry args={[b.x2 - b.x1, b.z2 - b.z1]} />
       </mesh>
+      <HomeAddons features={layout.features} b={b} upstairs={upstairs} wallMat={wallMat(layout.style.wall || WALL)} onUse={doAddon} />
       {items.map((it) => {
         const def = furnitureById[it.item];
-        if (!def || placing?.id === it.id) return null;
+        if (!def || placing?.id === it.id || upstairs) return null;
         return (
           <group
             key={it.id}
@@ -390,7 +441,8 @@ export function HomeScene({ me }) {
       })}
       <Yard yard={visiting ? hostYard : myYard} mine={!visiting} origin={HOME_ORIGIN} />
       <Ghost items={items} b={b} />
-      <Sim me={me} items={items} />
+      <Sim me={me} items={items} floorY={floorY} />
+      {!visiting && !upstairs && me.npcPartner && me.npcPartner.status !== 'couple' && <Spouse npc={me.npcPartner} b={b} />}
       <Guests />
       {party && <PartyDecor event={party} home />}
       <Driveway vehicles={visiting ? visiting.host.vehicles : me.vehicles} mine={!visiting} />

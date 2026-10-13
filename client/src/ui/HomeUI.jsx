@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { furnitureThumb, cachedThumb } from '../three/thumbs.jsx';
-import { FURNITURE, FURNITURE_CATS, HOME, furnitureById, footprint, homeFits, fmtTsh, fmtShort, NEEDS, homeBounds, HOME_LEVELS, HOME_WALLS, HOME_FLOORS, HOME_STYLE_PRICE } from '@shared/world.js';
+import { FURNITURE, FURNITURE_CATS, HOME, furnitureById, footprint, homeFits, fmtTsh, fmtShort, NEEDS, homeBounds, HOME_LEVELS, HOME_WALLS, HOME_FLOORS, HOME_STYLE_PRICE, HOME_FEATURES } from '@shared/world.js';
 import { ask } from './Confirm.jsx';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
@@ -122,6 +122,11 @@ function HomeUpgrade() {
     const r = await run('/home/upgrade', { method: 'POST', body: { level: next.level } });
     if (r) { sfx('levelup'); useStore.getState().toast(L(`${next.emoji} Karibu ${next.name}! Nafasi zaidi ya kupamba.`, `${next.emoji} Welcome to your ${next.nameEn}! More room to decorate.`)); }
   };
+  const build = async (f) => {
+    if (!(await ask({ icon: f.emoji, title: L(`Jenga ${f.name}?`, `Build a ${f.nameEn}?`), text: fmtTsh(f.price), ok: L('Jenga', 'Build') }))) return;
+    const r = await run('/home/feature', { method: 'POST', body: { id: f.id } });
+    if (r) { sfx('levelup'); useStore.getState().toast(L(`${f.emoji} ${f.name} imekamilika! Gusa alama zinazong'aa kuitumia.`, `${f.emoji} Your ${f.nameEn} is ready! Tap the glowing spots to use it.`)); }
+  };
   const restyle = async (body) => {
     const r = await run('/home/style', { method: 'POST', body });
     if (r) sfx('cash');
@@ -144,6 +149,22 @@ function HomeUpgrade() {
             : <small className="muted">{fmtShort(lv.price)}</small>}
         </div>
       ))}
+      <div className="hu-t">🔨 {L('Jenga kimoja kimoja', 'Build add-ons')}</div>
+      {HOME_FEATURES.map((f) => {
+        const built = (me.homeFeatures || []).includes(f.id);
+        const locked = f.requires && !(me.homeFeatures || []).includes(f.requires);
+        return (
+          <div key={f.id} className={`hu-lv ${built ? 'done' : ''}`}>
+            <span>{f.emoji}</span>
+            <div className="grow">
+              <b>{L(f.name, f.nameEn)}</b>
+              <small>{f.acts.map((a) => `${a.emoji} ${L(a.name[0], a.name[1])}`).join(' · ')}</small>
+            </div>
+            {built ? <b className="green">✓</b> : locked ? <small className="muted">🔒 {L('Ghorofa kwanza', 'Storey first')}</small>
+              : <button className="btn btn-green btn-sm" disabled={me.money < f.price} onClick={() => build(f)}>{fmtShort(f.price)}</button>}
+          </div>
+        );
+      })}
       <div className="hu-t">🎨 {L('Rangi ya kuta', 'Wall colour')} · {fmtShort(HOME_STYLE_PRICE.wall)}</div>
       <div className="hu-sw">
         {HOME_WALLS.map((c) => <button key={c} className={(style.wall || HOME_WALLS[0]) === c ? 'on' : ''} style={{ background: c }} disabled={me.money < HOME_STYLE_PRICE.wall} onClick={() => restyle({ wall: c })} aria-label={c} />)}
@@ -288,9 +309,15 @@ export function HomeUI() {
   const tab = useStore((s) => s.tab);
   const placing = useStore((s) => s.placing);
   const me = useStore((s) => s.me);
+  const visiting = useStore((s) => s.visiting);
+  const upstairs = useStore((s) => s.homeUpstairs);
   if (tab !== 'home' && tab !== 'shop') return null;
+  const hasStorey = ((visiting ? visiting.host.homeFeatures : me.homeFeatures) || []).includes('storey');
   return (
     <>
+      {tab === 'home' && hasStorey && (
+        <button className="floor-btn" onClick={() => { sfx('click'); useStore.setState({ homeUpstairs: !upstairs }); }}>{upstairs ? `⬇️ ${L('Chini', 'Downstairs')}` : `⬆️ ${L('Juu', 'Upstairs')}`}</button>
+      )}
       {tab === 'shop' && (
         <div className="buy-top">
           <span className="pill">🛋️ {L('Duka · Panga nyumba', 'Buy mode')}</span>

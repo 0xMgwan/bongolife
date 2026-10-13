@@ -33,6 +33,7 @@ import * as luxury from '../luxury.js';
 import * as afya from '../health.js';
 import * as gym from '../gym.js';
 import * as love from '../love.js';
+import * as npcLove from '../npclove.js';
 import * as music from '../music.js';
 import * as venue from '../venue.js';
 import * as court from '../court.js';
@@ -90,6 +91,8 @@ api.post('/auth/signup', rateLimit('signup', 8, 15 * 60_000), wrap(async (req, r
   const referrer = refName && refName.toLowerCase() !== username.toLowerCase() ? getUserByUsername(refName) : null;
   const user = db.transaction(() => {
     const u = createUser({ username, name, passwordHash, email, isAdmin: adminNames.has(username.toLowerCase()) });
+    const gender = ['male', 'female'].includes(req.body.gender) ? req.body.gender : null;
+    if (gender) db.prepare('UPDATE users SET gender = ? WHERE id = ?').run(gender, u.id);
     if (referrer && !referrer.bannedAt) {
       db.prepare('UPDATE users SET referred_by = ? WHERE id = ?').run(referrer.id, u.id);
       addMoney(u.id, REFERRAL.newPlayer, 'bonus', `Zawadi ya kukaribishwa na @${referrer.username}`);
@@ -349,7 +352,7 @@ api.get('/visit/:username', (req, res) => {
   if (!host) throw new GameError(['Mtumiaji hayupo', 'User not found'], 404);
   if (!canVisit(req.user.id, host.id)) throw new GameError(['Hujaalikwa nyumbani kwa mtu huyu.', "You haven't been invited to this home."], 403, 'not_invited');
   const vehicles = db.prepare('SELECT id, model, color FROM vehicles WHERE user_id = ?').all(host.id);
-  res.json({ host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance, vehicles, homeLevel: host.homeLevel, homeStyle: host.homeStyle }, items: game.homeItems(host.id) });
+  res.json({ host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance, vehicles, homeLevel: host.homeLevel, homeStyle: host.homeStyle, homeFeatures: host.homeFeatures }, items: game.homeItems(host.id) });
 });
 // ---- build mode: your yard of blocks
 const intOf = (v) => (Number.isInteger(v) ? v : Number.parseInt(v, 10));
@@ -374,6 +377,15 @@ api.delete('/yard/blocks', rateLimit('yard', 240, 60_000), (req, res) => {
 api.post('/home/upgrade', (req, res) => {
   const lvl = game.upgradeHome(req.user.id, req.body.level);
   res.json({ level: lvl, me: game.playerState(req.user.id) });
+});
+api.post('/home/feature', (req, res) => {
+  const f = game.buildHomeFeature(req.user.id, str(req.body.id, 20));
+  res.json({ feature: f.id, me: game.playerState(req.user.id) });
+});
+api.post('/home/feature/use', (req, res) => {
+  const r = game.useHomeFeature(req.user.id, str(req.body.feature, 20), str(req.body.act, 20));
+  broadcast('emote', { id: req.user.id, e: r.act.emoji });
+  res.json({ ...r, me: game.playerState(req.user.id) });
 });
 api.post('/home/style', (req, res) => {
   game.styleHome(req.user.id, { wall: str(req.body.wall, 10) || null, floor: str(req.body.floor, 12) || null });
@@ -859,7 +871,7 @@ api.get('/players/:username', (req, res) => {
   res.json({
     id: u.id, username: u.username, name: u.name, appearance: u.appearance, trait: u.trait, fame: u.fame, elimu: u.elimu,
     since: u.createdAt, online: online.has(u.id), plots, businesses: biz, vehicles, netWorth: game.netWorth(u.id), jobXp: u.jobXp,
-    love: love.publicStatus(u.id),
+    love: love.publicStatus(u.id) || (npcLove.npcPartner(u.id) && { status: npcLove.npcPartner(u.id).status, with: npcLove.npcPartner(u.id).name, npc: true }),
     // Mutual contacts = friends (needed for calls).
     friend: !!db.prepare('SELECT 1 FROM contacts x JOIN contacts y ON y.user_id = x.contact_id AND y.contact_id = x.user_id WHERE x.user_id = ? AND x.contact_id = ?').get(req.user.id, u.id),
     ...gym.publicFitness(u.id),
@@ -917,6 +929,13 @@ api.post('/music/:id/play', (req, res) => {
 });
 
 // ---------------------------------------------------------------------- dating
+api.get('/love/npc', (req, res) => res.json(npcLove.view(req.user.id)));
+api.post('/love/npc/:id/like', (req, res) => res.json(npcLove.like(req.user.id, str(req.params.id, 20))));
+api.post('/love/npc/:id/chat', (req, res) => res.json({ ...npcLove.chat(req.user.id, str(req.params.id, 20), str(req.body.style, 8)), me: game.playerState(req.user.id) }));
+api.post('/love/npc/:id/date', (req, res) => res.json({ ...npcLove.date(req.user.id, str(req.params.id, 20), str(req.body.spot, 20)), me: game.playerState(req.user.id) }));
+api.post('/love/npc/:id/gift', (req, res) => res.json({ ...npcLove.gift(req.user.id, str(req.params.id, 20), str(req.body.gift, 20)), me: game.playerState(req.user.id) }));
+api.post('/love/npc/:id/step', (req, res) => res.json({ ...npcLove.step(req.user.id, str(req.params.id, 20), str(req.body.kind, 10)), me: game.playerState(req.user.id) }));
+api.post('/love/npc/:id/end', (req, res) => res.json(npcLove.end(req.user.id, str(req.params.id, 20))));
 api.get('/love', (req, res) => res.json({ ...love.loveState(req.user.id), discover: love.discover(req.user.id) }));
 api.post('/love/profile', (req, res) => {
   love.saveProfile(req.user.id, { open: !!req.body.open, adult: !!req.body.adult, bio: req.body.bio, looking: str(req.body.looking, 8) });

@@ -3,11 +3,12 @@ import {
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST, industryById, COMPANY,
   furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
-  jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats, luxuryById, LUXURY_RESALE, HOME_LEVELS, homeBounds, HOME_WALLS, HOME_FLOORS, HOME_STYLE_PRICE,
+  jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats, luxuryById, LUXURY_RESALE, HOME_LEVELS, homeBounds, HOME_WALLS, HOME_FLOORS, HOME_STYLE_PRICE, homeFeatureById, HOME_ACT_CD,
 } from '../../shared/world.js';
 import * as hiring from './hiring.js';
 import * as health from './health.js';
 import * as gymMod from './gym.js';
+import * as npcLoveMod from './npclove.js';
 import { db, getUser, addMoney, saveFields, GameError, now, getSettings } from './db.js';
 
 export function liveEvent() {
@@ -111,6 +112,7 @@ export function playerState(userId) {
     z,
     mood: moodOf(u.needs),
     fitness: gymMod.fitnessOf(userId),
+    npcPartner: npcLoveMod.npcPartner(userId),
     vehicles: q.vehicles.all(userId),
     plots: q.plotsOf.all(userId),
     businesses: q.bizOf.all(userId),
@@ -240,6 +242,40 @@ export const upgradeHome = db.transaction((userId, level) => {
   saveFields(userId, { homeLevel: next.level });
   return next;
 });
+/** Build an add-on at home (pool, balcony, second storey…). */
+export const buildHomeFeature = db.transaction((userId, id) => {
+  const u = getUser(userId);
+  const f = homeFeatureById[id];
+  if (!f) throw new GameError(['Haipo', 'Not found'], 404);
+  const have = u.homeFeatures || [];
+  if (have.includes(id)) throw new GameError(['Tayari umejenga hii.', 'Already built.']);
+  if (f.requires && !have.includes(f.requires)) throw new GameError(['Jenga ghorofa ya pili kwanza.', 'Build the second storey first.']);
+  addMoney(userId, -f.price, 'purchase', `${f.emoji} Kwangu: ${f.name}`);
+  saveFields(userId, { homeFeatures: [...have, id] });
+  return f;
+});
+const homeActLast = new Map();
+/** Use an add-on (swim, grill, sleep upstairs…) — at your home or a home you're visiting. */
+export function useHomeFeature(userId, featureId, actId) {
+  const p = online.get(userId);
+  const hostId = p?.home || userId;
+  const host = getUser(hostId);
+  const f = homeFeatureById[featureId];
+  const act = f?.acts.find((a) => a.id === actId);
+  if (!f || !act || !(host.homeFeatures || []).includes(featureId)) throw new GameError(['Haipo', 'Not found'], 404);
+  const key = `${userId}:${featureId}:${actId}`;
+  const wait = (homeActLast.get(key) || 0) + (act.cd || HOME_ACT_CD) - now();
+  if (wait > 0) throw new GameError([`Subiri dakika ${Math.ceil(wait / 60_000)}.`, `Wait ${Math.ceil(wait / 60_000)} min.`], 429);
+  homeActLast.set(key, now());
+  const u = getUser(userId);
+  const comfort = 1 + (HOME_LEVELS[host.homeLevel || 0]?.comfort || 0);
+  const eff = Object.fromEntries(Object.entries(act.effects).map(([k, v]) => [k, v > 0 ? Math.round(v * comfort) : v]));
+  const fields = { needs: applyNeeds(u.needs, eff) };
+  if (act.health) fields.health = Math.min(100, (u.health ?? 100) + act.health);
+  saveFields(userId, fields);
+  return { act, effects: eff };
+}
+
 /** Repaint the walls / lay a new floor. */
 export const styleHome = db.transaction((userId, { wall, floor }) => {
   const u = getUser(userId);
