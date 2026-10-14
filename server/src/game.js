@@ -583,8 +583,10 @@ export const buyOutfit = db.transaction((userId, outfitId) => {
   if (o.price === 0 || user.outfits.includes(outfitId)) throw new GameError(['Tayari unayo nguo hii.', 'You already own this outfit.']);
   const shops = PLACES.filter((p) => p.shop === 'outfits');
   const [x, z] = positionOf(user);
-  if (!shops.some((s) => distToPlace(s, [x, z]) <= 14)) throw new GameError(['Nenda dukani (Kariakoo au Mlimani City) kwanza.', 'Go to a shop (Kariakoo or Mlimani City) first.']);
-  addMoney(userId, -discount(user, o.price), 'purchase', `Umenunua ${o.name}`);
+  // In the shop: shelf price. Anywhere else: order online from the Boutique app (+10% delivery).
+  const inShop = shops.some((s) => distToPlace(s, [x, z]) <= 14);
+  const price = Math.round((discount(user, o.price) * (inShop ? 1 : 1.1)) / 100) * 100;
+  addMoney(userId, -price, 'purchase', `Umenunua ${o.name}${inShop ? '' : ' (online)'}`);
   saveFields(userId, { outfits: [...user.outfits, outfitId] });
 });
 

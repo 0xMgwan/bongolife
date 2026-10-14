@@ -119,20 +119,44 @@ function wallsFor({ b, room }) {
   if (room) W.push([b.x1 + 5, b.z1, b.x1 + 5, b.z1 + 2.2], [b.x1 + 5, b.z1 + 3.2, b.x1 + 5, b.z1 + 4.5], [b.x1, b.z1 + 4.5, b.x1 + 5, b.z1 + 4.5]); // a second bedroom
   return W;
 }
+// Do segments p1-p2 and q1-q2 cross (2D, x/z)?
+function crosses([ax, az], [bx, bz], [cx, cz], [dx, dz]) {
+  const o = (px, pz, qx, qz, rx, rz) => Math.sign((qx - px) * (rz - pz) - (qz - pz) * (rx - px));
+  return o(ax, az, bx, bz, cx, cz) !== o(ax, az, bx, bz, dx, dz) && o(cx, cz, dx, dz, ax, az) !== o(cx, cz, dx, dz, bx, bz);
+}
+const FULL_WALL = 2.4;
+/** Walls stand full height when you're close in; any wall between the camera and your Sim
+ * drops down (Sims-style), and from far away they go back to a doll-house cut-away. */
 function Walls({ layout }) {
   const { b } = layout;
   const m = wallMat(layout.style.wall || WALL);
-  return wallsFor(layout).map(([x1, z1, x2, z2], i) => {
+  const segs = wallsFor(layout);
+  const refs = useRef([]);
+  useFrame(({ camera }, dt) => {
+    const cam = [camera.position.x - HOME_ORIGIN[0], camera.position.z - HOME_ORIGIN[2]];
+    const me = [homeAvatar.x, homeAvatar.z];
+    const far = view.homeDist > 18 || useStore.getState().tab === 'shop';
+    segs.forEach(([x1, z1, x2, z2], i) => {
+      const g = refs.current[i];
+      if (!g) return;
+      const back = (z1 === b.z1 && z2 === b.z1) || (x1 === b.x1 && x2 === b.x1);
+      let h = far ? (back ? 2.2 : 1.3) : FULL_WALL;
+      if (!far && crosses(cam, me, [x1, z1], [x2, z2])) h = 0.25;
+      const s = g.userData.h ?? h;
+      g.userData.h = s + (h - s) * Math.min(1, dt * 8);
+      g.children[0].scale.y = g.userData.h;
+      g.children[1].position.y = g.userData.h;
+    });
+  });
+  return segs.map(([x1, z1, x2, z2], i) => {
     const len = Math.hypot(x2 - x1, z2 - z1);
-    const back = (z1 === b.z1 && z2 === b.z1) || (x1 === b.x1 && x2 === b.x1);
-    const h = back ? 2.2 : 1.3;
     const sx = x1 === x2 ? 0.16 : len + 0.16;
     const sz = z1 === z2 ? 0.16 : len + 0.16;
     return (
-      <group key={i} position={[(x1 + x2) / 2, 0, (z1 + z2) / 2]}>
-        <mesh geometry={unitBox} material={m} scale={[sx, h, sz]} />
-        {/* light cap on top of the wall, like a real cut-away doll house */}
-        <mesh geometry={unitBox} material={CAP_MAT} position={[0, h, 0]} scale={[sx + 0.04, 0.07, sz + 0.04]} />
+      <group key={i} ref={(el) => (refs.current[i] = el)} position={[(x1 + x2) / 2, 0, (z1 + z2) / 2]}>
+        <mesh geometry={unitBox} material={m} scale={[sx, FULL_WALL, sz]} />
+        {/* light cap on top of the wall */}
+        <mesh geometry={unitBox} material={CAP_MAT} position={[0, FULL_WALL, 0]} scale={[sx + 0.04, 0.07, sz + 0.04]} />
         <mesh geometry={unitBox} material={SKIRT_MAT} position={[0, 0, 0]} scale={[sx + 0.03, 0.12, sz + 0.03]} />
       </group>
     );

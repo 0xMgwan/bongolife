@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { token } from '../../api.js';
 import { hapticsEnabled, setHaptics, onHaptics } from '../../haptics.js';
-import { HAIRSTYLES, HAIR_COLORS, OUTFITS, TRAITS, outfitFits } from '@shared/world.js';
+import { HAIRSTYLES, HAIR_COLORS, OUTFITS, TRAITS, outfitFits, fmtShort } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { AppHead } from '../Phone.jsx';
 import { AvatarPreview, Swatch } from '../Creator.jsx';
@@ -159,6 +159,15 @@ export function Kabati({ back }) {
   const run = useStore((s) => s.run);
   const [a, setA] = useState(me.appearance);
   const owned = OUTFITS.filter((o) => (o.price === 0 && outfitFits(o, a.body)) || me.outfits.includes(o.id));
+  const forSale = OUTFITS.filter((o) => o.price > 0 && outfitFits(o, a.body) && !me.outfits.includes(o.id));
+  const trying = !owned.some((o) => o.id === a.outfit);
+  const buy = async (o) => {
+    const r = await run('/shop/outfit', { method: 'POST', body: { outfitId: o.id } });
+    if (r) {
+      useStore.setState({ me: r.me || r });
+      useStore.getState().toast(L(`🛍️ ${o.name} ni yako!`, `🛍️ The ${loc(o)} is yours!`));
+    }
+  };
   const save = async () => {
     const r = await run('/me/profile', { method: 'POST', body: { appearance: a } });
     if (r) {
@@ -168,7 +177,7 @@ export function Kabati({ back }) {
   };
   return (
     <>
-      <AppHead title={L('Kabati', 'Wardrobe')} onBack={back} right={<button className="btn btn-green btn-sm" onClick={save}>{L('Hifadhi', 'Save')}</button>} />
+      <AppHead title={L('Kabati', 'Wardrobe')} onBack={back} right={<button className="btn btn-green btn-sm" disabled={trying} onClick={save}>{L('Hifadhi', 'Save')}</button>} />
       <div className="app-body">
         {/* Pinned while the options scroll underneath, so every change stays in view. */}
         <div className="wardrobe-preview">
@@ -180,7 +189,26 @@ export function Kabati({ back }) {
         <div className="chips">
           {owned.map((o) => <button key={o.id} className={`chip ${a.outfit === o.id ? 'on' : ''}`} onClick={() => setA({ ...a, outfit: o.id })}><Swatch o={o} />{loc(o)}</button>)}
         </div>
-        <div className="hint">{L('Nunua nguo zaidi Kariakoo Fashion au Mlimani City.', 'Buy more outfits at Kariakoo Fashion or Mlimani City.')}</div>
+        {trying && (() => {
+          const o = OUTFITS.find((x) => x.id === a.outfit);
+          return (
+            <div className="try-bar">
+              <span>👀 {L('Unajaribu', 'Trying on')}: <b>{loc(o)}</b></span>
+              <button className="btn btn-green btn-sm" disabled={me.money < o.price} onClick={() => buy(o)}>{L('Nunua', 'Buy')} · {fmtShort(Math.round(o.price * 1.1))}</button>
+            </div>
+          );
+        })()}
+        <div className="label">{L(`Duka · nguo ${forSale.length}`, `Shop · ${forSale.length} outfits`)}</div>
+        <div className="shop-grid">
+          {forSale.map((o) => (
+            <button key={o.id} className={`shop-item ${a.outfit === o.id ? 'on' : ''}`} onClick={() => setA({ ...a, outfit: o.id })}>
+              <Swatch o={o} />
+              <b>{loc(o)}</b>
+              <small>{fmtShort(o.price)}</small>
+            </button>
+          ))}
+        </div>
+        <div className="hint">{L('Gusa nguo uijaribu. Ukinunua hapa (mtandaoni) kuna ada ya usafirishaji 10% — dukani (Kariakoo Fashion, Mlimani City) ni bei ya kawaida.', 'Tap an outfit to try it on. Ordering here (online) adds 10% delivery — in the shops (Kariakoo Fashion, Mlimani City) it’s shelf price.')}</div>
         <div className="label">{L('Nywele', 'Hairstyle')}</div>
         <div className="chips">
           {HAIRSTYLES.map((h) => <button key={h.id} className={`chip ${a.hair === h.id ? 'on' : ''}`} onClick={() => setA({ ...a, hair: h.id })}>{loc(h)}</button>)}

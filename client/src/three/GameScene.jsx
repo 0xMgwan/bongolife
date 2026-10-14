@@ -9,7 +9,7 @@ import { ActivityScene, SCENES, SCENE_ORIGIN, sceneCam, sceneFocus } from './Sce
 import { Effects } from './Effects.jsx';
 import { cameraHook } from '../ui/Camera.jsx';
 import { setCityNight } from './CityDecor.jsx';
-import { HomeScene, HOME_ORIGIN, homeView } from './HomeScene.jsx';
+import { HomeScene, HOME_ORIGIN, homeView, homeAvatar } from './HomeScene.jsx';
 import { livePartyAt } from '../ui/events.js';
 import { MapPins } from './MapPins.jsx';
 import { useStore } from '../store.js';
@@ -35,7 +35,7 @@ function useCameraGestures(modeRef) {
       e.preventDefault();
       const f = 1 + Math.sign(e.deltaY) * 0.1;
       if (isMap()) view.mapDist = Math.max(50, Math.min(280, view.mapDist * f));
-      else if (isHome()) view.homeDist = Math.max(14, Math.min(48, view.homeDist * f));
+      else if (isHome()) view.homeDist = Math.max(3.5, Math.min(48, view.homeDist * f));
       else setZoom(zoom.target * f);
     };
     let pinch = null;
@@ -56,7 +56,7 @@ function useCameraGestures(modeRef) {
         const [a, b] = [...pts.values()];
         const ratio = pinch.d / Math.max(20, Math.hypot(a[0] - b[0], a[1] - b[1]));
         if (isMap()) view.mapDist = Math.max(50, Math.min(280, pinch.m * ratio));
-        else if (isHome()) view.homeDist = Math.max(14, Math.min(48, pinch.h * ratio));
+        else if (isHome()) view.homeDist = Math.max(3.5, Math.min(48, pinch.h * ratio));
         else setZoom(pinch.z * ratio);
         return;
       }
@@ -76,7 +76,7 @@ function useCameraGestures(modeRef) {
         view.mapZ = Math.max(city.center[1] - city.half, Math.min(city.center[1] + city.half, view.mapZ - (-dx * s + dy * c) * k));
       } else if (isHome()) {
         view.homeYaw -= dx * 0.008;
-        view.homePitch = Math.max(0.45, Math.min(1.45, view.homePitch + dy * 0.005));
+        view.homePitch = Math.max(0.12, Math.min(1.45, view.homePitch + dy * 0.005));
       } else {
         view.lastDrag = performance.now();
         view.yaw -= dx * 0.008;
@@ -170,16 +170,25 @@ function CameraRig({ mode, sceneKey }) {
     }
     if (mode === 'home') {
       // Build mode glides the camera over to the yard beside the house.
+      // Close in: follow your Sim like a third-person camera. Zoomed out: frame the whole house.
+      // Build mode glides over to the yard.
       const build = useStore.getState().building;
-      const want = build ? 14 : homeView.cx;
-      view.homeFx = (view.homeFx ?? 0) + (want - (view.homeFx ?? 0)) * Math.min(1, dt * 4);
-      view.homeFz = (view.homeFz ?? 0) + ((build ? 0 : homeView.cz) - (view.homeFz ?? 0)) * Math.min(1, dt * 4);
+      // Buy mode always frames the whole house so you can place furniture anywhere.
+      const shopMode = useStore.getState().tab === 'shop';
+      const over = shopMode ? 1 : Math.max(0, Math.min(1, (view.homeDist - 8) / 16));
+      const wantX = build ? 14 : homeAvatar.x + (homeView.cx - homeAvatar.x) * over;
+      const wantZ = build ? 0 : homeAvatar.z + (homeView.cz - homeAvatar.z) * over;
+      const k = Math.min(1, dt * 5);
+      view.homeFx = (view.homeFx ?? 0) + (wantX - (view.homeFx ?? 0)) * k;
+      view.homeFz = (view.homeFz ?? 0) + (wantZ - (view.homeFz ?? 0)) * k;
+      view.homeFy = (view.homeFy ?? 0) + ((build ? 0 : (homeAvatar.y || 0) * (1 - over)) - (view.homeFy ?? 0)) * k;
       const ox = HOME_ORIGIN[0] + view.homeFx;
       const oz = HOME_ORIGIN[2] + view.homeFz;
-      const dist = view.homeDist + homeView.extra;
+      const dist = (shopMode ? Math.max(24, view.homeDist) : view.homeDist) + homeView.extra * over;
       const flat = Math.cos(view.homePitch) * dist;
-      camera.position.set(ox + Math.sin(view.homeYaw) * flat, 1 + Math.sin(view.homePitch) * dist, oz + Math.cos(view.homeYaw) * flat);
-      camera.lookAt(ox, 0.5, oz);
+      const lookY = view.homeFy + 1 - over * 0.5;
+      camera.position.set(ox + Math.sin(view.homeYaw) * flat, lookY + Math.sin(view.homePitch) * dist, oz + Math.cos(view.homeYaw) * flat);
+      camera.lookAt(ox, lookY, oz);
       return;
     }
     const a = 1 - Math.exp(-dt * 6);

@@ -746,7 +746,7 @@ function CityChips() {
   return (
     <div className="city-chips">
       {CITIES.map((c) => (
-        <button key={c.id} className={showing?.id === c.id ? 'on' : ''} onClick={() => { sfx('click'); view.mapX = c.center[0]; view.mapZ = c.center[1]; view.mapDist = 240; tick((n) => n + 1); }}>{c.icon} {c.name}</button>
+        <button key={c.id} className={showing?.id === c.id ? 'on' : ''} onClick={() => { sfx('click'); view.mapX = c.center[0]; view.mapZ = c.center[1]; view.mapDist = 240; tick((n) => n + 1); }}>{c.icon} {c.id === 'dar' ? 'Dar' : c.name}</button>
       ))}
     </div>
   );
@@ -941,14 +941,14 @@ export function HUD() {
       {town && !riding && <HeadingBanner me={me} />}
       {!shop && (
         <div className="side">
-          <button onClick={() => { Object.assign(view, { yaw: 0, pitch: 1.0, homeYaw: 0.75, homePitch: 0.95, homeDist: 30 }); sfx('click'); }} aria-label={L('Rudisha kamera', 'Reset camera')}>🧭</button>
+          <button onClick={() => { Object.assign(view, { yaw: 0, pitch: 1.0, homeYaw: 0.75, homePitch: 0.55, homeDist: 9 }); sfx('click'); }} aria-label={L('Rudisha kamera', 'Reset camera')}>🧭</button>
           <button onClick={() => openCamera(scene?.placeId ? loc(placeById[scene.placeId]) : null)} aria-label={L('Kamera', 'Camera')}>📷</button>
           {town && (
             <button key={`chat-${me.unread || 0}`} onClick={() => (chatOpen ? useStore.setState({ chatOpen: false }) : openChat())} className={`${chatOpen ? 'on' : ''} ${me.unread > 0 ? 'has-unread' : ''}`} aria-label="Chat">
               💬{me.unread > 0 && <b className="badge">{me.unread}</b>}
             </button>
           )}
-          <button onClick={() => (town ? setZoom(getZoom() * 0.8) : (view.homeDist = Math.max(14, view.homeDist * 0.8)))} aria-label="Zoom in">＋</button>
+          <button onClick={() => (town ? setZoom(getZoom() * 0.8) : (view.homeDist = Math.max(3.5, view.homeDist * 0.8)))} aria-label="Zoom in">＋</button>
           <button onClick={() => (town ? setZoom(getZoom() * 1.25) : (view.homeDist = Math.min(48, view.homeDist * 1.25)))} aria-label="Zoom out">－</button>
           {/* In the same column as the zoom buttons so it can never cover them. */}
           {walking && (
