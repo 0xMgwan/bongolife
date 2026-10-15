@@ -91,6 +91,26 @@ export function installAudioUnlock() {
   });
 }
 
+/** Play an MP3/voice clip through the audio engine (already unlocked by the first tap, so it
+ * still plays after a slow download — a fresh <audio> element would be blocked on phones). */
+export async function playVoiceClip(arrayBuffer, { timeoutMs = 30_000 } = {}) {
+  const c = init();
+  if (!c) throw new Error('no audio');
+  if (c.state === 'suspended') await c.resume().catch(() => {});
+  const buf = await c.decodeAudioData(arrayBuffer);
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  const g = c.createGain();
+  g.gain.value = audioSettings.muted ? 0 : 1.4;
+  src.connect(g).connect(master);
+  // Duck the music while the voice talks.
+  musicBus.gain.setTargetAtTime(audioSettings.music * 0.15, c.currentTime, 0.1);
+  src.start();
+  await new Promise((resolve) => { src.onended = resolve; setTimeout(resolve, Math.min(timeoutMs, buf.duration * 1000 + 500)); });
+  musicBus.gain.setTargetAtTime(audioSettings.music * 0.55, c.currentTime, 0.4);
+  return true;
+}
+
 // ------------------------------------------------------------- helpers
 function env(gain, t, a, peak, d, sustain = 0.0001) {
   gain.gain.cancelScheduledValues(t);

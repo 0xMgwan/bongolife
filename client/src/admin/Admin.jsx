@@ -479,6 +479,8 @@ function Settings() {
             <button className="btn btn-outline" onClick={() => setForm({ ...form, watchLinks: [...(form.watchLinks || []), { title: '', url: '', live: false }] })}>+ Add match</button>
             <button className="btn btn-green" onClick={() => save({ watchLinks: form.watchLinks || [] })}>Save matches</button>
           </div>
+          <h2>🎙️ Welcome voice</h2>
+          <VoiceTest />
           <h2>📻 Default radio station</h2>
           <div className="small muted" style={{ marginBottom: 6 }}>Plays first when players open the game. Paste the station's https stream link (e.g. from its website's “Listen live” player).</div>
           <input className="in" style={{ width: '100%', marginBottom: 6 }} placeholder="Name, e.g. 102.9 FM" value={form.radioDefault?.name || ''} onChange={(e) => setForm({ ...form, radioDefault: { ...(form.radioDefault || {}), name: e.target.value } })} maxLength={40} />
@@ -643,6 +645,34 @@ export default function Admin() {
         {section === 'settings' && <Settings />}
         {section === 'audit' && <Audit />}
       </main>
+    </div>
+  );
+}
+
+
+/** Admin → Settings: test the natural welcome voice (ElevenLabs/Azure) and see the real error. */
+function VoiceTest() {
+  const [r, setR] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const test = async () => {
+    setBusy(true);
+    try {
+      const d = await api('/admin/voice-test');
+      setR(d);
+      if (d.audio) new Audio(`data:audio/mpeg;base64,${d.audio}`).play().catch(() => {});
+    } catch (e) { setR({ ok: false, error: e.message }); }
+    setBusy(false);
+  };
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <button className="btn btn-outline" disabled={busy} onClick={test}>{busy ? 'Testing…' : '▶ Test the welcome voice'}</button>
+      {r && (
+        <div className="small" style={{ marginTop: 8, padding: 10, borderRadius: 10, background: r.ok ? '#dcfce7' : '#fee2e2' }}>
+          <div><b>Provider:</b> {r.provider || 'none'} {r.voiceId ? `· voice ${r.voiceId}` : ''}</div>
+          {r.ok ? <div>✅ Generated {Math.round(r.bytes / 1024)} KB — you should hear it now.</div> : <div>❌ {r.error}</div>}
+          {r.last?.error && <div className="muted">Last provider error: {r.last.error.text} ({new Date(r.last.error.at).toLocaleString()})</div>}
+        </div>
+      )}
     </div>
   );
 }

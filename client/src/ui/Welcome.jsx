@@ -1,6 +1,7 @@
 // Arriving in the game: a How-to-play guide for new players, then a spoken welcome
 // (Swahili or English) with the city's real weather and what's new — and the radio comes on.
 import { useEffect, useState } from 'react';
+import { playVoiceClip } from '../audio.js';
 import { cityAt } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { api, token } from '../api.js';
@@ -109,16 +110,15 @@ async function naturalVoice(city, returning) {
   try {
     const lang = isEn() ? 'en' : 'sw';
     const r = await fetch(`/api/voice/welcome?lang=${lang}&city=${city}&returning=${returning ? 1 : 0}`, { headers: { authorization: `Bearer ${token.get()}` } });
-    if (!r.ok) return false;
-    const url = URL.createObjectURL(await r.blob());
-    const a = new Audio(url);
-    a.volume = 1;
-    await a.play();
-    await new Promise((resolve) => { a.onended = resolve; a.onerror = resolve; setTimeout(resolve, 25_000); });
-    URL.revokeObjectURL(url);
+    // 404 = no voice provider set up: use the device voice. Any other failure = the provider is
+    // set up but errored — stay quiet rather than fall back to the robotic voice.
+    if (r.status === 404) return false;
+    if (!r.ok) { console.warn('[voice] welcome failed', r.status, await r.text().catch(() => '')); return true; }
+    await playVoiceClip(await r.arrayBuffer());
     return true;
-  } catch {
-    return false;
+  } catch (e) {
+    console.warn('[voice] welcome playback', e?.message);
+    return true;
   }
 }
 

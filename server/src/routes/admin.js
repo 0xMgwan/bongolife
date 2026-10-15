@@ -10,6 +10,7 @@ import { online, broadcast, emitTo, kick } from '../presence.js';
 import { providers, provider, TOPUP_RATE } from '../payments/index.js';
 import { settleTopup, liveAds, publicAnnouncement } from './api.js';
 import multer from 'multer';
+import * as live from '../live.js';
 import * as music from '../music.js';
 
 export const admin = express.Router();
@@ -43,6 +44,10 @@ function series(rows, days) {
 }
 
 // ------------------------------------------------------------ overview
+// Welcome voice check: which provider is live and does a fresh phrase generate?
+admin.get('/voice-test', async (_req, res) => {
+  try { res.json(await live.voiceTest()); } catch (e) { res.json({ ok: false, error: e.message }); }
+});
 admin.get('/overview', (_req, res) => {
   const t = now();
   const since30 = t - 30 * DAY;

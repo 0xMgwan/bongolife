@@ -83,6 +83,25 @@ import { DATA_DIR } from './db.js';
 
 const provider = () => (process.env.ELEVENLABS_API_KEY ? 'eleven' : process.env.AZURE_SPEECH_KEY && process.env.AZURE_SPEECH_REGION ? 'azure' : null);
 export const voiceReady = () => !!provider();
+export const voiceLog = { ok: null, error: null };
+/** For the admin panel: which provider, and a fresh test phrase (bypasses the cache). */
+export async function voiceTest(text = 'Karibu Bongo! Hii ni sauti ya majaribio.') {
+  const p = provider();
+  const info = { provider: p, voiceId: process.env.ELEVENLABS_VOICE_ID ? `${process.env.ELEVENLABS_VOICE_ID.slice(0, 4)}…` : p === 'eleven' ? 'default (Sarah)' : null, last: voiceLog };
+  if (!p) return { ...info, ok: false, error: 'No ELEVENLABS_API_KEY (or Azure keys) set on the server.' };
+  try {
+    const buf = p === 'eleven' ? await eleven(text, 'sw') : await azure(text, 'sw');
+    return { ...info, ok: true, bytes: buf.length, audio: buf.toString('base64') };
+  } catch (e) {
+    return { ...info, ok: false, error: e.message };
+  }
+}
+/** Generate the shared welcome phrases ahead of time so the first welcome plays instantly. */
+export async function warmVoice() {
+  if (!provider()) return;
+  const lines = ['Karibu Bongo!', 'Karibu tena Bongo!', 'Furahia mtaa. Redio inaanza sasa.', 'Welcome to Bongo!', 'Welcome back to Bongo!', "Enjoy the streets. The radio's coming on now."];
+  for (const t of lines) await phrase(t, /[a-z]+ to Bongo|Enjoy/.test(t) ? 'en' : 'sw').catch(() => {});
+}
 const xml = (s) => String(s).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
 
 /** The welcome as separate phrases (no names, so phrases are shared by everyone and cached). */
@@ -102,8 +121,9 @@ async function eleven(text, lang) {
       body: JSON.stringify({ text, model_id: model, voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.35, use_speaker_boost: true } }),
       signal: AbortSignal.timeout(20_000),
     });
-    if (r.ok) return Buffer.from(await r.arrayBuffer());
-    last = `${r.status} ${(await r.text().catch(() => '')).slice(0, 200)}`;
+    if (r.ok) { voiceLog.ok = { at: Date.now(), model }; return Buffer.from(await r.arrayBuffer()); }
+    last = `${r.status} ${(await r.text().catch(() => '')).slice(0, 300)}`;
+    voiceLog.error = { at: Date.now(), model, text: last };
     console.error('[voice] elevenlabs', model, last);
   }
   throw new Error(`elevenlabs ${last}`);

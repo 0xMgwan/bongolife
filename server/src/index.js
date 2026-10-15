@@ -367,6 +367,9 @@ setInterval(() => {
   pendingMoves.clear();
 }, 100);
 
+// Pre-generate the shared welcome phrases so the first welcome plays straight away.
+setTimeout(() => import('./live.js').then((m) => m.warmVoice()).catch(() => {}), 5000);
+
 // Needs decay for online players + position flush.
 setInterval(() => {
   const tx = db.transaction(() => {
