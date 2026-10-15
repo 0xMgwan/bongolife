@@ -399,6 +399,14 @@ const checkElection = () => {
 };
 checkElection();
 setInterval(checkElection, 60_000);
+// Economy: stock market ticks; property of long-idle owners is bought back by the bank.
+import('./stocks.js').then((m) => m.startMarket());
+import('./street.js').then((m) => setInterval(() => { try { m.decayTick(); } catch (e) { console.error('[street]', e.message); } }, 3000));
+import('./buyback.js').then((m) => {
+  const run = () => m.buybackTick(() => broadcast('world', worldState()));
+  setTimeout(run, 60_000);
+  setInterval(run, 3600_000);
+});
 // Shop rent: reminders, charges, grace period and closing (every 5 minutes).
 setInterval(() => { try { shopRentTick(); } catch (e) { console.error('[rent]', e.message); } }, 5 * 60_000);
 

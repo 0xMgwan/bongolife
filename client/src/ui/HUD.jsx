@@ -32,6 +32,8 @@ import { LiftAsk, LiftBar } from './Lift.jsx';
 import { ShowroomPanel } from './ShowroomPanel.jsx';
 import { startBuild } from './BuildBar.jsx';
 import { MentionText, MentionSuggest } from './Mentions.jsx';
+import { StreetHUD } from './StreetHUD.jsx';
+import { ditchCar } from '../street.js';
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -886,15 +888,18 @@ export function HUD() {
   const run = useStore((s) => s.run);
   const [touch] = useState(() => matchMedia('(pointer: coarse)').matches);
   const riding = useStore((s) => s.riding);
+  const stolenCar = useStore((s) => s.stolenCar);
+  const streetOn = useStore((s) => !!(s.street?.stars || s.street?.mission || s.street?.heist));
   if (!me) return null;
   const town = tab === 'town';
   const scene = town ? activeScene({ me, inside }) : null;
   const shop = tab === 'shop';
-  const vehicle = me.vehicles?.find((v) => v.id === me.activeVehicle);
+  const vehicle = stolenCar || me.vehicles?.find((v) => v.id === me.activeVehicle);
   // Your go-to ride: the one you drove last, else the most expensive.
   const anyVehicle = me.vehicles?.find((v) => v.id === local.lastCar) || [...(me.vehicles || [])].sort((a, b) => (vehicleById[b.model]?.price || 0) - (vehicleById[a.model]?.price || 0))[0];
   const toggleVehicle = () => {
-    if (vehicle) run('/vehicle/use', { method: 'POST', body: { vehicleId: null } });
+    if (stolenCar) ditchCar();
+    else if (vehicle) run('/vehicle/use', { method: 'POST', body: { vehicleId: null } });
     else if (anyVehicle) {
       local.lastCar = anyVehicle.id;
       run('/vehicle/use', { method: 'POST', body: { vehicleId: anyVehicle.id } });
@@ -912,6 +917,7 @@ export function HUD() {
       <CameraOverlay />
       <WatchInvite />
       <LuxInvite />
+      <StreetHUD />
       <LiftAsk />
       <LiftBar />
       <ShowroomPanel />
@@ -926,7 +932,7 @@ export function HUD() {
           ...(announcement ? [{ key: 'announce', tone: 'amber', text: `📣 ${loc(announcement, 'text')}` }] : []),
         ]} />
       )}
-      {!shop && !riding && (
+      {!shop && !riding && !(town && streetOn) && (
         <div className="hud-left">
           {!scene && <QuestCard me={me} />}
           <SocialChips me={me} />

@@ -1715,7 +1715,12 @@ function Traffic({ cityId = 'dar', lowEnd = false }) {
       g.rotation.y = Math.atan2(dx, dz);
       // Shared with the player for collisions: half-length along travel, half-width across.
       const c = trafficCars[i] || (trafficCars[i] = {});
-      c.x = x; c.z = z; c.horiz = horiz; c.len = s.kind === 'bus' ? 3.2 : s.kind === 'moto' || s.kind === 'bajaji' ? 1.1 : 2.1; c.wid = s.kind === 'moto' ? 0.5 : 1;
+      // A car someone just jacked disappears from traffic for a while.
+      const gone = c.stolenAt && Date.now() - c.stolenAt < 45_000;
+      g.visible = !gone;
+      c.gone = gone;
+      c.kind = s.kind; c.color = s.color;
+      c.x = gone ? 1e6 : x; c.z = gone ? 1e6 : z; c.horiz = horiz; c.len = s.kind === 'bus' ? 3.2 : s.kind === 'moto' || s.kind === 'bajaji' ? 1.1 : 2.1; c.wid = s.kind === 'moto' ? 0.5 : 1;
     });
   });
   useEffect(() => () => { trafficCars.length = 0; }, []);

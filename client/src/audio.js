@@ -146,6 +146,8 @@ const midi = (n) => 440 * 2 ** ((n - 69) / 12);
 
 // ------------------------------------------------------------- effects
 const SFX = {
+  // Police siren: a two-tone wail.
+  siren: (t) => [0, 0.32, 0.64, 0.96].forEach((o, i) => tone(sfxBus, { type: 'sawtooth', freq: i % 2 ? 660 : 880, t: t + o, d: 0.3, peak: 0.07, glideTo: i % 2 ? 880 : 660, glideTime: 0.3 })),
   click: (t) => tone(sfxBus, { type: 'sine', freq: 880, t, d: 0.05, peak: 0.12 }),
   // Three knocks on a wooden door.
   knock: (t) => [0, 0.16, 0.32].forEach((o) => tone(sfxBus, { type: 'triangle', freq: 140, t: t + o, d: 0.07, peak: 0.45 })),

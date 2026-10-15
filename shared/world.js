@@ -2217,3 +2217,62 @@ const MORE_BUSINESS = {
   safari: { price: 200_000_000, incomePerHour: 1_350_000, label: 'Kampuni ya safari', labelEn: 'Safari company' },
 };
 for (const [id, b] of Object.entries(MORE_BUSINESS)) if (placeById[id] && !placeById[id].business) placeById[id].business = b;
+
+// ============================================================ hustles (unlimited small businesses)
+// No map spot needed — anyone can own several. Each earns per 6-hour shift (minus running
+// costs), sometimes breaks down, and pays out when you collect income.
+export const HUSTLES = [
+  { id: 'chips', emoji: '🍟', name: ['Banda la chipsi mayai', 'Chips mayai stall'], price: 1_500_000, earn: [55_000, 85_000], cost: 6_000, breakChance: 0.05, repair: 120_000 },
+  { id: 'boda', emoji: '🏍️', name: ['Bodaboda ya kukodisha', 'Bodaboda on hire'], price: 2_500_000, earn: [90_000, 140_000], cost: 15_000, breakChance: 0.07, repair: 200_000 },
+  { id: 'wakala', emoji: '📱', name: ['Wakala wa pesa (M-Pesa)', 'Mobile money agent'], price: 4_000_000, earn: [140_000, 200_000], cost: 12_000, breakChance: 0.03, repair: 250_000 },
+  { id: 'bajaji', emoji: '🛺', name: ['Bajaji ya kukodisha', 'Bajaji on hire'], price: 7_000_000, earn: [260_000, 380_000], cost: 35_000, breakChance: 0.07, repair: 500_000 },
+  { id: 'carwash', emoji: '🧽', name: ['Car wash', 'Car wash'], price: 9_000_000, earn: [330_000, 480_000], cost: 45_000, breakChance: 0.04, repair: 600_000 },
+  { id: 'container', emoji: '🏪', name: ['Duka la kontena', 'Container shop'], price: 15_000_000, earn: [550_000, 800_000], cost: 60_000, breakChance: 0.04, repair: 900_000 },
+  { id: 'daladala', emoji: '🚐', name: ['Daladala', 'Daladala minibus'], price: 28_000_000, earn: [1_000_000, 1_500_000], cost: 150_000, breakChance: 0.1, repair: 1_800_000 },
+  { id: 'carhire', emoji: '🚙', name: ['Gari la kukodisha', 'Car hire'], price: 40_000_000, earn: [1_500_000, 2_100_000], cost: 180_000, breakChance: 0.06, repair: 2_500_000 },
+];
+export const hustleById = Object.fromEntries(HUSTLES.map((h) => [h.id, h]));
+export const HUSTLE = { periodMs: 6 * 3600_000, maxPeriods: 8, maxEach: 25, resale: 0.6 };
+
+// ============================================================ stock exchange (Soko la Hisa)
+// Prices (TSh per share) move every few minutes; dividends pay daily.
+export const STOCKS = [
+  { id: 'KIBO', name: 'Kibo Bank', emoji: '🏦', sector: ['Benki', 'Banking'], base: 650, vol: 0.012, div: 0.0006 },
+  { id: 'MZLD', name: 'Mzalendo Bank', emoji: '🏦', sector: ['Benki', 'Banking'], base: 4_200, vol: 0.01, div: 0.0007 },
+  { id: 'SIMU', name: 'SimuPoa Telecom', emoji: '📶', sector: ['Mawasiliano', 'Telecoms'], base: 750, vol: 0.014, div: 0.0005 },
+  { id: 'KILI', name: 'Kili Breweries', emoji: '🍺', sector: ['Vinywaji', 'Beverages'], base: 10_900, vol: 0.009, div: 0.0008 },
+  { id: 'SRJ', name: 'Saruji Cement', emoji: '🏗️', sector: ['Ujenzi', 'Construction'], base: 4_100, vol: 0.012, div: 0.0007 },
+  { id: 'MAZA', name: 'Maziwa Foods', emoji: '🥤', sector: ['Vyakula', 'Food'], base: 2_500, vol: 0.011, div: 0.0006 },
+  { id: 'NDGE', name: 'Ndege Air', emoji: '✈️', sector: ['Usafiri', 'Airlines'], base: 380, vol: 0.03, div: 0 },
+  { id: 'MAFT', name: 'Mafuta Oil & Gas', emoji: '🛢️', sector: ['Nishati', 'Energy'], base: 450, vol: 0.035, div: 0 },
+  { id: 'NEDA', name: 'NEDA Labs (nTZS)', emoji: '🪙', sector: ['Fintech', 'Fintech'], base: 1_000, vol: 0.03, div: 0.0002 },
+  { id: 'BONGO', name: 'Bongo Flava Records', emoji: '🎤', sector: ['Burudani', 'Entertainment'], base: 1_200, vol: 0.025, div: 0.0003 },
+];
+export const stockById = Object.fromEntries(STOCKS.map((s) => [s.id, s]));
+export const MARKET = { tickMs: 5 * 60_000, feePct: 0.005, impact: 0.02, historyLen: 96 };
+
+// ============================================================ street life: wanted, missions, heists
+export const STREET = {
+  maxStars: 5,
+  decayMs: 90_000, // one star drops by itself after this long without new crimes
+  copSpeed: [14, 16, 18, 20, 23], // police chasing a car (you drive ~19, ~32 flat out)
+  copFoot: [8, 9, 10, 11, 12], // police chasing you on foot (walk 7.5, run 13 — keep running!)
+  copsPerStar: [1, 2, 3, 4, 5],
+  bustRange: 3.2,
+  bustHoldMs: 1500,
+  loseRange: 48,
+  loseHoldMs: 22_000,
+  bustFine: [60_000, 150_000, 300_000, 600_000, 1_000_000],
+  carjackStars: 1,
+  robStars: 2,
+  heistStars: 4,
+  chop: [-138, 30], // chop shop in Ubungo, west Dar
+  chopPay: { car: 2_500_000, suv: 4_000_000, van: 2_000_000, moto: 600_000, bajaji: 1_200_000 },
+  heist: { gear: 250_000, cooldownMs: 30 * 60_000, timeMs: 150_000, loot: [2_500_000, 7_000_000], places: ['bank'] },
+  missions: {
+    delivery: { emoji: '📦', name: ['Mzigo wa haraka', 'Rush delivery'], base: 30_000, perM: 450, speed: 9 },
+    taxi: { emoji: '🚕', name: ['Teksi ya dharura', 'Taxi rush'], base: 20_000, perM: 380, speed: 10, needCar: true },
+    race: { emoji: '🏁', name: ['Mbio za mtaani', 'Street race'], base: 60_000, perM: 250, speed: 15, needCar: true, points: 5 },
+  },
+};
+export const CARJACK_MODEL = { car: 'crown', suv: 'prado', van: 'noah', moto: 'bodaboda', bajaji: 'bajaji' };

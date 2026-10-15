@@ -317,6 +317,20 @@ export function connect() {
     local.target = null;
     local.teleported++;
   });
+  // Mtaani: wanted stars and job updates.
+  socket.on('wanted', ({ stars, why }) => {
+    const prev = st().street.stars;
+    useStore.setState((s) => ({ street: { ...s.street, stars } }));
+    if (stars > prev) { sfx('siren'); haptic('notify'); if (why) st().toast(L(`🚨 ${why[0]} — polisi wanakutafuta!`, `🚨 ${why[1]} — the police are after you!`), 'err'); }
+  });
+  socket.on('player:wanted', ({ id, stars }) => {
+    const r = remotes.get(id);
+    if (r) r.wanted = stars;
+  });
+  socket.on('street', ({ type, text }) => {
+    if (text) st().toast(L(text[0], text[1]), type.endsWith('fail') || type.endsWith('lost') ? 'err' : undefined);
+    import('./street.js').then((m) => m.refreshStreet());
+  });
   socket.on('toast', ({ text, refresh }) => {
     st().toast(text);
     sfx(refresh ? 'cash' : 'notify');

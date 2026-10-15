@@ -67,6 +67,17 @@ export function Wekeza({ back, close, open }) {
           <span className="go">{L('Fungua', 'Open')}</span>
         </button>
 
+        <button className="co-start" style={{ marginTop: 10 }} onClick={() => open?.('mishe')}>
+          <span className="em">🛺</span>
+          <span className="grow"><b>{L('Mishe: kuanzia 1.5M', 'Hustles: from 1.5M')}</b><small>{L('Boda, wakala, daladala, kontena… hakuna kikomo cha eneo', 'Bodas, M-Pesa agents, daladalas… no map spot needed')}</small></span>
+          <span className="go">{L('Fungua', 'Open')}</span>
+        </button>
+        <button className="co-start" style={{ marginTop: 10 }} onClick={() => open?.('hisa')}>
+          <span className="em">💹</span>
+          <span className="grow"><b>{L('Soko la Hisa', 'Stock exchange')}</b><small>{L('Nunua hisa, pata gawio kila siku', 'Buy shares, earn daily dividends')}</small></span>
+          <span className="go">{L('Fungua', 'Open')}</span>
+        </button>
+
         <button className="co-start" style={{ marginTop: 10 }} onClick={() => { close?.(); useStore.setState({ phone: null, tab: 'shop', catTab: 'upgrade', placing: null }); }}>
           <span className="em">{HOME_LEVELS[me.homeLevel || 0].emoji}</span>
           <span className="grow"><b>{L('Kwangu', 'My home')}: {L(HOME_LEVELS[me.homeLevel || 0].name, HOME_LEVELS[me.homeLevel || 0].nameEn)}</b><small>{L('Panua nyumba, paka rangi, badilisha sakafu', 'Make it bigger, repaint, new floors')}</small></span>

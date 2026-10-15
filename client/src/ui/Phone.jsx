@@ -31,11 +31,17 @@ import { Kampuni } from './apps/Kampuni.jsx';
 import { Maduka } from './apps/Maduka.jsx';
 import { Penzi } from './apps/Penzi.jsx';
 import { Mahakama } from './apps/Mahakama.jsx';
+import { Mishe } from './apps/Mishe.jsx';
+import { Hisa } from './apps/Hisa.jsx';
+import { Mtaani } from './apps/Mtaani.jsx';
 import { api } from '../api.js';
 
 // Built-in apps. `g` is the icon gradient.
 export const APPS = [
   { id: 'ndoto', name: 'Ndoto', nameEn: 'Ambitions', icon: '🌟', g: ['#fbbf24', '#ea580c'], C: Ndoto },
+  { id: 'mtaani', name: 'Mtaani', nameEn: 'Street', icon: '🌃', g: ['#f59e0b', '#7f1d1d'], C: Mtaani },
+  { id: 'mishe', name: 'Mishe', nameEn: 'Hustles', icon: '🛺', g: ['#a3e635', '#15803d'], C: Mishe },
+  { id: 'hisa', name: 'Hisa', nameEn: 'Stocks', icon: '💹', g: ['#34d399', '#0f766e'], C: Hisa },
   { id: 'kazi', name: 'Kazi', nameEn: 'Jobs', icon: '💼', g: ['#34d399', '#059669'], C: Kazi },
   { id: 'redio', name: 'Redio', nameEn: 'Radio', icon: '📻', g: ['#fb923c', '#c2410c'], C: Redio },
   { id: 'gist', name: 'Gist', nameEn: 'Gist', icon: '📸', g: ['#f472b6', '#be185d'], C: Gist },

@@ -37,6 +37,9 @@ import * as npcLove from '../npclove.js';
 import * as music from '../music.js';
 import * as venue from '../venue.js';
 import * as court from '../court.js';
+import * as hustle from '../hustle.js';
+import * as stocks from '../stocks.js';
+import * as street from '../street.js';
 
 export const api = express.Router();
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -456,6 +459,28 @@ api.post('/business/:id/buy', (req, res) => {
   worldChanged();
   res.json({ me: game.playerState(req.user.id) });
 });
+// Mishe (hustles): unlimited small businesses.
+api.get('/hustles', (req, res) => res.json(hustle.view(req.user.id)));
+api.post('/hustles/buy', (req, res) => res.json({ ...hustle.buy(req.user.id, str(req.body.kind, 16)), me: game.playerState(req.user.id) }));
+api.post('/hustles/sell', (req, res) => res.json({ ...hustle.sell(req.user.id, str(req.body.kind, 16)), me: game.playerState(req.user.id) }));
+// Soko la Hisa (stock exchange).
+api.get('/stocks', (req, res) => res.json(stocks.view(req.user.id)));
+api.post('/stocks/trade', (req, res) => {
+  const side = req.body.side === 'sell' ? 'sell' : 'buy';
+  res.json({ ...stocks.trade(req.user.id, str(req.body.sym, 8), side, req.body.qty), me: game.playerState(req.user.id) });
+});
+// Mtaani (street life): missions, heists, wanted level.
+api.get('/street', (req, res) => res.json(street.view(req.user.id)));
+api.post('/street/mission', (req, res) => res.json(street.startMission(req.user.id, str(req.body.kind, 12))));
+api.post('/street/mission/cancel', (req, res) => res.json(street.cancelMission(req.user.id)));
+api.post('/street/checkpoint', (req, res) => res.json(street.checkpoint(req.user.id)));
+api.post('/street/carjack', (req, res) => res.json(street.carjack(req.user.id, str(req.body.kind, 10), str(req.body.color, 9))));
+api.post('/street/ditch', (req, res) => res.json(street.ditch(req.user.id)));
+api.post('/street/heist', (req, res) => res.json({ ...street.startHeist(req.user.id), me: game.playerState(req.user.id) }));
+api.post('/street/heist/crack', (req, res) => res.json(street.crackVault(req.user.id, !!req.body.ok)));
+api.post('/street/busted', (req, res) => res.json({ ...street.bust(req.user.id), me: game.playerState(req.user.id) }));
+api.post('/street/escaped', (req, res) => res.json(street.escaped(req.user.id)));
+
 api.post('/income/collect', (req, res) => {
   const amount = game.collectIncome(req.user.id);
   res.json({ amount, me: game.playerState(req.user.id) });
@@ -704,6 +729,7 @@ api.post('/players/:username/interact', (req, res) => {
 });
 api.post('/players/:username/rob', (req, res) => {
   const r = crime.rob(req.user.id, targetOf(req));
+  if (r.amount) street.addStars(req.user.id, 2, ['Uporaji', 'Robbery']);
   res.json({ ...r, me: game.playerState(req.user.id) });
 });
 const reportedAt = new Map();

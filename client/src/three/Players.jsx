@@ -178,7 +178,9 @@ export function LocalPlayer({ me, onArrive, frozen = false }) {
   const group = useRef();
   const motion = useRef({ moving: false, mode: 'idle', speed: 1 });
   const riding = useStore((s) => s.riding);
-  const owned = useMemo(() => me.vehicles?.find((v) => v.id === me.activeVehicle) || null, [me.vehicles, me.activeVehicle]);
+  const stolen = useStore((s) => s.stolenCar);
+  const mine = useMemo(() => me.vehicles?.find((v) => v.id === me.activeVehicle) || null, [me.vehicles, me.activeVehicle]);
+  const owned = stolen || mine;
   const vehicle = riding ? { kind: riding.kind, body: riding.body || (riding.mode === 'taxi' ? 'sedan' : undefined), lux: riding.lux, color: riding.color } : owned;
   const speedMult = vehicle ? vehicleById[vehicle.model]?.speed || 1 : 1;
   const busyRef = useRef(me.busy);

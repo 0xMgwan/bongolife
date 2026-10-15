@@ -20,6 +20,8 @@ import { online, positionOf, broadcast, emitTo } from './presence.js';
 import { bumpStats, storySummary } from './story.js';
 import { partnersOf } from './love.js';
 import { plotValue, truckPending, collectTrucks } from './invest.js';
+import { hustlePending, collectHustles, hustleValue } from './hustle.js';
+import { portfolioValue } from './stocks.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const HOUR = 3600_000;
@@ -69,20 +71,22 @@ export function pendingIncome(userId, t = now()) {
     const place = placeById[b.id];
     if (place?.business) total += accrued(b.last_collect, place.business.incomePerHour, t);
   }
-  return total + truckPending(userId, t);
+  return total + truckPending(userId, t) + hustlePending(userId, t);
 }
 
 export const collectIncome = db.transaction((userId) => {
   const t = now();
   const amount = pendingIncome(userId, t);
   if (amount <= 0) throw new GameError(['Hakuna kodi ya kukusanya bado. Rudi baadaye.', 'No income to collect yet. Come back later.']);
-  const rentBiz = amount - truckPending(userId, t); // rent + businesses
+  const rentBiz = amount - truckPending(userId, t) - hustlePending(userId, t); // rent + businesses
   const trucks = collectTrucks(userId, t);
+  const hustles = collectHustles(userId, t);
   for (const p of q.plotsOf.all(userId)) q.collectPlot.run(t, p.id);
   for (const b of q.bizOf.all(userId)) q.collectBiz.run(t, b.id);
   if (rentBiz) addMoney(userId, rentBiz, 'income', 'Kodi na mapato ya biashara');
   if (trucks) addMoney(userId, trucks, 'truck', '🚛 Mapato ya malori (baada ya dereva na matengenezo)');
-  return rentBiz + trucks;
+  if (hustles) addMoney(userId, hustles, 'income', '🛺 Mapato ya mishe (baada ya gharama)');
+  return rentBiz + trucks + hustles;
 });
 
 // --------------------------------------------------------------- state
@@ -99,6 +103,7 @@ export function netWorth(userId) {
   try {
     for (const r of db.prepare('SELECT model FROM luxury WHERE user_id = ?').all(userId)) worth += (luxuryById[r.model]?.price || 0) * LUXURY_RESALE;
   } catch { /* table created when luxury.js loads */ }
+  worth += hustleValue(userId) + portfolioValue(userId);
   return Math.round(worth);
 }
 

@@ -12,6 +12,7 @@ import { setCityNight } from './CityDecor.jsx';
 import { HomeScene, HOME_ORIGIN, homeView, homeAvatar } from './HomeScene.jsx';
 import { livePartyAt } from '../ui/events.js';
 import { MapPins } from './MapPins.jsx';
+import { StreetLayer } from './Street.jsx';
 import { useStore } from '../store.js';
 import { local, view } from '../net.js';
 
@@ -330,6 +331,7 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
           <>
             <LocalPlayer me={me} frozen={!!sceneCfg || home} />
             {!sceneCfg && !home && <ParkedCar me={me} />}
+            {!sceneCfg && !home && mode === 'play' && <StreetLayer />}
             <AudioDriver me={me} scene={home ? 'home' : sceneCfg ? scene.key : null} placeId={!home && sceneCfg ? scene.placeId : null} party={!!party} />
             {sceneCfg && <ActivityScene scene={scene.key} placeId={scene.placeId} me={me} myBusy={scene.busy} />}
             <RemotePlayers onPlayer={onPlayer} />
