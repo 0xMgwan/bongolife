@@ -62,6 +62,7 @@ export const useStore = create((set, get) => ({
   meetup: null, // agreed meet-up { with, placeId, until }
   flightView: null, // null = auto | 'inside' | 'outside'
   street: { stars: 0, mission: null, heist: null, stolen: null }, // Mtaani: wanted level & live jobs
+  homeRoomKey: 'main', // which of the host's homes the live room is for
   homePick: false, // the 🏠 chooser (Kwangu or a building you own)
   newsFlash: null, // latest story for the breaking-news ticker
   stolenCar: null, // { model, color, plate } while driving a jacked car

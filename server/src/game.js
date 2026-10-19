@@ -337,7 +337,7 @@ const homeActLast = new Map();
 export function useHomeFeature(userId, featureId, actId) {
   const p = online.get(userId);
   const hostId = p?.home || userId;
-  const host = hostId === userId ? homeOf(userId) : homeOf(hostId, 'main');
+  const host = hostId === userId ? homeOf(userId) : homeOf(hostId, p?.homeKey || 'main');
   const f = homeFeatureById[featureId];
   const act = f?.acts.find((a) => a.id === actId);
   if (!f || !act || !(host.features || []).includes(featureId)) throw new GameError(['Haipo', 'Not found'], 404);

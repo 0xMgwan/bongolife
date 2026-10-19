@@ -47,6 +47,7 @@ export default function Game() {
   // Kwangu/Duka put you at home (others stop seeing you in town); Mjini brings you back.
   // At home you join that home's live room so hosts and guests see each other.
   const visitingId = useStore((s) => s.visiting?.host.id);
+  const roomKey = useStore((s) => (s.visiting ? s.visiting.home : s.me?.homeKey) || 'main');
   useEffect(() => {
     const home = tab === 'home' || tab === 'shop';
     const st = useStore.getState();
@@ -54,9 +55,9 @@ export default function Game() {
       if (st.inside !== 'home') setInside('home');
       if (!visitingId) loadHome();
       const host = visitingId || st.me?.id;
-      if (host && st.homeHost !== host) {
-        useStore.setState({ homeHost: host });
-        enterHome(host).then((r) => {
+      if (host && (st.homeHost !== host || st.homeRoomKey !== roomKey)) {
+        useStore.setState({ homeHost: host, homeRoomKey: roomKey });
+        enterHome(host, roomKey).then((r) => {
           if (r.error === 'not_invited') {
             useStore.getState().toast(L('Mwaliko umeisha muda.', 'That invite has expired.'), 'err');
             useStore.setState({ visiting: null });
@@ -70,7 +71,7 @@ export default function Game() {
         leaveHome();
       }
     }
-  }, [tab, visitingId]);
+  }, [tab, visitingId, roomKey]);
 
   // Keyboard movement for desktop.
   useEffect(() => {

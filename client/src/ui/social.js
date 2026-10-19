@@ -1,4 +1,4 @@
-import { placeById, PLACES, HOSPITAL_ID } from '@shared/world.js';
+import { placeById, PLACES, HOSPITAL_ID, buildingById } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
 import { sendInvite, replyInvite, local, remotes } from '../net.js';
@@ -10,18 +10,19 @@ import { sfx } from '../audio.js';
 const toast = (...a) => useStore.getState().toast(...a);
 
 /** Go to a friend's home (needs an invite or an RSVP to their house party). */
-export async function visitHome(username) {
+export async function visitHome(username, home) {
   const st = useStore.getState();
   if (username === st.me?.username) {
     useStore.setState({ visiting: null, tab: 'home', phone: null, sheet: null, invite: null });
     return true;
   }
   try {
-    const r = await api(`/visit/${encodeURIComponent(username)}`);
+    const r = await api(`/visit/${encodeURIComponent(username)}${home ? `?home=${encodeURIComponent(home)}` : ''}`);
     Object.assign(homeAvatar, { x: 2.5, z: 4.2, ry: Math.PI, target: null, arrive: null });
     useStore.setState({ visiting: r, tab: 'home', phone: null, sheet: null, placing: null, homeSel: null, invite: null });
     sfx('open');
-    toast(L(`🏠 Karibu kwa @${r.host.username}!`, `🏠 Welcome to @${r.host.username}'s place!`));
+    const b = r.building && buildingById[r.building];
+    toast(b ? L(`${b.emoji} Karibu ${b.name} ya @${r.host.username}!`, `${b.emoji} Welcome to @${r.host.username}'s ${b.nameEn}!`) : L(`🏠 Karibu kwa @${r.host.username}!`, `🏠 Welcome to @${r.host.username}'s place!`));
     return true;
   } catch (e) {
     toast(e.message, 'err');
@@ -45,7 +46,7 @@ export async function answerInvite(accept) {
   if (!inv) return;
   useStore.setState({ invite: null });
   replyInvite(inv.fromId, accept);
-  if (accept) await visitHome(inv.from);
+  if (accept) await visitHome(inv.from, inv.home);
 }
 
 /** Human label for where a player is right now. */

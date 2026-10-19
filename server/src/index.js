@@ -5,14 +5,14 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { Server } from 'socket.io';
 import { bumpStats } from './story.js';
-import { NEED_TICK_SECONDS, isWater, moodOf, placeById, EVENT_LIMITS, HANGOUT_PLACES, luxuryById, plotById, ENTERABLE_BUILDINGS, PRIVATE_BUILDINGS } from '../../shared/world.js';
+import { NEED_TICK_SECONDS, isWater, moodOf, placeById, EVENT_LIMITS, HANGOUT_PLACES, luxuryById, plotById, ENTERABLE_BUILDINGS, PRIVATE_BUILDINGS, buildingById } from '../../shared/world.js';
 import { db, getUser, saveFields, now, UPLOAD_DIR, getSettings } from './db.js';
 import { verifyToken } from './auth.js';
 import { registerInteractions } from './interact.js';
 import { api, settleTopup, applyTopupStatus } from './routes/api.js';
 import { verifyNtzsWebhook } from './payments/index.js';
 import { online, setIO, publicPlayer, broadcast, emitTo } from './presence.js';
-import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef, netWorth } from './game.js';
+import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef, netWorth, homeOf } from './game.js';
 import { settleElection, currentMayor } from './election.js';
 import { isBlocked } from './crime.js';
 import { attachVoice, leaveVoice } from './voice.js';
@@ -241,7 +241,10 @@ io.on('connection', (socket) => {
     if (!online.has(target.id)) return ack?.({ error: 'offline' });
     if (isBlocked(uid, target.id)) return ack?.({ error: 'blocked' });
     addInvite(uid, target.id);
-    emitTo(target.id, 'invite', { fromId: uid, from: p.username, fromName: p.name, appearance: p.appearance });
+    // The invite is to the home the host is in right now (Kwangu or one of their plot houses).
+    const h = homeOf(uid);
+    const b = h.building && buildingById[h.building];
+    emitTo(target.id, 'invite', { fromId: uid, from: p.username, fromName: p.name, appearance: p.appearance, home: h.key, house: b ? [b.name, b.nameEn, b.emoji] : null, area: h.plotId ? plotById[h.plotId]?.area : null });
     ack?.({ ok: true });
   });
   // "Let's go out": invite someone to meet at a place (club, beach, nyama choma…).
@@ -288,21 +291,29 @@ io.on('connection', (socket) => {
   socket.on('invite:reply', ({ fromId, accept } = {}) => {
     if (online.has(fromId)) emitTo(fromId, 'toast', { text: accept ? [`🏠 @${p.username} amekubali — anakuja!`, `🏠 @${p.username} accepted — on the way!`] : [`@${p.username} hawezi kuja sasa.`, `@${p.username} can't come right now.`] });
   });
+  // Each home (Kwangu or a plot house) has its own live room, so people only see who's in the same house.
+  const roomOf = (hostId, key) => `home:${hostId}:${key || 'main'}`;
   const leaveHome = () => {
     if (!p.home) return;
-    socket.to(`home:${p.home}`).emit('home:leave', { id: uid });
-    socket.leave(`home:${p.home}`);
+    socket.to(p.homeRoom).emit('home:leave', { id: uid });
+    socket.leave(p.homeRoom);
     p.home = null;
+    p.homeKey = null;
+    p.homeRoom = null;
   };
-  socket.on('home:enter', (hostId, ack) => {
+  socket.on('home:enter', (hostId, key, ack) => {
+    if (typeof key === 'function') { ack = key; key = 'main'; }
     hostId = Number(hostId) || uid;
+    key = typeof key === 'string' ? key.slice(0, 30) : 'main';
     if (!canVisit(uid, hostId)) return ack?.({ error: 'not_invited' });
     leaveHome();
     p.home = hostId;
+    p.homeKey = key;
+    p.homeRoom = roomOf(hostId, key);
     p.homePos = { x: 0, z: 3.5, ry: Math.PI, mode: 'idle' };
-    socket.join(`home:${hostId}`);
-    const others = [...online].filter(([id, o]) => id !== uid && o.home === hostId).map(([id, o]) => ({ id, username: o.username, name: o.name, appearance: o.appearance, ...o.homePos }));
-    socket.to(`home:${hostId}`).emit('home:join', { id: uid, username: p.username, name: p.name, appearance: p.appearance, ...p.homePos });
+    socket.join(p.homeRoom);
+    const others = [...online].filter(([id, o]) => id !== uid && o.homeRoom === p.homeRoom).map(([id, o]) => ({ id, username: o.username, name: o.name, appearance: o.appearance, ...o.homePos }));
+    socket.to(p.homeRoom).emit('home:join', { id: uid, username: p.username, name: p.name, appearance: p.appearance, ...p.homePos });
     if (p.inside !== 'home') {
       p.inside = 'home';
       broadcast('player:inside', { id: uid, inside: 'home' });
@@ -312,7 +323,7 @@ io.on('connection', (socket) => {
   socket.on('home:pos', (d = {}) => {
     if (!p.home || !Number.isFinite(d.x) || !Number.isFinite(d.z)) return;
     p.homePos = { x: d.x, z: d.z, y: Number(d.y) || 0, ry: Number(d.ry) || 0, mode: typeof d.mode === 'string' ? d.mode.slice(0, 10) : 'idle' };
-    socket.to(`home:${p.home}`).emit('home:pos', { id: uid, ...p.homePos });
+    socket.to(p.homeRoom).emit('home:pos', { id: uid, ...p.homePos });
   });
   socket.on('home:leave', leaveHome);
 
@@ -354,7 +365,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     if (p.sockets.size <= 1) { leaveVoice(uid); leaveWatch(uid); lift.leave(uid); }
-    if (p.home) socket.to(`home:${p.home}`).emit('home:leave', { id: uid });
+    if (p.home) socket.to(p.homeRoom).emit('home:leave', { id: uid });
     p.sockets.delete(socket.id);
     if (p.sockets.size) return;
     online.delete(uid);

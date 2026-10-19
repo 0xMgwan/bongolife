@@ -253,7 +253,8 @@ function LocationPill({ me, scene }) {
   if (atHome) {
     icon = '🏠';
     const hb = !visiting && me.homeKey && me.homeKey !== 'main' && buildingById[me.homeBuilding];
-    name = visiting ? L(`Kwa @${visiting.host.username}`, `@${visiting.host.username}'s place`) : hb ? loc(hb) : L('Kwangu', 'My place');
+    const vb = visiting?.building && buildingById[visiting.building];
+    name = visiting ? (vb ? L(`${vb.name} ya @${visiting.host.username}`, `@${visiting.host.username}'s ${vb.nameEn}`) : L(`Kwa @${visiting.host.username}`, `@${visiting.host.username}'s place`)) : hb ? loc(hb) : L('Kwangu', 'My place');
     placeId = null;
   } else {
     if (!placeId) {

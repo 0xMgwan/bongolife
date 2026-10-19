@@ -23,8 +23,10 @@ function InviteModal() {
     <div className="modal-wrap">
       <div className="modal card pop">
         <div className="big">{avatarEmoji(inv.appearance)}</div>
-        <h3>{L('Mwaliko! 🏠', 'Invitation! 🏠')}</h3>
-        <p className="muted">{L(`@${inv.from} anakualika nyumbani kwake.`, `@${inv.from} is inviting you over to their place.`)}</p>
+        <h3>{L('Mwaliko!', 'Invitation!')} {inv.house ? inv.house[2] : '🏠'}</h3>
+        <p className="muted">{inv.house
+          ? L(`@${inv.from} anakualika kwenye ${inv.house[0]} yake${inv.area ? ` ${inv.area}` : ''}.`, `@${inv.from} is inviting you to their ${inv.house[1]}${inv.area ? ` in ${inv.area}` : ''}.`)
+          : L(`@${inv.from} anakualika nyumbani kwake.`, `@${inv.from} is inviting you over to their place.`)}</p>
         <div className="row" style={{ gap: 8 }}>
           <button className="btn btn-ghost grow" onClick={() => answerInvite(false)}>{L('Sasa hivi siwezi', 'Not now')}</button>
           <button className="btn btn-green grow" onClick={() => answerInvite(true)}>✓ {L('Nakuja!', "I'm coming!")}</button>

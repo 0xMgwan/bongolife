@@ -305,7 +305,7 @@ export function connect() {
   socket.on('connect', () => {
     // Re-join the home room after a reconnect.
     const h = st().homeHost;
-    if (h) enterHome(h);
+    if (h) enterHome(h, st().homeRoomKey || 'main');
   });
   socket.on('online', (n) => useStore.setState({ online: n }));
   socket.on('world', (world) => useStore.setState({ world }));
@@ -348,10 +348,10 @@ export function connect() {
 export const getSocket = () => socket;
 
 /** Join a home's live room (yours or one you're invited to). */
-export function enterHome(hostId) {
+export function enterHome(hostId, key = 'main') {
   return new Promise((resolve) => {
     if (!socket?.connected) return resolve({ error: 'offline' });
-    socket.emit('home:enter', hostId, (r) => {
+    socket.emit('home:enter', hostId, key, (r) => {
       homeGuests.clear();
       for (const g of r?.others || []) homeGuests.set(g.id, g);
       bumpHome();

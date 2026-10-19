@@ -362,7 +362,13 @@ api.get('/visit/:username', (req, res) => {
   if (!host) throw new GameError(['Mtumiaji hayupo', 'User not found'], 404);
   if (!canVisit(req.user.id, host.id)) throw new GameError(['Hujaalikwa nyumbani kwa mtu huyu.', "You haven't been invited to this home."], 403, 'not_invited');
   const vehicles = db.prepare('SELECT id, model, color FROM vehicles WHERE user_id = ?').all(host.id);
-  res.json({ host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance, vehicles, homeLevel: host.homeLevel, homeStyle: host.homeStyle, homeFeatures: host.homeFeatures }, items: game.homeItems(host.id, 'main') });
+  // Which of their homes: the one in the invite, else wherever they are now. Falls back to Kwangu.
+  const h = game.homeOf(host.id, str(req.query.home, 30) || undefined);
+  res.json({
+    home: h.key, building: h.building || null,
+    host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance, vehicles, homeLevel: h.level, homeStyle: h.style, homeFeatures: h.features },
+    items: game.homeItems(host.id, h.key),
+  });
 });
 // ---- build mode: your yard of blocks
 const intOf = (v) => (Number.isInteger(v) ? v : Number.parseInt(v, 10));
