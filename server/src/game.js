@@ -3,7 +3,7 @@ import {
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST, industryById, COMPANY,
   furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
-  jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats, luxuryById, LUXURY_RESALE, HOME_LEVELS, homeBounds, HOME_WALLS, HOME_FLOORS, HOME_STYLE_PRICE, homeFeatureById, HOME_ACT_CD,
+  jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats, luxuryById, LUXURY_RESALE, HOME_LEVELS, homeBounds, HOME_WALLS, HOME_FLOORS, HOME_STYLE_PRICE, homeFeatureById, HOME_ACT_CD, PRIVATE_BUILDINGS,
 } from '../../shared/world.js';
 import * as hiring from './hiring.js';
 import * as health from './health.js';
@@ -120,6 +120,7 @@ export function playerState(userId) {
     mood: moodOf(u.needs),
     fitness: gymMod.fitnessOf(userId),
     guards: guardOf(userId),
+    ...activeHome(userId),
     npcPartner: npcLoveMod.npcPartner(userId),
     vehicles: q.vehicles.all(userId),
     plots: q.plotsOf.all(userId),
@@ -211,55 +212,124 @@ function setBusy(userId, busy) {
 }
 
 // ---------------------------------------------------------------- home
+// Every player has Kwangu ('main'). Houses they build on plots are full homes too, each with its
+// own size, add-ons, paint and furniture. `home_key` says which one they're in right now.
+if (!db.prepare('PRAGMA table_info(home_items)').all().some((c) => c.name === 'home')) db.exec("ALTER TABLE home_items ADD COLUMN home TEXT NOT NULL DEFAULT 'main'");
+db.exec(`CREATE TABLE IF NOT EXISTS plot_homes (
+  plot_id TEXT PRIMARY KEY, owner_id INTEGER NOT NULL, level INTEGER NOT NULL DEFAULT 0,
+  features TEXT, style TEXT, created_at INTEGER NOT NULL
+);`);
 const hq = {
-  items: db.prepare('SELECT id, item, x, z, rot FROM home_items WHERE user_id = ? ORDER BY id'),
+  items: db.prepare('SELECT id, item, x, z, rot FROM home_items WHERE user_id = ? AND home = ? ORDER BY id'),
   item: db.prepare('SELECT * FROM home_items WHERE id = ? AND user_id = ?'),
-  insert: db.prepare('INSERT INTO home_items (user_id, item, x, z, rot, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
+  insert: db.prepare('INSERT INTO home_items (user_id, item, x, z, rot, created_at, home) VALUES (?, ?, ?, ?, ?, ?, ?)'),
   move: db.prepare('UPDATE home_items SET x = ?, z = ?, rot = ? WHERE id = ?'),
   del: db.prepare('DELETE FROM home_items WHERE id = ?'),
-  count: db.prepare('SELECT COUNT(*) n FROM home_items WHERE user_id = ?'),
+  count: db.prepare('SELECT COUNT(*) n FROM home_items WHERE user_id = ? AND home = ?'),
+  plotHome: db.prepare('SELECT * FROM plot_homes WHERE plot_id = ?'),
+  newPlotHome: db.prepare('INSERT INTO plot_homes (plot_id, owner_id, level, features, style, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(plot_id) DO UPDATE SET owner_id = excluded.owner_id, level = excluded.level, features = excluded.features, style = excluded.style, created_at = excluded.created_at'),
+  savePlotHome: db.prepare('UPDATE plot_homes SET level = ?, features = ?, style = ? WHERE plot_id = ?'),
+  clearItems: db.prepare('DELETE FROM home_items WHERE home = ?'),
 };
+// A plot house starts the size and spec its building deserves, furnished.
+const PLOT_HOME_START = {
+  banda: { level: 1, features: [] },
+  kisasa: { level: 2, features: ['balcony'] },
+  kontena: { level: 2, features: ['storey', 'rooftop'] },
+  villa: { level: 3, features: ['pool', 'bbq', 'balcony'] },
+  kesho: { level: 3, features: ['storey', 'rooftop', 'cinema', 'jacuzzi'] },
+};
+const PLOT_STARTER = [['bed-double', -4, -3, 0], ['sofa-3', 1, 1.5, 2], ['tv-65', 1, -4.5, 0], ['rug', 1, -1.5, 0], ['fridge', 5.5, -4.5, 0], ['cooker', 4, -4.5, 0], ['table-dining', 4, 2, 0], ['lamp', -5.5, -4.5, 0], ['plant', -5.5, 4.5, 0], ['shower', -5, 2.5, 0], ['toilet', -3.5, 4.5, 0], ['art', -1.5, -4.5, 0]];
+/** The home this player is in: Kwangu, or a house of theirs on a plot. */
+export function homeOf(userId, key) {
+  const u = getUser(userId);
+  const want = key ?? u.homeKey ?? 'main';
+  if (want !== 'main') {
+    const row = db.prepare('SELECT * FROM plots WHERE id = ? AND owner_id = ?').get(want, userId);
+    if (row && PRIVATE_BUILDINGS.includes(row.building)) {
+      let h = hq.plotHome.get(want);
+      if (!h || h.owner_id !== userId) {
+        // New owner (or first visit): a fresh, furnished home.
+        const st = PLOT_HOME_START[row.building] || { level: 1, features: [] };
+        hq.clearItems.run(want);
+        hq.newPlotHome.run(want, userId, st.level, JSON.stringify(st.features || []), JSON.stringify({}), now());
+        const bounds = homeBounds(st.level, st.features || []);
+        const placed = [];
+        for (const [item, x, z, rot] of PLOT_STARTER) {
+          const def = furnitureById[item];
+          if (!def || !homeFits(def, x, z, rot, placed, bounds)) continue;
+          placed.push({ item, x, z, rot });
+          hq.insert.run(userId, item, x, z, rot, now(), want);
+        }
+        h = hq.plotHome.get(want);
+      }
+      const features = JSON.parse(h.features || '[]');
+      const style = JSON.parse(h.style || '{}');
+      return {
+        key: want, plotId: want, building: row.building, level: h.level, features, style,
+        save: (f) => hq.savePlotHome.run(f.level ?? h.level, JSON.stringify(f.features ?? features), JSON.stringify(f.style ?? style), want),
+      };
+    }
+  }
+  return {
+    key: 'main', level: u.homeLevel || 0, features: u.homeFeatures || [], style: u.homeStyle || {},
+    save: (f) => saveFields(userId, { ...(f.level != null ? { homeLevel: f.level } : {}), ...(f.features ? { homeFeatures: f.features } : {}), ...(f.style ? { homeStyle: f.style } : {}) }),
+  };
+}
+/** What the client shows at home: the active home's size, add-ons and paint. */
+function activeHome(userId) {
+  const h = homeOf(userId);
+  return { homeKey: h.key, homeLevel: h.level, homeFeatures: h.features, homeStyle: h.style, homeBuilding: h.building || null };
+}
+/** Step into Kwangu ('main') or one of your plot houses. */
+export function switchHome(userId, key) {
+  const h = homeOf(userId, key || 'main');
+  if (key && key !== 'main' && h.key === 'main') throw new GameError(['Hii si nyumba yako.', "That isn't your house."], 403);
+  saveFields(userId, { homeKey: h.key });
+  return h.key;
+}
 const snap = (v) => Math.round(Number(v) * 2) / 2;
 const turn = (r) => ((Math.trunc(Number(r) || 0) % 4) + 4) % 4;
 
 /** A player's furniture; new homes get the starter set once. */
-export const homeItems = db.transaction((userId) => {
+export const homeItems = db.transaction((userId, key) => {
   if (!getUser(userId).homeSeeded) {
-    for (const s of STARTER_HOME) hq.insert.run(userId, s.item, s.x, s.z, s.rot, now());
+    for (const s of STARTER_HOME) hq.insert.run(userId, s.item, s.x, s.z, s.rot, now(), 'main');
     saveFields(userId, { homeSeeded: 1 });
   }
-  return hq.items.all(userId);
+  return hq.items.all(userId, homeOf(userId, key).key);
 });
 
 export const buyFurniture = db.transaction((userId, { item, x, z, rot }) => {
   const def = furnitureById[item];
   if (!def) throw new GameError(['Kitu hicho hakipo.', 'That item does not exist.'], 404);
   x = snap(x); z = snap(z); rot = turn(rot);
-  if (!homeFits(def, x, z, rot, hq.items.all(userId), homeBounds(getUser(userId).homeLevel, getUser(userId).homeFeatures))) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
-  if (hq.count.get(userId).n >= 80) throw new GameError(['Nyumba imejaa vitu.', 'Your home is full.']);
+  const h = homeOf(userId);
+  if (!homeFits(def, x, z, rot, hq.items.all(userId, h.key), homeBounds(h.level, h.features))) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
+  if (hq.count.get(userId, h.key).n >= 80) throw new GameError(['Nyumba imejaa vitu.', 'Your home is full.']);
   if (def.price) addMoney(userId, -discount(getUser(userId), def.price), 'purchase', `Fanicha: ${def.name}`);
-  hq.insert.run(userId, item, x, z, rot, now());
+  hq.insert.run(userId, item, x, z, rot, now(), h.key);
 });
 
 /** Move up to a bigger home (Studio → Apartment → Family house → Mansion). */
 export const upgradeHome = db.transaction((userId, level) => {
-  const u = getUser(userId);
+  const h = homeOf(userId);
   const next = HOME_LEVELS[Number(level)];
-  if (!next || next.level !== (u.homeLevel || 0) + 1) throw new GameError(['Panda ngazi moja kwa wakati.', 'Upgrade one level at a time.']);
+  if (!next || next.level !== (h.level || 0) + 1) throw new GameError(['Panda ngazi moja kwa wakati.', 'Upgrade one level at a time.']);
   addMoney(userId, -next.price, 'purchase', `${next.emoji} Kwangu: ${next.name}`);
-  saveFields(userId, { homeLevel: next.level });
+  h.save({ level: next.level });
   return next;
 });
 /** Build an add-on at home (pool, balcony, second storey…). */
 export const buildHomeFeature = db.transaction((userId, id) => {
-  const u = getUser(userId);
+  const h = homeOf(userId);
   const f = homeFeatureById[id];
   if (!f) throw new GameError(['Haipo', 'Not found'], 404);
-  const have = u.homeFeatures || [];
+  const have = h.features || [];
   if (have.includes(id)) throw new GameError(['Tayari umejenga hii.', 'Already built.']);
   if (f.requires && !have.includes(f.requires)) throw new GameError(['Jenga ghorofa ya pili kwanza.', 'Build the second storey first.']);
   addMoney(userId, -f.price, 'purchase', `${f.emoji} Kwangu: ${f.name}`);
-  saveFields(userId, { homeFeatures: [...have, id] });
+  h.save({ features: [...have, id] });
   return f;
 });
 const homeActLast = new Map();
@@ -267,16 +337,16 @@ const homeActLast = new Map();
 export function useHomeFeature(userId, featureId, actId) {
   const p = online.get(userId);
   const hostId = p?.home || userId;
-  const host = getUser(hostId);
+  const host = hostId === userId ? homeOf(userId) : homeOf(hostId, 'main');
   const f = homeFeatureById[featureId];
   const act = f?.acts.find((a) => a.id === actId);
-  if (!f || !act || !(host.homeFeatures || []).includes(featureId)) throw new GameError(['Haipo', 'Not found'], 404);
+  if (!f || !act || !(host.features || []).includes(featureId)) throw new GameError(['Haipo', 'Not found'], 404);
   const key = `${userId}:${featureId}:${actId}`;
   const wait = (homeActLast.get(key) || 0) + (act.cd || HOME_ACT_CD) - now();
   if (wait > 0) throw new GameError([`Subiri dakika ${Math.ceil(wait / 60_000)}.`, `Wait ${Math.ceil(wait / 60_000)} min.`], 429);
   homeActLast.set(key, now());
   const u = getUser(userId);
-  const comfort = 1 + (HOME_LEVELS[host.homeLevel || 0]?.comfort || 0);
+  const comfort = 1 + (HOME_LEVELS[host.level || 0]?.comfort || 0);
   const eff = Object.fromEntries(Object.entries(act.effects).map(([k, v]) => [k, v > 0 ? Math.round(v * comfort) : v]));
   const fields = { needs: applyNeeds(u.needs, eff) };
   if (act.health) fields.health = Math.min(100, (u.health ?? 100) + act.health);
@@ -286,8 +356,8 @@ export function useHomeFeature(userId, featureId, actId) {
 
 /** Repaint the walls / lay a new floor. */
 export const styleHome = db.transaction((userId, { wall, floor }) => {
-  const u = getUser(userId);
-  const style = { ...(u.homeStyle || {}) };
+  const h = homeOf(userId);
+  const style = { ...(h.style || {}) };
   let cost = 0;
   if (wall && wall !== style.wall) {
     if (!HOME_WALLS.includes(wall)) throw new GameError(['Rangi haipo', 'Unknown colour']);
@@ -300,7 +370,7 @@ export const styleHome = db.transaction((userId, { wall, floor }) => {
     cost += HOME_STYLE_PRICE.floor;
   }
   if (cost) addMoney(userId, -cost, 'purchase', '🎨 Kwangu: rangi/sakafu');
-  saveFields(userId, { homeStyle: style });
+  h.save({ style });
   return style;
 });
 
@@ -308,8 +378,9 @@ export const moveFurniture = db.transaction((userId, id, { x, z, rot }) => {
   const row = hq.item.get(id, userId);
   if (!row) throw new GameError(['Kitu hicho si chako.', "That's not your item."], 404);
   x = snap(x); z = snap(z); rot = turn(rot);
-  const others = hq.items.all(userId).filter((o) => o.id !== row.id);
-  if (!homeFits(furnitureById[row.item], x, z, rot, others, homeBounds(getUser(userId).homeLevel, getUser(userId).homeFeatures))) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
+  const h = homeOf(userId);
+  const others = hq.items.all(userId, h.key).filter((o) => o.id !== row.id);
+  if (!homeFits(furnitureById[row.item], x, z, rot, others, homeBounds(h.level, h.features))) throw new GameError(['Hakuna nafasi hapo. Sogeza kwingine.', "It doesn't fit there. Try another spot."]);
   hq.move.run(x, z, rot, row.id);
 });
 
@@ -424,7 +495,7 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
   if (busy.kind === 'home') {
     const def = furnitureById[busy.item];
     // A bigger, nicer home makes resting there count for more.
-    const comfort = 1 + (HOME_LEVELS[user.homeLevel || 0]?.comfort || 0);
+    const comfort = 1 + (HOME_LEVELS[homeOf(userId).level || 0]?.comfort || 0);
     const eff = Object.fromEntries(Object.entries(def?.use?.effects || {}).map(([k, v]) => [k, v > 0 ? Math.round(v * comfort) : v]));
     fields.needs = applyNeeds(user.needs, eff);
     if (def?.use?.fame) {

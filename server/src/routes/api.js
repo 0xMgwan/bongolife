@@ -351,13 +351,18 @@ api.post('/act/cancel', (req, res) => {
 });
 // ---- Kwangu (player apartment)
 api.get('/home', (req, res) => res.json({ items: game.homeItems(req.user.id) }));
+// Switch between Kwangu ('main') and a house you own on a plot.
+api.post('/home/switch', (req, res) => {
+  const key = game.switchHome(req.user.id, str(req.body.home, 30) || 'main');
+  res.json({ home: key, items: game.homeItems(req.user.id), me: game.playerState(req.user.id) });
+});
 // Visit someone else's home (invite or RSVP to their house party required).
 api.get('/visit/:username', (req, res) => {
   const host = getUserByUsername(req.params.username);
   if (!host) throw new GameError(['Mtumiaji hayupo', 'User not found'], 404);
   if (!canVisit(req.user.id, host.id)) throw new GameError(['Hujaalikwa nyumbani kwa mtu huyu.', "You haven't been invited to this home."], 403, 'not_invited');
   const vehicles = db.prepare('SELECT id, model, color FROM vehicles WHERE user_id = ?').all(host.id);
-  res.json({ host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance, vehicles, homeLevel: host.homeLevel, homeStyle: host.homeStyle, homeFeatures: host.homeFeatures }, items: game.homeItems(host.id) });
+  res.json({ host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance, vehicles, homeLevel: host.homeLevel, homeStyle: host.homeStyle, homeFeatures: host.homeFeatures }, items: game.homeItems(host.id, 'main') });
 });
 // ---- build mode: your yard of blocks
 const intOf = (v) => (Number.isInteger(v) ? v : Number.parseInt(v, 10));

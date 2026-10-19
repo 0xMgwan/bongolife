@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ambitionById, NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH, TRAVEL, flightPhase, findActivity, PLACES, DISTRICTS, CITIES, CITY_ARRIVAL } from '@shared/world.js';
+import { ambitionById, NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH, TRAVEL, flightPhase, findActivity, PLACES, DISTRICTS, CITIES, CITY_ARRIVAL, buildingById } from '@shared/world.js';
 import { L, loc, pick, isEn } from '../i18n.js';
 import { useStore } from '../store.js';
 import { input, sendChat, sendEmote, setInside, remotes, local, view, jump } from '../net.js';
@@ -252,7 +252,8 @@ function LocationPill({ me, scene }) {
   let placeId = [scene?.placeId, inside, me.busy?.placeId].find((id) => id && placeById[id]) || null;
   if (atHome) {
     icon = '🏠';
-    name = visiting ? L(`Kwa @${visiting.host.username}`, `@${visiting.host.username}'s place`) : L('Kwangu', 'My place');
+    const hb = !visiting && me.homeKey && me.homeKey !== 'main' && buildingById[me.homeBuilding];
+    name = visiting ? L(`Kwa @${visiting.host.username}`, `@${visiting.host.username}'s place`) : hb ? loc(hb) : L('Kwangu', 'My place');
     placeId = null;
   } else {
     if (!placeId) {

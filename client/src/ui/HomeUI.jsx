@@ -27,6 +27,14 @@ async function refreshHome(r) {
   if (r?.me) useStore.setState({ me: r.me });
 }
 
+/** Go into Kwangu ('main') or one of your houses on a plot — each is its own home to furnish. */
+export async function switchHome(key = 'main') {
+  const st = useStore.getState();
+  const r = await st.run('/home/switch', { method: 'POST', body: { home: key } });
+  if (!r) return;
+  useStore.setState({ me: r.me, homeItems: r.items, tab: 'home', visiting: null, sheet: null, phone: null, homePick: false, placing: null, cityView: 'follow' });
+}
+
 export async function loadHome() {
   try {
     const r = await api('/home');

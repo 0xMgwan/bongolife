@@ -1,4 +1,5 @@
 import { NewsClip } from './apps/Habari.jsx';
+import { switchHome } from './HomeUI.jsx';
 import { useEffect, useRef, useState } from 'react';
 import {
   adPriceTzs, NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
@@ -260,7 +261,7 @@ function PlotSheet({ id, onClose }) {
         </div>
       )}
       {current && ENTERABLE_BUILDINGS.includes(current.id) && (mine || !PRIVATE_BUILDINGS.includes(current.id)) && (
-        <button className="btn btn-dark btn-block" style={{ marginBottom: 10 }} onClick={() => { enterBlock(id); onClose(); }}>🚪 {mine && PRIVATE_BUILDINGS.includes(current.id) ? L('Ingia nyumbani kwako', 'Go into your house') : L(`Ingia ndani: ${loc(current)}`, `Go inside: ${loc(current)}`)}</button>
+        <button className="btn btn-dark btn-block" style={{ marginBottom: 10 }} onClick={() => { if (mine && PRIVATE_BUILDINGS.includes(current.id)) switchHome(id); else enterBlock(id); onClose(); }}>🚪 {mine && PRIVATE_BUILDINGS.includes(current.id) ? L('Ingia nyumbani kwako', 'Go into your house') : L(`Ingia ndani: ${loc(current)}`, `Go inside: ${loc(current)}`)}</button>
       )}
       {st && !mine && (
         <div className="box">

@@ -1,13 +1,23 @@
 // The 🏠 button: if you own buildings on plots, pick where to go — your Kwangu apartment or any
 // house, tower, farm, factory or resort you've built. Otherwise it goes straight to Kwangu.
-import { plotById, buildingById, ENTERABLE_BUILDINGS, HOME_LEVELS, fmtShort } from '@shared/world.js';
+import { plotById, buildingById, ENTERABLE_BUILDINGS, PRIVATE_BUILDINGS, HOME_LEVELS, fmtShort } from '@shared/world.js';
+import { switchHome } from './HomeUI.jsx';
 import { useStore } from '../store.js';
 import { enterBlock } from '../net.js';
 import { L, loc } from '../i18n.js';
 import { sfx } from '../audio.js';
 
 const built = (me) => (me?.plots || []).filter((p) => p.building && ENTERABLE_BUILDINGS.includes(p.building));
-const goKwangu = () => useStore.setState({ tab: 'home', visiting: null, sheet: null, cityView: 'follow', homePick: false });
+const goKwangu = () => {
+  if ((useStore.getState().me?.homeKey || 'main') !== 'main') return switchHome('main');
+  useStore.setState({ tab: 'home', visiting: null, sheet: null, cityView: 'follow', homePick: false });
+};
+/** Your houses open as full homes (furnish, decorate); towers, farms & factories as walk-in sites. */
+export function enterProperty(plotId, buildingId) {
+  if (PRIVATE_BUILDINGS.includes(buildingId)) return switchHome(plotId);
+  useStore.setState({ homePick: false, tab: 'town', visiting: null });
+  enterBlock(plotId);
+}
 
 export function goHome() {
   sfx('open');
@@ -36,9 +46,9 @@ export function HomePicker() {
             const b = buildingById[p.building];
             const plot = plotById[p.id];
             return (
-              <button key={p.id} className="hp-card" style={{ '--hp': b.color }} onClick={() => { useStore.setState({ homePick: false, tab: 'town', visiting: null }); enterBlock(p.id); }}>
+              <button key={p.id} className="hp-card" style={{ '--hp': b.color }} onClick={() => enterProperty(p.id, p.building)}>
                 <span className="hp-em">{b.emoji || '🏠'}</span>
-                <span className="grow"><b>{loc(b)}</b><small>📍 {loc(plot)}{b.incomePerHour ? ` · +${fmtShort(b.incomePerHour)}/${L('saa', 'hr')}` : ''}</small></span>
+                <span className="grow"><b>{loc(b)}{PRIVATE_BUILDINGS.includes(p.building) ? ' 🛋️' : ''}</b><small>📍 {loc(plot)}{b.incomePerHour ? ` · +${fmtShort(b.incomePerHour)}/${L('saa', 'hr')}` : ''}</small></span>
                 <span className="hp-go">🚪</span>
               </button>
             );

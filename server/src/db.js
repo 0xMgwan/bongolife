@@ -169,6 +169,7 @@ addColumn('users', 'home_level', 'INTEGER NOT NULL DEFAULT 0');
 addColumn('users', 'home_style', 'TEXT');
 addColumn('users', 'gender', 'TEXT');
 addColumn('users', 'home_features', 'TEXT');
+addColumn('users', 'home_key', 'TEXT');
 db.exec(`
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS yard_blocks (
@@ -392,6 +393,7 @@ export function rowToUser(r) {
     gender: r.gender || null,
     homeFeatures: parse(r.home_features, []),
     homeStyle: parse(r.home_style, {}),
+    homeKey: r.home_key || 'main',
     stats: parse(r.stats, {}),
     story: parse(r.story, null),
   };
@@ -432,7 +434,7 @@ export function addMoney(userId, delta, kind, memo) {
 export function saveFields(userId, fields) {
   const cols = Object.keys(fields);
   if (!cols.length) return;
-  const map = { jobXp: 'job_xp', activeVehicle: 'active_vehicle', lastSeen: 'last_seen', homeSeeded: 'home_seeded', carSeeded: 'car_seeded', injuredAt: 'injured_at', homeLevel: 'home_level', homeStyle: 'home_style', homeFeatures: 'home_features' };
+  const map = { jobXp: 'job_xp', activeVehicle: 'active_vehicle', lastSeen: 'last_seen', homeSeeded: 'home_seeded', carSeeded: 'car_seeded', injuredAt: 'injured_at', homeLevel: 'home_level', homeStyle: 'home_style', homeFeatures: 'home_features', homeKey: 'home_key' };
   const sql = `UPDATE users SET ${cols.map((c) => `${map[c] || c} = @${c}`).join(', ')} WHERE id = @id`;
   const params = { id: userId };
   for (const c of cols) {
