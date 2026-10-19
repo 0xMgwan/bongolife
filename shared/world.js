@@ -1072,7 +1072,16 @@ const PRIVATE_PLACES = [
 for (const p of PRIVATE_PLACES) placeById[p.id] = p;
 export const isPrivatePlace = (id) => id === 'yacht' || id === 'jet' || id === 'block';
 // Plot buildings you can walk inside, floor by floor.
-export const ENTERABLE_BUILDINGS = ['ghorofa', 'hostel', 'hoteli', 'wazee'];
+// Every building on a plot can be entered. Homes are private (owner only); the rest are open to
+// anyone standing at the gate. `interiorOf` picks the inside: a cut-away tower/house, or an open site.
+export const ENTERABLE_BUILDINGS = ['banda', 'kisasa', 'ghorofa', 'villa', 'hoteli', 'shamba', 'kontena', 'hostel', 'resort', 'ghala', 'kiwanda-chakula', 'kiwanda-nguo', 'sola', 'kiwanda-saruji', 'wazee', 'kesho'];
+export const PRIVATE_BUILDINGS = ['banda', 'kisasa', 'villa', 'kontena', 'kesho'];
+export function interiorOf(buildingId) {
+  const b = buildingById[buildingId];
+  if (!b) return null;
+  if (b.kind === 'farm' || b.kind === 'factory' || b.kind === 'solar' || b.kind === 'resort') return 'site';
+  return 'tower';
+}
 export const jobById = Object.fromEntries(PLACES.flatMap((p) => (p.jobs || []).map((j) => [j.id, j])));
 
 /** What's still missing before a player can take this job: [[icon, sw, en], …]. Vehicles are checked separately. */

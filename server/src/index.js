@@ -5,7 +5,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { Server } from 'socket.io';
 import { bumpStats } from './story.js';
-import { NEED_TICK_SECONDS, isWater, moodOf, placeById, EVENT_LIMITS, HANGOUT_PLACES, luxuryById, plotById, ENTERABLE_BUILDINGS } from '../../shared/world.js';
+import { NEED_TICK_SECONDS, isWater, moodOf, placeById, EVENT_LIMITS, HANGOUT_PLACES, luxuryById, plotById, ENTERABLE_BUILDINGS, PRIVATE_BUILDINGS } from '../../shared/world.js';
 import { db, getUser, saveFields, now, UPLOAD_DIR, getSettings } from './db.js';
 import { verifyToken } from './auth.js';
 import { registerInteractions } from './interact.js';
@@ -205,6 +205,8 @@ io.on('connection', (socket) => {
       const row = plot && db.prepare('SELECT owner_id, building FROM plots WHERE id = ?').get(plot.id);
       if (!row || !ENTERABLE_BUILDINGS.includes(row.building)) return socket.emit('inside:denied', placeId);
       if (row.owner_id !== uid && Math.hypot(p.x - plot.pos[0], p.z - plot.pos[1]) > plot.size / 2 + 16) return socket.emit('inside:denied', placeId);
+      // Homes are private: only the owner (or someone they've invited home) walks in.
+      if (row.owner_id !== uid && PRIVATE_BUILDINGS.includes(row.building) && !canVisit(uid, row.owner_id)) return socket.emit('inside:denied', placeId);
       inside = 'block';
       host = `blk-${plot.id}`;
     }

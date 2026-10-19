@@ -33,6 +33,7 @@ import { ShowroomPanel } from './ShowroomPanel.jsx';
 import { startBuild } from './BuildBar.jsx';
 import { MentionText, MentionSuggest } from './Mentions.jsx';
 import { StreetHUD } from './StreetHUD.jsx';
+import { HomePicker, goHome } from './HomePicker.jsx';
 import { NewsTicker } from './apps/Habari.jsx';
 import { ditchCar } from '../street.js';
 
@@ -228,7 +229,7 @@ function Dock({ me, scene }) {
       me={me}
       placeId={placeId}
       onMap={() => { sfx('click'); useStore.setState({ tab: 'town', cityView: 'map', visiting: null, sheet: null, mapFilter: null }); }}
-      onHome={() => { sfx('open'); useStore.setState({ tab: 'home', visiting: null, sheet: null, cityView: 'follow' }); }}
+      onHome={goHome}
     />
   );
 }
@@ -287,7 +288,7 @@ function LocationPill({ me, scene }) {
       {atHome ? (
         <button className="lp-btn" aria-label={L('Toka nje', 'Go out')} onClick={() => { sfx('close'); if (visiting) leaveVisit(); else useStore.setState({ tab: 'town', cityView: 'follow' }); }}>🚪</button>
       ) : (
-        <button className="lp-btn" aria-label={L('Nenda nyumbani', 'Go home')} onClick={() => { sfx('open'); useStore.setState({ tab: 'home', visiting: null, sheet: null, cityView: 'follow' }); }}>🏠</button>
+        <button className="lp-btn" aria-label={L('Nenda nyumbani', 'Go home')} onClick={goHome}>🏠</button>
       )}
     </div>
   );
@@ -919,6 +920,7 @@ export function HUD() {
       <WatchInvite />
       <LuxInvite />
       <StreetHUD />
+      <HomePicker />
       <NewsTicker />
       <LiftAsk />
       <LiftBar />

@@ -1,4 +1,5 @@
-import { GAME, fmtTsh, vehicleById, plotById, placeById, buildingById } from '@shared/world.js';
+import { GAME, fmtTsh, vehicleById, plotById, placeById, buildingById, ENTERABLE_BUILDINGS } from '@shared/world.js';
+import { enterBlock } from '../../net.js';
 import { useStore } from '../../store.js';
 import { walkTo, goToPlace } from '../../nav.js';
 import { AppHead } from '../Phone.jsx';
@@ -41,10 +42,11 @@ export function Mali({ back, close }) {
           const plot = plotById[p.id];
           const b = p.building && buildingById[p.building];
           return (
-            <div key={p.id} className="item" style={{ background: '#fff' }}>
-              <span className="em">{b ? '🏠' : '🏞️'}</span>
-              <div className="grow"><div className="t">{loc(plot)}</div><div className="s">{b ? loc(b) : L('Hakijajengwa', 'Not built')}{b?.incomePerHour ? ` · ${fmtTsh(b.incomePerHour)}/${L('saa', 'hr')}` : ''}</div></div>
-              <button className="btn btn-ghost btn-sm" onClick={() => go(() => walkTo([plot.pos[0], plot.pos[1] + plot.size / 2 + 1.5], () => useStore.setState({ sheet: { type: 'plot', id: p.id } }), loc(plot)))}>{L('Nenda', 'Go')}</button>
+            <div key={p.id} className={`item asset-card ${b ? 'built' : ''}`} style={{ '--ac': b?.color || '#a3e635' }}>
+              <span className="em">{b ? b.emoji || '🏠' : '🏞️'}</span>
+              <div className="grow"><div className="t">{b ? loc(b) : loc(plot)}</div><div className="s">{b ? `📍 ${loc(plot)}` : L('Hakijajengwa', 'Not built')}{b?.incomePerHour ? ` · ${fmtTsh(b.incomePerHour)}/${L('saa', 'hr')}` : ''}</div></div>
+              {b && ENTERABLE_BUILDINGS.includes(b.id) && <button className="btn btn-green btn-sm" onClick={() => enterBlock(p.id)}>🚪 {L('Ingia', 'Go in')}</button>}
+              <button className="btn btn-ghost btn-sm" onClick={() => go(() => walkTo([plot.pos[0], plot.pos[1] + plot.size / 2 + 1.5], () => useStore.setState({ sheet: { type: 'plot', id: p.id } }), loc(plot)))} aria-label={L('Nenda', 'Go')}>{b ? '🧭' : L('Nenda', 'Go')}</button>
             </div>
           );
         })}

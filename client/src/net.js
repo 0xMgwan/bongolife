@@ -418,7 +418,7 @@ export const wherePickup = (id) => liftEmit('lift:where', { id });
 
 /** Walk into the apartment block / hostel / hotel on a plot. */
 export function enterBlock(plotId) {
-  useStore.setState({ inside: 'block', insideHost: `blk-${plotId}`, block: { plotId }, phone: null, sheet: null, cityView: 'follow' });
+  useStore.setState({ tab: 'town', visiting: null, inside: 'block', insideHost: `blk-${plotId}`, block: { plotId }, phone: null, sheet: null, cityView: 'follow' });
   local.target = null;
   socket?.emit('inside', `block:${plotId}`);
 }

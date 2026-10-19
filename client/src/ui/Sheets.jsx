@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   adPriceTzs, NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
   outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
-  jobLocks, HOUSE_UPGRADES, houseStats, liftSeats, ENTERABLE_BUILDINGS,
+  jobLocks, HOUSE_UPGRADES, houseStats, liftSeats, ENTERABLE_BUILDINGS, PRIVATE_BUILDINGS,
 } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
@@ -259,8 +259,8 @@ function PlotSheet({ id, onClose }) {
           </button>
         </div>
       )}
-      {current && ENTERABLE_BUILDINGS.includes(current.id) && (
-        <button className="btn btn-dark btn-block" style={{ marginBottom: 10 }} onClick={() => { enterBlock(id); onClose(); }}>🚪 {L('Ingia ndani ya jengo', 'Go inside the building')}</button>
+      {current && ENTERABLE_BUILDINGS.includes(current.id) && (mine || !PRIVATE_BUILDINGS.includes(current.id)) && (
+        <button className="btn btn-dark btn-block" style={{ marginBottom: 10 }} onClick={() => { enterBlock(id); onClose(); }}>🚪 {mine && PRIVATE_BUILDINGS.includes(current.id) ? L('Ingia nyumbani kwako', 'Go into your house') : L(`Ingia ndani: ${loc(current)}`, `Go inside: ${loc(current)}`)}</button>
       )}
       {st && !mine && (
         <div className="box">
