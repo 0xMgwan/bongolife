@@ -76,7 +76,8 @@ export function streetFrame(dt) {
     else chase.nearMs = Math.max(0, chase.nearMs - dt * 2000);
     if (closest > STREET.loseRange) chase.clearMs += dt * 1000;
     else chase.clearMs = 0;
-    if (chase.nearMs > STREET.bustHoldMs && !chase.busy) {
+    // Bodyguards hold the cops off for a bit longer.
+    if (chase.nearMs > STREET.bustHoldMs * (1 + (s.me?.guards?.copDelay || 0)) && !chase.busy) {
       chase.busy = true;
       api('/street/busted', { method: 'POST' }).then((r) => {
         if (r.me) useStore.setState({ me: r.me });

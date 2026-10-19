@@ -12,7 +12,7 @@ import { registerInteractions } from './interact.js';
 import { api, settleTopup, applyTopupStatus } from './routes/api.js';
 import { verifyNtzsWebhook } from './payments/index.js';
 import { online, setIO, publicPlayer, broadcast, emitTo } from './presence.js';
-import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef } from './game.js';
+import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef, netWorth } from './game.js';
 import { settleElection, currentMayor } from './election.js';
 import { isBlocked } from './crime.js';
 import { attachVoice, leaveVoice } from './voice.js';
@@ -23,6 +23,8 @@ import * as chat from './chat.js';
 import * as luxury from './luxury.js';
 import * as afya from './health.js';
 import * as lift from './lift.js';
+import { guardOf, expireTick as guardsTick } from './guards.js';
+import { startNews, story as newsStory } from './news.js';
 
 const PORT = Number(process.env.PORT) || 8787;
 const app = express();
@@ -112,7 +114,7 @@ io.on('connection', (socket) => {
     p = {
       sockets: new Set(), x: user.x, z: user.z, ry: 0, m: 0, name: user.name, username: user.username, appearance: user.appearance,
       vehicle: vehicleSummary(user.activeVehicle), busy: user.busy && user.busy.endsAt > now() ? { kind: user.busy.kind, id: user.busy.id, placeId: user.busy.placeId, emoji: user.busy.emoji, endsAt: user.busy.endsAt } : null,
-      inside: null,
+      inside: null, guards: guardOf(uid)?.men || 0,
       lastChat: 0, chatCount: 0,
     };
     online.set(uid, p);
@@ -392,6 +394,7 @@ const checkElection = () => {
   try {
     const won = settleElection();
     if (won) {
+      newsStory.mayor({ id: won.id, username: won.username }, won.votes);
       broadcast('toast', { text: [`🏛️ @${won.username} ndiye Mkuu wa Mkoa mpya wa Dar! (kura ${won.votes})`, `🏛️ @${won.username} is Dar's new Mayor! (${won.votes} votes)`] });
       broadcast('world', worldState());
     }
@@ -399,6 +402,9 @@ const checkElection = () => {
 };
 checkElection();
 setInterval(checkElection, 60_000);
+// Press: milestones, rich list, rivalries. Guards whose contract ran out go home.
+startNews({ netWorth: (id) => netWorth(id) });
+setInterval(() => { try { guardsTick(); } catch (e) { console.error('[guards]', e.message); } }, 60_000);
 // Economy: stock market ticks; property of long-idle owners is bought back by the bank.
 import('./stocks.js').then((m) => m.startMarket());
 import('./street.js').then((m) => setInterval(() => { try { m.decayTick(); } catch (e) { console.error('[street]', e.message); } }, 3000));

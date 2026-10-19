@@ -6,7 +6,7 @@ import path from 'node:path';
 import {
   GAME, HAIRSTYLES, SKIN_TONES, HAIR_COLORS, OUTFITS, TRAITS, SPAWNS, BILLBOARDS, AD_MAX_DAYS,
   billboardById, outfitById, ADS_PER_BOARD, adPriceTzs, adTzsPerDay, CRIME, plotById, togetherById, REFERRAL, ELECTION, EVENT_LIMITS, EVENT_PLACES, placeById,
-  VIBES, VIBE_DAILY,
+  VIBES, VIBE_DAILY, vehicleById, buildingById, luxuryById,
 } from '../../../shared/world.js';
 import { db, getUser, getUserByUsername, createUser, saveFields, addMoney, GameError, now, UPLOAD_DIR, getSettings } from '../db.js';
 import { hashPassword, checkPassword, signToken, requireAuth, requireAdmin, rateLimit, USERNAME_RE, normalizePhone } from '../auth.js';
@@ -40,6 +40,8 @@ import * as court from '../court.js';
 import * as hustle from '../hustle.js';
 import * as stocks from '../stocks.js';
 import * as street from '../street.js';
+import * as news from '../news.js';
+import * as guards from '../guards.js';
 
 export const api = express.Router();
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -192,7 +194,7 @@ api.use((req, _res, next) => {
 // Push notifications: save / remove this device, or send a test.
 // Spoken welcome in a natural Tanzanian voice (Azure). 404 = not configured → the app uses the device voice.
 api.get('/voice/welcome', rateLimit('voice-welcome', 10, 60 * 60_000), wrap(async (req, res) => {
-  if (!live.voiceReady()) return res.status(404).json({ error: 'voice off' });
+  if (!live.voiceReady() || process.env.VOICE_ENABLED !== '1') return res.status(404).json({ error: 'voice off' });
   const lang = req.query.lang === 'en' ? 'en' : 'sw';
   const city = ['dar', 'znz', 'aru', 'pwa'].includes(req.query.city) ? req.query.city : 'dar';
   const w = await live.weather(city);
@@ -423,7 +425,10 @@ api.post('/travel', (req, res) => {
 
 // ----------------------------------------------------------- shops
 api.post('/shop/vehicle', (req, res) => {
-  game.buyVehicle(req.user.id, str(req.body.model, 20), str(req.body.color, 10));
+  const model = str(req.body.model, 20);
+  game.buyVehicle(req.user.id, model, str(req.body.color, 10));
+  const v = vehicleById[model];
+  if (v?.price >= 80_000_000) news.story.luxury(req.user, v.nameEn || v.name, v.price);
   const me = game.playerState(req.user.id);
   game.useVehicle(req.user.id, me.activeVehicle);
   res.json({ me });
@@ -441,11 +446,16 @@ api.post('/shop/outfit', (req, res) => {
 const worldChanged = () => broadcast('world', game.worldState());
 api.post('/plots/:id/buy', (req, res) => {
   game.buyPlot(req.user.id, req.params.id);
+  const plot = plotById[req.params.id];
+  if (plot) news.story.land(req.user, plot.name, plot.price);
   worldChanged();
   res.json({ me: game.playerState(req.user.id) });
 });
 api.post('/plots/:id/build', (req, res) => {
-  game.buildOnPlot(req.user.id, req.params.id, str(req.body.building, 20));
+  const bid = str(req.body.building, 20);
+  game.buildOnPlot(req.user.id, req.params.id, bid);
+  const b = buildingById[bid];
+  if (b && b.price >= 20_000_000) news.story.build(req.user, (b.nameEn || b.name).toLowerCase(), plotById[req.params.id]?.area || 'Dar');
   worldChanged();
   res.json({ me: game.playerState(req.user.id) });
 });
@@ -456,29 +466,65 @@ api.post('/plots/:id/upgrade', (req, res) => {
 });
 api.post('/business/:id/buy', (req, res) => {
   game.buyBusiness(req.user.id, req.params.id);
+  const pl = placeById[req.params.id];
+  if (pl?.business) news.story.business(req.user, pl.business.label || pl.name, pl.business.price);
   worldChanged();
   res.json({ me: game.playerState(req.user.id) });
 });
 // Mishe (hustles): unlimited small businesses.
 api.get('/hustles', (req, res) => res.json(hustle.view(req.user.id)));
-api.post('/hustles/buy', (req, res) => res.json({ ...hustle.buy(req.user.id, str(req.body.kind, 16)), me: game.playerState(req.user.id) }));
+api.post('/hustles/buy', (req, res) => {
+  const r = hustle.buy(req.user.id, str(req.body.kind, 16));
+  const h = r.hustles.find((x) => x.id === str(req.body.kind, 16));
+  if (h && (h.count >= 5 || h.price >= 28_000_000)) news.story.hustle(req.user, h.name[1].toLowerCase(), h.count);
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
 api.post('/hustles/sell', (req, res) => res.json({ ...hustle.sell(req.user.id, str(req.body.kind, 16)), me: game.playerState(req.user.id) }));
 // Soko la Hisa (stock exchange).
 api.get('/stocks', (req, res) => res.json(stocks.view(req.user.id)));
 api.post('/stocks/trade', (req, res) => {
   const side = req.body.side === 'sell' ? 'sell' : 'buy';
-  res.json({ ...stocks.trade(req.user.id, str(req.body.sym, 8), side, req.body.qty), me: game.playerState(req.user.id) });
+  const sym = str(req.body.sym, 8);
+  const r = stocks.trade(req.user.id, sym, side, req.body.qty);
+  const price = r.stocks.find((x) => x.id === sym)?.price || 0;
+  const value = price * Math.floor(Number(req.body.qty) || 0);
+  if (value >= 50_000_000) news.story.stocks(req.user, sym, value, side);
+  res.json({ ...r, me: game.playerState(req.user.id) });
 });
 // Mtaani (street life): missions, heists, wanted level.
 api.get('/street', (req, res) => res.json(street.view(req.user.id)));
 api.post('/street/mission', (req, res) => res.json(street.startMission(req.user.id, str(req.body.kind, 12))));
 api.post('/street/mission/cancel', (req, res) => res.json(street.cancelMission(req.user.id)));
-api.post('/street/checkpoint', (req, res) => res.json(street.checkpoint(req.user.id)));
+api.post('/street/checkpoint', (req, res) => {
+  const r = street.checkpoint(req.user.id);
+  if (r.heist) news.story.heist(req.user, r.paid);
+  if (r.record && r.ms) news.story.race(req.user, (r.ms / 1000).toFixed(1));
+  res.json(r);
+});
+// Habari (news).
+api.get('/headlines', (req, res) => res.json({ stories: news.feed({ outlet: str(req.query.outlet, 16), limit: 60 }) }));
+// Ulinzi (security).
+api.get('/guards', (req, res) => res.json(guards.view(req.user.id)));
+api.post('/guards/hire', (req, res) => {
+  const r = guards.hire(req.user.id, str(req.body.tier, 12), Number(req.body.days) || 1);
+  if (r.tier?.perDay >= 700_000) news.story.guards(req.user, r.tier);
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
+api.post('/guards/dismiss', (req, res) => res.json({ ...guards.dismiss(req.user.id), me: game.playerState(req.user.id) }));
 api.post('/street/carjack', (req, res) => res.json(street.carjack(req.user.id, str(req.body.kind, 10), str(req.body.color, 9))));
 api.post('/street/ditch', (req, res) => res.json(street.ditch(req.user.id)));
 api.post('/street/heist', (req, res) => res.json({ ...street.startHeist(req.user.id), me: game.playerState(req.user.id) }));
-api.post('/street/heist/crack', (req, res) => res.json(street.crackVault(req.user.id, !!req.body.ok)));
-api.post('/street/busted', (req, res) => res.json({ ...street.bust(req.user.id), me: game.playerState(req.user.id) }));
+api.post('/street/heist/crack', (req, res) => {
+  const r = street.crackVault(req.user.id, !!req.body.ok);
+  if (r.alarm) news.story.bankAlarm(req.user);
+  res.json(r);
+});
+api.post('/street/busted', (req, res) => {
+  const stars = street.starsOf(req.user.id);
+  const r = street.bust(req.user.id);
+  if (r.ok && stars >= 2) news.story.busted(req.user, stars, game.netWorth(req.user.id));
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
 api.post('/street/escaped', (req, res) => res.json(street.escaped(req.user.id)));
 
 api.post('/income/collect', (req, res) => {
@@ -606,7 +652,12 @@ api.post('/health/pharmacy', (req, res) => res.json({ ...afya.pharmacy(req.user.
 
 // --------------------------------------------------------- yachts & jets
 api.get('/luxury', (req, res) => res.json(luxury.view(req.user.id)));
-api.post('/luxury/buy', (req, res) => res.json({ ...luxury.buy(req.user.id, str(req.body.model, 20), str(req.body.color, 10)), me: game.playerState(req.user.id) }));
+api.post('/luxury/buy', (req, res) => {
+  const r = luxury.buy(req.user.id, str(req.body.model, 20), str(req.body.color, 10));
+  const m = luxuryById[str(req.body.model, 20)];
+  if (m) news.story.luxury(req.user, m.name, m.price);
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
 api.post('/luxury/:id/sell', (req, res) => res.json({ ...luxury.sell(req.user.id, req.params.id), me: game.playerState(req.user.id) }));
 api.post('/luxury/:id/rename', (req, res) => res.json(luxury.rename(req.user.id, req.params.id, str(req.body.name, 30))));
 api.post('/luxury/invite', rateLimit('luxinv', 30, 60_000), (req, res) => res.json(luxury.invite(req.user.id, str(req.body.to, 30), req.body.kind === 'jet' ? 'jet' : 'yacht')));
@@ -728,8 +779,10 @@ api.post('/players/:username/interact', (req, res) => {
   res.json({ ...r, me: game.playerState(req.user.id) });
 });
 api.post('/players/:username/rob', (req, res) => {
-  const r = crime.rob(req.user.id, targetOf(req));
-  if (r.amount) street.addStars(req.user.id, 2, ['Uporaji', 'Robbery']);
+  const target = targetOf(req);
+  const r = crime.rob(req.user.id, target);
+  if (r.amount) { street.addStars(req.user.id, 2, ['Uporaji', 'Robbery']); news.story.robbery(req.user, target.username, r.amount); }
+  if (r.caught) news.story.robberyFoiled(req.user, target.username, !!r.guarded);
   res.json({ ...r, me: game.playerState(req.user.id) });
 });
 const reportedAt = new Map();
@@ -888,6 +941,20 @@ api.delete('/events/:id', (req, res) => {
 });
 
 // -------------------------------------------------------- players
+/** Public police file: arrests, robberies, street crimes. Anyone can look someone up. */
+function criminalRecord(uid) {
+  const arrests = db.prepare('SELECT reason, fine, created_at FROM arrests WHERE user_id = ? ORDER BY id DESC').all(uid);
+  const robbed = db.prepare('SELECT COUNT(*) n, COALESCE(SUM(amount), 0) s FROM robberies WHERE robber_id = ?').get(uid);
+  const st = street.statsOf(uid);
+  return {
+    arrests: arrests.length,
+    fines: arrests.reduce((a, r) => a + r.fine, 0),
+    recent: arrests.slice(0, 6).map((r) => ({ reason: JSON.parse(r.reason), fine: r.fine, at: r.created_at })),
+    robberies: robbed.n, stolen: robbed.s,
+    heists: st.heists, cars: st.cars, busts: st.busts,
+    wanted: street.starsOf(uid),
+  };
+}
 api.get('/players/:username', (req, res) => {
   const u = getUserByUsername(req.params.username);
   if (!u) throw new GameError(['Mtumiaji hayupo', 'User not found'], 404);
@@ -897,6 +964,7 @@ api.get('/players/:username', (req, res) => {
   res.json({
     id: u.id, username: u.username, name: u.name, appearance: u.appearance, trait: u.trait, fame: u.fame, elimu: u.elimu,
     since: u.createdAt, online: online.has(u.id), plots, businesses: biz, vehicles, netWorth: game.netWorth(u.id), jobXp: u.jobXp,
+    record: criminalRecord(u.id), press: news.aboutUser(u.id).slice(0, 4), guards: guards.guardOf(u.id)?.men || 0,
     love: love.publicStatus(u.id) || (npcLove.npcPartner(u.id) && { status: npcLove.npcPartner(u.id).status, with: npcLove.npcPartner(u.id).name, npc: true }),
     // Mutual contacts = friends (needed for calls).
     friend: !!db.prepare('SELECT 1 FROM contacts x JOIN contacts y ON y.user_id = x.contact_id AND y.contact_id = x.user_id WHERE x.user_id = ? AND x.contact_id = ?').get(req.user.id, u.id),
@@ -971,20 +1039,38 @@ api.post('/love/swipe', rateLimit('swipe', 120, 60 * 60_000), (req, res) => res.
 api.post('/love/:rid/date-invite', rateLimit('loveask', 30, 60 * 60_000), (req, res) => res.json(love.inviteDate(req.user.id, req.params.rid, str(req.body.spot, 20))));
 api.post('/love/:rid/ask-partner', rateLimit('loveask', 30, 60 * 60_000), (req, res) => res.json(love.askPartner(req.user.id, req.params.rid)));
 api.post('/love/:rid/propose', rateLimit('loveask', 30, 60 * 60_000), (req, res) => res.json(love.propose(req.user.id, req.params.rid)));
-api.post('/love/answer/:askId', (req, res) => res.json({ ...love.answer(req.user.id, str(req.params.askId, 40), !!req.body.accept), me: game.playerState(req.user.id) }));
+api.post('/love/answer/:askId', (req, res) => {
+  const r = love.answer(req.user.id, str(req.params.askId, 40), !!req.body.accept);
+  if (r.status === 'couple') {
+    const p = love.partnersOf(req.user.id).filter((x) => x.status === 'couple').sort((a, b) => b.rid - a.rid)[0];
+    if (p) news.story.dating(req.user, { username: p.username });
+  }
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
 api.post('/love/:rid/date', (req, res) => {
   crime.assertFree(getUser(req.user.id));
   res.json({ ...love.startDate(req.user.id, req.params.rid, str(req.body.spot, 20)), me: game.playerState(req.user.id) });
 });
 api.post('/love/:rid/gift', (req, res) => res.json({ ...love.gift(req.user.id, req.params.rid, str(req.body.gift, 12)), me: game.playerState(req.user.id) }));
-api.post('/love/:rid/wedding', (req, res) => res.json({ ...love.wedding(req.user.id, req.params.rid), me: game.playerState(req.user.id) }));
-api.post('/love/:rid/end', (req, res) => { love.endRelationship(req.user.id, req.params.rid); res.json(love.loveState(req.user.id)); });
+api.post('/love/:rid/wedding', (req, res) => {
+  const r = love.wedding(req.user.id, req.params.rid);
+  const p = love.partnersOf(req.user.id).find((x) => String(x.rid) === String(req.params.rid));
+  if (p) news.story.married(req.user, { username: p.username });
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
+api.post('/love/:rid/end', (req, res) => {
+  const p = love.partnersOf(req.user.id).find((x) => String(x.rid) === String(req.params.rid));
+  love.endRelationship(req.user.id, req.params.rid);
+  if (p && p.status !== 'match') news.story.breakup(req.user, { username: p.username });
+  res.json(love.loveState(req.user.id));
+});
 
 // ------------------------------------------------------------------- companies
 api.get('/companies', (req, res) => res.json(company.myCompanies(req.user.id)));
 api.post('/companies', (req, res) => {
   crime.assertFree(getUser(req.user.id));
   const id = company.createCompany(req.user.id, { name: req.body.name, logo: req.body.logo, color: req.body.color, industry: str(req.body.industry, 20) });
+  news.story.company(req.user, str(req.body.name, 40));
   res.status(201).json({ id, companies: company.myCompanies(req.user.id), me: game.playerState(req.user.id) });
 });
 // Hiring other players: job posts, applications, staff and shifts (hiring.js).

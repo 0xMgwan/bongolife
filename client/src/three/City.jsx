@@ -839,6 +839,42 @@ function PlaceModel({ place, owner }) {
           <Sign text={loc(place)} w={w} y={h - 0.9} z={d / 2 + 1} />
         </group>
       );
+    case 'church':
+      return (
+        <group>
+          <Box w={w * 0.8} h={h} d={d * 0.85} color={c} z={-d * 0.05} />
+          <mesh geometry={geo('cone', w * 0.6, 4, 4)} material={mat('#b91c1c')} position={[0, h + 2, -d * 0.05]} rotation={[0, Math.PI / 4, 0]} scale={[1, 1, d / w * 1.2]} />
+          {/* bell tower with a cross */}
+          <group position={[0, 0, d / 2 - 1.6]}>
+            <Box w={3} h={h + 6} d={3} color={c} />
+            <mesh geometry={geo('cone', 2.2, 4, 4)} material={mat('#b91c1c')} position={[0, h + 8, 0]} rotation={[0, Math.PI / 4, 0]} />
+            <Box w={0.25} h={2.4} d={0.25} color="#facc15" y={h + 10} />
+            <Box w={1.3} h={0.25} d={0.25} color="#facc15" y={h + 11.4} />
+            <Box w={1.3} h={2.2} d={0.1} color="#78350f" z={1.55} />
+          </group>
+          {[-1, 1].map((k) => <Box key={k} w={1.2} h={3} d={0.1} color="#60a5fa" x={k * w * 0.4 + 0.01} y={2.5} z={0} />)}
+          <Sign text={loc(place)} w={w} y={3.4} z={d / 2 + 0.15} bg="#7f1d1d" fg="#ffffff" />
+        </group>
+      );
+    case 'mosque':
+      return (
+        <group>
+          <Box w={w * 0.85} h={h} d={d * 0.85} color={c} />
+          <mesh geometry={geo('sphere', w * 0.3, 20, 12)} material={mat('#16a34a')} position={[0, h, 0]} scale={[1, 0.9, 1]} />
+          <Box w={0.2} h={1.6} d={0.2} color="#facc15" y={h + w * 0.27} />
+          {/* minarets */}
+          {[-1, 1].map((k) => (
+            <group key={k} position={[k * (w / 2 - 0.6), 0, d / 2 - 0.6]}>
+              <mesh geometry={geo('cyl', 0.7, 0.8, h + 9, 10)} material={mat(c)} position={[0, (h + 9) / 2, 0]} />
+              <mesh geometry={geo('cyl', 1.05, 1.05, 0.4, 10)} material={mat('#d6d3d1')} position={[0, h + 6, 0]} />
+              <mesh geometry={geo('cone', 0.85, 2.2, 10)} material={mat('#16a34a')} position={[0, h + 10.1, 0]} />
+            </group>
+          ))}
+          {/* arched doorway */}
+          <Box w={2.4} h={3.4} d={0.15} color="#0f766e" z={d * 0.425 + 0.02} />
+          <Sign text={loc(place)} w={w} y={h - 0.9} z={d * 0.425 + 0.1} bg="#14532d" fg="#ffffff" />
+        </group>
+      );
     case 'salon':
     case 'grill':
       return (

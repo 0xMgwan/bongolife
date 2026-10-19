@@ -1,3 +1,4 @@
+import { NewsClip } from './apps/Habari.jsx';
 import { useEffect, useRef, useState } from 'react';
 import {
   adPriceTzs, NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
@@ -433,6 +434,8 @@ function PlayerSheet({ username, onClose }) {
       </div>
       <div className="row" style={{ gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
         <span className="pill">💰 {fmtShort(p.netWorth)}</span>
+        {p.record?.wanted > 0 && <span className="pill wanted-pill">🚨 {'★'.repeat(p.record.wanted)} {L('anatafutwa', 'wanted')}</span>}
+        {p.guards > 0 && <span className="pill">🕶️ {L(`walinzi ${p.guards}`, `${p.guards} bodyguard${p.guards > 1 ? 's' : ''}`)}</span>}
         {p.love && <span className="pill love-pill">{p.love.status === 'married' ? '💍' : p.love.status === 'engaged' ? '💎' : '❤️'} {L(`${p.love.status === 'married' ? 'Ameoa/olewa na' : p.love.status === 'engaged' ? 'Mchumba wa' : 'Mpenzi wa'} ${p.love.npc ? "" : "@"}${p.love.with}`, `${p.love.status === 'married' ? 'Married to' : p.love.status === 'engaged' ? 'Engaged to' : 'Partners with'} ${p.love.npc ? "" : "@"}${p.love.with}`)}</span>}
         <span className="pill">⭐ {p.fame}</span>
         {p.fitness != null && <span className="pill">💪 {Math.round(p.fitness)}</span>}
@@ -490,8 +493,41 @@ function PlayerSheet({ username, onClose }) {
           <TogetherRow username={p.username} near={near} />
         </>
       )}
+      <CriminalRecord rec={p.record} />
+      {p.press?.length > 0 && (
+        <div className="press-clips">
+          <div className="section-t">🗞️ {L('KWENYE VYOMBO VYA HABARI', 'IN THE PRESS')}</div>
+          {p.press.map((n) => <NewsClip key={n.id} n={n} />)}
+        </div>
+      )}
       <button className="link-share" style={{ marginTop: 10 }} onClick={() => share({ title: `@${p.username}`, text: L(`Mcheki @${p.username} kwenye Bongo Life 🇹🇿`, `Check out @${p.username} on Bongo Life 🇹🇿`), params: { u: p.username } })}>🔗 {L('Shiriki profaili hii', 'Share this profile')}</button>
     </Sheet>
+  );
+}
+
+/** The public police file: clean, or a list of arrests and street crimes. */
+function CriminalRecord({ rec }) {
+  const [open, setOpen] = useState(false);
+  if (!rec) return null;
+  const clean = !rec.arrests && !rec.robberies && !rec.heists && !rec.cars;
+  if (clean) return <div className="rec-card clean">✅ {L('Rekodi safi — hana kesi yoyote polisi.', 'Clean record — no police file.')}</div>;
+  const ago = (t) => { const d = Math.floor((Date.now() - t) / 86_400_000); return d ? L(`siku ${d} zilizopita`, `${d}d ago`) : L('leo', 'today'); };
+  return (
+    <div className="rec-card">
+      <button className="rec-head" onClick={() => setOpen(!open)}>
+        <span>📁 <b>{L('Rekodi ya uhalifu', 'Criminal record')}</b></span>
+        <span className="rec-n">{rec.arrests} {L('kukamatwa', rec.arrests === 1 ? 'arrest' : 'arrests')} {open ? '▴' : '▾'}</span>
+      </button>
+      <div className="rec-stats">
+        {rec.robberies > 0 && <span>🦹 {rec.robberies} {L('wizi', rec.robberies === 1 ? 'robbery' : 'robberies')}</span>}
+        {rec.heists > 0 && <span>🏦 {rec.heists} {L('benki', rec.heists === 1 ? 'bank job' : 'bank jobs')}</span>}
+        {rec.cars > 0 && <span>🚗 {rec.cars} {L('magari ya wizi', 'stolen cars')}</span>}
+        {rec.fines > 0 && <span>💸 {L('faini', 'fines')} {fmtShort(rec.fines)}</span>}
+      </div>
+      {open && rec.recent.map((r, i) => (
+        <div key={i} className="rec-row"><span>🚓 {L(r.reason[0], r.reason[1])}</span><small>{fmtShort(r.fine)} · {ago(r.at)}</small></div>
+      ))}
+    </div>
   );
 }
 

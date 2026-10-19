@@ -10,6 +10,7 @@ import { playRadio, radioAutoOn, toggleRadio, nextStation } from '../radio.js';
 
 const ls = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 const ss = { get: (k) => { try { return sessionStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { sessionStorage.setItem(k, v); } catch {} } };
+const WELCOME_VOICE = false;
 export const voiceOn = () => ls.get('bl_voice') !== '0';
 export const setVoiceOn = (on) => ls.set('bl_voice', on ? '1' : '0');
 
@@ -142,7 +143,8 @@ async function greet(me, returning) {
   setW({ card: { w, news, first: String(me.name || me.username).split(' ')[0] } });
   const go = async () => {
     setW({ needTap: false });
-    if (voiceOn()) await (await naturalVoice(city, returning)) || (await speak(text));
+    // Spoken welcome is off until the ElevenLabs plan is paid for (no robotic fallback either).
+    if (WELCOME_VOICE && voiceOn()) await (await naturalVoice(city, returning)) || (await speak(text));
     if (radioAutoOn()) playRadio();
   };
   // Browsers only allow sound after the player has touched the page.

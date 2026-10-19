@@ -62,6 +62,7 @@ function setStars(uid, stars, why) {
 }
 export const addStars = (uid, n, why) => setStars(uid, st(uid).stars + n, why);
 export const starsOf = (uid) => S.get(uid)?.stars || 0;
+export const statsOf = (uid) => q.stats.get(uid) || { missions: 0, earned: 0, heists: 0, cars: 0, busts: 0 };
 
 /** Called on a timer: stars slowly fade when you lie low. */
 export function decayTick() {

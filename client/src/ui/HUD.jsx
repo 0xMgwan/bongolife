@@ -33,6 +33,7 @@ import { ShowroomPanel } from './ShowroomPanel.jsx';
 import { startBuild } from './BuildBar.jsx';
 import { MentionText, MentionSuggest } from './Mentions.jsx';
 import { StreetHUD } from './StreetHUD.jsx';
+import { NewsTicker } from './apps/Habari.jsx';
 import { ditchCar } from '../street.js';
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -918,6 +919,7 @@ export function HUD() {
       <WatchInvite />
       <LuxInvite />
       <StreetHUD />
+      <NewsTicker />
       <LiftAsk />
       <LiftBar />
       <ShowroomPanel />

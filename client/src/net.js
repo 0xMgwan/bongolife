@@ -323,6 +323,12 @@ export function connect() {
     useStore.setState((s) => ({ street: { ...s.street, stars } }));
     if (stars > prev) { sfx('siren'); haptic('notify'); if (why) st().toast(L(`🚨 ${why[0]} — polisi wanakutafuta!`, `🚨 ${why[1]} — the police are after you!`), 'err'); }
   });
+  socket.on('news', (n) => useStore.setState({ newsFlash: n }));
+  socket.on('player:guards', ({ id, guards }) => {
+    const r = remotes.get(id);
+    if (r) { r.guards = guards; bump(); }
+    if (id === st().myId) st().refreshMe?.().catch(() => {});
+  });
   socket.on('player:wanted', ({ id, stars }) => {
     const r = remotes.get(id);
     if (r) r.wanted = stars;

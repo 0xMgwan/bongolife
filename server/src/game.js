@@ -22,6 +22,8 @@ import { partnersOf } from './love.js';
 import { plotValue, truckPending, collectTrucks } from './invest.js';
 import { hustlePending, collectHustles, hustleValue } from './hustle.js';
 import { portfolioValue } from './stocks.js';
+import { story as newsStory } from './news.js';
+import { guardOf } from './guards.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const HOUR = 3600_000;
@@ -117,6 +119,7 @@ export function playerState(userId) {
     z,
     mood: moodOf(u.needs),
     fitness: gymMod.fitnessOf(userId),
+    guards: guardOf(userId),
     npcPartner: npcLoveMod.npcPartner(userId),
     vehicles: q.vehicles.all(userId),
     plots: q.plotsOf.all(userId),
@@ -344,6 +347,7 @@ export const startAction = db.transaction((userId, { kind, placeId, id }) => {
     if (!act) throw new GameError(['Shughuli haipo', 'Activity not found'], 404);
     const cost = health.hospitalPrice(userId, placeId, discount(user, act.cost));
     if (cost > 0) addMoney(userId, -cost, 'spend', `${act.name} — ${place.name}`);
+    if (cost >= 500_000 && (place.type === 'church' || place.type === 'mosque')) newsStory.donation(user, cost, place.nameEn || place.name);
     let secs = act.secs;
     if (act.special?.elimu && user.trait === 'msomi') secs = Math.round(secs * 0.6);
     const busy = { kind, id, placeId, emoji: act.emoji, label: act.name, labelEn: act.nameEn, startedAt: now(), endsAt: now() + secs * 1000 };

@@ -34,11 +34,14 @@ import { Mahakama } from './apps/Mahakama.jsx';
 import { Mishe } from './apps/Mishe.jsx';
 import { Hisa } from './apps/Hisa.jsx';
 import { Mtaani } from './apps/Mtaani.jsx';
+import { Habari } from './apps/Habari.jsx';
+import { Ulinzi } from './apps/Ulinzi.jsx';
 import { api } from '../api.js';
 
 // Built-in apps. `g` is the icon gradient.
 export const APPS = [
   { id: 'ndoto', name: 'Ndoto', nameEn: 'Ambitions', icon: '🌟', g: ['#fbbf24', '#ea580c'], C: Ndoto },
+  { id: 'habari', name: 'Habari', nameEn: 'News', icon: '🗞️', g: ['#f87171', '#7f1d1d'], C: Habari },
   { id: 'mtaani', name: 'Mtaani', nameEn: 'Street', icon: '🌃', g: ['#f59e0b', '#7f1d1d'], C: Mtaani },
   { id: 'mishe', name: 'Mishe', nameEn: 'Hustles', icon: '🛺', g: ['#a3e635', '#15803d'], C: Mishe },
   { id: 'hisa', name: 'Hisa', nameEn: 'Stocks', icon: '💹', g: ['#34d399', '#0f766e'], C: Hisa },
@@ -58,6 +61,7 @@ export const APPS = [
   { id: 'matukio', name: 'Matukio', nameEn: 'Events', icon: '🎉', g: ['#c084fc', '#7c3aed'], C: Matukio },
   { id: 'penzi', name: 'Penzi', nameEn: 'Dating', icon: '💘', g: ['#fb7185', '#be123c'], C: Penzi },
   { id: 'majirani', name: 'Majirani', nameEn: 'Neighbours', icon: '🏘️', g: ['#f9a8d4', '#be185d'], C: Majirani },
+  { id: 'ulinzi', name: 'Ulinzi', nameEn: 'Security', icon: '🕶️', g: ['#94a3b8', '#020617'], C: Ulinzi },
   { id: 'polisi', name: 'Polisi', nameEn: 'Police', icon: '🚓', g: ['#60a5fa', '#1e3a8a'], C: Polisi },
   { id: 'mahakama', name: 'Mahakama', nameEn: 'Court', icon: '⚖️', g: ['#d6a35c', '#78350f'], C: Mahakama },
   { id: 'anwani', name: 'Anwani', nameEn: 'Contacts', icon: '📞', g: ['#4ade80', '#16a34a'], C: Contacts },

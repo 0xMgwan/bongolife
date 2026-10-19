@@ -98,7 +98,7 @@ export async function voiceTest(text = 'Karibu Bongo! Hii ni sauti ya majaribio.
 }
 /** Generate the shared welcome phrases ahead of time so the first welcome plays instantly. */
 export async function warmVoice() {
-  if (!provider()) return;
+  if (!provider() || process.env.VOICE_ENABLED !== '1') return;
   const lines = ['Karibu Bongo!', 'Karibu tena Bongo!', 'Furahia mtaa. Redio inaanza sasa.', 'Welcome to Bongo!', 'Welcome back to Bongo!', "Enjoy the streets. The radio's coming on now."];
   for (const t of lines) await phrase(t, /[a-z]+ to Bongo|Enjoy/.test(t) ? 'en' : 'sw').catch(() => {});
 }

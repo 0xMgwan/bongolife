@@ -5,6 +5,7 @@ import { online, broadcast, emitTo } from './presence.js';
 import { applyNeeds } from './game.js';
 import { bumpStats } from './story.js';
 import { openCase, COURT } from './court.js';
+import { guardOf } from './guards.js';
 
 const jailed = (u) => !!u?.jail && u.jail.phase !== 'free';
 export const isJailed = jailed;
@@ -77,6 +78,13 @@ export const rob = db.transaction((userId, target) => {
   lastRob.set(userId, now());
   // Every report the police have on you makes the next job riskier.
   const heat = Math.min(0.25, (me.stats?.police_reports || 0) * 0.05);
+  // Bodyguards: most robbers walk away empty-handed (and straight into a cell).
+  const guard = guardOf(target.id);
+  if (guard && Math.random() < guard.protect) {
+    arrest(userId, ['Jaribio la wizi', 'Attempted robbery'], CRIME.fine);
+    emitTo(target.id, 'toast', { text: [`🕶️ Walinzi wako wamemzuia @${me.username} kukuibia!`, `🕶️ Your bodyguards stopped @${me.username} from robbing you!`] });
+    return { caught: true, guarded: true };
+  }
   if (Math.random() > CRIME.robSuccess - heat || target.money < CRIME.robMin) {
     arrest(userId, ['Jaribio la wizi', 'Attempted robbery'], CRIME.fine);
     emitTo(target.id, 'toast', { text: [`🚓 @${me.username} alijaribu kukuibia — polisi wamemkamata!`, `🚓 @${me.username} tried to rob you — the police caught them!`] });

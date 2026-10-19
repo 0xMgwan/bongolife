@@ -931,6 +931,57 @@ function Classroom({ me, myBusy, people }) {
   );
 }
 
+// -------------------------------------------------------------- worship
+/** Church: pews, an altar and cross, the pastor at the pulpit. Mosque: carpet rows facing the mihrab, the imam in front. */
+function Worship({ me, myBusy, people, mosque }) {
+  const slots = useMemo(() => {
+    const s = [];
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) s.push([(c - 2.5) * (mosque ? 1.3 : 1.25) + (c > 2 && !mosque ? 0.8 : c < 3 && !mosque ? -0.8 : 0), 0.1, -1 + r * 1.9, Math.PI]);
+    return s;
+  }, [mosque]);
+  const clergy = mosque
+    ? { body: 'man', skin: 2, hair: 'kipara', outfit: 'kanzu', hairColor: 0 }
+    : { body: 'man', skin: 1, hair: 'kipara', outfit: 'suti', hairColor: 0 };
+  return (
+    <group>
+      <Room w={14} d={13} h={7} floor={mosque ? '#166534' : '#a8a29e'} wall={mosque ? '#f0fdf4' : '#fefce8'} back={mosque ? '#dcfce7' : '#fef3c7'} />
+      {mosque ? (
+        <group>
+          {/* prayer rows on the carpet */}
+          {[0, 1, 2, 3].map((r) => <Box key={r} p={[0, 0.01, -1 + r * 1.9]} s={[12, 0.02, 0.9]} c={r % 2 ? '#15803d' : '#14532d'} />)}
+          {/* mihrab: an arch in the back wall */}
+          <Box p={[0, 0, -6.35]} s={[2.6, 4.2, 0.3]} c="#ca8a04" />
+          <mesh position={[0, 4.2, -6.3]}><cylinderGeometry args={[1.3, 1.3, 0.32, 24, 1, false, 0, Math.PI]} /><meshStandardMaterial color="#ca8a04" /></mesh>
+          <Box p={[0, 0, -6.15]} s={[1.9, 3.8, 0.1]} c="#0f766e" />
+          {/* minbar steps */}
+          <group position={[3, 0, -5.4]}>{[0, 1, 2, 3].map((i) => <Box key={i} p={[0, 0, i * 0.35]} s={[1, 1.4 - i * 0.3, 0.35]} c="#7c2d12" />)}</group>
+          {[-4.5, 4.5].map((x) => <Box key={x} p={[x, 3.5, -6.4]} s={[1.6, 1.6, 0.05]} c="#99f6e4" />)}
+          <mesh position={[0, 6.4, -1]}><sphereGeometry args={[0.5, 16, 10]} /><meshStandardMaterial color="#fde68a" emissive="#fde68a" emissiveIntensity={0.6} /></mesh>
+        </group>
+      ) : (
+        <group>
+          {/* aisle and pews */}
+          <Box p={[0, 0.01, 1]} s={[1.3, 0.02, 11]} c="#991b1b" />
+          {[0, 1, 2, 3].map((r) => [-1, 1].map((side) => <Box key={r + ',' + side} p={[side * 3.6, 0, -0.35 + r * 1.9]} s={[5, 0.9, 0.35]} c="#78350f" />))}
+          {/* altar, pulpit and cross */}
+          <Box p={[0, 0, -5]} s={[10, 0.4, 2.6]} c="#d6d3d1" />
+          <Box p={[0, 0.4, -5.4]} s={[3, 1, 1]} c="#fafaf9" />
+          <Box p={[-3, 0.4, -4.4]} s={[1.1, 1.3, 0.8]} c="#78350f" />
+          <Box p={[0, 3, -6.35]} s={[0.35, 2.8, 0.15]} c="#ca8a04" />
+          <Box p={[0, 4.6, -6.35]} s={[1.6, 0.35, 0.15]} c="#ca8a04" />
+          {/* stained glass */}
+          {[-5, -2.5, 2.5, 5].map((x, i) => <Box key={x} p={[x, 3.2, -6.4]} s={[1, 2.2, 0.05]} c={['#3b82f6', '#ef4444', '#22c55e', '#a855f7'][i]} />)}
+          {/* choir */}
+          {[3.2, 4.1, 5].map((x, i) => <Person key={x} slot={[x, 0.4, -4.9, 0]} appearance={{ body: i % 2 ? 'woman' : 'man', skin: i, hair: i % 2 ? 'rasta' : 'kipara', outfit: i % 2 ? 'kanga' : 'suti', hairColor: 0 }} mode="dance" />)}
+        </group>
+      )}
+      <Person slot={mosque ? [0, 0, -4.8, 0] : [-3, 0.4, -4.6, 0]} appearance={clergy} mode="idle" />
+      <Crowd me={me} myBusy={myBusy} people={people} slots={slots} crowd={14} modeFor={() => 'sit'} />
+      <pointLight color="#fff7e6" intensity={3} distance={26} position={[0, 6, -2]} />
+    </group>
+  );
+}
+
 // -------------------------------------------------------------- hospital
 function drawEcg(ctx, t) {
   const w = ctx.canvas.width, h = ctx.canvas.height;
@@ -2815,6 +2866,8 @@ export const SCENES = {
   market: { C: Market, camera: { pos: [0, 9.5, 17.5], look: [0, 1.4, -1.5] }, bg: '#7dd3fc', light: 1.1 },
   shop: { C: Shop, camera: { pos: [0, 7.5, 10.5], look: [0, 0.6, -0.5] }, bg: '#1c1917', light: 1 },
   hospital: { C: Hospital, camera: { pos: [0, 8.5, 12], look: [0, 0.6, -2.2] }, bg: '#0f172a', light: 1 },
+  church: { C: Worship, camera: { pos: [0, 6.5, 11], look: [0, 1.6, -4] }, bg: '#1c1917', light: 0.95 },
+  mosque: { C: (p) => <Worship {...p} mosque />, camera: { pos: [0, 6.5, 11], look: [0, 1.4, -4] }, bg: '#1c1917', light: 0.95 },
   classroom: { C: Classroom, camera: { pos: [0, 5.5, 9], look: [0, 1.6, -4] }, bg: '#1c1917', light: 0.9 },
   yacht: { C: Yacht, camera: { pos: [6.5, 9, 16], look: [0, 0.8, -1] }, bg: '#8fd0f5', light: 1.1 },
   block: { C: Apartments, dynamic: true, bg: '#bae6fd', light: 1.05 },

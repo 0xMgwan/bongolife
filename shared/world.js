@@ -532,6 +532,66 @@ export const PLACES = [
     jobs: [{ id: 'trainer-znz', title: 'Personal Trainer', titles: ['Trainer', 'Senior Trainer', 'Coach'], secs: 45, pay: 22_000, energy: 14 }],
   },
   {
+    id: 'kanisa-dar', name: 'Kanisa la Neema Magomeni', nameEn: 'Grace Church Magomeni', district: 'Magomeni', type: 'church', icon: '⛪', pos: [-98, 22], size: [12, 16], h: 8, color: '#fefce8',
+    blurb: 'Ibada ya Jumapili, kwaya, harusi na maombi. Kila mtu anakaribishwa.', blurbEn: 'Sunday service, choir, weddings and prayer. Everyone is welcome.',
+    activities: [
+      { id: 'ibada', name: 'Hudhuria ibada', nameEn: 'Attend the service', cost: 0, secs: 25, effects: { fun: 15, social: 25, energy: 5 }, emoji: '🙏' },
+      { id: 'kwaya', name: 'Imba kwenye kwaya', nameEn: 'Sing in the choir', cost: 0, secs: 20, effects: { fun: 25, social: 15, energy: -5 }, emoji: '🎶', fame: 1 },
+      { id: 'sadaka', name: 'Toa sadaka (10K)', nameEn: 'Give an offering (10K)', cost: 10_000, secs: 6, effects: { social: 10, fun: 5 }, emoji: '💝', fame: 1 },
+      { id: 'fungu', name: 'Toa fungu la kumi (500K)', nameEn: 'Pay a big tithe (500K)', cost: 500_000, secs: 8, effects: { social: 30, fun: 15 }, emoji: '🕊️', fame: 6 },
+      { id: 'maombi', name: 'Ombewa na mchungaji', nameEn: 'Get prayed for by the pastor', cost: 20_000, secs: 15, effects: { fun: 20, energy: 15 }, emoji: '✋' },
+    ],
+    jobs: [
+      { id: 'mchungaji', title: 'Mchungaji', titleEn: 'Pastor', titles: ['Mzee wa kanisa', 'Mchungaji msaidizi', 'Mchungaji', 'Askofu', 'Askofu Mkuu'], titlesEn: ['Church elder', 'Assistant pastor', 'Pastor', 'Bishop', 'Archbishop'], secs: 60, pay: 30_000, energy: 10 },
+      { id: 'mwimbaji', title: 'Mwimbaji wa kwaya', titleEn: 'Choir singer', titles: ['Mwimbaji', 'Kiongozi wa kwaya', 'Msanii wa injili'], titlesEn: ['Singer', 'Choir leader', 'Gospel star'], secs: 45, pay: 16_000, energy: 10 },
+    ],
+  },
+  {
+    id: 'msikiti-dar', name: 'Msikiti wa Nuru Kariakoo', nameEn: 'Nuru Mosque Kariakoo', district: 'Kariakoo', type: 'mosque', icon: '🕌', pos: [-35, 13], size: [14, 14], h: 7, color: '#f0fdf4',
+    blurb: 'Swala tano, darsa la Qur\'an na swala ya Ijumaa. Kila mtu anakaribishwa.', blurbEn: "Daily prayers, Qur'an classes and Friday prayer. Everyone is welcome.",
+    activities: [
+      { id: 'swala', name: 'Swali msikitini', nameEn: 'Pray at the mosque', cost: 0, secs: 20, effects: { fun: 12, social: 25, energy: 5 }, emoji: '🤲' },
+      { id: 'darsa', name: "Darsa la Qur'an", nameEn: "Qur'an class", cost: 0, secs: 25, effects: { fun: 15, social: 15 }, emoji: '📖' },
+      { id: 'sadakam', name: 'Toa sadaka (10K)', nameEn: 'Give charity (10K)', cost: 10_000, secs: 6, effects: { social: 10, fun: 5 }, emoji: '💝', fame: 1 },
+      { id: 'zaka', name: 'Toa zaka (500K)', nameEn: 'Pay zakat (500K)', cost: 500_000, secs: 8, effects: { social: 30, fun: 15 }, emoji: '🕊️', fame: 6 },
+      { id: 'futari', name: 'Kula futari ya pamoja', nameEn: 'Share an iftar meal', cost: 0, secs: 15, effects: { hunger: 45, social: 20 }, emoji: '🍲' },
+    ],
+    jobs: [
+      { id: 'imamu', title: 'Imamu', titleEn: 'Imam', titles: ['Muadhini', 'Mwalimu wa madrasa', 'Imamu', 'Shehe', 'Shehe Mkuu'], titlesEn: ['Muezzin', 'Madrasa teacher', 'Imam', 'Sheikh', 'Chief Sheikh'], secs: 60, pay: 30_000, energy: 10 },
+      { id: 'kaswida', title: 'Mwimbaji wa kaswida', titleEn: 'Qaswida singer', titles: ['Mwimbaji', 'Kiongozi wa kikundi', 'Msanii wa kaswida'], titlesEn: ['Singer', 'Group leader', 'Qaswida star'], secs: 45, pay: 16_000, energy: 10 },
+    ],
+  },
+  {
+    id: 'msikiti-znz', name: 'Msikiti wa Baraka', nameEn: 'Baraka Mosque', district: 'Stone Town', type: 'mosque', icon: '🕌', pos: Z(-4, -13), size: [14, 14], h: 7, color: '#ecfeff',
+    blurb: 'Swala tano, darsa la Qur\'an na swala ya Ijumaa. Kila mtu anakaribishwa.', blurbEn: "Daily prayers, Qur'an classes and Friday prayer. Everyone is welcome.",
+    activities: [
+      { id: 'swala-znz', name: 'Swali msikitini', nameEn: 'Pray at the mosque', cost: 0, secs: 20, effects: { fun: 12, social: 25, energy: 5 }, emoji: '🤲' },
+      { id: 'darsa-znz', name: "Darsa la Qur'an", nameEn: "Qur'an class", cost: 0, secs: 25, effects: { fun: 15, social: 15 }, emoji: '📖' },
+      { id: 'sadakam-znz', name: 'Toa sadaka (10K)', nameEn: 'Give charity (10K)', cost: 10_000, secs: 6, effects: { social: 10, fun: 5 }, emoji: '💝', fame: 1 },
+      { id: 'zaka-znz', name: 'Toa zaka (500K)', nameEn: 'Pay zakat (500K)', cost: 500_000, secs: 8, effects: { social: 30, fun: 15 }, emoji: '🕊️', fame: 6 },
+      { id: 'futari-znz', name: 'Kula futari ya pamoja', nameEn: 'Share an iftar meal', cost: 0, secs: 15, effects: { hunger: 45, social: 20 }, emoji: '🍲' },
+    ],
+    jobs: [
+      { id: 'imamu-znz', title: 'Imamu', titleEn: 'Imam', titles: ['Muadhini', 'Mwalimu wa madrasa', 'Imamu', 'Shehe', 'Shehe Mkuu'], titlesEn: ['Muezzin', 'Madrasa teacher', 'Imam', 'Sheikh', 'Chief Sheikh'], secs: 60, pay: 30_000, energy: 10 },
+      { id: 'kaswida-znz', title: 'Mwimbaji wa kaswida', titleEn: 'Qaswida singer', titles: ['Mwimbaji', 'Kiongozi wa kikundi', 'Msanii wa kaswida'], titlesEn: ['Singer', 'Group leader', 'Qaswida star'], secs: 45, pay: 16_000, energy: 10 },
+    ],
+  },
+  {
+    id: 'kanisa-aru', name: 'Kanisa la Mlima Meru', nameEn: 'Mount Meru Church', district: 'Arusha CBD', type: 'church', icon: '⛪', pos: A(13, 25), size: [12, 16], h: 8, color: '#fff7ed',
+    blurb: 'Ibada ya Jumapili, kwaya, harusi na maombi. Kila mtu anakaribishwa.', blurbEn: 'Sunday service, choir, weddings and prayer. Everyone is welcome.',
+    activities: [
+      { id: 'ibada-aru', name: 'Hudhuria ibada', nameEn: 'Attend the service', cost: 0, secs: 25, effects: { fun: 15, social: 25, energy: 5 }, emoji: '🙏' },
+      { id: 'kwaya-aru', name: 'Imba kwenye kwaya', nameEn: 'Sing in the choir', cost: 0, secs: 20, effects: { fun: 25, social: 15, energy: -5 }, emoji: '🎶', fame: 1 },
+      { id: 'sadaka-aru', name: 'Toa sadaka (10K)', nameEn: 'Give an offering (10K)', cost: 10_000, secs: 6, effects: { social: 10, fun: 5 }, emoji: '💝', fame: 1 },
+      { id: 'fungu-aru', name: 'Toa fungu la kumi (500K)', nameEn: 'Pay a big tithe (500K)', cost: 500_000, secs: 8, effects: { social: 30, fun: 15 }, emoji: '🕊️', fame: 6 },
+      { id: 'maombi-aru', name: 'Ombewa na mchungaji', nameEn: 'Get prayed for by the pastor', cost: 20_000, secs: 15, effects: { fun: 20, energy: 15 }, emoji: '✋' },
+    ],
+    jobs: [
+      { id: 'mchungaji-aru', title: 'Mchungaji', titleEn: 'Pastor', titles: ['Mzee wa kanisa', 'Mchungaji msaidizi', 'Mchungaji', 'Askofu', 'Askofu Mkuu'], titlesEn: ['Church elder', 'Assistant pastor', 'Pastor', 'Bishop', 'Archbishop'], secs: 60, pay: 30_000, energy: 10 },
+      { id: 'mwimbaji-aru', title: 'Mwimbaji wa kwaya', titleEn: 'Choir singer', titles: ['Mwimbaji', 'Kiongozi wa kwaya', 'Msanii wa injili'], titlesEn: ['Singer', 'Choir leader', 'Gospel star'], secs: 45, pay: 16_000, energy: 10 },
+    ],
+  },
+  {
     id: 'gym-aru', name: 'Arusha Peak Gym', district: 'Arusha CBD', type: 'gym', icon: '🏋️', pos: A(35, 40), size: [12, 10], h: 7, color: '#f97316',
     blurb: 'Fanya mazoezi kwa mwonekano wa Mlima Meru.',
     activities: [{ id: 'mazoezi-aru', name: 'Fanya mazoezi', cost: 5_000, secs: 20, effects: { fun: 15, energy: -18, hygiene: -15, social: 8 }, emoji: '💪' }],
@@ -1367,12 +1427,13 @@ for (const [k, t] of Object.entries(TRAVEL)) t.nameEn = EN.travel[k];
 EVENTS.forEach((e, i) => (e.textEn = EN.events[i]));
 for (const p of PLOTS) p.nameEn = p.name.replace('Kiwanja', 'Plot');
 for (const p of PLACES) {
-  const [name, blurb, acts] = EN.places[p.id];
+  // Newer places carry their English inline.
+  const [name, blurb, acts] = EN.places[p.id] || [p.nameEn, p.blurbEn, {}];
   p.nameEn = name;
   p.blurbEn = blurb;
-  for (const a of p.activities || []) a.nameEn = acts[a.id] || a.name;
+  for (const a of p.activities || []) a.nameEn = acts[a.id] || a.nameEn || a.name;
   for (const j of p.jobs || []) {
-    [j.titleEn, j.titlesEn] = EN.jobs[j.id];
+    if (EN.jobs[j.id]) [j.titleEn, j.titlesEn] = EN.jobs[j.id];
     // Longer, more real shifts (2–4 min) that pay accordingly.
     j.secs = Math.round(Math.max(120, Math.min(240, j.secs * 3)) / 10) * 10;
     j.pay = Math.round((j.pay * 2.5) / 100) * 100;
@@ -1828,7 +1889,7 @@ export const EVENT_PLACES = ['home', 'club', 'bar', 'lounge', 'singeli', 'nyamac
   'bagamoyo-old', 'pw-jetty', 'pw-soko'];
 // Venues without their own walk-in interior use this scene while a party is live there.
 // Every place has an inside: explicit venues first, then the closest interior for its type.
-const TYPE_SCENES = { block: 'block', yacht: 'yacht', jet: 'jet', market: 'market', terminal: 'stand', mall: 'shop', shop: 'shop', stonetown: 'shop', restaurant: 'dining', food: 'dining', fish: 'dining', grill: 'grill', bar: 'bar', club: 'club', lounge: 'club', hotel: 'rooftop', gesti: 'room', beach: 'beach', waterpark: 'waterpark', golf: 'golf', karting: 'karting', slipway: 'dhow', stage: 'concert', stadium: 'stadium', studio: 'studio', gym: 'gym', salon: 'salon', office: 'office', tower: 'office', bank: 'bank', hospital: 'hospital', campus: 'classroom', police: 'police', court: 'court', casino: 'casino', safari: 'safari', mountain: 'hike', forest: 'safari', museum: 'ngoma' };
+const TYPE_SCENES = { block: 'block', yacht: 'yacht', jet: 'jet', market: 'market', terminal: 'stand', mall: 'shop', shop: 'shop', stonetown: 'shop', restaurant: 'dining', food: 'dining', fish: 'dining', grill: 'grill', bar: 'bar', club: 'club', lounge: 'club', hotel: 'rooftop', gesti: 'room', beach: 'beach', waterpark: 'waterpark', golf: 'golf', karting: 'karting', slipway: 'dhow', stage: 'concert', stadium: 'stadium', studio: 'studio', gym: 'gym', salon: 'salon', office: 'office', tower: 'office', bank: 'bank', hospital: 'hospital', campus: 'classroom', church: 'church', mosque: 'mosque', police: 'police', court: 'court', casino: 'casino', safari: 'safari', mountain: 'hike', forest: 'safari', museum: 'ngoma' };
 /** The interior scene for a place, or null for open-air landmarks (ports, airports…). */
 export function venueOf(placeId) {
   const p = placeById[placeId];
@@ -2276,3 +2337,45 @@ export const STREET = {
   },
 };
 export const CARJACK_MODEL = { car: 'crown', suv: 'prado', van: 'noah', moto: 'bodaboda', bajaji: 'bajaji' };
+
+// ============================================================ news & media
+// In-game media houses (fictional, Bongo-flavoured). Stories are written by the server from what
+// players actually do: fortunes, crimes, scandals, launches, rivalries and rankings.
+export const NEWS_OUTLETS = [
+  { id: 'forbz', name: 'Forbz Bongo', emoji: '💎', color: '#0f172a', accent: '#facc15', tag: ['Utajiri na mabilionea', 'Wealth & billionaires'] },
+  { id: 'mwanabongo', name: 'Mwanabongo', emoji: '📰', color: '#b91c1c', accent: '#fef2f2', tag: ['Gazeti la kila siku', 'The daily paper'] },
+  { id: 'wasafa', name: 'Wasafa TV', emoji: '🎤', color: '#7c3aed', accent: '#f5f3ff', tag: ['Burudani, mapenzi na skendo', 'Showbiz, love & scandal'] },
+  { id: 'tbx', name: 'TBX Taifa', emoji: '📺', color: '#1d4ed8', accent: '#eff6ff', tag: ['Habari za kitaifa na usalama', 'National news & crime'] },
+  { id: 'eavision', name: 'EA Vision TV', emoji: '📡', color: '#0f766e', accent: '#f0fdfa', tag: ['Biashara Afrika Mashariki', 'East African business'] },
+  { id: 'dailybongo', name: 'The Bongo Daily', emoji: '🗞️', color: '#374151', accent: '#f9fafb', tag: ['Habari kwa Kiingereza', 'News in English'] },
+];
+export const outletById = Object.fromEntries(NEWS_OUTLETS.map((o) => [o.id, o]));
+export const NEWS_CATS = {
+  wealth: { emoji: '💰', name: ['Utajiri', 'Wealth'], outlets: ['forbz', 'dailybongo', 'eavision'] },
+  milestone: { emoji: '🏆', name: ['Hatua mpya', 'Milestones'], outlets: ['forbz', 'mwanabongo'] },
+  ranking: { emoji: '📊', name: ['Orodha', 'Rankings'], outlets: ['forbz', 'eavision'] },
+  business: { emoji: '🏢', name: ['Biashara', 'Business'], outlets: ['eavision', 'dailybongo', 'forbz'] },
+  luxury: { emoji: '🛥️', name: ['Anasa', 'Luxury'], outlets: ['forbz', 'wasafa'] },
+  crime: { emoji: '🚨', name: ['Uhalifu', 'Crime'], outlets: ['tbx', 'mwanabongo'] },
+  scandal: { emoji: '🫢', name: ['Skendo', 'Scandal'], outlets: ['wasafa', 'mwanabongo'] },
+  love: { emoji: '💘', name: ['Mapenzi', 'Love'], outlets: ['wasafa'] },
+  politics: { emoji: '🏛️', name: ['Siasa', 'Politics'], outlets: ['tbx', 'mwanabongo', 'dailybongo'] },
+  sport: { emoji: '🏁', name: ['Michezo', 'Sport'], outlets: ['mwanabongo', 'wasafa'] },
+};
+// Net-worth milestones that make the papers.
+export const WEALTH_MARKS = [1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e18];
+export function bigMoney(n) {
+  const u = [[1e18, ['kwintilioni', 'quintillion']], [1e15, ['kwadrilioni', 'quadrillion']], [1e12, ['trilioni', 'trillion']], [1e9, ['bilioni', 'billion']], [1e6, ['milioni', 'million']]];
+  for (const [v, [sw, en]] of u) if (n >= v) { const x = n / v; const s = x >= 100 ? Math.round(x) : +x.toFixed(1); return [`TSh ${s} ${sw}`, `TSh ${s} ${en}`]; }
+  return [`TSh ${Math.round(n).toLocaleString()}`, `TSh ${Math.round(n).toLocaleString()}`];
+}
+
+// ============================================================ security
+// Hire protection by the day. Guards walk with you, put robbers off and can delay an arrest.
+export const GUARDS = [
+  { id: 'mlinzi', emoji: '🧍🏾‍♂️', name: ['Mlinzi binafsi', 'Personal guard'], perDay: 60_000, men: 1, protect: 0.3, copDelay: 0, blurb: ['Mlinzi mmoja wa kampuni ya ulinzi.', 'One guard from a security firm.'] },
+  { id: 'bodyguard', emoji: '💪🏾', name: ['Bodyguards wawili', 'Two bodyguards'], perDay: 200_000, men: 2, protect: 0.5, copDelay: 0, blurb: ['Mabaunsa wawili, suti nyeusi.', 'Two big men in black suits.'] },
+  { id: 'elite', emoji: '🕶️', name: ['Ulinzi wa VIP', 'VIP close protection'], perDay: 700_000, men: 3, protect: 0.75, copDelay: 0.5, blurb: ['Walinzi watatu waliofunzwa, miwani na redio.', 'Three trained agents with shades and radios.'] },
+  { id: 'convoy', emoji: '🚙', name: ['Msafara wa ulinzi', 'Security convoy'], perDay: 2_500_000, men: 4, protect: 0.92, copDelay: 1, blurb: ['Walinzi wanne — kama Rais. Wezi hawasogei.', 'Four agents — presidential style. Robbers stay away.'] },
+];
+export const guardById = Object.fromEntries(GUARDS.map((g) => [g.id, g]));
