@@ -6,12 +6,12 @@ import path from 'node:path';
 import {
   GAME, HAIRSTYLES, SKIN_TONES, HAIR_COLORS, OUTFITS, TRAITS, SPAWNS, BILLBOARDS, AD_MAX_DAYS,
   billboardById, outfitById, ADS_PER_BOARD, adPriceTzs, adTzsPerDay, CRIME, plotById, togetherById, REFERRAL, ELECTION, EVENT_LIMITS, EVENT_PLACES, placeById,
-  VIBES, VIBE_DAILY, vehicleById, buildingById, luxuryById,
+  VIBES, VIBE_DAILY, vehicleById, buildingById, luxuryById, ENTERABLE_BUILDINGS,
 } from '../../../shared/world.js';
 import { db, getUser, getUserByUsername, createUser, saveFields, addMoney, GameError, now, UPLOAD_DIR, getSettings } from '../db.js';
 import { hashPassword, checkPassword, signToken, requireAuth, requireAdmin, rateLimit, USERNAME_RE, normalizePhone } from '../auth.js';
 import { admin } from './admin.js';
-import { canVisit } from '../social.js';
+import { canVisit, addInvite, addBlockInvite } from '../social.js';
 import { sendMail, welcomeEmail, resetEmail, checkUnsubToken } from '../mail.js';
 import { pushPublicKey, subscribe as pushSubscribe, unsubscribe as pushUnsubscribe, pushCount, notify as pushNotify } from '../push.js';
 import * as election from '../election.js';
@@ -511,6 +511,34 @@ api.post('/street/checkpoint', (req, res) => {
   if (r.heist) news.story.heist(req.user, r.paid);
   if (r.record && r.ms) news.story.race(req.user, (r.ms / 1000).toFixed(1));
   res.json(r);
+});
+// Invite a friend to any of your places: Kwangu or a house ('home'), a yacht/jet, or a building on a plot.
+api.post('/invite/place', rateLimit('invplace', 40, 60_000), (req, res) => {
+  const to = getUserByUsername(str(req.body.to, 30).replace(/^@/, ''));
+  if (!to || to.id === req.user.id) throw new GameError(['Mtumiaji hayupo', 'User not found'], 404);
+  if (crime.isBlocked(req.user.id, to.id)) throw new GameError(['Huwezi kumwalika.', "You can't invite them."], 403);
+  const kind = str(req.body.kind, 8);
+  const id = str(req.body.id, 30);
+  const me = req.user;
+  if (kind === 'yacht' || kind === 'jet') return res.json(luxury.invite(me.id, to.username, kind));
+  if (!online.has(to.id)) throw new GameError([`@${to.username} hayuko online sasa.`, `@${to.username} isn't online right now.`], 409, 'offline');
+  if (kind === 'home') {
+    const h = game.homeOf(me.id, id || 'main');
+    if ((id || 'main') !== h.key) throw new GameError(['Hii si nyumba yako.', "That isn't your house."], 403);
+    addInvite(me.id, to.id);
+    const b = h.building && buildingById[h.building];
+    emitTo(to.id, 'invite', { fromId: me.id, from: me.username, fromName: me.name, appearance: me.appearance, home: h.key, house: b ? [b.name, b.nameEn, b.emoji] : null, area: h.plotId ? plotById[h.plotId]?.area : null });
+    return res.json({ ok: true, to: to.username });
+  }
+  if (kind === 'block') {
+    const row = db.prepare('SELECT * FROM plots WHERE id = ? AND owner_id = ?').get(id, me.id);
+    const b = row && buildingById[row.building];
+    if (!b || !ENTERABLE_BUILDINGS.includes(b.id)) throw new GameError(['Hili si jengo lako.', "That isn't your building."], 403);
+    addBlockInvite(id, to.id);
+    emitTo(to.id, 'block:invite', { from: me.username, appearance: me.appearance, plotId: id, house: [b.name, b.nameEn, b.emoji], area: plotById[id]?.area });
+    return res.json({ ok: true, to: to.username });
+  }
+  throw new GameError(['Ombi si sahihi', 'Invalid request']);
 });
 // Habari (news).
 api.get('/headlines', (req, res) => res.json({ stories: news.feed({ outlet: str(req.query.outlet, 16), limit: 60 }) }));

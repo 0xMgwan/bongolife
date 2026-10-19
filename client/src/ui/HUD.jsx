@@ -34,6 +34,7 @@ import { startBuild } from './BuildBar.jsx';
 import { MentionText, MentionSuggest } from './Mentions.jsx';
 import { StreetHUD } from './StreetHUD.jsx';
 import { HomePicker, goHome } from './HomePicker.jsx';
+import { InvitePicker, BlockInviteModal } from './InvitePicker.jsx';
 import { NewsTicker } from './apps/Habari.jsx';
 import { ditchCar } from '../street.js';
 
@@ -923,6 +924,8 @@ export function HUD() {
       <LuxInvite />
       <StreetHUD />
       <HomePicker />
+      <InvitePicker />
+      <BlockInviteModal />
       <NewsTicker />
       <LiftAsk />
       <LiftBar />

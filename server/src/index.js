@@ -18,7 +18,7 @@ import { isBlocked } from './crime.js';
 import { attachVoice, leaveVoice } from './voice.js';
 import { attachWatch, leaveWatch } from './watch.js';
 import { shopRentTick } from './company.js';
-import { addInvite, canVisit } from './social.js';
+import { addInvite, canVisit, hasBlockInvite } from './social.js';
 import * as chat from './chat.js';
 import * as luxury from './luxury.js';
 import * as afya from './health.js';
@@ -204,9 +204,10 @@ io.on('connection', (socket) => {
       const plot = plotById[blk[1]];
       const row = plot && db.prepare('SELECT owner_id, building FROM plots WHERE id = ?').get(plot.id);
       if (!row || !ENTERABLE_BUILDINGS.includes(row.building)) return socket.emit('inside:denied', placeId);
-      if (row.owner_id !== uid && Math.hypot(p.x - plot.pos[0], p.z - plot.pos[1]) > plot.size / 2 + 16) return socket.emit('inside:denied', placeId);
+      const invited = hasBlockInvite(plot.id, uid);
+      if (row.owner_id !== uid && !invited && Math.hypot(p.x - plot.pos[0], p.z - plot.pos[1]) > plot.size / 2 + 16) return socket.emit('inside:denied', placeId);
       // Homes are private: only the owner (or someone they've invited home) walks in.
-      if (row.owner_id !== uid && PRIVATE_BUILDINGS.includes(row.building) && !canVisit(uid, row.owner_id)) return socket.emit('inside:denied', placeId);
+      if (row.owner_id !== uid && !invited && PRIVATE_BUILDINGS.includes(row.building) && !canVisit(uid, row.owner_id)) return socket.emit('inside:denied', placeId);
       inside = 'block';
       host = `blk-${plot.id}`;
     }

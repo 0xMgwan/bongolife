@@ -17,8 +17,13 @@ export function hasInvite(hostId, guestId) {
   }
   return true;
 }
+// Invites into a building on a plot (tower, farm, factory, resort…): enter from anywhere.
+const blockInvites = new Map(); // `${plotId}:${guestId}` -> expiresAt
+export const addBlockInvite = (plotId, guestId) => blockInvites.set(`${plotId}:${guestId}`, now() + 30 * 60_000);
+export const hasBlockInvite = (plotId, guestId) => (blockInvites.get(`${plotId}:${guestId}`) || 0) > now();
 setInterval(() => {
   const t = now();
+  for (const [k, exp] of blockInvites) if (exp < t) blockInvites.delete(k);
   for (const [k, exp] of invites) if (exp < t) invites.delete(k);
 }, 60_000).unref();
 

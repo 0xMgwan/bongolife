@@ -468,7 +468,7 @@ function PlayerSheet({ username, onClose }) {
       })()}
       {p.online && !blocked && (
         <div className="row" style={{ marginTop: 8, gap: 8 }}>
-          <button className="btn btn-dark grow" onClick={() => inviteHome(p.username)}>🏠 {L('Mwalike kwako', 'Invite home')}</button>
+          <button className="btn btn-dark grow" onClick={() => inviteHome(p.username)}>📨 {L('Mwalike…', 'Invite to…')}</button>
           <button className="btn btn-ghost grow" onClick={() => goToPlayer(p.username)}>📍 {L('Nenda kwake', 'Go to them')}</button>
         </div>
       )}

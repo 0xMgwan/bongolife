@@ -63,6 +63,8 @@ export const useStore = create((set, get) => ({
   flightView: null, // null = auto | 'inside' | 'outside'
   street: { stars: 0, mission: null, heist: null, stolen: null }, // Mtaani: wanted level & live jobs
   homeRoomKey: 'main', // which of the host's homes the live room is for
+  invitePick: null, // { username, places } — choose where to invite a friend
+  blockInvite: null, // invite into someone's building on a plot
   homePick: false, // the 🏠 chooser (Kwangu or a building you own)
   newsFlash: null, // latest story for the breaking-news ticker
   stolenCar: null, // { model, color, plate } while driving a jacked car

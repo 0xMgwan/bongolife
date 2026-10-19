@@ -34,7 +34,11 @@ export function leaveVisit() {
   useStore.setState({ visiting: null, tab: 'town', homeSel: null });
 }
 
-export async function inviteHome(username) {
+/** "Invite home" buttons open the place picker: Kwangu, your houses, yacht/jet, buildings. */
+export function inviteHome(username) {
+  return import('./InvitePicker.jsx').then((m) => m.pickInvite(username));
+}
+export async function inviteKwangu(username) {
   const r = await sendInvite(username);
   if (r.ok) toast(L(`📨 Mwaliko umetumwa kwa @${username}`, `📨 Invite sent to @${username}`));
   else if (r.error === 'offline') toast(L(`@${username} hayuko online sasa.`, `@${username} isn't online right now.`), 'err');

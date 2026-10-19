@@ -99,6 +99,7 @@ export function connect() {
     else st().toast(L('Sogea karibu na mlango kwanza.', 'Get closer to the entrance first.'), 'err');
   });
   socket.on('lux:invite', (d) => { sfx('notify'); useStore.setState({ luxInvite: d }); });
+  socket.on('block:invite', (d) => { sfx('notify'); useStore.setState({ blockInvite: d }); });
   // ---- lifts
   const liftState = ({ driver, passengers }) => {
     for (const [pid, did] of [...riderOf]) if (did === driver) riderOf.delete(pid);
