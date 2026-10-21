@@ -1,5 +1,6 @@
 import { GAME, fmtTsh, vehicleById, plotById, placeById, buildingById, ENTERABLE_BUILDINGS } from '@shared/world.js';
 import { enterProperty } from '../HomePicker.jsx';
+import { VirtualNote } from '../VirtualNote.jsx';
 import { useStore } from '../../store.js';
 import { walkTo, goToPlace } from '../../nav.js';
 import { AppHead } from '../Phone.jsx';
@@ -22,6 +23,7 @@ export function Mali({ back, close }) {
           </div>
         </div>
 
+        <VirtualNote compact style={{ marginTop: 10 }} />
         <div className="section-t">{L('Magari', 'Vehicles')} ({me.vehicles.length})</div>
         {me.vehicles.length === 0 && <div className="box small muted">{L('Huna usafiri bado. Tembelea Yadi ya Magari Ubungo 🚗', 'No vehicle yet. Visit the Car Yard in Ubungo 🚗')} <button className="btn btn-ghost btn-xs" onClick={() => go(() => goToPlace('yadi'))}>{L('Nenda', 'Go')}</button></div>}
         {me.vehicles.map((v) => {

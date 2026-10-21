@@ -37,6 +37,8 @@ import { HomePicker, goHome } from './HomePicker.jsx';
 import { InvitePicker, BlockInviteModal } from './InvitePicker.jsx';
 import { NewsTicker } from './apps/Habari.jsx';
 import { ditchCar } from '../street.js';
+import { VIRTUAL_TEXT } from './VirtualNote.jsx';
+import { ask } from './Confirm.jsx';
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -391,6 +393,8 @@ function TopBar({ me }) {
   }, [open, poke]);
   const reveal = (e) => {
     if (open) return setPoke((n) => n + 1);
+    // The money balance always responds (wallet, or the virtual-currency notice).
+    if (e.target.closest?.('.tb-money')) return;
     // While collapsed, the first tap anywhere on the bar only reveals it.
     e.stopPropagation();
     e.preventDefault();
@@ -409,7 +413,7 @@ function TopBar({ me }) {
           <span className="tb-sep" />
           <button className="tb-sound" tabIndex={open ? 0 : -1} onClick={() => setAudioSettings({ muted: !sound.muted })} aria-label={L('Sauti', 'Sound')}>{sound.muted ? '🔇' : '🔊'}</button>
         </div>
-        <MoneyPill money={me.money} onClick={walletOpen ? () => openPhone('pesa', 'topup') : undefined} plus={walletOpen} />
+        <MoneyPill money={me.money} onClick={walletOpen ? () => openPhone('pesa', 'topup') : () => ask({ icon: '🪙', title: L('Pesa za mchezo', 'Virtual currency'), text: VIRTUAL_TEXT(), alert: true })} plus={walletOpen} />
       </div>
       {liveOpen && <LiveNow onClose={() => setLiveOpen(false)} />}
       {!clean && (

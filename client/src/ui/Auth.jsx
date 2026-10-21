@@ -5,6 +5,7 @@ import { L } from '../i18n.js';
 import { Crown } from './Logo.jsx';
 import { pendingRef } from './share.js';
 import { LangToggle } from './LangToggle.jsx';
+import { VirtualNote } from './VirtualNote.jsx';
 
 /** Forgot password: request an emailed code, then set a new password with it. */
 function Forgot({ onDone, onBack, initial }) {
@@ -152,6 +153,7 @@ export function AuthCard({ username = '', onAuthed, lockTab }) {
               </label>
             </>
           )}
+          {signup && <VirtualNote compact style={{ marginTop: 12 }} />}
           {err && <div className="err">{err}</div>}
           <button className="btn btn-green btn-block" style={{ marginTop: 18 }} disabled={!ready || busy}>
             {busy ? L('Subiri…', 'Please wait…') : signup ? L('Jisajili · ni bure', "Sign up · it's free") : L('Ingia Bongo', 'Log in')}

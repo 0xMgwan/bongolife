@@ -2059,3 +2059,8 @@ body.cam-flash::after { content: ''; position: fixed; inset: 0; background: #fff
 .hp-go { font-size: 20px; font-weight: 900; }
 .asset-card.built { background: linear-gradient(120deg, #fff 60%, color-mix(in srgb, var(--ac) 35%, #fff)) !important; }
 .asset-card .btn-sm { margin-left: 4px; }
+
+/* ---------------------------------------------------------------- virtual currency notice */
+.virtual-note { display: flex; gap: 8px; align-items: flex-start; background: #fffbeb; border: 1.5px solid #f59e0b; border-radius: 12px; padding: 9px 11px; font-size: 12.5px; line-height: 1.4; color: #78350f; text-align: left; text-shadow: none; }
+.virtual-note .vn-ic { font-size: 16px; line-height: 1.1; flex: none; }
+.virtual-note.compact { font-size: 11px; padding: 6px 9px; border-width: 1px; }

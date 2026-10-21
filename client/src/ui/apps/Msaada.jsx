@@ -1,6 +1,7 @@
 import { AppHead } from '../Phone.jsx';
 import { L } from '../../i18n.js';
 import { Socials } from '../Socials.jsx';
+import { VirtualNote } from '../VirtualNote.jsx';
 
 const SECTIONS = [
   ['🚶', ['Kutembea', 'Getting around'], ['Gusa ardhi au tumia joystick. Vuta skrini kuzungusha kamera. Kwenye Mjini, chips za juu zinakupeleka kwenye ramani.', 'Tap the ground or use the joystick. Drag the screen to turn the camera. In Town, the chips at the top open the map.']],
@@ -16,6 +17,7 @@ export function Msaada({ back }) {
     <>
       <AppHead title={L('Msaada & Mwongozo', 'Help & guide')} onBack={back} />
       <div className="app-body">
+        <VirtualNote />
         <div className="box"><Socials /></div>
         {SECTIONS.map(([icon, t, b]) => (
           <div key={t[1]} className="box">

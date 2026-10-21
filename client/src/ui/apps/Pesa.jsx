@@ -4,6 +4,7 @@ import { useStore } from '../../store.js';
 import { api } from '../../api.js';
 import { AppHead } from '../Phone.jsx';
 import { L } from '../../i18n.js';
+import { VirtualNote } from '../VirtualNote.jsx';
 
 const KIND = { topup: '💳', salary: '💼', spend: '🛍️', purchase: '🧾', income: '🏦', gift: '🎁', transfer_in: '📥', transfer_out: '📤', travel: '🛺', ads: '📢' };
 
@@ -153,6 +154,7 @@ export function Pesa({ arg, back }) {
     <>
       <AppHead title={L('Bongo Pesa', 'Wallet')} onBack={back} />
       <div className="app-body">
+        <VirtualNote compact style={{ marginBottom: 10 }} />
         <div className="bal">
           <div className="small" style={{ opacity: 0.85 }}>{L('Salio lako', 'Your balance')}</div>
           <div className="n">{fmtTsh(me.money)}</div>
