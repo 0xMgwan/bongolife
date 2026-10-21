@@ -101,6 +101,8 @@ export const useStore = create((set, get) => ({
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 3300);
   },
   openPhone: (app = 'home', arg = null) => {
+    // The wallet (top-ups, sending money) is closed while the admin has top-ups paused.
+    if (app === 'pesa' && get().world?.walletOpen === false) return;
     if (!get().phone) sfx('open');
     set({ phone: app, phoneArg: arg, sheet: null });
   },

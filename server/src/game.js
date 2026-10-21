@@ -142,6 +142,7 @@ export function worldState() {
     plots: Object.fromEntries(q.allPlots.all().map((p) => [p.id, { building: p.building, owner: p.username, ownerName: p.name, up: parseUp(p.upgrades) }])),
     businesses: Object.fromEntries(q.allBiz.all().map((b) => [b.id, { owner: b.username, ownerName: b.name }])),
     event: liveEvent(),
+    walletOpen: !!getSettings().topupsEnabled, // the Bank app & top-ups are hidden while false
     mayor: (() => {
       const m = mayorRef.current?.();
       return m ? { username: m.username, name: m.name, message: m.message || null } : null;

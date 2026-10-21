@@ -41,7 +41,7 @@ import { ditchCar } from '../street.js';
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** Balance pill: counts to the new amount, flashes green/red and floats the difference. */
-function MoneyPill({ money, onClick }) {
+function MoneyPill({ money, onClick, plus = true }) {
   const [shown, setShown] = useState(money);
   const [delta, setDelta] = useState(null);
   const prev = useRef(money);
@@ -71,7 +71,7 @@ function MoneyPill({ money, onClick }) {
   const up = delta && delta.diff > 0;
   return (
     <button className={`tb-money${delta ? (up ? ' gain' : ' spend') : ''}`} onClick={onClick}>
-      TSh {fmtShort(shown)} <i>＋</i>
+      TSh {fmtShort(shown)} {plus && <i>＋</i>}
       {delta && <b key={delta.key} className={`tb-delta ${up ? 'up' : 'down'}`}>{up ? '+' : '−'}{fmtShort(Math.abs(delta.diff))}</b>}
     </button>
   );
@@ -369,6 +369,7 @@ const fmtTime = ({ hour, minute }) => {
 
 /** Top pill: time · mood · sound · wallet (+). */
 function TopBar({ me }) {
+  const walletOpen = useStore((s) => s.world?.walletOpen !== false);
   const clock = useClock();
   const sound = useAudioSettings();
   const openPhone = useStore((s) => s.openPhone);
@@ -408,7 +409,7 @@ function TopBar({ me }) {
           <span className="tb-sep" />
           <button className="tb-sound" tabIndex={open ? 0 : -1} onClick={() => setAudioSettings({ muted: !sound.muted })} aria-label={L('Sauti', 'Sound')}>{sound.muted ? '🔇' : '🔊'}</button>
         </div>
-        <MoneyPill money={me.money} onClick={() => openPhone('pesa', 'topup')} />
+        <MoneyPill money={me.money} onClick={walletOpen ? () => openPhone('pesa', 'topup') : undefined} plus={walletOpen} />
       </div>
       {liveOpen && <LiveNow onClose={() => setLiveOpen(false)} />}
       {!clean && (
@@ -532,6 +533,7 @@ const NEED_FIX = {
 /** Avatar (bottom-left): tap for the "Me" panel — needs you can fix in a tap, emotes, shortcuts. */
 function NeedsPanel({ me }) {
   const openPhone = useStore((s) => s.openPhone);
+  const walletOpen = useStore((s) => s.world?.walletOpen !== false);
   const [open, setOpen] = useState(false);
   const [poke, setPoke] = useState(0);
   useEffect(() => {
@@ -614,7 +616,7 @@ function NeedsPanel({ me }) {
             <div className="me-acts">
               <button onClick={act(() => openPhone('kabati'))}>👗<span>{L('Kabati', 'Wardrobe')}</span></button>
               <button onClick={act(() => openPhone('kazi'))}>💼<span>{L('Kazi', 'Jobs')}</span></button>
-              <button onClick={act(() => openPhone('pesa'))}>🏦<span>{L('Benki', 'Bank')}</span></button>
+              {walletOpen && <button onClick={act(() => openPhone('pesa'))}>🏦<span>{L('Benki', 'Bank')}</span></button>}
               <button onClick={act(() => openPhone('mali'))}>🏡<span>{L('Mali', 'Assets')}</span></button>
               <button onClick={act(startBuild)}>🔨<span>{L('Jenga', 'Build')}</span></button>
             </div>

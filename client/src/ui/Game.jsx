@@ -35,7 +35,7 @@ export default function Game() {
 
   useEffect(() => {
     connect();
-    api('/world').then((w) => set({ world: { plots: w.plots, businesses: w.businesses, event: w.event, mayor: w.mayor }, ads: w.ads, announcement: w.announcement })).catch(() => {});
+    api('/world').then((w) => set({ world: { plots: w.plots, businesses: w.businesses, event: w.event, mayor: w.mayor, walletOpen: w.walletOpen }, ads: w.ads, announcement: w.announcement })).catch(() => {});
     const stats = () => api(`/public/stats?v=${visitorId()}`).then((s) => set({ visits: s.visits, online: s.online })).catch(() => {});
     stats();
     loadEvents();

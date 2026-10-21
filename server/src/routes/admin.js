@@ -518,6 +518,7 @@ admin.put('/settings', (req, res) => {
     patch.radioDefault = { name: str(req.body.radioDefault.name, 40) || 'Radio', url, city: str(req.body.radioDefault.city, 40) || 'Dar es Salaam', tag: ['Kituo chetu', 'Our station'] };
   }
   const after = setSettings(patch);
+  if ('topupsEnabled' in patch) worldChanged();
   if ('announcement' in patch || 'announcementEn' in patch) broadcast('announcement', publicAnnouncement());
   if ('eventOverride' in patch || 'eventOverrideEn' in patch) worldChanged();
   if (patch.maintenance && !before.maintenance) {

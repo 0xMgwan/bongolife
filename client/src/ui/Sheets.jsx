@@ -229,7 +229,7 @@ function PlaceSheet({ id, onClose }) {
       })}
       {p.shop === 'outfits' && <OutfitShop me={me} />}
       {p.shop === 'vehicles' && <VehicleShop me={me} />}
-      {p.shop === 'topup' && (
+      {p.shop === 'topup' && useStore.getState().world?.walletOpen !== false && (
         <button className="btn btn-green btn-block" style={{ marginTop: 14 }} onClick={() => openPhone('pesa', 'topup')}>💳 {L('Ongeza salio la wallet', 'Top up your wallet')}</button>
       )}
     </Sheet>

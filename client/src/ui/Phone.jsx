@@ -122,6 +122,8 @@ function AppIcon({ icon, label, onClick, badge, g, img, color }) {
 }
 
 export function Phone() {
+  const walletOpen = useStore((s) => s.world?.walletOpen !== false);
+  const apps = walletOpen ? APPS : APPS.filter((a) => a.id !== 'pesa');
   const phone = useStore((s) => s.phone);
   const arg = useStore((s) => s.phoneArg);
   const me = useStore((s) => s.me);
@@ -164,9 +166,9 @@ export function Phone() {
               <div className="home-date">{days[d.getDay()]} {d.getDate()} {months[d.getMonth()]} · Dar es Salaam</div>
               {banner && <div className="home-banner">✨ <span>{banner}</span></div>}
               <div className="apps">
-                {APPS.slice(0, 2).map((a) => <AppIcon key={a.id} icon={a.icon} g={a.g} label={loc(a)} badge={badges[a.id]} onClick={() => open(a.id)} />)}
+                {apps.slice(0, 2).map((a) => <AppIcon key={a.id} icon={a.icon} g={a.g} label={loc(a)} badge={badges[a.id]} onClick={() => open(a.id)} />)}
                 {(partner || []).map((pa) => <AppIcon key={`p${pa.id}`} icon={pa.emoji || '🌐'} img={pa.icon_url} color={pa.color} label={pa.name} badge={pa.badge} onClick={() => openPartner(pa)} />)}
-                {APPS.slice(2).map((a) => <AppIcon key={a.id} icon={a.icon} g={a.g} label={loc(a)} badge={badges[a.id]} onClick={() => open(a.id)} />)}
+                {apps.slice(2).map((a) => <AppIcon key={a.id} icon={a.icon} g={a.g} label={loc(a)} badge={badges[a.id]} onClick={() => open(a.id)} />)}
               </div>
               <Skyline />
             </div>

@@ -328,6 +328,11 @@ export function getSettings() {
   }
   return settingsCache;
 }
+// One-time: wallet top-ups paused (Oct 2026). Admin → Settings → "Wallet top-ups" turns them back on.
+if (!db.prepare("SELECT 1 FROM settings WHERE key = 'migr_topups_paused'").get()) {
+  db.prepare("INSERT INTO settings (key, value) VALUES ('topupsEnabled', 'false') ON CONFLICT(key) DO UPDATE SET value = 'false'").run();
+  db.prepare("INSERT INTO settings (key, value) VALUES ('migr_topups_paused', 'true')").run();
+}
 export function setSettings(patch) {
   const up = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
   db.transaction(() => {

@@ -28,7 +28,7 @@ export function TipRow({ username, onSent }) {
   return (
     <div className="tip-row">
       {TIP_AMOUNTS.map((a) => <button key={a} disabled={money < a} onClick={async () => { if (await tipUser(username, a)) onSent?.(); }}>{fmtShort(a)}</button>)}
-      <button onClick={() => { useStore.setState({ userActions: null, sheet: null }); useStore.getState().openPhone('pesa', { send: username }); }}>{L('Kiasi kingine', 'Other')}</button>
+      {useStore.getState().world?.walletOpen !== false && <button onClick={() => { useStore.setState({ userActions: null, sheet: null }); useStore.getState().openPhone('pesa', { send: username }); }}>{L('Kiasi kingine', 'Other')}</button>}
     </div>
   );
 }

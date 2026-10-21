@@ -460,7 +460,7 @@ export function Dm({ arg: username, back }) {
         <div className="dm-acts">
           <button className="g" onClick={() => inviteHome(username)}>🏠 {L('Mwalike kwako', 'Invite over')}</button>
           <button className="b" onClick={() => visitHome(username)}>🚪 {L('Mtembelee', 'Visit them')}</button>
-          <button className="y" onClick={() => useStore.getState().openPhone('pesa', { send: username })}>💸 {L('Tuma pesa', 'Send money')}</button>
+          {useStore.getState().world?.walletOpen !== false && <button className="y" onClick={() => useStore.getState().openPhone('pesa', { send: username })}>💸 {L('Tuma pesa', 'Send money')}</button>}
           <button className="p" onClick={() => useStore.setState({ phone: null, sheet: { type: 'player', id: username } })}>🎉 {L('Mtoke pamoja', 'Go out')}</button>
         </div>
       </div>
