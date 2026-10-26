@@ -122,8 +122,7 @@ function AppIcon({ icon, label, onClick, badge, g, img, color }) {
 }
 
 export function Phone() {
-  const walletOpen = useStore((s) => s.world?.walletOpen !== false);
-  const apps = walletOpen ? APPS : APPS.filter((a) => a.id !== 'pesa');
+  const apps = APPS;
   const phone = useStore((s) => s.phone);
   const arg = useStore((s) => s.phoneArg);
   const me = useStore((s) => s.me);

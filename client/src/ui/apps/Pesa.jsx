@@ -145,7 +145,9 @@ function Send({ initial, onDone }) {
 export function Pesa({ arg, back }) {
   const me = useStore((s) => s.me);
   const [data, setData] = useState(null);
-  const [tab, setTab] = useState(arg === 'topup' ? 'topup' : arg?.send ? 'send' : 'history');
+  // Top-ups can be paused by the admin; the wallet (history, sending) stays open.
+  const canTopup = useStore((s) => s.world?.walletOpen !== false);
+  const [tab, setTab] = useState(arg === 'topup' && canTopup ? 'topup' : arg?.send ? 'send' : 'history');
   const load = () => api('/wallet').then(setData).catch(() => {});
   useEffect(() => {
     load();
@@ -159,16 +161,16 @@ export function Pesa({ arg, back }) {
           <div className="small" style={{ opacity: 0.85 }}>{L('Salio lako', 'Your balance')}</div>
           <div className="n">{fmtTsh(me.money)}</div>
           <div className="row">
-            <button className="btn btn-white btn-sm" onClick={() => setTab('topup')}>＋ {L('Ongeza', 'Top up')}</button>
+            {canTopup && <button className="btn btn-white btn-sm" onClick={() => setTab('topup')}>＋ {L('Ongeza', 'Top up')}</button>}
             <button className="btn btn-sm" style={{ background: 'rgba(255,255,255,.2)', color: '#fff' }} onClick={() => setTab('send')}>{L('Tuma', 'Send')}</button>
           </div>
         </div>
         <div className="seg">
           <button className={tab === 'history' ? 'on' : ''} onClick={() => setTab('history')}>{L('Historia', 'History')}</button>
-          <button className={tab === 'topup' ? 'on' : ''} onClick={() => setTab('topup')}>{L('Ongeza salio', 'Top up')}</button>
+          {canTopup && <button className={tab === 'topup' ? 'on' : ''} onClick={() => setTab('topup')}>{L('Ongeza salio', 'Top up')}</button>}
           <button className={tab === 'send' ? 'on' : ''} onClick={() => setTab('send')}>{L('Tuma', 'Send')}</button>
         </div>
-        {tab === 'topup' && (data?.topup ? <Topup info={data.topup} me={me} onDone={load} /> : <div className="box small muted">{data ? L('Malipo hayajawashwa kwenye server hii bado.', 'Payments are not enabled on this server yet.') : L('Inapakia…', 'Loading…')}</div>)}
+        {tab === 'topup' && canTopup && (data?.topup ? <Topup info={data.topup} me={me} onDone={load} /> : <div className="box small muted">{data ? L('Malipo hayajawashwa kwenye server hii bado.', 'Payments are not enabled on this server yet.') : L('Inapakia…', 'Loading…')}</div>)}
         {tab === 'send' && <Send initial={arg?.send} onDone={load} />}
         {tab === 'history' && (
           <div className="box" style={{ padding: '4px 14px' }}>

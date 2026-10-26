@@ -54,7 +54,7 @@ export function Contacts({ back, open }) {
               {c.online && <button className="round" style={{ width: 36, height: 36, fontSize: 15 }} onClick={() => inviteHome(c.username)} aria-label={L('Mwalike nyumbani', 'Invite home')}>🏠</button>}
               {c.mutual && <button className="round" style={{ width: 36, height: 36, fontSize: 15 }} onClick={() => callFriends([c.username])} aria-label={L('Piga simu', 'Call')}>📞</button>}
               <button className="round" style={{ width: 36, height: 36, fontSize: 15 }} onClick={() => open('dm', c.username)} aria-label={L('Ujumbe', 'Message')}>💬</button>
-              {useStore.getState().world?.walletOpen !== false && <button className="round" style={{ width: 36, height: 36, fontSize: 15 }} onClick={() => open('pesa', { send: c.username })} aria-label={L('Tuma pesa', 'Send money')}>💸</button>}
+              <button className="round" style={{ width: 36, height: 36, fontSize: 15 }} onClick={() => open('pesa', { send: c.username })} aria-label={L('Tuma pesa', 'Send money')}>💸</button>
               <button className="round" style={{ width: 36, height: 36, fontSize: 13 }} onClick={() => remove(c.username)} aria-label={L('Ondoa', 'Remove')}>✕</button>
             </div>
           ))}

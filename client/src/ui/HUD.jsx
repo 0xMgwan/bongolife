@@ -37,8 +37,6 @@ import { HomePicker, goHome } from './HomePicker.jsx';
 import { InvitePicker, BlockInviteModal } from './InvitePicker.jsx';
 import { NewsTicker } from './apps/Habari.jsx';
 import { ditchCar } from '../street.js';
-import { VIRTUAL_TEXT } from './VirtualNote.jsx';
-import { ask } from './Confirm.jsx';
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -413,7 +411,7 @@ function TopBar({ me }) {
           <span className="tb-sep" />
           <button className="tb-sound" tabIndex={open ? 0 : -1} onClick={() => setAudioSettings({ muted: !sound.muted })} aria-label={L('Sauti', 'Sound')}>{sound.muted ? '🔇' : '🔊'}</button>
         </div>
-        <MoneyPill money={me.money} onClick={walletOpen ? () => openPhone('pesa', 'topup') : () => ask({ icon: '🪙', title: L('Pesa za mchezo', 'Virtual currency'), text: VIRTUAL_TEXT(), alert: true })} plus={walletOpen} />
+        <MoneyPill money={me.money} onClick={() => openPhone('pesa', walletOpen ? 'topup' : null)} plus={walletOpen} />
       </div>
       {liveOpen && <LiveNow onClose={() => setLiveOpen(false)} />}
       {!clean && (
@@ -537,7 +535,6 @@ const NEED_FIX = {
 /** Avatar (bottom-left): tap for the "Me" panel — needs you can fix in a tap, emotes, shortcuts. */
 function NeedsPanel({ me }) {
   const openPhone = useStore((s) => s.openPhone);
-  const walletOpen = useStore((s) => s.world?.walletOpen !== false);
   const [open, setOpen] = useState(false);
   const [poke, setPoke] = useState(0);
   useEffect(() => {
@@ -620,7 +617,7 @@ function NeedsPanel({ me }) {
             <div className="me-acts">
               <button onClick={act(() => openPhone('kabati'))}>👗<span>{L('Kabati', 'Wardrobe')}</span></button>
               <button onClick={act(() => openPhone('kazi'))}>💼<span>{L('Kazi', 'Jobs')}</span></button>
-              {walletOpen && <button onClick={act(() => openPhone('pesa'))}>🏦<span>{L('Benki', 'Bank')}</span></button>}
+              <button onClick={act(() => openPhone('pesa'))}>🏦<span>{L('Benki', 'Bank')}</span></button>
               <button onClick={act(() => openPhone('mali'))}>🏡<span>{L('Mali', 'Assets')}</span></button>
               <button onClick={act(startBuild)}>🔨<span>{L('Jenga', 'Build')}</span></button>
             </div>
