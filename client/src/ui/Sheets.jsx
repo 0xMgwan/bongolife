@@ -1,5 +1,6 @@
 import { NewsClip } from './apps/Habari.jsx';
 import { switchHome } from './HomeUI.jsx';
+import { PropertyDeal } from './apps/SokoMali.jsx';
 import { useEffect, useRef, useState } from 'react';
 import {
   adPriceTzs, NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
@@ -196,6 +197,8 @@ function PlaceSheet({ id, onClose }) {
           )}
         </div>
       )}
+      {p.business && owner && owner.owner !== me.username && <PropertyDeal kind="biz" id={id} />}
+      {p.business && owner && owner.owner === me.username && <button className="btn btn-ghost btn-block" style={{ marginTop: 6 }} onClick={() => openPhone('sokomali')}>🏷️ {L('Uza biashara hii sokoni', 'Sell this business on the market')}</button>}
       {p.activities?.length > 0 && <div className="section-t">{L('Shughuli', 'Activities')}</div>}
       {p.activities?.map((a) => (
         <div key={a.id} className="item">
@@ -267,11 +270,13 @@ function PlotSheet({ id, onClose }) {
         <div className="box">
           <span className="owner">🏠 {L('Mmiliki', 'Owner')}: @{st.owner}</span>
           <div className="small muted" style={{ marginTop: 8 }}>{current ? loc(current) : L('Bado hakijajengwa.', 'Not built yet.')}</div>
+          <PropertyDeal kind="plot" id={id} />
         </div>
       )}
       {mine && (
         <>
           <span className="owner">✅ {L('Hiki ni kiwanja chako', 'This is your plot')}{current ? ` · ${loc(current)}` : ''}</span>
+          <button className="btn btn-ghost btn-block" style={{ margin: '8px 0' }} onClick={() => useStore.getState().openPhone('sokomali')}>🏷️ {L('Uza / weka mnada', 'Sell / auction it')}</button>
           {current && (
             <>
               <div className="section-t">{L('Nyumbani', 'At home')}</div>

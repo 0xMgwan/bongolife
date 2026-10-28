@@ -24,6 +24,7 @@ import { hustlePending, collectHustles, hustleValue } from './hustle.js';
 import { portfolioValue } from './stocks.js';
 import { story as newsStory } from './news.js';
 import { guardOf } from './guards.js';
+import * as familyMod from './family.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const HOUR = 3600_000;
@@ -120,6 +121,7 @@ export function playerState(userId) {
     mood: moodOf(u.needs),
     fitness: gymMod.fitnessOf(userId),
     guards: guardOf(userId),
+    kids: familyMod.kidsBrief(userId),
     ...activeHome(userId),
     npcPartner: npcLoveMod.npcPartner(userId),
     vehicles: q.vehicles.all(userId),

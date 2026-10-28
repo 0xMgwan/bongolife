@@ -172,8 +172,9 @@ export function step(uid, npcId, kind) {
   return view(uid);
 }
 
-export function end(uid, npcId) {
-  need(uid, npcId);
+export function end(uid, npcId, divorce = false) {
+  const r = need(uid, npcId);
+  if (r.status === 'married' && !divorce) throw new GameError(['Mmeoana — tumia Talaka kwenye Familia.', "You're married — file for divorce in the Family app."]);
   db.prepare('UPDATE npc_romance SET ended_at = ? WHERE user_id = ? AND npc_id = ?').run(now(), uid, npcId);
   return view(uid);
 }

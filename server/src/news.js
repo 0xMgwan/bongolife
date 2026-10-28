@@ -135,6 +135,21 @@ export const story = {
       [`Machozi mtandaoni: ${u(a)} amtema ${u(b)}`, `Tears online: ${u(a)} dumps ${u(b)}`],
     ]), { user: a });
   },
+  divorce(user, ex, cost) {
+    publish('scandal', pick([
+      [`TALAKA! ${u(user)} na ${ex} waachana — fidia ya ${M(cost)[0]}`, `DIVORCE! ${u(user)} and ${ex} split — a ${M(cost)[1]} settlement`],
+      [`Ndoa ya ${u(user)} na ${ex} yavunjika mahakamani ⚖️`, `${u(user)} and ${ex}'s marriage ends in court ⚖️`],
+    ]), { user, big: cost >= 100_000_000 });
+  },
+  baby(user, partner, name, gender) {
+    publish('love', [`Hongera! ${u(user)} na ${partner} wampokea ${gender === 'girl' ? 'binti' : 'mtoto wa kiume'}, ${name} 👶🏾`, `Congratulations! ${u(user)} and ${partner} welcome baby ${gender === 'girl' ? 'girl' : 'boy'} ${name} 👶🏾`], { user });
+  },
+  propertySale(seller, buyer, asset, amount) {
+    publish(amount >= 1_000_000_000 ? 'wealth' : 'business', pick([
+      [`DILI: ${u(buyer)} anunua ${asset.name} kutoka kwa ${u(seller)} kwa ${M(amount)[0]}`, `DEAL: ${u(buyer)} buys ${asset.nameEn || asset.name} from ${u(seller)} for ${M(amount)[1]}`],
+      [`${asset.name} yabadilisha mmiliki — ${M(amount)[0]}`, `${asset.nameEn || asset.name} changes hands for ${M(amount)[1]}`],
+    ]), { user: buyer, big: amount >= 1_000_000_000 });
+  },
   mayor(user, votes) {
     publish('politics', [`${u(user)} ashinda Umeya wa Dar kwa kura ${votes}`, `${u(user)} wins the Dar mayoral race with ${votes} votes`], { user, big: true });
   },

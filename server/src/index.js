@@ -416,6 +416,15 @@ const checkElection = () => {
 };
 checkElection();
 setInterval(checkElection, 60_000);
+// Families: babies arrive. Property market: auctions close.
+import('./family.js').then((m) => {
+  m.setBirthHook((u, partner, p) => newsStory.baby(u, partner, p.name, p.gender));
+  setInterval(() => { try { m.birthTick(); } catch (e) { console.error('[family]', e.message); } }, 60_000);
+});
+import('./market.js').then((m) => {
+  m.setSaleHook(({ seller, buyer, asset, amount }) => { broadcast('world', worldState()); if (amount >= 50_000_000) newsStory.propertySale(seller, buyer, asset, amount); });
+  setInterval(() => { try { m.marketTick(); } catch (e) { console.error('[market]', e.message); } }, 30_000);
+});
 // Press: milestones, rich list, rivalries. Guards whose contract ran out go home.
 startNews({ netWorth: (id) => netWorth(id) });
 setInterval(() => { try { guardsTick(); } catch (e) { console.error('[guards]', e.message); } }, 60_000);

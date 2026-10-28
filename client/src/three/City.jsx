@@ -150,6 +150,7 @@ const CityGround = memo(function CityGround({ city, onGround }) {
       {city.id === 'aru' && <Mountains cx={cx} cz={cz} />}
       {city.id === 'znz' && <FlatText text={L('BAHARI YA HINDI', 'INDIAN OCEAN')} pos={[cx - 120, cz]} size={9} />}
       {city.id === 'pwa' && <FlatText text={L('BAHARI YA HINDI', 'INDIAN OCEAN')} pos={[cx + 140, cz]} size={9} />}
+      {city.id === 'mwz' && <FlatText text={L('ZIWA VICTORIA', 'LAKE VICTORIA')} pos={[cx - 20, cz - 110]} size={9} />}
       <FlatText text={city.name.toUpperCase()} pos={[cx, cz + h - 12]} size={7} />
     </group>
   );

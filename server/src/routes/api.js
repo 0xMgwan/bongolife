@@ -42,6 +42,8 @@ import * as stocks from '../stocks.js';
 import * as street from '../street.js';
 import * as news from '../news.js';
 import * as guards from '../guards.js';
+import * as family from '../family.js';
+import * as market from '../market.js';
 
 export const api = express.Router();
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -196,7 +198,7 @@ api.use((req, _res, next) => {
 api.get('/voice/welcome', rateLimit('voice-welcome', 10, 60 * 60_000), wrap(async (req, res) => {
   if (!live.voiceReady() || process.env.VOICE_ENABLED !== '1') return res.status(404).json({ error: 'voice off' });
   const lang = req.query.lang === 'en' ? 'en' : 'sw';
-  const city = ['dar', 'znz', 'aru', 'pwa'].includes(req.query.city) ? req.query.city : 'dar';
+  const city = ['dar', 'znz', 'aru', 'pwa', 'mwz'].includes(req.query.city) ? req.query.city : 'dar';
   const w = await live.weather(city);
   const latest = getSettings().latestUpdate;
   const news = latest && Date.now() - latest.at < 14 * 86_400_000 ? latest : null;
@@ -539,6 +541,29 @@ api.post('/invite/place', rateLimit('invplace', 40, 60_000), (req, res) => {
     return res.json({ ok: true, to: to.username });
   }
   throw new GameError(['Ombi si sahihi', 'Invalid request']);
+});
+// Familia: babies, kids, divorce.
+api.get('/family', (req, res) => res.json(family.view(req.user.id)));
+api.post('/family/baby', (req, res) => res.json({ ...family.planBaby(req.user.id, str(req.body.name, 20), str(req.body.gender, 4)), me: game.playerState(req.user.id) }));
+api.post('/family/kids/:id/care', (req, res) => res.json({ ...family.care(req.user.id, req.params.id, str(req.body.act, 10)), me: game.playerState(req.user.id) }));
+api.post('/family/divorce', (req, res) => {
+  const r = family.divorce(req.user.id);
+  news.story.divorce(req.user, r.spouse.name, r.cost);
+  res.json({ ...r, me: game.playerState(req.user.id) });
+});
+// Soko la Mali: property market (listings, auctions, offers).
+const mktDone = (req, r) => { broadcast('world', game.worldState()); return { ...r, me: game.playerState(req.user.id) }; };
+api.get('/market', (req, res) => res.json(market.view(req.user.id)));
+api.get('/market/asset/:kind/:id', (req, res) => res.json({ listing: market.listingFor(str(req.params.kind, 4), str(req.params.id, 30)), asset: market.describe(str(req.params.kind, 4), str(req.params.id, 30)) }));
+api.post('/market/list', (req, res) => res.json(market.list(req.user.id, { kind: str(req.body.kind, 4), id: str(req.body.id, 30), price: req.body.price, startBid: req.body.startBid, hours: req.body.hours })));
+api.post('/market/:id/cancel', (req, res) => res.json(market.cancel(req.user.id, req.params.id)));
+api.post('/market/:id/bid', rateLimit('bid', 60, 60_000), (req, res) => res.json({ ...market.bid(req.user.id, req.params.id, req.body.amount), me: game.playerState(req.user.id) }));
+api.post('/market/:id/buy', (req, res) => res.json(mktDone(req, market.buyNow(req.user.id, req.params.id))));
+api.post('/market/offer', rateLimit('offer', 30, 60_000), (req, res) => res.json(market.offer(req.user.id, { kind: str(req.body.kind, 4), id: str(req.body.id, 30), amount: req.body.amount })));
+api.post('/market/offer/:id/:action', (req, res) => {
+  const action = ['accept', 'decline', 'withdraw'].includes(req.params.action) ? req.params.action : 'decline';
+  const r = market.answerOffer(req.user.id, req.params.id, action);
+  res.json(action === 'accept' ? mktDone(req, r) : r);
 });
 // Habari (news).
 api.get('/headlines', (req, res) => res.json({ stories: news.feed({ outlet: str(req.query.outlet, 16), limit: 60 }) }));
@@ -1099,6 +1124,7 @@ api.post('/love/:rid/wedding', (req, res) => {
 });
 api.post('/love/:rid/end', (req, res) => {
   const p = love.partnersOf(req.user.id).find((x) => String(x.rid) === String(req.params.rid));
+  if (p?.status === 'married') throw new GameError(['Mmeoana — tumia Talaka kwenye Familia.', "You're married — file for divorce in the Family app."]);
   love.endRelationship(req.user.id, req.params.rid);
   if (p && p.status !== 'match') news.story.breakup(req.user, { username: p.username });
   res.json(love.loveState(req.user.id));

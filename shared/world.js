@@ -45,6 +45,12 @@ export const CITIES = [
   },
   { id: 'aru', name: 'Arusha', icon: '⛰️', center: [-1600, 0], half: 120, ground: '#a9c48c' },
   {
+    id: 'mwz', name: 'Mwanza', icon: '🪨', center: [0, 1600], half: 120, ground: '#b5c98f',
+    // Rock City on Lake Victoria: the lake fills the north; Capri Point juts into it.
+    land: [{ x1: -120, z1: -72, x2: 120, z2: 120 }, { x1: 70, z1: -96, x2: 120, z2: -72 }],
+    beaches: [{ x1: -120, z1: -76, x2: 70, z2: -72 }],
+  },
+  {
     id: 'pwa', name: 'Pwani', icon: '🏭', center: [0, -1600], half: 120, ground: '#c5c9a4',
     // Kibaha & Mlandizi industrial parks, Mapinga retirement homes, old Bagamoyo on the coast.
     land: [{ x1: -120, z1: -120, x2: 96, z2: 120 }, { x1: 96, z1: -110, x2: 104, z2: 110 }],
@@ -56,6 +62,7 @@ export const cityAt = (x, z) => CITIES.find((c) => Math.abs(x - c.center[0]) <= 
 const Z = (x, z) => [1600 + x, z];
 const A = (x, z) => [-1600 + x, z];
 const P = (x, z) => [x, -1600 + z];
+const M = (x, z) => [x, 1600 + z];
 
 export function isWater(x, z) {
   const c = cityAt(x, z);
@@ -105,6 +112,12 @@ export const ROADS = [
   [...P(-40, -115), ...P(-40, 115), 7, 'Barabara ya Viwanda'],
   [...P(30, -115), ...P(30, 115), 6, 'Barabara ya Kibaha'],
   [...A(-110, 60), ...A(110, 60), 6, 'Barabara ya Dodoma'],
+  // Mwanza
+  [...M(-115, 0), ...M(115, 0), 7, 'Barabara ya Kenyatta'],
+  [...M(-115, -50), ...M(115, -50), 6, 'Barabara ya Ziwani'],
+  [...M(-115, 62), ...M(115, 62), 6, 'Barabara ya Pasiansi'],
+  [...M(-60, -68), ...M(-60, 115), 7, 'Barabara ya Nyerere'],
+  [...M(40, -68), ...M(40, 115), 6, 'Barabara ya Makongoro'],
 ];
 
 export function onRoad(x, z, pad = 0) {
@@ -125,6 +138,15 @@ export const DISTRICTS = [
   { id: 'mlandizi', name: 'Mlandizi', pos: P(-80, 30) },
   { id: 'mapinga', name: 'Mapinga', pos: P(65, -88) },
   { id: 'bagamoyo', name: 'Bagamoyo', pos: P(55, 30) },
+  { id: 'capri', name: 'Capri Point', pos: M(95, -60) },
+  { id: 'goba', name: 'Goba', pos: [-125, -67] },
+  { id: 'mikocheni', name: 'Mikocheni', pos: [76, -119] },
+  { id: 'kimara', name: 'Kimara', pos: [-80, 63] },
+  { id: 'kunduchi', name: 'Kunduchi', pos: [-35, 134] },
+  { id: 'isamilo', name: 'Isamilo', pos: M(-95, 30) },
+  { id: 'kirumba', name: 'Kirumba', pos: M(-20, -60) },
+  { id: 'igoma', name: 'Igoma', pos: M(-90, 95) },
+  { id: 'buswelu', name: 'Buswelu', pos: M(70, 40) },
   { id: 'kariakoo', name: 'Kariakoo', pos: [7, 18] },
   { id: 'posta', name: 'Posta', pos: [52, 0] },
   { id: 'sinza', name: 'Sinza', pos: [-82, -66] },
@@ -385,6 +407,10 @@ export const PLOTS = [
   ...plotGrid('mbz', 'Mbezi', [-100, -86, -72], [-108, -122], 14_000_000),
   ...plotGrid('knd', 'Kinondoni', [0, 14], [-108, -122], 18_000_000),
   ...plotGrid('tmk', 'Temeke', [-40, -28], [52, 66, 80], 9_000_000),
+  ...plotGrid('gob', 'Goba', [-132, -119], [-80, -67, -54], 16_000_000),
+  ...plotGrid('mik', 'Mikocheni', [63, 76, 89], [-132, -119, -106], 60_000_000),
+  ...plotGrid('kmr', 'Kimara', [-93, -80, -67], [50, 63, 76], 12_000_000),
+  ...plotGrid('kdc', 'Kunduchi', [-41, -28], [128, 141], 45_000_000),
   // Zanzibar
   ...plotGrid('nwv', 'Nungwi', [1650, 1663, 1676, 1689], [-92], 80_000_000, 11),
   ...plotGrid('pje', 'Paje', [1688, 1701], [-45, -31, -17], 55_000_000),
@@ -400,6 +426,11 @@ export const PLOTS = [
   ...plotGrid('mld', 'Mlandizi', [-100, -82, -64], [-1587, -1569, -1552], 30_000_000, 14),
   ...plotGrid('mpg', 'Mapinga', [45, 58, 71, 84], [-1675, -1690, -1705], 15_000_000, 11),
   ...plotGrid('bgm', 'Bagamoyo', [42, 55, 68], [-1585, -1570, -1555], 20_000_000, 11),
+  // Mwanza: lakeside Capri Point, hilltop Isamilo, industrial Igoma, starter plots in Buswelu
+  ...plotGrid('cpr', 'Capri Point', [80, 93, 106], [1514, 1528], 75_000_000, 11),
+  ...plotGrid('ism', 'Isamilo', [-110, -96, -82], [1615, 1629, 1643], 32_000_000),
+  ...plotGrid('igm', 'Igoma', [-110, -92, -74], [1680, 1698], 28_000_000, 14),
+  ...plotGrid('bsw', 'Buswelu', [56, 69, 82, 95], [1622, 1636], 10_000_000),
 ];
 for (const p of PLOTS) { p.district = p.area; p.city = cityAt(p.pos[0], p.pos[1])?.id || 'dar'; }
 export const plotById = Object.fromEntries(PLOTS.map((p) => [p.id, p]));
@@ -420,6 +451,14 @@ export const ALLOWED_BUILDINGS = {
   Mlandizi: ['ghala', 'kiwanda-nguo', 'kiwanda-chakula', 'kiwanda-saruji', 'sola', 'shamba'],
   Mapinga: ['wazee', 'banda', 'kisasa', 'villa', 'kontena'],
   Bagamoyo: ['wazee', 'kisasa', 'villa', 'hostel', 'resort', 'banda'],
+  Goba: ['banda', 'kisasa', 'villa', 'kontena', 'shamba', 'wazee', 'hostel'],
+  Mikocheni: ['kisasa', 'villa', 'ghorofa', 'hoteli', 'kesho', 'kontena'],
+  Kimara: ['banda', 'kisasa', 'ghorofa', 'hostel', 'kontena', 'ghala', 'kiwanda-chakula'],
+  Kunduchi: ['kisasa', 'villa', 'hoteli', 'resort', 'kesho'],
+  'Capri Point': ['kisasa', 'villa', 'hoteli', 'resort', 'kesho', 'ghorofa'],
+  Isamilo: ['banda', 'kisasa', 'villa', 'ghorofa', 'hostel', 'kontena', 'wazee', 'kesho'],
+  Igoma: ['ghala', 'kiwanda-chakula', 'kiwanda-nguo', 'kiwanda-saruji', 'sola', 'shamba'],
+  Buswelu: ['banda', 'kisasa', 'kontena', 'hostel', 'shamba', 'ghorofa'],
 };
 
 // ----------------------------------------------------------------- places
@@ -592,6 +631,34 @@ export const PLACES = [
     ],
   },
   {
+    id: 'kanisa-mz', name: 'Kanisa la Mwamba', nameEn: 'Rock Church', district: 'Isamilo', type: 'church', icon: '⛪', pos: M(25, 80), size: [12, 16], h: 8, color: '#fff7ed',
+    blurb: 'Ibada ya Jumapili, kwaya, harusi na maombi. Kila mtu anakaribishwa.', blurbEn: 'Sunday service, choir, weddings and prayer. Everyone is welcome.',
+    activities: [
+      { id: 'ibada-mz', name: 'Hudhuria ibada', nameEn: 'Attend the service', cost: 0, secs: 25, effects: { fun: 15, social: 25, energy: 5 }, emoji: '🙏' },
+      { id: 'kwaya-mz', name: 'Imba kwenye kwaya', nameEn: 'Sing in the choir', cost: 0, secs: 20, effects: { fun: 25, social: 15, energy: -5 }, emoji: '🎶', fame: 1 },
+      { id: 'sadaka-mz', name: 'Toa sadaka (10K)', nameEn: 'Give an offering (10K)', cost: 10_000, secs: 6, effects: { social: 10, fun: 5 }, emoji: '💝', fame: 1 },
+      { id: 'fungu-mz', name: 'Toa fungu la kumi (500K)', nameEn: 'Pay a big tithe (500K)', cost: 500_000, secs: 8, effects: { social: 30, fun: 15 }, emoji: '🕊️', fame: 6 },
+      { id: 'maombi-mz', name: 'Ombewa na mchungaji', nameEn: 'Get prayed for by the pastor', cost: 20_000, secs: 15, effects: { fun: 20, energy: 15 }, emoji: '✋' },
+    ],
+    jobs: [
+      { id: 'mchungaji-mz', title: 'Mchungaji', titleEn: 'Pastor', titles: ['Mzee wa kanisa', 'Mchungaji msaidizi', 'Mchungaji', 'Askofu', 'Askofu Mkuu'], titlesEn: ['Church elder', 'Assistant pastor', 'Pastor', 'Bishop', 'Archbishop'], secs: 60, pay: 30_000, energy: 10 },
+      { id: 'mwimbaji-mz', title: 'Mwimbaji wa kwaya', titleEn: 'Choir singer', titles: ['Mwimbaji', 'Kiongozi wa kwaya', 'Msanii wa injili'], titlesEn: ['Singer', 'Choir leader', 'Gospel star'], secs: 45, pay: 16_000, energy: 10 },
+    ],
+  },  {
+    id: 'msikiti-mz', name: 'Msikiti wa Ziwani', nameEn: 'Lakeside Mosque', district: 'Mjini', type: 'mosque', icon: '🕌', pos: M(-28, 82), size: [14, 14], h: 7, color: '#ecfeff',
+    blurb: 'Swala tano, darsa la Qur\'an na swala ya Ijumaa. Kila mtu anakaribishwa.', blurbEn: "Daily prayers, Qur'an classes and Friday prayer. Everyone is welcome.",
+    activities: [
+      { id: 'swala-mz', name: 'Swali msikitini', nameEn: 'Pray at the mosque', cost: 0, secs: 20, effects: { fun: 12, social: 25, energy: 5 }, emoji: '🤲' },
+      { id: 'darsa-mz', name: "Darsa la Qur'an", nameEn: "Qur'an class", cost: 0, secs: 25, effects: { fun: 15, social: 15 }, emoji: '📖' },
+      { id: 'sadakam-mz', name: 'Toa sadaka (10K)', nameEn: 'Give charity (10K)', cost: 10_000, secs: 6, effects: { social: 10, fun: 5 }, emoji: '💝', fame: 1 },
+      { id: 'zaka-mz', name: 'Toa zaka (500K)', nameEn: 'Pay zakat (500K)', cost: 500_000, secs: 8, effects: { social: 30, fun: 15 }, emoji: '🕊️', fame: 6 },
+      { id: 'futari-mz', name: 'Kula futari ya pamoja', nameEn: 'Share an iftar meal', cost: 0, secs: 15, effects: { hunger: 45, social: 20 }, emoji: '🍲' },
+    ],
+    jobs: [
+      { id: 'imamu-mz', title: 'Imamu', titleEn: 'Imam', titles: ['Muadhini', 'Mwalimu wa madrasa', 'Imamu', 'Shehe', 'Shehe Mkuu'], titlesEn: ['Muezzin', 'Madrasa teacher', 'Imam', 'Sheikh', 'Chief Sheikh'], secs: 60, pay: 30_000, energy: 10 },
+      { id: 'kaswida-mz', title: 'Mwimbaji wa kaswida', titleEn: 'Qaswida singer', titles: ['Mwimbaji', 'Kiongozi wa kikundi', 'Msanii wa kaswida'], titlesEn: ['Singer', 'Group leader', 'Qaswida star'], secs: 45, pay: 16_000, energy: 10 },
+    ],
+  },  {
     id: 'gym-aru', name: 'Arusha Peak Gym', district: 'Arusha CBD', type: 'gym', icon: '🏋️', pos: A(35, 40), size: [12, 10], h: 7, color: '#f97316',
     blurb: 'Fanya mazoezi kwa mwonekano wa Mlima Meru.',
     activities: [{ id: 'mazoezi-aru', name: 'Fanya mazoezi', cost: 5_000, secs: 20, effects: { fun: 15, energy: -18, hygiene: -15, social: 8 }, emoji: '💪' }],
@@ -1020,6 +1087,56 @@ export const PLACES = [
     ],
     jobs: [{ id: 'croupier', title: 'Croupier', titles: ['Croupier', 'Pit boss', 'Meneja wa kasino'], secs: 60, pay: 30_000, energy: 10 }],
   },
+  {
+    id: 'mz-airport', name: 'Uwanja wa Ndege wa Mwanza', nameEn: 'Mwanza Airport', district: 'Ilemela', type: 'airport', icon: '✈️', pos: M(85, 95), size: [28, 16], h: 7, color: '#cbd5e1',
+    blurb: 'Ndege kwenda Dar, Arusha na Zanzibar.', blurbEn: 'Flights to Dar, Arusha and Zanzibar.',
+    activities: [{ id: 'kahawa-mz', name: 'Kahawa ya uwanjani', nameEn: 'Airport coffee', cost: 5000, secs: 8, effects: { energy: 15 }, emoji: '☕' }],
+  },
+  {
+    id: 'mz-stendi', name: 'Stendi ya Nyegezi', nameEn: 'Nyegezi Bus Stand', district: 'Nyegezi', type: 'terminal', icon: '🚌', pos: M(-20, 15), size: [14, 10], h: 5, color: '#e5e7eb',
+    blurb: 'Mabasi ya Dar, Arusha na Bagamoyo.', blurbEn: 'Coaches to Dar, Arusha and Bagamoyo.',
+    activities: [{ id: 'chai-mz', name: 'Chai na chapati', nameEn: 'Chai & chapati', cost: 2000, secs: 10, effects: { hunger: 18, energy: 5 }, emoji: '☕' }],
+  },
+  {
+    id: 'mz-port', name: 'Bandari ya Mwanza Kaskazini', nameEn: 'Mwanza North Port', district: 'Kirumba', type: 'port', icon: '⛴️', pos: M(0, -62), size: [10, 12], h: 3, color: '#e2e8f0',
+    blurb: 'Meli za Ukerewe na Bukoba — mitumbwi na wavuvi.', blurbEn: 'Ferries to Ukerewe and Bukoba — canoes and fishermen.',
+    activities: [{ id: 'safari-ziwa', name: 'Safari ya mtumbwi ziwani', nameEn: 'Canoe trip on the lake', cost: 15000, secs: 20, effects: { fun: 25, social: 10 }, emoji: '🛶' }], jobs: [{ id: 'mvuvi-mz', title: 'Mvuvi wa Ziwa', titleEn: 'Lake fisherman', titles: ['Mvuvi', 'Nahodha wa mtumbwi', 'Mmiliki wa mitumbwi', 'Mfalme wa sangara'], titlesEn: ['Fisherman', 'Canoe captain', 'Boat owner', 'Nile perch king'], secs: 50, pay: 20000, energy: 12 }],
+  },
+  {
+    id: 'mz-fish', name: 'Soko la Samaki Kirumba', nameEn: 'Kirumba Fish Market', district: 'Kirumba', type: 'fish', icon: '🐟', pos: M(-35, -62), size: [12, 9], h: 5, color: '#5eead4',
+    blurb: 'Sangara na sato fresh kutoka Ziwa Victoria.', blurbEn: 'Fresh Nile perch and tilapia from Lake Victoria.',
+    activities: [{ id: 'sato', name: 'Sato wa kukaanga na ugali', nameEn: 'Fried tilapia & ugali', cost: 9000, secs: 10, effects: { hunger: 70, fun: 10 }, emoji: '🐟' }],
+  },
+  {
+    id: 'mz-beach', name: 'Ufukwe wa Mwamba wa Bismarck', nameEn: 'Bismarck Rock Beach', district: 'Capri Point', type: 'beach', icon: '🪨', pos: M(17, -62), size: [16, 9], h: 1, color: '#fde68a',
+    blurb: 'Machweo juu ya Mwamba wa Bismarck — alama ya Mwanza.', blurbEn: 'Sunsets over Bismarck Rock — the symbol of Mwanza.',
+    activities: [{ id: 'machweo-mz', name: 'Tazama machweo ziwani', nameEn: 'Watch the lake sunset', cost: 0, secs: 20, effects: { fun: 25, social: 10 }, emoji: '🌅' }, { id: 'ogelea-mz', name: 'Piga picha na Mwamba', nameEn: 'Photos at the Rock', cost: 5000, secs: 10, effects: { fun: 15, social: 15 }, emoji: '📸', fame: 1 }],
+  },
+  {
+    id: 'mz-hotel', name: 'Hoteli ya Ziwa Victoria', nameEn: 'Lake Victoria Hotel', district: 'Capri Point', type: 'hotel', icon: '🏨', pos: M(-90, -38), size: [12, 10], h: 14, color: '#f0fdfa',
+    blurb: 'Hoteli ya kifahari yenye bwawa linaloangalia ziwa.', blurbEn: 'A luxury hotel with a pool overlooking the lake.',
+    activities: [{ id: 'chakula-hoteli-mz', name: 'Chakula cha jioni', nameEn: 'Lakeside dinner', cost: 60000, secs: 15, effects: { hunger: 60, fun: 15, social: 10 }, emoji: '🍽️' }, { id: 'spa-mz', name: 'Spa na massage', nameEn: 'Spa & massage', cost: 90000, secs: 25, effects: { energy: 35, hygiene: 30, fun: 10 }, emoji: '💆🏾' }], jobs: [{ id: 'mhudumu-mz', title: 'Mhudumu wa hoteli', titleEn: 'Hotel staff', titles: ['Mhudumu', 'Msimamizi', 'Meneja wa hoteli'], titlesEn: ['Waiter', 'Supervisor', 'Hotel manager'], secs: 50, pay: 24000, energy: 10 }],
+  },
+  {
+    id: 'mz-mall', name: 'Rock City Plaza', nameEn: 'Rock City Plaza', district: 'Mjini', type: 'mall', icon: '🛍️', pos: M(10, -16), size: [20, 14], h: 10, color: '#c4b5fd',
+    blurb: 'Maduka, sinema na migahawa katikati ya Mwanza.', blurbEn: 'Shops, cinema and restaurants in central Mwanza.',
+    activities: [{ id: 'sinema-mz', name: 'Tazama sinema', nameEn: 'Watch a movie', cost: 15000, secs: 25, effects: { fun: 35, social: 10 }, emoji: '🎬' }, { id: 'shopping-mz', name: 'Shopping', nameEn: 'Shopping', cost: 40000, secs: 15, effects: { fun: 25 }, emoji: '🛍️' }],
+  },
+  {
+    id: 'mz-club', name: 'Rock City Club', nameEn: 'Rock City Club', district: 'Mjini', type: 'club', icon: '🪩', pos: M(-28, 46), size: [12, 10], h: 8, color: '#312e81',
+    blurb: 'Bongo Flava na Singeli hadi asubuhi — Mwanza style.', blurbEn: 'Bongo Flava and Singeli till sunrise — Mwanza style.',
+    activities: [{ id: 'cheza-mz', name: 'Ingia ucheze', nameEn: 'Go in and dance', cost: 10000, secs: 25, effects: { fun: 40, social: 30, energy: -15 }, emoji: '💃🏾' }], jobs: [{ id: 'dj-mz', title: 'DJ', titleEn: 'DJ', titles: ['DJ', 'Resident DJ', 'Headline DJ'], titlesEn: ['DJ', 'Resident DJ', 'Headline DJ'], secs: 50, pay: 26000, energy: 12 }],
+  },
+  {
+    id: 'mz-gym', name: 'Rock City Fitness', nameEn: 'Rock City Fitness', district: 'Ilemela', type: 'gym', icon: '🏋️', pos: M(70, -14), size: [12, 10], h: 7, color: '#f97316',
+    blurb: 'Gym ya kisasa yenye mwonekano wa ziwa.', blurbEn: 'A modern gym with a lake view.',
+    activities: [{ id: 'mazoezi-mz', name: 'Fanya mazoezi', nameEn: 'Work out', cost: 5000, secs: 20, effects: { fun: 15, energy: -18, hygiene: -15, social: 8 }, emoji: '💪' }],
+  },
+  {
+    id: 'mz-soko', name: 'Soko Kuu la Mwanza', nameEn: 'Mwanza Central Market', district: 'Mjini', type: 'market', icon: '🧺', pos: M(-35, -16), size: [14, 10], h: 5, color: '#fca5a5',
+    blurb: 'Matunda, mboga na vitenge — kelele za biashara.', blurbEn: 'Fruit, veg and vitenge — the buzz of trade.',
+    activities: [{ id: 'matunda-mz', name: 'Nunua matunda', nameEn: 'Buy fresh fruit', cost: 3000, secs: 8, effects: { hunger: 25 }, emoji: '🍍' }], jobs: [{ id: 'mchuuzi-mz', title: 'Mchuuzi', titleEn: 'Market trader', titles: ['Mchuuzi', 'Mwenye kibanda', 'Mfanyabiashara mkubwa'], titlesEn: ['Trader', 'Stall owner', 'Big trader'], secs: 45, pay: 18000, energy: 10 }],
+  },
 ];
 
 // Senior careers. The best-paid jobs need more than Education: experience in a related job
@@ -1063,7 +1180,7 @@ export const luxuryById = Object.fromEntries(LUXURY.map((l) => [l.id, l]));
 export const LUXURY_RESALE = 0.6;
 export const LUXURY_COLORS = ['#f8fafc', '#0f172a', '#1e3a8a', '#7f1d1d', '#14532d', '#d4af37'];
 // Where a yacht can sail to / a jet can fly to, per city (a place id to arrive at).
-export const LUXURY_PORTS = { yacht: { dar: 'slipway', znz: 'zn-port', pwa: 'pw-jetty' }, jet: { dar: 'airport', znz: 'zn-airport', aru: 'kia' } };
+export const LUXURY_PORTS = { yacht: { dar: 'slipway', znz: 'zn-port', pwa: 'pw-jetty' }, jet: { dar: 'airport', znz: 'zn-airport', aru: 'kia', mwz: 'mz-airport' } };
 const PRIVATE_PLACES = [
   { id: 'yacht', private: true, name: 'Yacht', nameEn: 'Yacht', type: 'yacht', icon: '🛥️', district: 'Bahari ya Hindi', pos: [0, 0], size: [1, 1], h: 0, color: '#f8fafc', activities: [], blurb: 'Yacht binafsi.' },
   { id: 'block', private: true, name: 'Jengo la Ghorofa', nameEn: 'Apartment block', type: 'block', icon: '🏢', district: 'Plot', pos: [0, 0], size: [1, 1], h: 0, color: '#e2e8f0', activities: [], blurb: 'Ndani ya jengo.' },
@@ -1819,16 +1936,16 @@ export const POLICE_ID = 'polisi';
 // Prices keyed by the two city ids sorted alphabetically.
 export const tripKey = (a, b) => [a, b].sort().join('-');
 export const TRIP_MODES = {
-  flight: { emoji: '✈️', name: 'Ndege', nameEn: 'Flight', secs: 60, ins: 10_000, risk: 1 / 8, price: { 'dar-znz': 95_000, 'aru-dar': 260_000, 'aru-znz': 320_000 }, note: ['Teksi hadi uwanja imejumuishwa', 'Cab to the airport included'] },
-  heli: { emoji: '🚁', name: 'Helikopta', nameEn: 'Helicopter', secs: 40, ins: 60_000, risk: 1 / 12, price: { 'dar-znz': 1_800_000, 'aru-dar': 4_500_000, 'aru-znz': 5_000_000, 'dar-pwa': 900_000, 'pwa-znz': 1_500_000, 'aru-pwa': 4_200_000 }, note: ['Kutoka mlangoni hadi mlangoni', 'Door to door'] },
+  flight: { emoji: '✈️', name: 'Ndege', nameEn: 'Flight', secs: 60, ins: 10_000, risk: 1 / 8, price: { 'dar-znz': 95_000, 'aru-dar': 260_000, 'aru-znz': 320_000, 'dar-mwz': 290_000, 'aru-mwz': 230_000, 'mwz-znz': 360_000 }, note: ['Teksi hadi uwanja imejumuishwa', 'Cab to the airport included'] },
+  heli: { emoji: '🚁', name: 'Helikopta', nameEn: 'Helicopter', secs: 40, ins: 60_000, risk: 1 / 12, price: { 'dar-znz': 1_800_000, 'aru-dar': 4_500_000, 'aru-znz': 5_000_000, 'dar-pwa': 900_000, 'pwa-znz': 1_500_000, 'aru-pwa': 4_200_000, 'dar-mwz': 7_000_000, 'aru-mwz': 5_500_000, 'mwz-znz': 7_500_000, 'mwz-pwa': 6_800_000 }, note: ['Kutoka mlangoni hadi mlangoni', 'Door to door'] },
   ferry: { emoji: '⛴️', name: 'Boti ya Azam', nameEn: 'Azam fast ferry', secs: 70, ins: 5_000, risk: 1 / 7, price: { 'dar-znz': 40_000, 'pwa-znz': 30_000 }, note: ['Kivukoni hadi Bandari ya Zanzibar', 'Kivukoni to Zanzibar Port'] },
-  bus: { emoji: '🚌', name: 'Basi la abiria', nameEn: 'Coach', secs: 80, ins: 5_000, risk: 1 / 6, price: { 'aru-dar': 45_000, 'dar-pwa': 6_000, 'aru-pwa': 42_000 }, note: ['Magufuli hadi stendi kuu ya Arusha', 'Magufuli terminal to Arusha'] },
-  car: { emoji: '🚗', name: 'Endesha gari lako', nameEn: 'Drive', secs: 75, ins: 20_000, risk: 1 / 5, own: true, price: { 'aru-dar': 70_000, 'dar-pwa': 12_000, 'aru-pwa': 65_000 }, note: ['Mafuta tu, lakini utafika umechoka', "Fuel only, but you'll arrive tired"] },
+  bus: { emoji: '🚌', name: 'Basi la abiria', nameEn: 'Coach', secs: 80, ins: 5_000, risk: 1 / 6, price: { 'aru-dar': 45_000, 'dar-pwa': 6_000, 'aru-pwa': 42_000, 'dar-mwz': 60_000, 'aru-mwz': 50_000, 'mwz-pwa': 58_000 }, note: ['Magufuli hadi stendi kuu ya Arusha', 'Magufuli terminal to Arusha'] },
+  car: { emoji: '🚗', name: 'Endesha gari lako', nameEn: 'Drive', secs: 75, ins: 20_000, risk: 1 / 5, own: true, price: { 'aru-dar': 70_000, 'dar-pwa': 12_000, 'aru-pwa': 65_000, 'dar-mwz': 95_000, 'aru-mwz': 75_000, 'mwz-pwa': 92_000 }, note: ['Mafuta tu, lakini utafika umechoka', "Fuel only, but you'll arrive tired"] },
 };
 // What a flight looks like on arrival in each city.
-export const CITY_ARRIVAL = { znz: { dest: 'ZANZIBAR', ground: '#0e7490', land: '#fde68a' }, aru: { dest: 'ARUSHA · KILIMANJARO', ground: '#4d7c0f', land: '#a3e635' }, dar: { dest: 'DAR ES SALAAM', ground: '#0e7490', land: '#86efac' }, pwa: { dest: 'PWANI · BAGAMOYO', ground: '#0e7490', land: '#c5c9a4' } };
+export const CITY_ARRIVAL = { znz: { dest: 'ZANZIBAR', ground: '#0e7490', land: '#fde68a' }, aru: { dest: 'ARUSHA · KILIMANJARO', ground: '#4d7c0f', land: '#a3e635' }, dar: { dest: 'DAR ES SALAAM', ground: '#0e7490', land: '#86efac' }, pwa: { dest: 'PWANI · BAGAMOYO', ground: '#0e7490', land: '#c5c9a4' }, mwz: { dest: 'MWANZA · ROCK CITY', ground: '#1d4ed8', land: '#b5c98f' } };
 // Where you arrive in each city, by mode.
-export const ARRIVAL_PLACE = { dar: { flight: 'airport', heli: 'airport', ferry: 'ferry', bus: 'stendi', car: 'stendi' }, znz: { flight: 'zn-airport', heli: 'zn-airport', ferry: 'zn-port' }, aru: { flight: 'kia', heli: 'kia', bus: 'ar-bus', car: 'ar-bus' }, pwa: { heli: 'pw-stendi', bus: 'pw-stendi', car: 'pw-stendi', ferry: 'pw-jetty' } };
+export const ARRIVAL_PLACE = { dar: { flight: 'airport', heli: 'airport', ferry: 'ferry', bus: 'stendi', car: 'stendi' }, znz: { flight: 'zn-airport', heli: 'zn-airport', ferry: 'zn-port' }, aru: { flight: 'kia', heli: 'kia', bus: 'ar-bus', car: 'ar-bus' }, pwa: { heli: 'pw-stendi', bus: 'pw-stendi', car: 'pw-stendi', ferry: 'pw-jetty' }, mwz: { flight: 'mz-airport', heli: 'mz-airport', bus: 'mz-stendi', car: 'mz-stendi' } };
 
 // ---------------------------------------------------------------- casino
 // Game money only (it can never be cashed out). House edge keeps it a money sink.
@@ -1895,7 +2012,9 @@ export const EVENT_PLACES = ['home', 'club', 'bar', 'lounge', 'singeli', 'nyamac
   // Arusha
   'viavia', 'ar-hotel', 'clocktower', 'maasai', 'coffee', 'safari',
   // Pwani
-  'bagamoyo-old', 'pw-jetty', 'pw-soko'];
+  'bagamoyo-old', 'pw-jetty', 'pw-soko',
+  // Mwanza
+  'mz-beach', 'mz-club', 'mz-hotel', 'mz-port'];
 // Venues without their own walk-in interior use this scene while a party is live there.
 // Every place has an inside: explicit venues first, then the closest interior for its type.
 const TYPE_SCENES = { block: 'block', yacht: 'yacht', jet: 'jet', market: 'market', terminal: 'stand', mall: 'shop', shop: 'shop', stonetown: 'shop', restaurant: 'dining', food: 'dining', fish: 'dining', grill: 'grill', bar: 'bar', club: 'club', lounge: 'club', hotel: 'rooftop', gesti: 'room', beach: 'beach', waterpark: 'waterpark', golf: 'golf', karting: 'karting', slipway: 'dhow', stage: 'concert', stadium: 'stadium', studio: 'studio', gym: 'gym', salon: 'salon', office: 'office', tower: 'office', bank: 'bank', hospital: 'hospital', campus: 'classroom', church: 'church', mosque: 'mosque', police: 'police', court: 'court', casino: 'casino', safari: 'safari', mountain: 'hike', forest: 'safari', museum: 'ngoma' };
@@ -2240,8 +2359,52 @@ export const LOVE_NPCS = [
   { id: 'daudi', name: 'Daudi', age: 31, body: 'man', city: 'Arusha', job: ['Mkulima wa kahawa', 'Coffee farmer'], vibe: 'sweet', spot: 'sunset', gift: 'choc', bio: ['Mlima Meru asubuhi, kahawa yangu mchana.', 'Mount Meru mornings, my own coffee by noon.'], look: { body: 'man', skin: 3, hair: 'kipara', hairColor: 0, outfit: 'shati-check', accent: 3 } },
   { id: 'emma', name: 'Emmanuel', age: 26, body: 'man', city: 'Dar', job: ['Mchezaji wa Simba SC', 'Simba SC footballer'], vibe: 'fun', spot: 'nyama', gift: 'teddy', bio: ['Mpira, gym na familia. Simba nguvu moja!', 'Football, gym and family. Simba nguvu moja!'], look: { body: 'man', skin: 2, hair: 'kiduku', hairColor: 0, outfit: 'jezi-simba', accent: 0 } },
   { id: 'omari', name: 'Omari', age: 28, body: 'man', city: 'Dar', job: ['Daktari wa meno', 'Dentist'], vibe: 'sweet', spot: 'dinner', gift: 'rose', bio: ['Tabasamu lako ni kazi yangu 😁', 'Your smile is literally my job 😁'], look: { body: 'man', skin: 3, hair: 'afro', hairColor: 0, outfit: 'polo', accent: 5 } },
+  { id: 'wema', name: 'Wema', age: 25, body: 'woman', city: 'Dar', job: ['Mwigizaji wa Bongo Movie', 'Bongo Movie actress'], vibe: 'fun', spot: 'dance', gift: 'perfume', bio: ['Kamera, taa, action! Lakini moyoni napenda utulivu 😌', 'Camera, lights, action! But deep down I love calm 😌'], look: { body: 'woman', skin: 2, hair: 'kibanio', hairColor: 1, outfit: 'party-red', accent: 3 } },
+  { id: 'mwanaisha', name: 'Mwanaisha', age: 27, body: 'woman', city: 'Zanzibar', job: ['Mpishi wa hoteli', 'Hotel chef'], vibe: 'sweet', spot: 'dinner', gift: 'choc', bio: ['Pilau, biriani na mahamri — njoo ule ukiwa na njaa.', 'Pilau, biriani and mahamri — come hungry.'], look: { body: 'woman', skin: 4, hair: 'kilemba', hairColor: 0, outfit: 'abaya', accent: 1 } },
+  { id: 'grace', name: 'Grace', age: 24, body: 'woman', city: 'Dar', job: ['Muuguzi', 'Nurse'], vibe: 'sweet', spot: 'coffee', gift: 'rose', bio: ['Nasaidia watu kila siku — nami nahitaji mtu wa kunijali 💕', 'I take care of people all day — I need someone to care for me too 💕'], look: { body: 'woman', skin: 3, hair: 'mkia', hairColor: 0, outfit: 'scrubs-blue', accent: 0 } },
+  { id: 'lulu', name: 'Lulu', age: 23, body: 'woman', city: 'Dar', job: ['Mwanamuziki wa Bongo Flava', 'Bongo Flava singer'], vibe: 'fun', spot: 'dance', gift: 'watch', bio: ['Studio usiku, jukwaa wikendi. Unaweza kunifuata? 🎤', 'Studio at night, stage at the weekend. Can you keep up? 🎤'], look: { body: 'woman', skin: 1, hair: 'rasta', hairColor: 2, outfit: 'crop-jeans', accent: 4 } },
+  { id: 'happy', name: 'Happiness', age: 28, body: 'woman', city: 'Arusha', job: ['Mwanasheria', 'Lawyer'], vibe: 'chill', spot: 'dinner', gift: 'watch', bio: ['Hoja nzuri na divai nzuri. Usinidanganye 😏', 'Good arguments and good wine. Don’t lie to me 😏'], look: { body: 'woman', skin: 2, hair: 'bun', hairColor: 0, outfit: 'blazer-navy', accent: 2 } },
+  { id: 'mariam', name: 'Mariam', age: 26, body: 'woman', city: 'Zanzibar', job: ['Mwalimu wa Kiingereza', 'English teacher'], vibe: 'sweet', spot: 'sunset', gift: 'bouquet', bio: ['Mashairi ya Kiswahili na machweo ya Forodhani 🌅', 'Swahili poetry and Forodhani sunsets 🌅'], look: { body: 'woman', skin: 3, hair: 'kilemba', hairColor: 0, outfit: 'kanga-dress', accent: 5 } },
+  { id: 'jackline', name: 'Jackline', age: 29, body: 'woman', city: 'Dar', job: ['Mkurugenzi wa benki', 'Bank manager'], vibe: 'chill', spot: 'getaway', gift: 'watch', bio: ['Nafanya kazi kwa bidii, napumzika Zanzibar 🏝️', 'I work hard and rest in Zanzibar 🏝️'], look: { body: 'woman', skin: 2, hair: 'mkia', hairColor: 0, outfit: 'suti-wine', accent: 1 } },
+  { id: 'nasra', name: 'Nasra', age: 22, body: 'woman', city: 'Dar', job: ['Mwanafunzi wa UDSM', 'UDSM student'], vibe: 'fun', spot: 'cinema', gift: 'teddy', bio: ['Mitihani, TikTok na chipsi mayai 😂', 'Exams, TikTok and chips mayai 😂'], look: { body: 'woman', skin: 4, hair: 'afro', hairColor: 3, outfit: 'tee-mustard', accent: 3 } },
+  { id: 'esther', name: 'Esther', age: 30, body: 'woman', city: 'Arusha', job: ['Rubani wa ndege', 'Airline pilot'], vibe: 'chill', spot: 'getaway', gift: 'perfume', bio: ['Nimeona dunia kutoka juu — sasa nataka kutua moyoni mwako ✈️', 'I’ve seen the world from above — now I want to land in your heart ✈️'], look: { body: 'woman', skin: 1, hair: 'bun', hairColor: 0, outfit: 'blazer-navy', accent: 4 } },
+  { id: 'shamsa', name: 'Shamsa', age: 25, body: 'woman', city: 'Dar', job: ['Mfanyabiashara wa Kariakoo', 'Kariakoo trader'], vibe: 'fun', spot: 'nyama', gift: 'bouquet', bio: ['Biashara ni biashara — lakini mapenzi si biashara 😉', 'Business is business — but love isn’t 😉'], look: { body: 'woman', skin: 4, hair: 'kilemba', hairColor: 1, outfit: 'ankara-gown', accent: 2 } },
+  { id: 'irene', name: 'Irene', age: 27, body: 'woman', city: 'Mwanza', job: ['Mhandisi wa madini', 'Mining engineer'], vibe: 'chill', spot: 'dhow', gift: 'watch', bio: ['Dhahabu ya Geita, samaki wa Ziwa Victoria 🐟', 'Geita gold and Lake Victoria fish 🐟'], look: { body: 'woman', skin: 2, hair: 'misuko', hairColor: 0, outfit: 'jumpsuit', accent: 0 } },
+  { id: 'agnes', name: 'Agnes', age: 24, body: 'woman', city: 'Mwanza', job: ['Mpiga picha wa harusi', 'Wedding photographer'], vibe: 'sweet', spot: 'sunset', gift: 'rose', bio: ['Napiga picha za upendo wa wengine — nangoja wangu 📸', 'I photograph other people’s love — waiting for mine 📸'], look: { body: 'woman', skin: 3, hair: 'kibanio', hairColor: 2, outfit: 'sundress', accent: 5 } },
+  { id: 'rose', name: 'Rose', age: 26, body: 'woman', city: 'Dar', job: ['Mwanamitindo', 'Model'], vibe: 'fun', spot: 'dance', gift: 'perfume', bio: ['Runway leo, Coco Beach kesho 💃🏾', 'Runway today, Coco Beach tomorrow 💃🏾'], look: { body: 'woman', skin: 1, hair: 'afro', hairColor: 4, outfit: 'floral-maxi', accent: 3 } },
+  { id: 'fatma', name: 'Fatma', age: 28, body: 'woman', city: 'Zanzibar', job: ['Daktari wa watoto', 'Paediatrician'], vibe: 'sweet', spot: 'coffee', gift: 'choc', bio: ['Napenda watoto na familia kubwa yenye furaha 👶🏾', 'I love children and a big happy family 👶🏾'], look: { body: 'woman', skin: 3, hair: 'kilemba', hairColor: 0, outfit: 'buibui', accent: 1 } },
+  { id: 'debora', name: 'Debora', age: 25, body: 'woman', city: 'Arusha', job: ['Mwongozaji wa kupanda mlima', 'Mountain guide'], vibe: 'fun', spot: 'nyama', gift: 'teddy', bio: ['Kilimanjaro mara saba! Uko tayari kwa adventure? 🏔️', 'Summited Kilimanjaro seven times! Ready for an adventure? 🏔️'], look: { body: 'woman', skin: 2, hair: 'mkia', hairColor: 0, outfit: 'gym', accent: 2 } },
+  { id: 'kelvin', name: 'Kelvin', age: 28, body: 'man', city: 'Mwanza', job: ['Mvuvi tajiri', 'Fishing boss'], vibe: 'chill', spot: 'dhow', gift: 'watch', bio: ['Mitumbwi yangu kumi Ziwa Victoria. Twende tukavue? 🚤', 'Ten boats on Lake Victoria. Fancy a fishing trip? 🚤'], look: { body: 'man', skin: 3, hair: 'kiduku', hairColor: 0, outfit: 'shati', accent: 1 } },
+  { id: 'alex', name: 'Alex', age: 30, body: 'man', city: 'Dar', job: ['Mjasiriamali wa teknolojia', 'Tech founder'], vibe: 'chill', spot: 'coffee', gift: 'perfume', bio: ['Startup yangu na kahawa yangu — na labda wewe? ☕', 'My startup, my coffee — and maybe you? ☕'], look: { body: 'man', skin: 1, hair: 'kipara', hairColor: 0, outfit: 'blazer-navy', accent: 2 } },
+  { id: 'hamisi', name: 'Hamisi', age: 27, body: 'man', city: 'Zanzibar', job: ['DJ wa Kendwa Rocks', 'Kendwa Rocks DJ'], vibe: 'fun', spot: 'dance', gift: 'bouquet', bio: ['Full moon party kila mwezi 🌕🎧', 'Full moon party every month 🌕🎧'], look: { body: 'man', skin: 4, hair: 'rasta', hairColor: 0, outfit: 'tank-shorts', accent: 4 } },
 ];
 export const loveNpcById = Object.fromEntries(LOVE_NPCS.map((n) => [n.id, n]));
+// Family: married couples (with a player or a game character) can have children. A baby arrives a
+// few hours after you plan one; kids grow up over real days and like time and attention.
+export const FAMILY = {
+  maxKids: 6,
+  babyMs: 3 * 3600_000, // pregnancy, compressed
+  tryCooldownMs: 6 * 3600_000,
+  stages: [[0, '👶🏾', ['Mtoto mchanga', 'Baby']], [2, '🧒🏾', ['Mtoto mdogo', 'Toddler']], [5, '🧑🏾‍🎓', ['Mwanafunzi', 'Schoolkid']], [12, '🧑🏾', ['Kijana', 'Teen']], [20, '🧑🏾‍💼', ['Mtu mzima', 'Grown up']]],
+  dayYears: 1, // a real day = a year of their life
+  care: [
+    { id: 'play', emoji: '⚽', name: ['Cheza naye', 'Play together'], cost: 0, joy: 12, effects: { fun: 15, social: 10 } },
+    { id: 'outing', emoji: '🍦', name: ['Mtoe matembezi', 'Take them out'], cost: 30_000, joy: 20, effects: { fun: 20, social: 15 } },
+    { id: 'school', emoji: '🎒', name: ['Lipa ada ya shule', 'Pay school fees'], cost: 250_000, joy: 8, smart: 1 },
+    { id: 'gift', emoji: '🎁', name: ['Mnunulie zawadi', 'Buy them a gift'], cost: 80_000, joy: 25 },
+  ],
+  careCooldownMs: 20 * 60_000,
+  names: { girl: ['Amani', 'Zawadi', 'Neema', 'Imani', 'Upendo', 'Furaha', 'Rehema', 'Tumaini', 'Asha', 'Nuru'], boy: ['Baraka', 'Juma', 'Jabari', 'Faraji', 'Hamza', 'Shujaa', 'Daudi', 'Tariq', 'Imara', 'Zuberi'] },
+  // Divorce: the spouse who files pays a settlement (to their ex if a player); kids stay with them.
+  divorcePct: 0.2,
+  divorceMin: 2_000_000,
+};
+export const familyStage = (born, t = Date.now()) => {
+  const age = Math.floor((t - born) / 86_400_000 * FAMILY.dayYears);
+  let st = FAMILY.stages[0];
+  for (const s of FAMILY.stages) if (age >= s[0]) st = s;
+  return { age, emoji: st[1], label: st[2] };
+};
 // Chats: they ask, you pick a reply. Their vibe likes one style best.
 export const NPC_CHAT = [
   { q: ['Unapenda kufanya nini wikendi?', 'What do you like doing on weekends?'], a: { sweet: ['Kukaa na mtu maalum kama wewe 😊', 'Spending time with someone special like you 😊'], fun: ['Kucheza Singeli mpaka asubuhi! 🔊', 'Dancing to Singeli till sunrise! 🔊'], chill: ['Kahawa na machweo ufukweni 🌅', 'Coffee and a beach sunset 🌅'] } },
@@ -2300,6 +2463,11 @@ export const HUSTLES = [
   { id: 'container', emoji: '🏪', name: ['Duka la kontena', 'Container shop'], price: 15_000_000, earn: [550_000, 800_000], cost: 60_000, breakChance: 0.04, repair: 900_000 },
   { id: 'daladala', emoji: '🚐', name: ['Daladala', 'Daladala minibus'], price: 28_000_000, earn: [1_000_000, 1_500_000], cost: 150_000, breakChance: 0.1, repair: 1_800_000 },
   { id: 'carhire', emoji: '🚙', name: ['Gari la kukodisha', 'Car hire'], price: 40_000_000, earn: [1_500_000, 2_100_000], cost: 180_000, breakChance: 0.06, repair: 2_500_000 },
+  { id: 'petrol', emoji: '⛽', name: ['Kituo cha mafuta', 'Petrol station'], price: 120_000_000, earn: [4_200_000, 5_800_000], cost: 500_000, breakChance: 0.03, repair: 6_000_000 },
+  { id: 'supermarket', emoji: '🛒', name: ['Supermarket', 'Supermarket'], price: 260_000_000, earn: [9_000_000, 12_500_000], cost: 1_200_000, breakChance: 0.03, repair: 12_000_000 },
+  { id: 'clinic', emoji: '🏥', name: ['Hospitali binafsi', 'Private hospital'], price: 650_000_000, earn: [22_000_000, 30_000_000], cost: 3_000_000, breakChance: 0.02, repair: 30_000_000 },
+  { id: 'goldmine', emoji: '⛏️', name: ['Mgodi wa dhahabu Geita', 'Geita gold mine'], price: 1_800_000_000, earn: [55_000_000, 95_000_000], cost: 10_000_000, breakChance: 0.05, repair: 120_000_000 },
+  { id: 'airline', emoji: '🛫', name: ['Shirika la ndege', 'Airline'], price: 6_000_000_000, earn: [190_000_000, 300_000_000], cost: 40_000_000, breakChance: 0.04, repair: 400_000_000 },
 ];
 export const hustleById = Object.fromEntries(HUSTLES.map((h) => [h.id, h]));
 export const HUSTLE = { periodMs: 6 * 3600_000, maxPeriods: 8, maxEach: 25, resale: 0.6 };
@@ -2388,3 +2556,15 @@ export const GUARDS = [
   { id: 'convoy', emoji: '🚙', name: ['Msafara wa ulinzi', 'Security convoy'], perDay: 2_500_000, men: 4, protect: 0.92, copDelay: 1, blurb: ['Walinzi wanne — kama Rais. Wezi hawasogei.', 'Four agents — presidential style. Robbers stay away.'] },
 ];
 export const guardById = Object.fromEntries(GUARDS.map((g) => [g.id, g]));
+
+// ============================================================ property market
+// Sell a plot (with whatever's built on it) or a business to other players: a fixed "buy now"
+// price, a timed auction, or both. Anyone can also make an offer on property that isn't listed.
+export const PROPERTY_MARKET = {
+  feePct: 0.03, // the seller pays the agent
+  minRaise: 0.05, // each bid beats the last by 5%
+  hours: [1, 6, 24, 72],
+  snipeMs: 2 * 60_000, // a bid in the last 2 min adds 2 min
+  offerTtlMs: 48 * 3600_000,
+  maxListings: 10,
+};

@@ -314,6 +314,41 @@ function Sim({ me, items, layout }) {
 }
 
 /** Your game-character spouse/fiancé(e) lives at home: strolls between a few spots. */
+/** Your children wander around the house, sized by age. */
+function Kid({ kid, i, b }) {
+  const g = useRef();
+  const motion = useRef({ mode: 'idle' });
+  const st = useRef({ x: 1 + i, z: 2 - i * 0.6, i, wait: 1 + i });
+  const spots = useMemo(() => [[2, 2.5], [-2.5, 1.5], [b.x1 + 2.5, -1], [1, -2.5], [-1, 3.5], [3.5, -0.5]], [b.x1]);
+  const scale = kid.age < 2 ? 0.42 : kid.age < 5 ? 0.55 : kid.age < 12 ? 0.7 : kid.age < 20 ? 0.88 : 1;
+  const tag = useMemo(() => labelTexture(`${kid.emoji} ${kid.name}`, { size: 40, bold: 800, bg: kid.gender === 'girl' ? 'rgba(219,39,119,.9)' : 'rgba(37,99,235,.9)', fg: '#fff' }), [kid.name, kid.emoji, kid.gender]);
+  useFrame((_, dt) => {
+    const s = st.current;
+    const [tx, tz] = spots[s.i % spots.length];
+    const dx = tx - s.x;
+    const dz = tz - s.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.1) {
+      motion.current.mode = kid.age < 2 ? 'sit' : kid.age < 12 && s.wait > 2 ? 'dance' : 'idle';
+      s.wait -= dt;
+      if (s.wait <= 0) { s.i = (s.i + 1 + i) % spots.length; s.wait = 2 + Math.random() * 4; }
+    } else {
+      const step = Math.min(d, (kid.age < 12 ? 2.2 : 1.6) * Math.min(dt, 0.1));
+      s.x += (dx / d) * step;
+      s.z += (dz / d) * step;
+      motion.current.mode = kid.age < 2 ? 'sit' : kid.age < 12 ? 'run' : 'walk';
+      g.current.rotation.y = Math.atan2(dx, dz);
+    }
+    g.current.position.set(s.x, 0, s.z);
+  });
+  return (
+    <group ref={g}>
+      <group scale={scale}><Body appearance={kid.look} motion={motion} /></group>
+      <sprite position={[0, 2.1 * scale + 0.3, 0]} scale={[0.3 * tag.aspect, 0.3, 1]}><spriteMaterial map={tag.texture} depthWrite={false} /></sprite>
+    </group>
+  );
+}
+
 function Spouse({ npc, b }) {
   const g = useRef();
   const motion = useRef({ mode: 'idle' });
@@ -537,6 +572,7 @@ export function HomeScene({ me }) {
       <Ghost items={items} b={b} />
       <Sim me={me} items={items} layout={layout} />
       {!visiting && me.npcPartner && me.npcPartner.status !== 'couple' && <Spouse npc={me.npcPartner} b={b} />}
+      {!visiting && (me.kids || []).map((k, i) => <Kid key={k.id} kid={k} i={i} b={b} />)}
       <Guests />
       {party && <PartyDecor event={party} home />}
       <Driveway vehicles={visiting ? visiting.host.vehicles : me.vehicles} mine={!visiting} />
