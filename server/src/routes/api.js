@@ -1058,9 +1058,17 @@ api.get('/invest', (req, res) => res.json(invest.portfolio(req.user.id)));
 const investDone = (req, res, extra = {}) => res.json({ ...extra, invest: invest.portfolio(req.user.id), me: game.playerState(req.user.id) });
 api.post('/invest/plots/:id/buy', (req, res) => {
   crime.assertFree(getUser(req.user.id));
-  investDone(req, res, invest.buyPlotRemote(req.user.id, req.params.id));
+  const r = invest.buyPlotRemote(req.user.id, req.params.id);
+  const plot = plotById[req.params.id];
+  if (plot) news.story.land(req.user, plot.name, plot.price);
+  worldChanged();
+  investDone(req, res, r);
 });
-api.post('/invest/plots/:id/sell', (req, res) => investDone(req, res, invest.sellPlot(req.user.id, req.params.id)));
+api.post('/invest/plots/:id/sell', (req, res) => {
+  const r = invest.sellPlot(req.user.id, req.params.id);
+  worldChanged();
+  investDone(req, res, r);
+});
 api.post('/invest/trucks', (req, res) => {
   crime.assertFree(getUser(req.user.id));
   invest.buyTruck(req.user.id);
