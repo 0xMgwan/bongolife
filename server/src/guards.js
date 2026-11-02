@@ -54,6 +54,16 @@ export const dismiss = db.transaction((uid) => {
   announce(uid);
   return { refund: back, ...view(uid) };
 });
+/** Free protection (the mayor's escort) until `until`. Never downgrades; a cheaper paid tier's unused days are refunded. */
+export function grantGuards(uid, tierId, until) {
+  const tier = guardById[tierId];
+  const cur = guardOf(uid);
+  if (!tier || (cur && cur.perDay >= tier.perDay)) return;
+  const back = cur ? Math.floor((cur.until - now()) / DAY) * cur.perDay : 0;
+  if (back > 0) addMoney(uid, back, 'refund', 'Marejesho ya ulinzi');
+  q.set.run(uid, tier.id, until, now());
+  announce(uid);
+}
 /** Expired contracts: tell everyone the guards went home. */
 export function expireTick() {
   for (const [uid, p] of online) if (p.guards && !guardOf(uid)) announce(uid);

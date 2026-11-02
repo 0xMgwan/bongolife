@@ -34,6 +34,7 @@ import * as afya from '../health.js';
 import * as gym from '../gym.js';
 import * as love from '../love.js';
 import * as npcLove from '../npclove.js';
+import * as loans from '../loans.js';
 import * as music from '../music.js';
 import * as venue from '../venue.js';
 import * as court from '../court.js';
@@ -1101,6 +1102,18 @@ api.post('/love/npc/:id/chat', (req, res) => res.json({ ...npcLove.chat(req.user
 api.post('/love/npc/:id/date', (req, res) => res.json({ ...npcLove.date(req.user.id, str(req.params.id, 20), str(req.body.spot, 20)), me: game.playerState(req.user.id) }));
 api.post('/love/npc/:id/gift', (req, res) => res.json({ ...npcLove.gift(req.user.id, str(req.params.id, 20), str(req.body.gift, 20)), me: game.playerState(req.user.id) }));
 api.post('/love/npc/:id/step', (req, res) => res.json({ ...npcLove.step(req.user.id, str(req.params.id, 20), str(req.body.kind, 10)), me: game.playerState(req.user.id) }));
+api.get('/loans', (req, res) => res.json(loans.view(req.user.id, game.netWorth(req.user.id))));
+api.post('/loans/take', (req, res) => {
+  crime.assertFree(getUser(req.user.id));
+  const r = loans.take(req.user.id, game.netWorth(req.user.id), req.body || {});
+  res.json({ ...r, ...loans.view(req.user.id, game.netWorth(req.user.id)), me: game.playerState(req.user.id) });
+});
+api.post('/loans/repay', (req, res) => {
+  const r = loans.repay(req.user.id, req.body?.amount);
+  res.json({ ...r, ...loans.view(req.user.id, game.netWorth(req.user.id)), me: game.playerState(req.user.id) });
+});
+api.post('/love/npc/:id/salon', (req, res) => res.json({ ...npcLove.salon(req.user.id, str(req.params.id, 20), str(req.body.treat, 12), str(req.body.hair, 12), req.body.color), me: game.playerState(req.user.id) }));
+api.post('/love/npc/:id/shop', (req, res) => res.json({ ...npcLove.shop(req.user.id, str(req.params.id, 20), str(req.body.kind, 8), str(req.body.id, 24)), me: game.playerState(req.user.id) }));
 api.post('/love/npc/:id/end', (req, res) => res.json(npcLove.end(req.user.id, str(req.params.id, 20))));
 api.get('/love', (req, res) => res.json({ ...love.loveState(req.user.id), discover: love.discover(req.user.id) }));
 api.post('/love/profile', (req, res) => {

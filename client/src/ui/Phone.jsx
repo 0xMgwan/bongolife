@@ -37,6 +37,7 @@ import { Mtaani } from './apps/Mtaani.jsx';
 import { Habari } from './apps/Habari.jsx';
 import { Familia } from './apps/Familia.jsx';
 import { SokoMali } from './apps/SokoMali.jsx';
+import { Mkopo } from './apps/Mkopo.jsx';
 import { Ulinzi } from './apps/Ulinzi.jsx';
 import { api } from '../api.js';
 
@@ -63,6 +64,7 @@ export const APPS = [
   { id: 'matukio', name: 'Matukio', nameEn: 'Events', icon: '🎉', g: ['#c084fc', '#7c3aed'], C: Matukio },
   { id: 'familia', name: 'Familia', nameEn: 'Family', icon: '👨‍👩‍👧', g: ['#fda4af', '#9f1239'], C: Familia },
   { id: 'sokomali', name: 'Soko la Mali', nameEn: 'Property', icon: '🏘️', g: ['#6ee7b7', '#065f46'], C: SokoMali },
+  { id: 'mkopo', name: 'Mikopo', nameEn: 'Loans', icon: '🏦', g: ['#93c5fd', '#1e3a8a'], C: Mkopo },
   { id: 'penzi', name: 'Penzi', nameEn: 'Dating', icon: '💘', g: ['#fb7185', '#be123c'], C: Penzi },
   { id: 'majirani', name: 'Majirani', nameEn: 'Neighbours', icon: '🏘️', g: ['#f9a8d4', '#be185d'], C: Majirani },
   { id: 'ulinzi', name: 'Ulinzi', nameEn: 'Security', icon: '🕶️', g: ['#94a3b8', '#020617'], C: Ulinzi },

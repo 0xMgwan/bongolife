@@ -262,7 +262,7 @@ export function Mipangilio({ back }) {
               <button key={id} className={quality === id ? 'on' : ''} onClick={() => setQuality(id)}>{n}</button>
             ))}
           </div>
-          <div className="hint">{L('Chagua "Chini" kama simu yako inakwama au betri inaisha haraka.', 'Choose "Low" if your phone lags or the battery drains fast.')}</div>
+          <div className="hint">{L('"Auto" kwenye simu inatunza betri na kuzuia simu kupata joto. "Juu" ina madoido yote (fremu 60+ kwa sekunde) — simu inaweza kupata joto. Chagua "Chini" kama bado inakwama.', '"Auto" on phones saves battery and keeps the phone cool. "High" turns on every effect at 60+ fps — your phone may heat up. Pick "Low" if it still lags.')}</div>
         </div>
         <div className="box small muted" style={{ lineHeight: 1.6 }}>
           <b style={{ color: 'var(--ink)' }}>{L('Jinsi ya kucheza', 'How to play')}</b><br />

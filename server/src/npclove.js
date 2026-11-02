@@ -2,7 +2,7 @@
 // proposal, wedding — for players who haven't matched with a real player yet. One partner at a
 // time across real and game romances.
 import { db, getUser, saveFields, addMoney, GameError, now } from './db.js';
-import { LOVE, NPC_LOVE, NPC_CHAT, LOVE_NPCS, loveNpcById, dateSpotById, loveGiftById, placeById, NEEDS } from '../../shared/world.js';
+import { LOVE, NPC_LOVE, NPC_CHAT, LOVE_NPCS, loveNpcById, dateSpotById, loveGiftById, placeById, PLACES, NEEDS, GLOW, glowItemById, glowSalonById, outfitById, outfitFits, partnerOutfitPrice, HAIR_COLORS } from '../../shared/world.js';
 import { online, broadcast } from './presence.js';
 
 const DAY = 86_400_000;
@@ -15,6 +15,10 @@ db.exec(`CREATE TABLE IF NOT EXISTS npc_romance (
   ended_at INTEGER,
   PRIMARY KEY (user_id, npc_id)
 )`);
+// Glow-up columns (added later): style = look overrides, closet = owned pieces & outfits.
+for (const c of ['style TEXT', 'closet TEXT', 'glow INTEGER NOT NULL DEFAULT 0', 'glow_at INTEGER', 'last_salon INTEGER']) {
+  try { db.exec(`ALTER TABLE npc_romance ADD COLUMN ${c}`); } catch {}
+}
 const q = {
   mine: db.prepare('SELECT * FROM npc_romance WHERE user_id = ? AND ended_at IS NULL ORDER BY since DESC'),
   one: db.prepare('SELECT * FROM npc_romance WHERE user_id = ? AND npc_id = ? AND ended_at IS NULL'),
@@ -29,6 +33,12 @@ const touch = (r, delta, extra = {}) => {
   db.prepare(`UPDATE npc_romance SET affection = @aff, touched_at = @t${sets} WHERE user_id = @u AND npc_id = @n`).run({ ...extra, aff, t: now(), u: r.user_id, n: r.npc_id });
   return aff;
 };
+const json = (s, d) => { try { return s ? JSON.parse(s) : d; } catch { return d; } };
+const closetOf = (r) => ({ items: [], outfits: [], ...json(r.closet, {}) });
+const lookOf = (r) => ({ ...loveNpcById[r.npc_id].look, ...json(r.style, {}) });
+const glowFloor = (r) => closetOf(r).items.reduce((a, id) => a + (glowItemById[id]?.floor || 0), 0);
+/** Glow fades a little every day, never below what their closet is worth. */
+const glowNow = (r) => Math.min(100, Math.max(glowFloor(r), (r.glow || 0) - Math.floor((now() - (r.glow_at || r.since)) / DAY) * GLOW.decayPerDay));
 const need = (uid, id) => {
   const r = q.one.get(uid, id);
   if (!r) throw new GameError(['Hamjaendana bado.', "You haven't matched yet."], 404);
@@ -42,7 +52,7 @@ export const hasNpcPartner = (uid) => q.mine.all(uid).some((r) => r.status !== '
 export function npcPartner(uid) {
   const r = q.mine.all(uid).find((x) => x.status !== 'match');
   const n = r && loveNpcById[r.npc_id];
-  return n ? { id: n.id, name: n.name, status: r.status, look: n.look } : null;
+  return n ? { id: n.id, name: n.name, status: r.status, look: lookOf(r), glow: glowNow(r) } : null;
 }
 
 function romanceView(r) {
@@ -50,7 +60,9 @@ function romanceView(r) {
   const aff = affNow(r);
   const chat = NPC_CHAT[r.chat_idx % NPC_CHAT.length];
   return {
-    npc: n, status: r.status, affection: aff, dates: r.dates, since: r.since,
+    npc: { ...n, look: lookOf(r) }, status: r.status, affection: aff, dates: r.dates, since: r.since,
+    glow: glowNow(r), glowFloor: glowFloor(r), closet: closetOf(r),
+    salonReadyAt: (r.last_salon || 0) + GLOW.salonCooldownMs,
     chat: { q: chat.q, a: chat.a, readyAt: (r.last_chat || 0) + NPC_LOVE.chatCooldownMs },
     nextDateIn: Math.max(0, (r.last_date || 0) + LOVE.dateCooldownMs - now()),
     canCouple: r.status === 'match' && aff >= LOVE.coupleAt,
@@ -119,7 +131,7 @@ export const date = db.transaction((uid, npcId, spotId) => {
   addMoney(uid, -spot.cost, 'spend', `${spot.emoji} Deti na ${loveNpcById[npcId].name}`);
   const n = loveNpcById[npcId];
   const fav = n.spot === spot.id;
-  const bonus = (r.status === 'married' ? 4 : r.status !== 'match' ? 2 : 0) + (fav ? NPC_LOVE.favouriteBonus : 0);
+  const bonus = (r.status === 'married' ? 4 : r.status !== 'match' ? 2 : 0) + (fav ? NPC_LOVE.favouriteBonus : 0) + Math.floor(glowNow(r) / GLOW.dateBonusPer);
   const aff = touch(r, spot.affection + bonus, { last_date: now(), dates: r.dates + 1 });
   const u = getUser(uid);
   const needs = { ...u.needs };
@@ -138,6 +150,63 @@ export function gift(uid, npcId, giftId) {
   const aff = touch(r, g.affection + (fav ? NPC_LOVE.favouriteBonus : 0));
   return { affection: aff, fav, ...view(uid) };
 }
+
+// ------------------------------------------------------------------ glow-up
+const glowUp = (r, add, aff, extra = {}) => {
+  const glow = Math.min(100, glowNow(r) + add);
+  return { glow, affection: touch(r, aff, { glow, glow_at: now(), ...extra }) };
+};
+
+/** Send them to the salon (from anywhere). Hair treatments can restyle them. */
+export const salon = db.transaction((uid, npcId, treatId, hairIn, colorIn) => {
+  const r = need(uid, npcId);
+  const t = glowSalonById[treatId];
+  const n = loveNpcById[npcId];
+  if (!t) throw new GameError(['Huduma haipo.', 'Unknown treatment.']);
+  const wait = (r.last_salon || 0) + GLOW.salonCooldownMs - now();
+  if (wait > 0) throw new GameError([`${n.name} bado yuko saluni — dakika ${Math.ceil(wait / 60_000)}.`, `${n.name} is still at the salon — ${Math.ceil(wait / 60_000)} min.`], 429);
+  const style = json(r.style, {});
+  if (t.restyle) {
+    if (hairIn && GLOW.hair.includes(hairIn)) style.hair = hairIn;
+    const c = Number(colorIn);
+    if (Number.isInteger(c) && c >= 0 && c < HAIR_COLORS.length) style.hairColor = c;
+  }
+  addMoney(uid, -t.price, 'spend', `${t.emoji} ${t.name[0]} — ${n.name}`);
+  const res = glowUp(r, t.glow, t.affection, { last_salon: now(), style: JSON.stringify(style) });
+  broadcast('emote', { id: uid, e: '✨' });
+  return { ...res, ...view(uid) };
+});
+
+const atShops = (uid) => PLACES.some((p) => (p.shop === 'outfits' || p.type === 'mall') && atPlace(uid, p.id));
+/** Take them shopping: a luxury piece (kept forever) or an outfit they wear straight away. */
+export const shop = db.transaction((uid, npcId, kind, id) => {
+  const r = need(uid, npcId);
+  const n = loveNpcById[npcId];
+  const closet = closetOf(r);
+  if (kind === 'wear') {
+    if (!closet.outfits.includes(id)) throw new GameError(['Hana nguo hiyo bado.', "They don't own that outfit yet."]);
+    db.prepare('UPDATE npc_romance SET style = ? WHERE user_id = ? AND npc_id = ?').run(JSON.stringify({ ...json(r.style, {}), outfit: id }), uid, npcId);
+    return view(uid);
+  }
+  const item = kind === 'item' ? glowItemById[id] : null;
+  const outfit = kind === 'outfit' ? outfitById[id] : null;
+  if (!item && !(outfit && outfitFits(outfit, n.body))) throw new GameError(['Haipo dukani.', 'Not in the shop.']);
+  if (!item?.anywhere && !atShops(uid)) throw new GameError(['Mpeleke dukani — nenda Kariakoo Fashion, Mlimani City au mall yoyote kwanza 🛍️', 'Take them to the shops — go to Kariakoo Fashion, Mlimani City or any mall first 🛍️']);
+  if (item) {
+    if (closet.items.includes(item.id)) throw new GameError([`${n.name} tayari ana hii.`, `${n.name} already has this.`]);
+    addMoney(uid, -item.price, 'gift', `${item.emoji} ${item.name[0]} — ${n.name}`);
+    closet.items.push(item.id);
+    const res = glowUp(r, item.glow, item.affection, { closet: JSON.stringify(closet) });
+    broadcast('emote', { id: uid, e: item.emoji });
+    return { ...res, ...view(uid) };
+  }
+  if (closet.outfits.includes(outfit.id)) throw new GameError([`${n.name} tayari ana nguo hii — mvalishe tu.`, `${n.name} already owns this — just put it on.`]);
+  addMoney(uid, -partnerOutfitPrice(outfit), 'gift', `👗 ${outfit.name} — ${n.name}`);
+  closet.outfits.push(outfit.id);
+  const res = glowUp(r, GLOW.outfitGlow, GLOW.outfitAffection, { closet: JSON.stringify(closet), style: JSON.stringify({ ...json(r.style, {}), outfit: outfit.id }) });
+  broadcast('emote', { id: uid, e: '🛍️' });
+  return { ...res, ...view(uid) };
+});
 
 const loyal = (uid, npcId) => {
   if (q.realPartner.get(uid, uid)) throw new GameError(['Tayari una mpenzi (mchezaji). Kuwa mwaminifu 😅', 'You already have a partner (a player). Stay loyal 😅']);

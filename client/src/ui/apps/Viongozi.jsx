@@ -67,7 +67,15 @@ function Uchaguzi({ open }) {
           </div>
         ))}
         <div className="small" style={{ marginTop: 10, color: '#78350f' }}>
-          🗳️ {L(`Uchaguzi wa wiki hii unaisha baada ya ${left(e.endsAt - Date.now())}. Mshindi anapata ${fmtTsh(e.rules.salary)} na taji 👑.`, `This week's election closes in ${left(e.endsAt - Date.now())}. The winner gets ${fmtTsh(e.rules.salary)} and the crown 👑.`)}
+          🗳️ {L(`Uchaguzi wa wiki hii unaisha baada ya ${left(e.endsAt - Date.now())}.`, `This week's election closes in ${left(e.endsAt - Date.now())}.`)}
+        </div>
+        <div className="mayor-perks">
+          <b>{L('Marupurupu ya Mkuu wa Mkoa (wiki nzima)', "The Mayor's package (for the whole week)")}</b>
+          <span>💰 {L(`Mshahara ${fmtTsh(e.rules.salary)}`, `${fmtTsh(e.rules.salary)} salary`)}</span>
+          <span>🕶️ {L('Walinzi wa VIP bure', 'Free VIP bodyguards')}</span>
+          <span>🏷️ {L(`Punguzo ${Math.round(e.rules.perks.discount * 100)}% kwa viwanja, ujenzi na nguo`, `${Math.round(e.rules.perks.discount * 100)}% off plots, buildings & clothes`)}</span>
+          <span>🏛️ {L('Hazina ya jiji: sehemu ya ada ya kila mauzo ya mali', "City treasury: a cut of every property sale's fee")}</span>
+          <span>👑 {L('Taji na ujumbe kwa jiji zima', 'The crown and a message to the whole city')}</span>
         </div>
       </div>
 

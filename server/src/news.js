@@ -150,6 +150,12 @@ export const story = {
       [`${asset.name} yabadilisha mmiliki — ${M(amount)[0]}`, `${asset.nameEn || asset.name} changes hands for ${M(amount)[1]}`],
     ]), { user: buyer, big: amount >= 1_000_000_000 });
   },
+  seized(user, what) {
+    publish('scandal', pick([
+      [`AIBU! Benki yataifisha ${what} ya ${u(user)} kwa deni 🏦`, `SHAME! The bank seizes ${u(user)}'s ${what} over an unpaid loan 🏦`],
+      [`${u(user)} ashindwa kulipa mkopo — dalali wa benki wafika ${what}`, `${u(user)} misses loan payments — bank auctioneers arrive at ${what}`],
+    ]), { user });
+  },
   mayor(user, votes) {
     publish('politics', [`${u(user)} ashinda Umeya wa Dar kwa kura ${votes}`, `${u(user)} wins the Dar mayoral race with ${votes} votes`], { user, big: true });
   },

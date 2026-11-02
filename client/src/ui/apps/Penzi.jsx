@@ -139,6 +139,7 @@ export function Penzi({ back, open, close }) {
         <AppHead title="Penzi 💘" onBack={back} />
         <div className="app-body">
           <Setup s={s} onSaved={(r) => { setS(r); setEditing(false); }} onCancel={editing ? () => setEditing(false) : null} />
+          {!editing && <BongoSingles close={close} romancesOnly />}
           {rels.length > 0 && !editing && <div className="hint center">{L('Uhusiano wako unaendelea hata uchumba ukiwa umezimwa.', 'Your relationships carry on even with dating switched off.')}</div>}
         </div>
       </>

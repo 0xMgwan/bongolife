@@ -4,8 +4,10 @@ import {
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST, industryById, COMPANY,
   furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
   jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats, luxuryById, LUXURY_RESALE, HOME_LEVELS, homeBounds, HOME_WALLS, HOME_FLOORS, HOME_STYLE_PRICE, homeFeatureById, HOME_ACT_CD, PRIVATE_BUILDINGS,
+  ELECTION,
 } from '../../shared/world.js';
 import * as hiring from './hiring.js';
+import { debtOf } from './loans.js';
 import * as health from './health.js';
 import * as gymMod from './gym.js';
 import * as npcLoveMod from './npclove.js';
@@ -54,7 +56,9 @@ function plate() {
 }
 
 function discount(user, price) {
-  return user.trait === 'mjanja' ? Math.round(price * 0.95) : price;
+  let p = user.trait === 'mjanja' ? price * 0.95 : price;
+  if (mayorRef.current?.()?.id === user.id) p *= 1 - ELECTION.perks.discount; // mayor's perk
+  return Math.round(p);
 }
 
 // ------------------------------------------------------------- income
@@ -107,6 +111,7 @@ export function netWorth(userId) {
     for (const r of db.prepare('SELECT model FROM luxury WHERE user_id = ?').all(userId)) worth += (luxuryById[r.model]?.price || 0) * LUXURY_RESALE;
   } catch { /* table created when luxury.js loads */ }
   worth += hustleValue(userId) + portfolioValue(userId);
+  worth -= debtOf(userId); // bank loans
   return Math.round(worth);
 }
 

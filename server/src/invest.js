@@ -1,5 +1,6 @@
 // Investing: land that grows in value, buying/selling through agents, and haulage trucks.
 import { db, getUser, addMoney, GameError, now } from './db.js';
+import { assertUnpledged } from './loans.js';
 import { INVEST, PLOTS, plotById, buildingById, placeById, cityAt } from '../../shared/world.js';
 
 const DAY = 86_400_000;
@@ -45,6 +46,7 @@ export const buyPlotRemote = db.transaction((userId, plotId) => {
 });
 
 export const sellPlot = db.transaction((userId, plotId) => {
+  assertUnpledged('plot', plotId);
   const row = q.plot.get(plotId);
   if (!row || row.owner_id !== userId) throw new GameError(['Hiki si kiwanja chako.', "That isn't your plot."], 403);
   const value = plotValue(row);

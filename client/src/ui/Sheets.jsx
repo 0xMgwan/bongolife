@@ -230,6 +230,7 @@ function PlaceSheet({ id, onClose }) {
           </div>
         );
       })}
+      {p.type === 'bank' && <button className="btn btn-dark btn-block" style={{ marginTop: 14 }} onClick={() => openPhone('mkopo')}>🏦 {L('Chukua mkopo / lipa mkopo', 'Take out or repay a loan')}</button>}
       {p.shop === 'outfits' && <OutfitShop me={me} />}
       {p.shop === 'vehicles' && <VehicleShop me={me} />}
       {p.shop === 'topup' && useStore.getState().world?.walletOpen !== false && (

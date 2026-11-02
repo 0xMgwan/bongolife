@@ -1,7 +1,7 @@
 // Penzi → Bongo Singles: date game characters (chat, dates, gifts, partner, proposal, wedding)
 // when you haven't matched with a real player — or just because.
 import { useEffect, useState } from 'react';
-import { DATE_SPOTS, LOVE_GIFTS, LOVE, LOVE_STATUS, placeById, fmtShort, fmtTsh } from '@shared/world.js';
+import { DATE_SPOTS, LOVE_GIFTS, LOVE, LOVE_STATUS, placeById, fmtShort, fmtTsh, GLOW, OUTFITS, outfitFits, outfitById, partnerOutfitPrice, HAIR_COLORS, HAIRSTYLES } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { api } from '../../api.js';
 import { AvatarPreview } from '../Creator.jsx';
@@ -11,6 +11,87 @@ import { L, loc } from '../../i18n.js';
 import { sfx } from '../../audio.js';
 
 const STYLE = { sweet: '💕', fun: '😂', chill: '😌' };
+
+/** Glow-up: salon treatments (sent from anywhere), luxury pieces and outfits (at the shops). */
+function GlowUp({ r, act, close }) {
+  const me = useStore((s) => s.me);
+  const n = r.npc;
+  const [tab, setTab] = useState('salon');
+  const [hair, setHair] = useState(n.look.hair);
+  const [color, setColor] = useState(n.look.hairColor ?? 0);
+  const busy = r.salonReadyAt > Date.now();
+  const done = (res) => L(`✨ ${n.name} anang'aa! Glow ${res.glow} · 💗 ${res.affection}`, `✨ ${n.name} is glowing! Glow ${res.glow} · 💗 ${res.affection}`);
+  const outfits = OUTFITS.filter((o) => outfitFits(o, n.body) && !r.closet.outfits.includes(o.id)).sort((a, b) => partnerOutfitPrice(a) - partnerOutfitPrice(b));
+  return (
+    <div className="npc-pane">
+      <div className="glow-bar"><span>✨ Glow</span><div><i style={{ width: `${r.glow}%` }} />{r.glowFloor > 0 && <em style={{ left: `${r.glowFloor}%` }} />}</div><b>{r.glow}</b></div>
+      <small className="muted">{L(`Glow inaongeza 💗 kwenye kila deti (+1 kwa kila ${GLOW.dateBonusPer}). Inapungua kila siku — vitu vya thamani alivyonavyo vinaizuia isishuke sana.`, `Glow adds 💗 to every date (+1 per ${GLOW.dateBonusPer}). It fades daily — the luxury pieces they own stop it dropping too far.`)}</small>
+      <div className="seg" style={{ margin: '8px 0' }}>
+        {[['salon', L('💇🏾‍♀️ Saluni', '💇🏾‍♀️ Salon')], ['shop', L('🛍️ Shopping', '🛍️ Shopping')], ['closet', L('👗 Kabati', '👗 Closet')]].map(([k, t]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{t}</button>)}
+      </div>
+      {tab === 'salon' && (
+        <>
+          {busy && <small className="muted">⏳ {L(`${n.name} yuko saluni — dakika ${Math.ceil((r.salonReadyAt - Date.now()) / 60000)}`, `${n.name} is at the salon — ${Math.ceil((r.salonReadyAt - Date.now()) / 60000)} min`)}</small>}
+          <div className="glow-hair">
+            <small>{L('Mtindo (kwa nywele mpya / VIP):', 'Style (for new hair / VIP):')}</small>
+            <div className="chips">{GLOW.hair.map((h) => <button key={h} className={`chip ${hair === h ? 'on' : ''}`} onClick={() => setHair(h)}>{HAIRSTYLES.find((x) => x.id === h)?.name || h}</button>)}</div>
+            <div className="glow-colors">{HAIR_COLORS.map((c, i) => <button key={c} className={color === i ? 'on' : ''} style={{ background: c }} onClick={() => setColor(i)} aria-label={`colour ${i + 1}`} />)}</div>
+          </div>
+          {GLOW.salon.map((t) => (
+            <div key={t.id} className="inv-row">
+              <span className="em">{t.emoji}</span>
+              <div className="grow"><b>{L(t.name[0], t.name[1])}</b><small>{fmtShort(t.price)} · +{t.glow} ✨ · +{t.affection} 💗</small></div>
+              <button className="btn btn-green btn-xs" disabled={busy || me.money < t.price} onClick={() => act('salon', { treat: t.id, hair, color }, done)}>{L('Mtume', 'Send')}</button>
+            </div>
+          ))}
+          <div className="hint">{L(`Mtume ${n.name} saluni ukiwa popote. Nywele mpya na VIP zinabadilisha mtindo wake.`, `Send ${n.name} to the salon from anywhere. New hair and VIP change their style.`)}</div>
+        </>
+      )}
+      {tab === 'shop' && (
+        <>
+          <div className="section-t">{L('VITU VYA THAMANI', 'LUXURY PIECES')}</div>
+          {GLOW.items.map((g) => {
+            const owned = r.closet.items.includes(g.id);
+            return (
+              <div key={g.id} className="inv-row">
+                <span className="em">{g.emoji}</span>
+                <div className="grow"><b>{L(g.name[0], g.name[1])}</b><small>{fmtShort(g.price)} · +{g.glow} ✨ · +{g.affection} 💗 · {L(`kinga ${g.floor}`, `floor +${g.floor}`)}</small></div>
+                <button className="btn btn-green btn-xs" disabled={owned || me.money < g.price} onClick={() => act('shop', { kind: 'item', id: g.id }, done)}>{owned ? '✓' : L('Nunua', 'Buy')}</button>
+              </div>
+            );
+          })}
+          <div className="section-t">{L('NGUO', 'OUTFITS')}</div>
+          {outfits.map((o) => (
+            <div key={o.id} className="inv-row">
+              <span className="em" style={{ color: o.top }}>👗</span>
+              <div className="grow"><b>{L(o.name, o.nameEn || o.name)}</b><small>{fmtShort(partnerOutfitPrice(o))} · +{GLOW.outfitGlow} ✨</small></div>
+              <button className="btn btn-green btn-xs" disabled={me.money < partnerOutfitPrice(o)} onClick={() => act('shop', { kind: 'outfit', id: o.id }, done)}>{L('Nunua', 'Buy')}</button>
+            </div>
+          ))}
+          <div className="hint">{L(`Mpeleke ${n.name} dukani: nenda Kariakoo Fashion, Mlimani City au mall yoyote, kisha nunua. (Dubai ni safari — popote.)`, `Take ${n.name} shopping: go to Kariakoo Fashion, Mlimani City or any mall, then buy. (Dubai is a trip — works anywhere.)`)}</div>
+          <button className="btn btn-ghost btn-sm btn-block" onClick={() => { close?.(); goToPlace('fashion'); }}>📍 Kariakoo Fashion</button>
+        </>
+      )}
+      {tab === 'closet' && (
+        <>
+          {!r.closet.outfits.length && !r.closet.items.length && <small className="muted">{L('Kabati tupu — mpeleke shopping!', 'Empty closet — take them shopping!')}</small>}
+          {r.closet.items.length > 0 && <div className="chips">{r.closet.items.map((id) => { const g = GLOW.items.find((x) => x.id === id); return g && <span key={id} className="chip on">{g.emoji} {L(g.name[0], g.name[1])}</span>; })}</div>}
+          {r.closet.outfits.map((id) => {
+            const o = outfitById[id];
+            const on = n.look.outfit === id;
+            return o && (
+              <div key={id} className="inv-row">
+                <span className="em" style={{ color: o.top }}>👗</span>
+                <div className="grow"><b>{L(o.name, o.nameEn || o.name)}</b></div>
+                <button className="btn btn-ghost btn-xs" disabled={on} onClick={() => act('shop', { kind: 'wear', id })}>{on ? L('Amevaa', 'Wearing') : L('Mvalishe', 'Wear')}</button>
+              </div>
+            );
+          })}
+        </>
+      )}
+    </div>
+  );
+}
 
 function Romance({ r, set, close }) {
   const run = useStore((s) => s.run);
@@ -48,7 +129,7 @@ function Romance({ r, set, close }) {
           <small>{L(n.job[0], n.job[1])} · {n.city}</small>
           <span className="tag friend">{L(LOVE_STATUS[r.status][0], LOVE_STATUS[r.status][1])}</span>
           <div className="aff"><i style={{ width: `${r.affection}%` }} /></div>
-          <small>💗 {r.affection}/100 · {r.dates} {L('deti', 'dates')}</small>
+          <small>💗 {r.affection}/100 · ✨ {r.glow} · {r.dates} {L('deti', 'dates')}</small>
         </div>
       </div>
       {/* chat */}
@@ -71,6 +152,7 @@ function Romance({ r, set, close }) {
       <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
         <button className="btn btn-green btn-sm grow" onClick={() => setPane(pane === 'date' ? null : 'date')}>🌹 {L('Deti', 'Date')}</button>
         <button className="btn btn-white btn-sm grow" style={{ border: '1px solid var(--line)' }} onClick={() => setPane(pane === 'gift' ? null : 'gift')}>🎁 {L('Zawadi', 'Gift')}</button>
+        <button className="btn btn-white btn-sm grow" style={{ border: '1px solid var(--line)' }} onClick={() => setPane(pane === 'glow' ? null : 'glow')}>✨ Glow</button>
         {r.canCouple && <button className="btn btn-dark btn-sm grow" onClick={() => step('couple')}>❤️ {L('Uwe mpenzi wangu?', 'Be my partner?')}</button>}
         {r.canPropose && <button className="btn btn-dark btn-sm grow" disabled={me.money < LOVE.ringPrice} onClick={() => step('propose')}>💍 {L('Chumbia', 'Propose')}</button>}
         {r.canWed && <button className="btn btn-dark btn-sm grow" disabled={me.money < LOVE.weddingPrice} onClick={() => step('wed')}>💒 {L('Harusi', 'Wedding')}</button>}
@@ -89,6 +171,7 @@ function Romance({ r, set, close }) {
           <div className="hint">{L(`Nenda mahali hapo (📍) kisha bonyeza Anza — ${n.name} atakukuta.`, `Head to the spot (📍), then tap Go — ${n.name} will meet you there.`)}</div>
         </div>
       )}
+      {pane === 'glow' && <GlowUp r={r} act={act} close={close} />}
       {pane === 'gift' && (
         <div className="npc-pane npc-gifts">
           {LOVE_GIFTS.map((g) => (
@@ -103,12 +186,14 @@ function Romance({ r, set, close }) {
   );
 }
 
-export function BongoSingles({ close }) {
+export function BongoSingles({ close, romancesOnly = false }) {
   const run = useStore((s) => s.run);
   const [d, setD] = useState(null);
   const [filter, setFilter] = useState(null);
   useEffect(() => { api('/love/npc').then((r) => { setD(r); setFilter(r.looking); }).catch(() => {}); }, []);
-  if (!d) return <div className="small muted" style={{ padding: 12 }}>{L('Inapakia…', 'Loading…')}</div>;
+  if (!d) return romancesOnly ? null : <div className="small muted" style={{ padding: 12 }}>{L('Inapakia…', 'Loading…')}</div>;
+  // With dating switched off you still look after the partner you already have.
+  if (romancesOnly) return d.romances.map((r) => <Romance key={r.npc.id} r={r} set={setD} close={close} />);
   const like = async (n) => {
     const r = await run(`/love/npc/${n.id}/like`, { method: 'POST' });
     if (r) { setD(r); sfx('levelup'); useStore.getState().toast(L(`💘 Mmeendana na ${n.name}! Mwandikie sasa.`, `💘 It's a match with ${n.name}! Say hi now.`)); }

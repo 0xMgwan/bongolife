@@ -3,6 +3,7 @@
 import { db, addMoney, now } from './db.js';
 import { plotById, placeById } from '../../shared/world.js';
 import { plotValue } from './invest.js';
+import { pledged } from './loans.js';
 import { broadcast } from './presence.js';
 
 const DAY = 86_400_000;
@@ -13,7 +14,7 @@ export const runBuyback = db.transaction(() => {
   const freed = [];
   for (const p of db.prepare(`SELECT x.* FROM plots x JOIN users u ON u.id = x.owner_id WHERE COALESCE(u.last_seen, u.created_at) < ? AND x.bought_at < ?`).all(cut, cut)) {
     const plot = plotById[p.id];
-    if (!plot) continue;
+    if (!plot || pledged('plot', p.id)) continue;
     const pay = Math.round(plotValue(p) * BUYBACK.pay);
     db.prepare('DELETE FROM plots WHERE id = ?').run(p.id);
     addMoney(p.owner_id, pay, 'sale', `🏦 Benki imenunua ${plot.name} (hukuonekana siku ${BUYBACK.idleDays})`);
@@ -21,7 +22,7 @@ export const runBuyback = db.transaction(() => {
   }
   for (const b of db.prepare(`SELECT x.* FROM businesses x JOIN users u ON u.id = x.owner_id WHERE COALESCE(u.last_seen, u.created_at) < ? AND x.bought_at < ?`).all(cut, cut)) {
     const place = placeById[b.id];
-    if (!place?.business) continue;
+    if (!place?.business || pledged('biz', b.id)) continue;
     const pay = Math.round(place.business.price * BUYBACK.pay);
     db.prepare('DELETE FROM businesses WHERE id = ?').run(b.id);
     addMoney(b.owner_id, pay, 'sale', `🏦 Benki imenunua ${place.business.label || place.name} (hukuonekana siku ${BUYBACK.idleDays})`);

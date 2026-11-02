@@ -274,24 +274,54 @@ function DayNight({ interior }) {
 
 const GOLDEN = new THREE.Color('#ffb36b');
 
+const isPhone = () => {
+  try { return matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent); } catch { return false; }
+};
+
+/** Renders at most `fps` frames a second (with frameloop="demand"); nothing while the tab is hidden. */
+function FpsCap({ fps }) {
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => {
+    const step = 1000 / fps;
+    let last = 0;
+    let id;
+    const loop = (t) => {
+      id = requestAnimationFrame(loop);
+      if (t - last < step - 2) return;
+      last = t;
+      invalidate();
+    };
+    id = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(id);
+  }, [fps, invalidate]);
+  return null;
+}
+
 export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPlot, onBillboard, onGround, onPlayer, quality = 'auto', scene = null }) {
   const sceneCfg = scene && SCENES[scene.key];
   const home = mode === 'home';
   const events = useStore((s) => s.events);
   const visitingHost = useStore((s) => s.visiting?.host.id);
   const party = home ? livePartyAt(events, 'home', visitingHost || me?.id) : scene ? livePartyAt(events, scene.placeId) : null;
-  const lowEnd = useMemo(() => {
-    if (quality === 'low') return true;
-    if (quality === 'high') return false;
+  // Graphics tiers. Phones on "Auto" get a lighter tier (no post-processing, capped resolution,
+  // 30 fps) — full effects at 60–120 fps kept phones hot after a few minutes.
+  const tier = useMemo(() => {
+    if (quality === 'low') return 'low';
+    if (quality === 'high') return 'high';
     const mem = navigator.deviceMemory || 4;
-    return mem <= 2 || (navigator.hardwareConcurrency || 4) <= 4;
+    if (mem <= 2 || (navigator.hardwareConcurrency || 4) <= 4) return 'low';
+    return isPhone() ? 'phone' : 'high';
   }, [quality]);
+  const lowEnd = tier === 'low';
+  const phoneOpen = useStore((s) => !!s.phone); // the city is mostly hidden behind the phone
+  const full = tier === 'high';
   return (
     <Canvas
-      dpr={lowEnd ? [1, 1.25] : [1, 2]}
-      gl={{ antialias: !lowEnd, powerPreference: 'high-performance', stencil: false }}
+      dpr={lowEnd ? [1, 1.25] : full ? [1, 2] : [1, 1.5]}
+      gl={{ antialias: !lowEnd, powerPreference: full ? 'high-performance' : 'low-power', stencil: false }}
       camera={{ fov: 40, near: 0.5, far: 900, position: [0, 60, 60] }}
-      shadows={lowEnd ? false : 'soft'}
+      shadows={lowEnd ? false : full ? 'soft' : true}
+      frameloop={full ? 'always' : 'demand'}
       flat
       onCreated={(state) => {
         state.gl.setClearColor('#cfe6f7');
@@ -307,8 +337,9 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
         if (import.meta.env.DEV) window.__r3f = state;
       }}
     >
+      {!full && <FpsCap fps={phoneOpen ? 8 : 30} />}
       <Suspense fallback={null}>
-        {!lowEnd && mode !== 'map' && <Effects interiorDark={!!sceneCfg?.dark} />}
+        {full && mode !== 'map' && <Effects interiorDark={!!sceneCfg?.dark} />}
         <DayNight interior={sceneCfg ? { bg: sceneCfg.bg, light: sceneCfg.light } : null} />
         <CameraRig mode={mode} sceneKey={sceneCfg ? scene.key : null} />
         <group visible={!sceneCfg && !home}>

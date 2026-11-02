@@ -427,6 +427,12 @@ import('./market.js').then((m) => {
 });
 // Press: milestones, rich list, rivalries. Guards whose contract ran out go home.
 startNews({ netWorth: (id) => netWorth(id) });
+import('./loans.js').then((m) => {
+  m.setSeizeHook((user, what) => newsStory.seized(user, what));
+  const run = () => { try { if (m.loanTick()) broadcast('world', worldState()); } catch (e) { console.error('[loans]', e.message); } };
+  run();
+  setInterval(run, 600_000);
+});
 setInterval(() => { try { guardsTick(); } catch (e) { console.error('[guards]', e.message); } }, 60_000);
 // Economy: stock market ticks; property of long-idle owners is bought back by the bank.
 import('./stocks.js').then((m) => m.startMarket());

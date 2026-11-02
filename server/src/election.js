@@ -3,6 +3,7 @@
 import { ELECTION, electionPeriod, electionEnds } from '../../shared/world.js';
 import { db, getUser, addMoney, GameError, now } from './db.js';
 import { bumpStats } from './story.js';
+import { grantGuards } from './guards.js';
 
 const shiftsOf = (u) => Object.values(u.jobXp || {}).reduce((a, b) => a + b, 0);
 const parse = (r) => (r ? { ...r, appearance: JSON.parse(r.appearance || 'null') } : null);
@@ -18,8 +19,12 @@ export const settleElection = db.transaction(() => {
   db.prepare('INSERT INTO mayors (period, user_id, votes, decided_at) VALUES (?, ?, ?, ?)').run(prev, w?.id ?? null, w?.n ?? 0, now());
   if (!w) return null;
   addMoney(w.id, ELECTION.salary, 'bonus', 'Mshahara wa Mkuu wa Mkoa 🏛️');
+  grantGuards(w.id, ELECTION.perks.guard, electionEnds(prev + 1)); // VIP protection for the whole term
   return { id: w.id, votes: w.n, username: getUser(w.id).username };
 });
+
+/** Is this player the sitting mayor? */
+export const isMayor = (uid) => currentMayor()?.id === uid;
 
 export function currentMayor() {
   return parse(db.prepare(`SELECT m.period, m.votes, m.message, u.id, u.username, u.name, u.appearance FROM mayors m

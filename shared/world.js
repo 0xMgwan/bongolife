@@ -1304,7 +1304,12 @@ export const TRAVEL = {
 
 // ---------------------------------------------------------------- mayor
 // Weekly elections (Monday 00:00 Dar time). Last week's winner is Mkuu wa Mkoa.
-export const ELECTION = { fee: 50_000, salary: 500_000, minShifts: 1, candidateShifts: 3, sloganMax: 60, messageMax: 140 };
+export const ELECTION = {
+  fee: 50_000, salary: 45_000_000, minShifts: 1, candidateShifts: 3, sloganMax: 60, messageMax: 140,
+  // While in office: free VIP guards, a discount on plots/buildings/clothes, and a cut of the
+  // property market's agent fee (the city treasury).
+  perks: { guard: 'elite', discount: 0.1, treasuryShare: 1 / 3 },
+};
 const WEEK_MS = 7 * 86_400_000;
 const WEEK_OFF = 3 * 3_600_000 + 3 * 86_400_000; // EAT offset + Thursday→Monday
 export const electionPeriod = (t = Date.now()) => Math.floor((t + WEEK_OFF) / WEEK_MS);
@@ -2418,6 +2423,34 @@ export const NPC_CHAT = [
 ];
 export const NPC_LOVE = { chatCooldownMs: 3 * 60_000, chatGood: 6, chatOk: 2, likeChance: 0.75, favouriteBonus: 6 };
 
+// Glow-up: send your (game-character) partner to the salon, take them shopping for clothes and
+// luxury pieces. Glow ✨ fades a little each day, but what's in their closet keeps a floor under it.
+// A glowing partner enjoys dates more (+1 💗 per 20 glow).
+export const GLOW = {
+  decayPerDay: 6, salonCooldownMs: 60 * 60_000, dateBonusPer: 20,
+  hair: ['misuko', 'afro', 'kibanio', 'mkia', 'rasta', 'kilemba', 'kiduku'],
+  salon: [
+    { id: 'nails', emoji: '💅🏾', name: ['Kucha na pedicure', 'Nails & pedicure'], price: 90_000, glow: 8, affection: 3 },
+    { id: 'makeup', emoji: '💄', name: ['Makeup ya glam', 'Full glam makeup'], price: 180_000, glow: 12, affection: 4 },
+    { id: 'hair', emoji: '💇🏾‍♀️', name: ['Mtindo mpya wa nywele', 'New hairstyle'], price: 250_000, glow: 15, affection: 5, restyle: true },
+    { id: 'spa', emoji: '🧖🏾‍♀️', name: ['Spa: facial na masaji', 'Spa: facial & massage'], price: 450_000, glow: 18, affection: 6 },
+    { id: 'vip', emoji: '👑', name: ['Glow-up ya VIP (vyote + photoshoot)', 'VIP glow-up (everything + photoshoot)'], price: 2_500_000, glow: 45, affection: 15, restyle: true },
+  ],
+  // Luxury pieces: bought once, kept forever — each raises the glow floor.
+  items: [
+    { id: 'perfume', emoji: '🧴', name: ['Manukato ya Paris', 'Paris perfume'], price: 400_000, glow: 6, affection: 4, floor: 3 },
+    { id: 'heels', emoji: '👠', name: ['Viatu vya designer', 'Designer heels'], price: 900_000, glow: 8, affection: 5, floor: 4 },
+    { id: 'bag', emoji: '👜', name: ['Mkoba wa designer', 'Designer handbag'], price: 3_500_000, glow: 12, affection: 8, floor: 6 },
+    { id: 'diamonds', emoji: '💎', name: ['Mkufu wa almasi', 'Diamond necklace'], price: 12_000_000, glow: 20, affection: 12, floor: 10 },
+    { id: 'dubai', emoji: '✈️', name: ['Shopping Dubai (siku 3)', 'Dubai shopping trip (3 days)'], price: 50_000_000, glow: 40, affection: 20, floor: 15, anywhere: true },
+  ],
+  outfitMarkup: 2, outfitMin: 80_000, outfitGlow: 10, outfitAffection: 4,
+};
+export const glowItemById = Object.fromEntries(GLOW.items.map((g) => [g.id, g]));
+export const glowSalonById = Object.fromEntries(GLOW.salon.map((g) => [g.id, g]));
+/** What a boutique charges to dress your partner in an outfit. */
+export const partnerOutfitPrice = (o) => Math.max(GLOW.outfitMin, o.price * GLOW.outfitMarkup);
+
 // ============================================================ music (real tracks)
 // Venues that can play uploaded tracks (admin tags each track with where it plays).
 export const MUSIC_VENUES = [
@@ -2567,4 +2600,22 @@ export const PROPERTY_MARKET = {
   snipeMs: 2 * 60_000, // a bid in the last 2 min adds 2 min
   offerTtlMs: 48 * 3600_000,
   maxListings: 10,
+};
+
+// ============================================================ bank loans
+// Borrow at the bank. Pledge plots or businesses as collateral for a bigger loan at a lower rate,
+// or borrow a little unsecured against your net worth. One loan at a time; repay any time.
+// Late: a daily late fee, then after the grace days the bank collects from your wallet and —
+// if that isn't enough — seizes the collateral (unsecured debt is taken from future earnings).
+export const LOANS = {
+  min: 100_000,
+  ltv: 0.6, // borrow up to 60% of the collateral's value
+  unsecuredPct: 0.1, unsecuredMin: 500_000, unsecuredMax: 100_000_000, // of your net worth
+  unsecuredExtra: 0.08, // unsecured loans cost more
+  terms: [
+    { days: 3, rate: 0.06 },
+    { days: 7, rate: 0.12 },
+    { days: 30, rate: 0.3 },
+  ],
+  lateFeePerDay: 0.05, maxLateDays: 10, graceDays: 2,
 };

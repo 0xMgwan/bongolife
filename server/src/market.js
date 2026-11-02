@@ -4,6 +4,9 @@
 import { db, getUser, addMoney, GameError, now } from './db.js';
 import { PROPERTY_MARKET as PM, plotById, placeById, buildingById, houseStats } from '../../shared/world.js';
 import { plotValue } from './invest.js';
+import { currentMayor } from './election.js';
+import { assertUnpledged } from './loans.js';
+import { ELECTION } from '../../shared/world.js';
 import { emitTo, broadcast } from './presence.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS listings (
@@ -56,6 +59,7 @@ const shape = (l) => ({ ...l, asset: describe(l.kind, l.asset_id), minBid: l.top
 
 /** Move ownership. Income timers restart for the new owner. */
 function transfer(kind, id, from, to) {
+  assertUnpledged(kind, id);
   const row = ownerOf(kind, id);
   if (!row || row.owner_id !== from) throw new GameError(['Mali hii haipo tena kwa muuzaji.', 'The seller no longer owns this.'], 409);
   const t = now();
@@ -75,6 +79,10 @@ function payout(l, buyer, amount) {
   const fee = Math.round(amount * PM.feePct);
   transfer(l.kind, l.asset_id, l.seller_id, buyer);
   addMoney(l.seller_id, amount - fee, 'sale', `🏷️ Umeuza ${describe(l.kind, l.asset_id).name} (ada ${PM.feePct * 100}%)`);
+  // The mayor's treasury gets a share of every agent fee.
+  const mayor = currentMayor();
+  const cut = mayor ? Math.round(fee * ELECTION.perks.treasuryShare) : 0;
+  if (cut > 0) addMoney(mayor.id, cut, 'income', `🏛️ Hazina ya jiji — ada ya mauzo ya ${describe(l.kind, l.asset_id).name}`);
   db.prepare("UPDATE listings SET status = 'sold', buyer_id = ?, final = ?, closed_at = ? WHERE id = ?").run(buyer, amount, now(), l.id);
   const a = describe(l.kind, l.asset_id);
   emitTo(l.seller_id, 'toast', { text: [`🏷️ ${a.name} imeuzwa kwa @${uname(buyer)} — TSh ${amount.toLocaleString()}`, `🏷️ ${a.nameEn || a.name} sold to @${uname(buyer)} for TSh ${amount.toLocaleString()}`], refresh: true });
@@ -104,6 +112,7 @@ export const list = db.transaction((uid, { kind, id, price, startBid, hours }) =
   const row = ownerOf(kind, id);
   if (!row || row.owner_id !== uid) throw new GameError(['Hii si mali yako.', "You don't own this."], 403);
   if (q.openFor.get(kind, id)) throw new GameError(['Tayari iko sokoni.', 'Already on the market.']);
+  assertUnpledged(kind, id);
   if (db.prepare("SELECT COUNT(*) n FROM listings WHERE seller_id = ? AND status = 'open'").get(uid).n >= PM.maxListings) throw new GameError([`Kikomo ni matangazo ${PM.maxListings}.`, `You can have ${PM.maxListings} listings at once.`]);
   price = Math.floor(Number(price) || 0) || null;
   startBid = Math.floor(Number(startBid) || 0) || null;

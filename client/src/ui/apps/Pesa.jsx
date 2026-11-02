@@ -6,7 +6,7 @@ import { AppHead } from '../Phone.jsx';
 import { L } from '../../i18n.js';
 import { VirtualNote } from '../VirtualNote.jsx';
 
-const KIND = { topup: '💳', salary: '💼', spend: '🛍️', purchase: '🧾', income: '🏦', gift: '🎁', transfer_in: '📥', transfer_out: '📤', travel: '🛺', ads: '📢' };
+const KIND = { loan: '🏦', loan_repay: '🏦', topup: '💳', salary: '💼', spend: '🛍️', purchase: '🧾', income: '🏦', gift: '🎁', transfer_in: '📥', transfer_out: '📤', travel: '🛺', ads: '📢' };
 
 function Topup({ info, me, onDone }) {
   const [amount, setAmount] = useState(info.presets[2] || info.min);
