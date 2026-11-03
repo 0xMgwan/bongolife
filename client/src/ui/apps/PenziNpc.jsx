@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { DATE_SPOTS, LOVE_GIFTS, LOVE, LOVE_STATUS, placeById, fmtShort, fmtTsh, GLOW, OUTFITS, outfitFits, outfitById, partnerOutfitPrice, HAIR_COLORS, HAIRSTYLES } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { api } from '../../api.js';
-import { AvatarPreview } from '../Creator.jsx';
+import { AvatarPortrait } from '../AvatarPortrait.jsx';
 import { ask } from '../Confirm.jsx';
 import { goToPlace } from '../../nav.js';
 import { L, loc } from '../../i18n.js';
@@ -123,7 +123,7 @@ function Romance({ r, set, close }) {
   return (
     <div className="npc-rel">
       <div className="npc-top">
-        <div className="npc-av"><AvatarPreview appearance={n.look} /></div>
+        <div className="npc-av"><AvatarPortrait appearance={n.look} alt={n.name} /></div>
         <div className="grow">
           <b>{n.name}, {n.age}</b>
           <small>{L(n.job[0], n.job[1])} · {n.city}</small>
@@ -210,7 +210,7 @@ export function BongoSingles({ close, romancesOnly = false }) {
       <div className="npc-grid">
         {singles.map((n) => (
           <div key={n.id} className="npc-card">
-            <div className="npc-av"><AvatarPreview appearance={n.look} /></div>
+            <div className="npc-av"><AvatarPortrait appearance={n.look} alt={n.name} /></div>
             <b>{n.name}, {n.age}</b>
             <small>{L(n.job[0], n.job[1])} · {n.city}</small>
             <small className="bio">“{L(n.bio[0], n.bio[1])}”</small>
