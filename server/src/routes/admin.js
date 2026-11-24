@@ -7,7 +7,7 @@ import { db, getUser, addMoney, saveFields, GameError, now, audit, getSettings, 
 import { hashPassword } from '../auth.js';
 import * as game from '../game.js';
 import { online, broadcast, emitTo, kick } from '../presence.js';
-import { providers, provider, TOPUP_RATE } from '../payments/index.js';
+import { providers, provider, TOPUP_RATE, diagnosePayguard } from '../payments/index.js';
 import { settleTopup, liveAds, publicAnnouncement } from './api.js';
 import multer from 'multer';
 import * as live from '../live.js';
@@ -46,6 +46,8 @@ function series(rows, days) {
 
 // ------------------------------------------------------------ overview
 // Welcome voice check: which provider is live and does a fresh phrase generate?
+// PayGuard key check (Settings → Payments).
+admin.get('/payments-test', async (_req, res, next) => { try { res.json(await diagnosePayguard()); } catch (e) { next(e); } });
 admin.get('/voice-test', async (_req, res) => {
   try { res.json(await live.voiceTest()); } catch (e) { res.json({ ok: false, error: e.message }); }
 });

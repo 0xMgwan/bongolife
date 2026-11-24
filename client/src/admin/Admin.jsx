@@ -448,7 +448,7 @@ function Settings() {
     }
   };
   const flag = (key, label, desc, danger) => (
-    <div className="toggle">
+    <div className="adm-toggle">
       <div><b>{label}</b><div className="small muted">{desc}</div></div>
       <Switch on={!!form[key]} danger={danger} onChange={(v) => save({ [key]: v })} />
     </div>
@@ -465,6 +465,8 @@ function Settings() {
           {flag('topupsEnabled', 'Wallet top-ups', 'Allow mobile money top-ups.')}
           {flag('chatEnabled', 'Public chat', 'Allow street chat messages.')}
           {flag('adsEnabled', 'New ads', 'Allow players to buy billboard ads.')}
+          <h2 style={{ marginTop: 22 }}>💳 Payments (Wooble / PayGuard)</h2>
+          <PaymentsTest />
         </div>
         <div className="panel">
           <h2>⚽ Watch party matches</h2>
@@ -652,6 +654,35 @@ export default function Admin() {
   );
 }
 
+
+/** Admin → Settings: check the PayGuard keys log in, and in which environment. */
+function PaymentsTest() {
+  const [r, setR] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    try { setR(await api('/admin/payments-test')); } catch (e) { setR({ verdict: e.message }); }
+    setBusy(false);
+  };
+  const ok = r?.configured?.ok;
+  return (
+    <div>
+      <div className="small muted" style={{ marginBottom: 8 }}>Logs in to PayGuard with the server's keys. Nothing is charged.</div>
+      <button className="btn btn-outline" disabled={busy} onClick={run}>{busy ? 'Checking…' : '🔑 Test PayGuard keys'}</button>
+      {r && (
+        <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
+          <div style={{ fontWeight: 800, color: ok ? '#15803d' : '#b91c1c' }}>{ok ? '✅ ' : '⚠️ '}{r.verdict}</div>
+          {r.env && <div>Environment: <b>{r.env}</b> · {r.baseUrl}</div>}
+          {r.key && <div>Key: {r.key.starts}…{r.key.ends} ({r.key.length} chars)</div>}
+          {r.secret && <div>Secret: {r.secret.length} chars (expected {r.secret.expected})</div>}
+          {r.configured && <div>Login on {r.env}: {r.configured.ok ? 'OK' : `${r.configured.status} ${r.configured.message || ''}`}</div>}
+          {r.other && <div>Login on {r.other.env}: {r.other.ok ? 'OK' : `${r.other.status} ${r.other.message || ''}`}</div>}
+          {r.env && <div>Callback token: {r.callbackToken ? 'set' : 'not set'}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Admin → Settings: test the natural welcome voice (ElevenLabs/Azure) and see the real error. */
 function VoiceTest() {

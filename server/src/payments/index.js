@@ -70,10 +70,11 @@ const ntzs = {
 
 
 // ------------------------------------------------------------ Wooble / PayGuard
-const PG_LIVE = process.env.PAYGUARD_ENV === 'live';
+const PG_LIVE = process.env.PAYGUARD_ENV?.trim().toLowerCase() === 'live';
 const PG_BASE = (process.env.PAYGUARD_BASE_URL || (PG_LIVE ? 'https://secure.payguard.tz' : 'http://102.223.19.6:8010')).replace(/\/$/, '');
-const PG_KEY = process.env.PAYGUARD_COLLECTION_KEY;
-const PG_SECRET = process.env.PAYGUARD_COLLECTION_SECRET;
+// Trimmed: a stray space or newline from pasting into the dashboard would make every login fail.
+const PG_KEY = process.env.PAYGUARD_COLLECTION_KEY?.trim();
+const PG_SECRET = process.env.PAYGUARD_COLLECTION_SECRET?.trim();
 /** Shared token in the callback URL (?token=…) — callbacks carry no signature of their own. */
 export const PAYGUARD_CALLBACK_TOKEN = process.env.PAYGUARD_CALLBACK_TOKEN;
 
@@ -167,6 +168,42 @@ const payguard = {
     return 'pending';
   },
 };
+
+/**
+ * Admin check: can these keys log in, and in which environment? Tries the configured base URL
+ * and the other one, so keys made for the wrong environment show up plainly. Never returns the secret.
+ */
+export async function diagnosePayguard() {
+  const SANDBOX = 'http://102.223.19.6:8010';
+  const LIVE = 'https://secure.payguard.tz';
+  const tryLogin = async (base) => {
+    try {
+      const res = await fetch(base + '/api/client/auth/generate-token', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ apiKey: PG_KEY, apiSecret: PG_SECRET }), signal: AbortSignal.timeout(20_000),
+      });
+      const body = await res.json().catch(() => ({}));
+      return { ok: res.ok && !!body.data?.token, status: res.status, message: body.message || null };
+    } catch (e) {
+      return { ok: false, status: 0, message: e.message };
+    }
+  };
+  const out = {
+    env: PG_LIVE ? 'live' : 'sandbox', baseUrl: PG_BASE, active: provider?.id || null,
+    key: PG_KEY ? { length: PG_KEY.length, starts: PG_KEY.slice(0, 4), ends: PG_KEY.slice(-2) } : null,
+    secret: PG_SECRET ? { length: PG_SECRET.length, expected: 64 } : null,
+    callbackToken: !!PAYGUARD_CALLBACK_TOKEN,
+  };
+  if (!PG_KEY || !PG_SECRET) return { ...out, verdict: 'PAYGUARD_COLLECTION_KEY / PAYGUARD_COLLECTION_SECRET are not set on the server.' };
+  out.configured = await tryLogin(PG_BASE);
+  const other = PG_BASE === LIVE ? SANDBOX : LIVE;
+  if (!out.configured.ok) out.other = { env: other === LIVE ? 'live' : 'sandbox', ...(await tryLogin(other)) };
+  out.verdict = out.configured.ok ? `Keys work on ${out.env}. Payments are ready.`
+    : out.other?.ok ? `These keys are ${out.other.env} keys — set PAYGUARD_ENV=${out.other.env} in Railway.`
+      : out.secret.length !== 64 ? `The secret is ${out.secret.length} characters; PayGuard secrets are 64. Re-copy it (or click "New secret" in the Wooble portal).`
+        : 'PayGuard rejected the key/secret in both sandbox and live. Check they are the Collection product\'s keys, the secret wasn\'t regenerated, and (for live) that this server\'s IP is whitelisted.';
+  return out;
+}
 
 const demo = {
   id: 'demo',
