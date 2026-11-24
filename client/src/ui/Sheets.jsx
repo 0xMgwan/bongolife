@@ -599,8 +599,8 @@ function AdSheet({ id, onClose }) {
       <button className="btn btn-white btn-block" style={{ marginTop: 12, border: '1px solid var(--line)' }} onClick={() => openPhone('matangazo', id)}>＋ {L('Weka tangazo lako hapa', 'Add your ad to this board')}</button>
       <div className="hint center" style={{ marginTop: 8 }}>
         {L(
-          `Skrini ya kidijitali: tangazo lako linaanza ukilipia na linapokezana na mengine hapa · TZS ${adPriceTzs(slot, 7).toLocaleString()} kwa siku 7 (nTZS)`,
-          `A digital board: yours goes live as soon as you pay and takes turns with the ads here · TZS ${adPriceTzs(slot, 7).toLocaleString()} for 7 days (nTZS)`,
+          `Skrini ya kidijitali: tangazo lako linaanza ukilipia na linapokezana na mengine hapa · TZS ${adPriceTzs(slot, 7).toLocaleString()} kwa siku 7 (mobile money)`,
+          `A digital board: yours goes live as soon as you pay and takes turns with the ads here · TZS ${adPriceTzs(slot, 7).toLocaleString()} for 7 days (mobile money)`,
         )}
       </div>
     </Sheet>

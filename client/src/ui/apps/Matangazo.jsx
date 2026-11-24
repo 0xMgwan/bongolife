@@ -142,7 +142,7 @@ export function Matangazo({ arg, back }) {
             <input type="range" min="1" max={AD_MAX_DAYS} value={f.days} onChange={(e) => setF({ ...f, days: Number(e.target.value) })} style={{ width: '100%', accentColor: 'var(--green)' }} />
             <div className="label">{L('Namba ya mobile money', 'Mobile money number')}</div>
             <input className="field" inputMode="tel" placeholder="0712 345 678" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <div className="hint">💳 {L('Matangazo yanalipwa kwa pesa halisi (nTZS · M-Pesa, Tigo Pesa, Airtel Money) — si pesa ya mchezo.', 'Ads are paid with real money (nTZS · M-Pesa, Tigo Pesa, Airtel Money) — not game cash.')}</div>
+            <div className="hint">💳 {L('Matangazo yanalipwa kwa pesa halisi (M-Pesa, Mixx by Yas, Airtel Money · kupitia Wooble) — si pesa ya mchezo.', 'Ads are paid with real money (M-Pesa, Mixx by Yas, Airtel Money · via Wooble) — not game cash.')}</div>
             {err && <div className="err">{err}</div>}
             <button className="btn btn-green btn-block" style={{ marginTop: 14 }} disabled={busy || !f.title || !phone} onClick={submit}>
               {busy ? L('Subiri…', 'Please wait…') : L(`Lipa TZS ${tzs.toLocaleString()} & weka hewani`, `Pay TZS ${tzs.toLocaleString()} & go live`)}

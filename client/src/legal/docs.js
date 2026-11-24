@@ -71,8 +71,8 @@ export const DOCS = {
       {
         h: ['5. Malipo na urejeshaji', '5. Payments and refunds'],
         body: [
-          ['Malipo yanachakatwa na mshirika wetu wa malipo (nTZS) na mitandao ya simu. Hatuoni wala kuhifadhi PIN yako. Lazima utumie namba ya simu iliyosajiliwa kwa jina lako au uliyoruhusiwa kuitumia.',
-            'Payments are processed by our payment partner (nTZS) and mobile networks. We never see or store your PIN. You must use a phone number registered in your name or that you are authorised to use.'],
+          ['Malipo yanachakatwa na mshirika wetu wa malipo (Wooble, huduma ya PayGuard Limited) na mitandao ya simu. Hatuoni wala kuhifadhi PIN yako. Lazima utumie namba ya simu iliyosajiliwa kwa jina lako au uliyoruhusiwa kuitumia.',
+            'Payments are processed by our payment partner (Wooble, a service of PayGuard Limited) and mobile networks. We never see or store your PIN. You must use a phone number registered in your name or that you are authorised to use.'],
           ['Ununuzi wa pesa ya mchezo ni wa mwisho. Tutarudisha pesa tu pale: (a) ulikatwa lakini salio halikuingia; (b) ulikatwa mara mbili kwa kosa; au (c) sheria inatutaka. Tuandikie ndani ya siku 30 ukiwa na namba ya muamala.',
             'Purchases of in-game currency are final. We refund only where: (a) you were charged but the balance was not credited; (b) you were charged twice by mistake; or (c) the law requires it. Contact us within 30 days with the transaction reference.'],
           ['Malipo ya matangazo yanafuata Sera ya Matangazo.', 'Payments for ads follow the Advertising Policy.'],
@@ -217,7 +217,7 @@ export const DOCS = {
         h: ['6. Tunaowapa taarifa', '6. Who we share data with'],
         body: [
           { list: [
-            ['Mtoa huduma wa malipo (nTZS) na mitandao ya simu — namba ya simu na kiasi, pale tu unapoongeza salio.', 'Our payment provider (nTZS) and mobile networks — your phone number and amount, only when you top up.'],
+            ['Mtoa huduma wa malipo (Wooble / PayGuard) na mitandao ya simu — namba ya simu na kiasi, pale tu unapoongeza salio.', 'Our payment provider (Wooble / PayGuard) and mobile networks — your phone number and amount, only when you top up.'],
             ['Watoa huduma wa server na hifadhi (hosting), wanaoweza kuwa nje ya Tanzania; tunahakikisha kuna kinga stahiki kama sheria inavyotaka.', 'Hosting and infrastructure providers, which may be located outside Tanzania; we put appropriate safeguards in place as the law requires.'],
             ['Mamlaka za kisheria pale tunapolazimika kisheria.', 'Law enforcement or regulators when legally required.'],
           ] },

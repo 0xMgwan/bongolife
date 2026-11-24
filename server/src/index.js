@@ -10,7 +10,7 @@ import { db, getUser, saveFields, now, UPLOAD_DIR, getSettings } from './db.js';
 import { verifyToken } from './auth.js';
 import { registerInteractions } from './interact.js';
 import { api, settleTopup, applyTopupStatus } from './routes/api.js';
-import { verifyNtzsWebhook } from './payments/index.js';
+import { verifyNtzsWebhook, PAYGUARD_CALLBACK_TOKEN } from './payments/index.js';
 import { online, setIO, publicPlayer, broadcast, emitTo } from './presence.js';
 import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef, netWorth, homeOf } from './game.js';
 import { settleElection, currentMayor, allMayors, isMayor } from './election.js';
@@ -80,6 +80,17 @@ app.post('/api/webhooks/ntzs', express.raw({ type: '*/*', limit: '100kb' }), (re
     } else console.warn('[webhook] unknown deposit', event.data.depositId);
   }
   res.json({ received: true });
+});
+// Wooble / PayGuard result callbacks. They aren't signed, so the body is only a hint: we look the
+// payment up by our own id and ask PayGuard's Inquiry API before crediting anything.
+app.post('/api/webhooks/payguard', express.json({ limit: '20kb' }), (req, res) => {
+  if (PAYGUARD_CALLBACK_TOKEN && req.query.token !== PAYGUARD_CALLBACK_TOKEN) return res.status(403).json({ error: 'forbidden' });
+  res.json({ received: true }); // answer fast; the work happens after
+  const ref = String(req.body?.transactionId || req.body?.reference || '').slice(0, 64);
+  console.log('[payguard] callback', ref, req.body?.status ?? 'null', req.body?.providerReceiptId || '');
+  const t = ref && db.prepare("SELECT * FROM topups WHERE provider = 'payguard' AND provider_ref = ?").get(ref);
+  if (!t) return void (ref && console.warn('[payguard] callback for unknown payment', ref));
+  settleTopup(t, { force: true }).catch((e) => console.warn('[payguard] settle failed', ref, e.message));
 });
 app.use(express.json({ limit: '50kb' }));
 app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d', immutable: true, fallthrough: false }));

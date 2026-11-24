@@ -110,7 +110,7 @@ function Topup({ info, me, onDone }) {
       <button className="btn btn-green btn-block" style={{ marginTop: 14 }} disabled={busy || !phone || Number(amount) < info.min} onClick={start}>
         {busy ? L('Subiri…', 'Please wait…') : `${L('Lipa', 'Pay')} TZS ${Number(amount || 0).toLocaleString()}`}
       </button>
-      <div className="hint center">{L('Malipo kupitia nTZS', 'Payments via nTZS')} · TZS 1 = {fmtTsh(info.rate)} {L('za mchezo', 'in-game')}</div>
+      <div className="hint center">{L('Malipo kupitia Wooble (PayGuard) · M-Pesa, Mixx by Yas, Airtel Money', 'Payments via Wooble (PayGuard) · M-Pesa, Mixx by Yas, Airtel Money')} · TZS 1 = {fmtTsh(info.rate)} {L('za mchezo', 'in-game')}</div>
     </div>
   );
 }

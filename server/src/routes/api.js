@@ -643,12 +643,12 @@ api.post('/wallet/topup', rateLimit('topup', 10, 10 * 60_000), wrap(async (req, 
 
 // `expired` is our own 72h timeout, not the provider's verdict, so a deposit can still be paid
 // after it. Admin re-checks pass { recheckExpired: true } to look again.
-export async function settleTopup(t, { recheckExpired = false } = {}) {
+export async function settleTopup(t, { recheckExpired = false, force = false } = {}) {
   const prov = providers[t.provider];
   if (!prov || !(t.status === 'pending' || (recheckExpired && t.status === 'expired'))) return t.status;
   let status;
   try {
-    status = await prov.check(t.provider_ref);
+    status = await prov.check(t.provider_ref, { createdAt: t.created_at, force });
   } catch (e) {
     console.warn('[topup] check failed', t.id, e.message);
     return 'pending';
@@ -1324,7 +1324,7 @@ api.post('/ads', rateLimit('ads', 10, 60 * 60_000), upload.single('image'), wrap
     if (!kind) throw new GameError(['Picha iwe PNG, JPG au WEBP.', 'Image must be PNG, JPG or WEBP.']);
     image = `ads/${crypto.randomUUID()}.${kind.ext}`;
   }
-  // Real money: start an nTZS mobile-money payment; the ad goes live once it's paid.
+  // Real money: start a mobile-money payment; the ad goes live once it's paid.
   const amountTzs = adPriceTzs(slot, days);
   let created;
   try {

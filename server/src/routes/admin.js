@@ -290,7 +290,7 @@ admin.post('/topups/:id/recheck', async (req, res, next) => {
   try {
     const t = db.prepare('SELECT * FROM topups WHERE id = ?').get(int(req.params.id));
     if (!t) throw new GameError('Top-up not found', 404);
-    const status = await settleTopup(t, { recheckExpired: true });
+    const status = await settleTopup(t, { recheckExpired: true, force: true });
     audit(req.user.id, 'topup.recheck', 'topup', t.id, { status });
     res.json({ status });
   } catch (e) {
