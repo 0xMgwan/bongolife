@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { randomAppearance, findActivity, gameClock, workStage, flightPhase, placeById, vehicleById as vehicleByIdS, CITY_ARRIVAL } from '@shared/world.js';
+import { randomAppearance, findActivity, gameClock, workStage, flightPhase, placeById, vehicleById as vehicleByIdS, CITY_ARRIVAL, concertAt, concertSlot } from '@shared/world.js';
 import { Plane, Car, Vehicle as VehicleS } from './Vehicle.jsx';
 import { PartyDecor } from './Party.jsx';
 import { Shadows } from './Shadows.jsx';
@@ -1706,9 +1706,13 @@ function Dhow({ me, myBusy, people }) {
 }
 
 /** Singeli night: big outdoor stage, speaker stacks, lights and a jumping crowd. */
-function Concert({ me, myBusy, people }) {
+function Concert({ me, myBusy, people, placeId }) {
   const act = myBusy?.id;
   const onStage = act === 'jukwaani' || myBusy?.kind === 'job';
+  // A scheduled concert here (yours, or whatever's live): its headliner, colours and front row.
+  const show = myBusy?.kind === 'concert' ? concertAt(myBusy.slot) : (() => { const c = concertAt(concertSlot()); return c.placeId === placeId && Date.now() >= c.startsAt && Date.now() < c.endsAt ? c : null; })();
+  const vipFront = myBusy?.kind === 'concert' && act !== 'regular';
+  const banner = show ? `${show.artist.emoji} ${show.artist.name.toUpperCase()} · LIVE` : '🔊 SINGELI NIGHT · MBAGALA';
   const crowdSlots = useMemo(() => {
     const r = rng(77);
     return Array.from({ length: 22 }, (_, i) => [((i % 6) - 2.5) * 1.6 + (r() - 0.5) * 0.6, 0, 1 + Math.floor(i / 6) * 1.5 + (r() - 0.5) * 0.4, Math.PI + (r() - 0.5) * 0.6]);
@@ -1718,8 +1722,9 @@ function Concert({ me, myBusy, people }) {
       <Box p={[0, -0.1, 2]} s={[30, 0.1, 22]} c="#a8a29e" />
       <Box p={[0, 0, -5]} s={[14, 1.4, 6]} c="#111827" />
       <Box p={[0, 0, -8]} s={[16, 7, 0.3]} c="#1f2937" />
-      <mesh position={[0, 4.2, -7.8]}><planeGeometry args={[12, 4]} /><meshBasicMaterial color="#7e22ce" /></mesh>
-      <Sign text="🔊 SINGELI NIGHT · MBAGALA" p={[0, 4.4, -7.7]} h={0.9} fg="#fdf4ff" />
+      <mesh position={[0, 4.2, -7.8]}><planeGeometry args={[12, 4]} /><meshBasicMaterial color={show?.artist.color || '#7e22ce'} /></mesh>
+      <Sign text={banner} p={[0, 4.4, -7.7]} h={0.9} fg="#fdf4ff" />
+      {show && <Sign text={`${show.artist.emoji} ${show.artist.name} · ${show.artist.genre}`} p={[0, 0.72, -1.98]} h={0.5} bg="rgba(15,5,30,.92)" fg={show.artist.color} />}
       {[-1, 1].map((sx) => (
         <group key={sx} position={[sx * 8.5, 0, -5]}>
           {[0, 1.3, 2.6].map((y) => <Box key={y} p={[0, y, 0]} s={[1.8, 1.2, 1.4]} c="#0b0b0b" />)}
@@ -1730,7 +1735,8 @@ function Concert({ me, myBusy, people }) {
       <Person slot={[-2.5, 1.4, -6, 0]} appearance={{ ...look(12), outfit: 'hoodie' }} mode="dj" />
       <Box p={[-2.5, 1.4, -5.2]} s={[2, 0.9, 0.7]} c="#0f172a" />
       {!onStage && <Person slot={[2.5, 1.4, -4.4, 0]} appearance={{ ...look(1), outfit: 'jaketi-ngozi' }} mode="sing" />}
-      <Crowd me={me} myBusy={myBusy} people={people} slots={crowdSlots} localSlot={onStage ? [2.5, 1.4, -4.4, 0] : [0.2, 0, 1.2, Math.PI]} crowd={20}
+      {vipFront && <Box p={[0, 0, -0.9]} s={[10, 0.55, 0.12]} c={act === 'vvip' ? '#d4af37' : '#64748b'} />}
+      <Crowd me={me} myBusy={myBusy} people={people} slots={crowdSlots} localSlot={onStage ? [2.5, 1.4, -4.4, 0] : act === 'vvip' ? [4.2, 1.4, -5.6, -0.6] : vipFront ? [0.4, 0, -1.4, Math.PI] : [0.2, 0, 1.2, Math.PI]} crowd={show ? 22 : 20}
         modeFor={(who, busy, n) => (who === 'me' ? (onStage ? 'sing' : act === 'chipsi-mayai' ? 'eat' : 'dance') : n % 4 === 1 ? 'cheer' : 'dance')} />
     </group>
   );
@@ -2061,7 +2067,8 @@ function Ferry({ me, myBusy, people }) {
 /** Highway: your car (or the coach) on the open road, acacias & baobabs streaming past, Kili ahead. */
 function Road({ me, myBusy }) {
   const own = myBusy?.id === 'car';
-  const car = own && [...(me.vehicles || [])].filter((v) => ['car', 'van', 'suv'].includes(vehicleByIdS[v.model]?.kind)).sort((a, b) => vehicleByIdS[b.model].price - vehicleByIdS[a.model].price)[0];
+  const car = own && ((me.vehicles || []).find((v) => v.id === myBusy.vehicleId)
+    || [...(me.vehicles || [])].filter((v) => ['car', 'van', 'suv'].includes(vehicleByIdS[v.model]?.kind)).sort((a, b) => vehicleByIdS[b.model].price - vehicleByIdS[a.model].price)[0]);
   const def = car && vehicleByIdS[car.model];
   const dash = useRef();
   const scenery = useRef();

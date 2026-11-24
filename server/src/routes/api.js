@@ -6,7 +6,7 @@ import path from 'node:path';
 import {
   GAME, HAIRSTYLES, SKIN_TONES, HAIR_COLORS, OUTFITS, TRAITS, SPAWNS, BILLBOARDS, AD_MAX_DAYS,
   billboardById, outfitById, ADS_PER_BOARD, adPriceTzs, adTzsPerDay, CRIME, plotById, togetherById, REFERRAL, ELECTION, EVENT_LIMITS, EVENT_PLACES, placeById,
-  VIBES, VIBE_DAILY, vehicleById, buildingById, luxuryById, ENTERABLE_BUILDINGS,
+  VIBES, VIBE_DAILY, vehicleById, buildingById, luxuryById, ENTERABLE_BUILDINGS, cityById, FAMILY,
 } from '../../../shared/world.js';
 import { db, getUser, getUserByUsername, createUser, saveFields, addMoney, GameError, now, UPLOAD_DIR, getSettings } from '../db.js';
 import { hashPassword, checkPassword, signToken, requireAuth, requireAdmin, rateLimit, USERNAME_RE, normalizePhone } from '../auth.js';
@@ -44,6 +44,7 @@ import * as street from '../street.js';
 import * as news from '../news.js';
 import * as guards from '../guards.js';
 import * as family from '../family.js';
+import * as concerts from '../concerts.js';
 import * as market from '../market.js';
 
 export const api = express.Router();
@@ -99,6 +100,7 @@ api.post('/auth/signup', rateLimit('signup', 8, 15 * 60_000), wrap(async (req, r
   const referrer = refName && refName.toLowerCase() !== username.toLowerCase() ? getUserByUsername(refName) : null;
   const user = db.transaction(() => {
     const u = createUser({ username, name, passwordHash, email, isAdmin: adminNames.has(username.toLowerCase()) });
+    db.prepare('UPDATE users SET signup_ip = ?, last_ip = ? WHERE id = ?').run(req.ip || null, req.ip || null, u.id);
     const gender = ['male', 'female'].includes(req.body.gender) ? req.body.gender : null;
     if (gender) db.prepare('UPDATE users SET gender = ? WHERE id = ?').run(gender, u.id);
     if (referrer && !referrer.bannedAt) {
@@ -123,6 +125,7 @@ api.post('/auth/login', rateLimit('login', 20, 15 * 60_000), wrap(async (req, re
     throw new GameError([`Akaunti hii imefungiwa${row.ban_reason ? ': ' + row.ban_reason : '.'}`, `This account is banned${row.ban_reason ? ': ' + row.ban_reason : '.'}`], 403, 'banned');
   if (!row.is_admin && adminNames.has(row.username.toLowerCase())) db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(row.id);
   saveFields(row.id, { lastSeen: now() });
+  db.prepare('UPDATE users SET last_ip = ? WHERE id = ?').run(req.ip || null, row.id);
   game.ensureStarterCar(row.id);
   res.json({ token: signToken({ id: row.id, tokenVersion: row.token_version }), me: game.playerState(row.id) });
 }));
@@ -369,7 +372,9 @@ api.get('/visit/:username', (req, res) => {
   const h = game.homeOf(host.id, str(req.query.home, 30) || undefined);
   res.json({
     home: h.key, building: h.building || null,
-    host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance, vehicles, homeLevel: h.level, homeStyle: h.style, homeFeatures: h.features },
+    host: { id: host.id, username: host.username, name: host.name, appearance: host.appearance, vehicles, homeLevel: h.level, homeStyle: h.style, homeFeatures: h.features,
+      // Their family is home too — guests see the kids and a game-character spouse.
+      kids: family.kidsBrief(host.id), npcPartner: npcLove.npcPartner(host.id) },
     items: game.homeItems(host.id, h.key),
   });
 });
@@ -546,6 +551,7 @@ api.post('/invite/place', rateLimit('invplace', 40, 60_000), (req, res) => {
 // Familia: babies, kids, divorce.
 api.get('/family', (req, res) => res.json(family.view(req.user.id)));
 api.post('/family/baby', (req, res) => res.json({ ...family.planBaby(req.user.id, str(req.body.name, 20), str(req.body.gender, 4)), me: game.playerState(req.user.id) }));
+api.post('/family/outing', (req, res) => res.json({ ...family.setOuting(req.user.id, req.body.on === false ? 0 : FAMILY.outingHours), me: game.playerState(req.user.id) }));
 api.post('/family/kids/:id/care', (req, res) => res.json({ ...family.care(req.user.id, req.params.id, str(req.body.act, 10)), me: game.playerState(req.user.id) }));
 api.post('/family/divorce', (req, res) => {
   const r = family.divorce(req.user.id);
@@ -820,9 +826,15 @@ api.delete('/contacts/:username', (req, res) => {
   res.json(contactList(req.user.id));
 });
 
+// ---------------------------------------------------------- concerts
+api.get('/concerts', (req, res) => res.json(concerts.view(req.user.id)));
+api.post('/concerts/:slot/ticket', (req, res) => res.json({ ...concerts.buyTicket(req.user.id, Number(req.params.slot) | 0, str(req.body.tier, 10)), me: game.playerState(req.user.id) }));
+api.post('/concerts/:slot/attend', (req, res) => res.json({ ...game.attendConcert(req.user.id, Number(req.params.slot) | 0), me: game.playerState(req.user.id) }));
+
 // ---------------------------------------------------------- trips & casino
 api.post('/trip', (req, res) => {
-  const r = game.startTrip(req.user.id, str(req.body.placeId, 30), str(req.body.mode, 10), req.body.insured === true);
+  const r = game.startTrip(req.user.id, str(req.body.placeId, 30), str(req.body.mode, 10), req.body.insured === true,
+    Number.isInteger(req.body.vehicleId) ? req.body.vehicleId : null, req.body.family === true, req.body.checkin !== false);
   res.json({ ...r, me: game.playerState(req.user.id) });
 });
 const casinoRoute = (fn) => (req, res) => res.json({ ...fn(req), me: game.playerState(req.user.id) });
@@ -921,16 +933,16 @@ api.get('/me/referrals', (req, res) => {
 });
 
 // ---------------------------------------------------------- mayor
-api.get('/election', (req, res) => res.json(election.electionState(req.user.id)));
+api.get('/election', (req, res) => res.json(election.electionState(req.user.id, str(req.query.city, 8))));
 api.post('/election/run', (req, res) => {
-  election.runForMayor(req.user.id, str(req.body.slogan, ELECTION.sloganMax));
-  broadcast('toast', { text: [`🗳️ @${req.user.username} anagombea Ukuu wa Mkoa!`, `🗳️ @${req.user.username} is running for Mayor!`] });
+  const city = cityById[election.runForMayor(req.user.id, str(req.body.slogan, ELECTION.sloganMax))];
+  broadcast('toast', { text: [`🗳️ @${req.user.username} anagombea Ukuu wa Mkoa wa ${city.name}!`, `🗳️ @${req.user.username} is running for Mayor of ${city.name}!`] });
   res.json({ ...election.electionState(req.user.id), me: game.playerState(req.user.id) });
 });
 api.post('/election/vote', (req, res) => {
   const c = getUserByUsername(str(req.body.username, 30));
   if (!c) throw new GameError(['Mgombea hayupo', 'Candidate not found'], 404);
-  election.vote(req.user.id, c.id);
+  election.vote(req.user.id, c.id, req.ip);
   res.json(election.electionState(req.user.id));
 });
 api.post('/election/message', (req, res) => {
@@ -1039,7 +1051,7 @@ api.get('/players/:username', (req, res) => {
 api.get('/leaderboard', (_req, res) => res.json(game.leaderboard()));
 
 // ------------------------------------------------------ ambitions & storylines
-story.wireStory({ netWorth: game.netWorth, currentMayor: election.currentMayor });
+story.wireStory({ netWorth: game.netWorth, currentMayor: election.isMayor });
 api.get('/story', (req, res) => res.json(story.storyState(req.user.id)));
 api.post('/story/choose', (req, res) => {
   story.chooseAmbition(req.user.id, str(req.body.amb, 20));

@@ -156,8 +156,8 @@ export const story = {
       [`${u(user)} ashindwa kulipa mkopo — dalali wa benki wafika ${what}`, `${u(user)} misses loan payments — bank auctioneers arrive at ${what}`],
     ]), { user });
   },
-  mayor(user, votes) {
-    publish('politics', [`${u(user)} ashinda Umeya wa Dar kwa kura ${votes}`, `${u(user)} wins the Dar mayoral race with ${votes} votes`], { user, big: true });
+  mayor(user, votes, city = 'Dar') {
+    publish('politics', [`${u(user)} ashinda Umeya wa ${city} kwa kura ${votes}`, `${u(user)} wins the ${city} mayoral race with ${votes} votes`], { user, big: true });
   },
   guards(user, tier) {
     publish('luxury', [`${u(user)} sasa anatembea na ${tier.name[0].toLowerCase()} — anaogopa nini? 🕶️`, `${u(user)} now rolls with ${tier.name[1].replace(/^[A-Z][a-z]/, (x) => x.toLowerCase())} — what are they afraid of? 🕶️`], { user, throttleMs: 6 * 3600_000 });

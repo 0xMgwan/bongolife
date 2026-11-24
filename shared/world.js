@@ -1305,7 +1305,12 @@ export const TRAVEL = {
 // ---------------------------------------------------------------- mayor
 // Weekly elections (Monday 00:00 Dar time). Last week's winner is Mkuu wa Mkoa.
 export const ELECTION = {
-  fee: 50_000, salary: 45_000_000, minShifts: 1, candidateShifts: 3, sloganMax: 60, messageMax: 140,
+  fee: 50_000, salary: 45_000_000, minShifts: 3, candidateShifts: 3, sloganMax: 60, messageMax: 140,
+  // Fair play: a voter's account must be this old, and one network (IP) can only cast so many
+  // votes for the same candidate in a week — stops someone farming alt accounts for votes.
+  minAccountDays: 3, maxVotesPerIp: 3,
+  // Every city elects its own mayor; Dar's office pays the most.
+  citySalary: { dar: 45_000_000, znz: 25_000_000, aru: 25_000_000, mwz: 25_000_000, pwa: 18_000_000 },
   // While in office: free VIP guards, a discount on plots/buildings/clothes, and a cut of the
   // property market's agent fee (the city treasury).
   perks: { guard: 'elite', discount: 0.1, treasuryShare: 1 / 3 },
@@ -1632,6 +1637,7 @@ export function sceneFor(busy) {
   if (!busy) return null;
   if (busy.kind === 'trip') return TRIP_SCENES[busy.id] || null;
   if (busy.kind === 'job') return JOB_SCENES[busy.id] ?? null;
+  if (busy.kind === 'concert') return 'concert';
   return ENTERABLE[busy.placeId] || ACTIVITY_SCENES[busy.placeId]?.[busy.id] || null;
 }
 
@@ -2388,6 +2394,8 @@ export const loveNpcById = Object.fromEntries(LOVE_NPCS.map((n) => [n.id, n]));
 // few hours after you plan one; kids grow up over real days and like time and attention.
 export const FAMILY = {
   maxKids: 6,
+  // Family outings: your spouse and kids walk with you around town (or come along on a trip).
+  outingHours: 3, outingCost: 20_000, tripFarePerMember: 0.5,
   babyMs: 3 * 3600_000, // pregnancy, compressed
   tryCooldownMs: 6 * 3600_000,
   stages: [[0, '👶🏾', ['Mtoto mchanga', 'Baby']], [2, '🧒🏾', ['Mtoto mdogo', 'Toddler']], [5, '🧑🏾‍🎓', ['Mwanafunzi', 'Schoolkid']], [12, '🧑🏾', ['Kijana', 'Teen']], [20, '🧑🏾‍💼', ['Mtu mzima', 'Grown up']]],
@@ -2464,6 +2472,47 @@ export const MUSIC_VENUES = [
   { id: 'forodhani', name: 'Forodhani', style: 'Taarab' },
   { id: 'home', name: 'Home radio', style: 'Any' },
 ];
+
+// ============================================================ concerts
+// A show every two hours somewhere in the country: buy a ticket, be at the venue when it's
+// live, and party with whoever else came. Headliners are fictional Bongo stars.
+export const CONCERT = {
+  slotMs: 2 * 3600_000, showMs: 70 * 60_000, attendMs: 4 * 60_000, ahead: 8,
+  tiers: [
+    { id: 'regular', emoji: '🎟️', name: ['Kawaida', 'Regular'], mult: 1, fun: 35, social: 25, fame: 0 },
+    { id: 'vip', emoji: '🥂', name: ['VIP', 'VIP'], mult: 6, fun: 50, social: 35, fame: 2 },
+    { id: 'vvip', emoji: '💎', name: ['VVIP · Backstage', 'VVIP · Backstage'], mult: 40, fun: 65, social: 45, fame: 6, backstage: true },
+  ],
+};
+export const HEADLINERS = [
+  { id: 'kilele', name: 'Lady Kilele', genre: 'Bongo Flava', emoji: '👑', color: '#a855f7' },
+  { id: 'mchele', name: 'DJ Mchele', genre: 'Singeli', emoji: '🔊', color: '#f97316' },
+  { id: 'bonge', name: 'Mzee Bonge & Kilimanjaro Band', genre: 'Dansi', emoji: '🎺', color: '#eab308' },
+  { id: 'mwanaisha', name: 'Bi Mwanaisha', genre: 'Taarab', emoji: '🪕', color: '#14b8a6' },
+  { id: 'kasuku', name: 'Kasuku Boyz', genre: 'Amapiano', emoji: '🦜', color: '#22c55e' },
+  { id: 'jabali', name: 'Jabali MC', genre: 'Hip hop', emoji: '🎤', color: '#ef4444' },
+  { id: 'malaika', name: 'Malaika Choir', genre: 'Gospel', emoji: '🙏🏾', color: '#3b82f6' },
+  { id: 'zawadi', name: 'Zawadi Sauti', genre: 'R&B', emoji: '💜', color: '#ec4899' },
+];
+// Venue, base ticket price (regular), and how big the crowd looks.
+export const CONCERT_VENUES = [
+  { placeId: 'uwanja', price: 30_000, crowd: 40 },
+  { placeId: 'singeli', price: 10_000, crowd: 26 },
+  { placeId: 'kendwa', price: 50_000, crowd: 22 },
+  { placeId: 'coco', price: 20_000, crowd: 28 },
+  { placeId: 'viavia', price: 25_000, crowd: 18 },
+  { placeId: 'mz-beach', price: 20_000, crowd: 24 },
+  { placeId: 'bagamoyo-old', price: 15_000, crowd: 24 },
+];
+export const concertSlot = (t = Date.now()) => Math.floor(t / CONCERT.slotMs);
+/** The show in a time slot: who plays, where, when. */
+export function concertAt(slot) {
+  const artist = HEADLINERS[(slot * 5 + 3) % HEADLINERS.length];
+  const v = CONCERT_VENUES[(slot * 3 + 1) % CONCERT_VENUES.length];
+  const startsAt = slot * CONCERT.slotMs + 20 * 60_000; // doors 20 min into the slot
+  return { slot, artist, placeId: v.placeId, crowd: v.crowd, price: v.price, startsAt, endsAt: startsAt + CONCERT.showMs };
+}
+export const ticketPrice = (show, tierId) => show.price * (CONCERT.tiers.find((t) => t.id === tierId)?.mult || 1);
 
 // ============================================================ Zanzibar & Arusha businesses
 // Buyable like the Dar ones: walk up (or use an agent in the Invest app) and it pays every hour.
@@ -2583,10 +2632,10 @@ export function bigMoney(n) {
 // ============================================================ security
 // Hire protection by the day. Guards walk with you, put robbers off and can delay an arrest.
 export const GUARDS = [
-  { id: 'mlinzi', emoji: '🧍🏾‍♂️', name: ['Mlinzi binafsi', 'Personal guard'], perDay: 60_000, men: 1, protect: 0.3, copDelay: 0, blurb: ['Mlinzi mmoja wa kampuni ya ulinzi.', 'One guard from a security firm.'] },
-  { id: 'bodyguard', emoji: '💪🏾', name: ['Bodyguards wawili', 'Two bodyguards'], perDay: 200_000, men: 2, protect: 0.5, copDelay: 0, blurb: ['Mabaunsa wawili, suti nyeusi.', 'Two big men in black suits.'] },
-  { id: 'elite', emoji: '🕶️', name: ['Ulinzi wa VIP', 'VIP close protection'], perDay: 700_000, men: 3, protect: 0.75, copDelay: 0.5, blurb: ['Walinzi watatu waliofunzwa, miwani na redio.', 'Three trained agents with shades and radios.'] },
-  { id: 'convoy', emoji: '🚙', name: ['Msafara wa ulinzi', 'Security convoy'], perDay: 2_500_000, men: 4, protect: 0.92, copDelay: 1, blurb: ['Walinzi wanne — kama Rais. Wezi hawasogei.', 'Four agents — presidential style. Robbers stay away.'] },
+  { id: 'mlinzi', emoji: '🧍🏾‍♂️', name: ['Mlinzi binafsi', 'Personal guard'], perDay: 60_000, men: 1, protect: 0.9, copDelay: 0, blurb: ['Mlinzi mmoja wa kampuni ya ulinzi.', 'One guard from a security firm.'] },
+  { id: 'bodyguard', emoji: '💪🏾', name: ['Bodyguards wawili', 'Two bodyguards'], perDay: 200_000, men: 2, protect: 1, copDelay: 0, blurb: ['Mabaunsa wawili, suti nyeusi.', 'Two big men in black suits.'] },
+  { id: 'elite', emoji: '🕶️', name: ['Ulinzi wa VIP', 'VIP close protection'], perDay: 700_000, men: 3, protect: 1, copDelay: 0.5, blurb: ['Walinzi watatu waliofunzwa, miwani na redio.', 'Three trained agents with shades and radios.'] },
+  { id: 'convoy', emoji: '🚙', name: ['Msafara wa ulinzi', 'Security convoy'], perDay: 2_500_000, men: 4, protect: 1, copDelay: 1, blurb: ['Walinzi wanne — kama Rais. Wezi hawasogei.', 'Four agents — presidential style. Robbers stay away.'] },
 ];
 export const guardById = Object.fromEntries(GUARDS.map((g) => [g.id, g]));
 

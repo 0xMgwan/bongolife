@@ -5,6 +5,7 @@ import { db, getUser, addMoney, GameError, now } from './db.js';
 import { PROPERTY_MARKET as PM, plotById, placeById, buildingById, houseStats } from '../../shared/world.js';
 import { plotValue } from './invest.js';
 import { currentMayor } from './election.js';
+import { cityAt } from '../../shared/world.js';
 import { assertUnpledged } from './loans.js';
 import { ELECTION } from '../../shared/world.js';
 import { emitTo, broadcast } from './presence.js';
@@ -79,8 +80,9 @@ function payout(l, buyer, amount) {
   const fee = Math.round(amount * PM.feePct);
   transfer(l.kind, l.asset_id, l.seller_id, buyer);
   addMoney(l.seller_id, amount - fee, 'sale', `🏷️ Umeuza ${describe(l.kind, l.asset_id).name} (ada ${PM.feePct * 100}%)`);
-  // The mayor's treasury gets a share of every agent fee.
-  const mayor = currentMayor();
+  // The treasury of the city the property is in gets a share of every agent fee.
+  const pos = l.kind === 'plot' ? plotById[l.asset_id]?.pos : placeById[l.asset_id]?.pos;
+  const mayor = currentMayor((pos && cityAt(pos[0], pos[1])?.id) || 'dar');
   const cut = mayor ? Math.round(fee * ELECTION.perks.treasuryShare) : 0;
   if (cut > 0) addMoney(mayor.id, cut, 'income', `🏛️ Hazina ya jiji — ada ya mauzo ya ${describe(l.kind, l.asset_id).name}`);
   db.prepare("UPDATE listings SET status = 'sold', buyer_id = ?, final = ?, closed_at = ? WHERE id = ?").run(buyer, amount, now(), l.id);

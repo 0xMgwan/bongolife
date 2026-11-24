@@ -1,6 +1,6 @@
 import {
   GAME, NEEDS, PLACES, PLOTS, VEHICLES, BUILDINGS, ALLOWED_BUILDINGS, VEHICLE_COLORS,
-  placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob,
+  placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob, CAR_KINDS, FAMILY, CONCERT, concertAt,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST, industryById, COMPANY,
   furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
   jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats, luxuryById, LUXURY_RESALE, HOME_LEVELS, homeBounds, HOME_WALLS, HOME_FLOORS, HOME_STYLE_PRICE, homeFeatureById, HOME_ACT_CD, PRIVATE_BUILDINGS,
@@ -27,6 +27,7 @@ import { portfolioValue } from './stocks.js';
 import { story as newsStory } from './news.js';
 import { guardOf } from './guards.js';
 import * as familyMod from './family.js';
+import * as concertsMod from './concerts.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const HOUR = 3600_000;
@@ -57,7 +58,7 @@ function plate() {
 
 function discount(user, price) {
   let p = user.trait === 'mjanja' ? price * 0.95 : price;
-  if (mayorRef.current?.()?.id === user.id) p *= 1 - ELECTION.perks.discount; // mayor's perk
+  if (mayorRef.isMayor?.(user.id)) p *= 1 - ELECTION.perks.discount; // any city's mayor
   return Math.round(p);
 }
 
@@ -127,6 +128,7 @@ export function playerState(userId) {
     fitness: gymMod.fitnessOf(userId),
     guards: guardOf(userId),
     kids: familyMod.kidsBrief(userId),
+    outing: familyMod.outingOf(userId),
     ...activeHome(userId),
     npcPartner: npcLoveMod.npcPartner(userId),
     vehicles: q.vehicles.all(userId),
@@ -154,6 +156,7 @@ export function worldState() {
       const m = mayorRef.current?.();
       return m ? { username: m.username, name: m.name, message: m.message || null } : null;
     })(),
+    mayors: Object.fromEntries(Object.entries(mayorRef.all?.() || {}).map(([c, m]) => [c, { username: m.username, name: m.name, message: m.message || null }])),
   };
 }
 
@@ -558,6 +561,17 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
     result.lines.push(...r.lines);
     result.pay = r.pay;
     if (r.company && r.pay) emitTo(r.company.owner_id, 'toast', { text: [`💼 @${user.username} amemaliza shifti — ${r.company.name}`, `💼 @${user.username} finished a shift at ${r.company.name}`] });
+  } else if (busy.kind === 'concert') {
+    // The show: the better your ticket, the bigger the night (VVIP meets the artist backstage).
+    const tier = CONCERT.tiers.find((t) => t.id === busy.id) || CONCERT.tiers[0];
+    const c = concertAt(busy.slot);
+    fields.needs = applyNeeds(user.needs, { fun: tier.fun, social: tier.social, energy: -15 });
+    if (tier.fame) fields.fame = user.fame + tier.fame;
+    concertsMod.markAttended(userId, busy.slot);
+    result.title = [`${c.artist.emoji} ${c.artist.name} — tamasha la kibabe!`, `${c.artist.emoji} ${c.artist.name} — what a show!`];
+    result.lines.push([`🎉 Furaha +${tier.fun} · Marafiki +${tier.social}`, `🎉 Fun +${tier.fun} · Social +${tier.social}`]);
+    if (tier.fame) result.lines.push([`⭐ Umaarufu +${tier.fame} — watu wamekuona ${tier.name[0]}!`, `⭐ Fame +${tier.fame} — people saw you in ${tier.name[1]}!`]);
+    if (tier.backstage) result.lines.push([`📸 Selfie backstage na ${c.artist.name}!`, `📸 A backstage selfie with ${c.artist.name}!`]);
   } else if (busy.kind === 'trip') {
     // Arrive in the other city — and, if you skipped insurance, maybe some wahala on the way.
     const m = TRIP_MODES[busy.id];
@@ -568,9 +582,21 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
     const p = online.get(userId);
     if (p) Object.assign(p, { x, z, inside: null, host: null });
     result.teleport = [x, z];
+    if (busy.vehicleId) fields.activeVehicle = busy.vehicleId; // the car you drove is the one you have there
+    if (busy.family) {
+      try { familyMod.setOuting(userId, FAMILY.outingHours, { free: true }); } catch { /* family changed on the way */ }
+      result.lines.push(['👨‍👩‍👧 Familia iko nawe — tembeeni mji!', '👨‍👩‍👧 The family is with you — go explore!']);
+    }
+    // Check-in: a postcard on Bongo Gist for friends to see where you landed.
+    if (busy.checkin) {
+      try {
+        db.prepare('INSERT INTO gist_posts (user_id, image, caption, place, created_at) VALUES (?, ?, ?, ?, ?)')
+          .run(userId, `checkin:${busy.to}:${busy.id}${busy.family ? ':fam' : ''}`, null, dest.name, now());
+      } catch { /* feed not ready */ }
+    }
     const city = cityById[busy.to];
     result.title = [`${m.emoji} Karibu ${city.name}!`, `${m.emoji} Welcome to ${city.name}!`];
-    fields.needs = applyNeeds(user.needs, m.own ? { energy: -25, fun: 5 } : { energy: -8, fun: 10 });
+    fields.needs = applyNeeds(user.needs, { ...(m.own ? { energy: -25, fun: 5 } : { energy: -8, fun: 10 }), ...(busy.family ? { fun: 25, social: 15 } : {}) });
     if (Math.random() < m.risk) {
       const W = WAHALA[busy.id];
       const w = W[Math.floor(Math.random() * W.length)];
@@ -593,9 +619,12 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
     // Invite reward: the friend who brought you in gets paid on your first full shift.
     const ref = frac >= 1 && db.prepare('SELECT referred_by, referral_paid FROM users WHERE id = ?').get(userId);
     if (ref?.referred_by && !ref.referral_paid) {
+      // An invite from the inviter's own network is an alt account: no bonus.
+      const ips = db.prepare('SELECT a.signup_ip s, b.signup_ip rs, b.last_ip rl FROM users a, users b WHERE a.id = ? AND b.id = ?').get(userId, ref.referred_by);
+      const alt = ips?.s && (ips.s === ips.rs || ips.s === ips.rl);
       const paid = db.prepare('SELECT COUNT(*) n FROM users WHERE referred_by = ? AND referral_paid = 1').get(ref.referred_by).n;
       db.prepare('UPDATE users SET referral_paid = 1 WHERE id = ?').run(userId);
-      if (paid < REFERRAL.maxPaid) {
+      if (paid < REFERRAL.maxPaid && !alt) {
         addMoney(ref.referred_by, REFERRAL.referrer, 'bonus', `Zawadi ya kualika @${user.username}`);
         result.referrer = ref.referred_by;
       }
@@ -615,6 +644,7 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
   if (busy.kind === 'activity') bumpStats(userId, ['acts', `place:${busy.placeId}`, `act:${busy.id}`, pl && `type:${pl.type === 'lounge' ? 'club' : pl.type}`]);
   else if (busy.kind === 'job' && frac >= 1) bumpStats(userId, ['shifts', `job:${busy.id}`]);
   else if (busy.kind === 'trip') bumpStats(userId, ['trips', `city:${busy.to}`, `trip:${busy.id}`]);
+  else if (busy.kind === 'concert') bumpStats(userId, ['concerts']);
   else if (busy.kind === 'company') bumpStats(userId, ['shifts', 'company_shifts']);
   return result;
 });
@@ -780,7 +810,27 @@ const WAHALA = {
 };
 
 /** Book a trip to a place in another city (flight, helicopter, ferry, coach or your own car). */
-export const startTrip = db.transaction((userId, placeId, mode, insured) => {
+/** Go into a concert you have a ticket for — at the venue, while it's live. */
+export const attendConcert = db.transaction((userId, slot) => {
+  const user = getUser(userId);
+  assertNotJailed(user);
+  if (user.busy && user.busy.endsAt > now()) throw new GameError(['Bado uko bize na kitu kingine.', "You're still busy with something else."]);
+  const c = concertAt(slot);
+  const t = now();
+  if (t < c.startsAt) throw new GameError([`Milango inafunguliwa baada ya dakika ${Math.ceil((c.startsAt - t) / 60_000)}.`, `Doors open in ${Math.ceil((c.startsAt - t) / 60_000)} min.`]);
+  if (t >= c.endsAt) throw new GameError(['Tamasha limeisha.', 'The show is over.']);
+  const ticket = concertsMod.ticketOf(userId, slot);
+  if (!ticket) throw new GameError(['Nunua tiketi kwanza 🎟️', 'Buy a ticket first 🎟️'], 403);
+  if (ticket.attended) throw new GameError(['Umeshahudhuria tamasha hili.', "You've already been to this show."]);
+  requireNear(user, placeById[c.placeId]);
+  const tier = CONCERT.tiers.find((x) => x.id === ticket.tier);
+  const busy = { kind: 'concert', id: ticket.tier, slot, placeId: c.placeId, emoji: c.artist.emoji, artist: c.artist.name,
+    label: `${c.artist.name} · ${tier.name[0]}`, labelEn: `${c.artist.name} · ${tier.name[1]}`, startedAt: t, endsAt: t + CONCERT.attendMs };
+  setBusy(userId, busy);
+  return { busy };
+});
+
+export const startTrip = db.transaction((userId, placeId, mode, insured, vehicleId, family, checkin = true) => {
   const user = getUser(userId);
   assertNotJailed(user);
   if (user.busy && user.busy.endsAt > now()) throw new GameError(['Bado uko bize na kitu kingine.', "You're still busy with something else."]);
@@ -791,15 +841,22 @@ export const startTrip = db.transaction((userId, placeId, mode, insured) => {
   const from = cityAt(ux, uz)?.id || 'dar';
   const to = cityAt(...place.pos)?.id;
   if (!to || to === from) throw new GameError(['Uko kwenye mji huo tayari.', "You're already in that city."]);
-  const car = m.own ? bestCar(q.vehicles.all(userId)) : null;
+  // Drive the car you picked (a car, van or SUV you own); otherwise your best one.
+  const mine = q.vehicles.all(userId);
+  const picked = vehicleId && mine.find((v) => v.id === vehicleId && CAR_KINDS.includes(vehicleById[v.model]?.kind));
+  const car = m.own ? picked || bestCar(mine) : null;
   const base = m.price[tripKey(from, to)];
   const fare = car ? tripFuel(base, car.model) : base;
   if (!fare) throw new GameError(['Hakuna usafiri huo kati ya miji hii.', "That way of travelling doesn't connect these cities."]);
   if (m.own && !car)
     throw new GameError(['Unahitaji gari kuendesha safari hii.', 'You need a car to drive there.']);
-  const cost = fare + (insured ? m.ins : 0);
-  addMoney(userId, -cost, 'travel', `${m.name} kwenda ${cityById[to].name}${insured ? ' (+bima)' : ''}`);
-  const busy = { kind: 'trip', id: mode, placeId, from, to, insured: !!insured, emoji: m.emoji, label: `${m.name} → ${cityById[to].name}`, labelEn: `${m.nameEn} → ${cityById[to].name}`, startedAt: now(), endsAt: now() + m.secs * 1000 };
+  // Bring the family: they ride free in your car; tickets cost extra for everyone else.
+  const party = family ? familyMod.familyParty(userId) : [];
+  if (family && !party.length) throw new GameError(['Huna familia ya kusafiri nayo bado.', "You don't have a family to travel with yet."]);
+  const famFare = m.own ? 0 : Math.round(base * FAMILY.tripFarePerMember * party.length / 1000) * 1000;
+  const cost = fare + famFare + (insured ? m.ins : 0);
+  addMoney(userId, -cost, 'travel', `${m.name} kwenda ${cityById[to].name}${party.length ? ' (na familia)' : ''}${insured ? ' (+bima)' : ''}`);
+  const busy = { kind: 'trip', id: mode, placeId, from, to, insured: !!insured, vehicleId: car?.id || null, family: party.length > 0, checkin: !!checkin, emoji: m.emoji, label: `${m.name} → ${cityById[to].name}`, labelEn: `${m.nameEn} → ${cityById[to].name}`, startedAt: now(), endsAt: now() + m.secs * 1000 };
   setBusy(userId, busy);
   return { busy, cost };
 });

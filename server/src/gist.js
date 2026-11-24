@@ -49,7 +49,9 @@ export function feed(viewerId, { before = null, user = null } = {}) {
       WHERE u.banned_at IS NULL ${before ? 'AND p.id < ?' : ''} ${user ? 'AND u.username = ?' : ''} ORDER BY p.id DESC LIMIT 20`).all(...[before, user].filter((v) => v !== null));
   const liked = new Set(db.prepare(`SELECT post_id FROM gist_likes WHERE user_id = ? AND post_id IN (${rows.map(() => '?').join(',') || 'NULL'})`).all(viewerId, ...rows.map((r) => r.id)).map((r) => r.post_id));
   return rows.filter((r) => !isBlocked(viewerId, r.user_id)).map((r) => ({
-    id: r.id, image: imageUrl(r.image), caption: r.caption, place: r.place, likes: r.likes, comments: r.comments, at: r.created_at,
+    // Trip check-ins have no photo: 'checkin:<city>:<mode>[:fam]' becomes a postcard.
+    ...(r.image.startsWith('checkin:') ? (([, city, mode, fam]) => ({ image: null, checkin: { city, mode, family: fam === 'fam' } }))(r.image.split(':')) : { image: imageUrl(r.image) }),
+    id: r.id, caption: r.caption, place: r.place, likes: r.likes, comments: r.comments, at: r.created_at,
     username: r.username, name: r.name, appearance: r.appearance ? JSON.parse(r.appearance) : null, liked: liked.has(r.id), mine: r.user_id === viewerId,
   }));
 }
@@ -83,5 +85,5 @@ export function removePost(userId, postId, isAdmin = false) {
   if (!p) return;
   if (p.user_id !== userId && !isAdmin) throw new GameError(['Huna ruhusa.', "You can't do that."], 403);
   db.prepare('DELETE FROM gist_posts WHERE id = ?').run(p.id);
-  removeFile(p.image);
+  if (!p.image.startsWith('checkin:')) removeFile(p.image);
 }

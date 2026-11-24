@@ -2,7 +2,7 @@ import express from 'express';
 import crypto from 'node:crypto';
 import { sendMail, mailStatus, welcomeEmail, updateEmail, startCampaign } from '../mail.js';
 import { notifyEveryone } from '../push.js';
-import { PLOTS, PLACES, SPAWNS, plotById, placeById, buildingById, vehicleById, NEEDS } from '../../../shared/world.js';
+import { PLOTS, PLACES, SPAWNS, plotById, placeById, buildingById, vehicleById, NEEDS, electionPeriod } from '../../../shared/world.js';
 import { db, getUser, addMoney, saveFields, GameError, now, audit, getSettings, setSettings, freshNeeds } from '../db.js';
 import { hashPassword } from '../auth.js';
 import * as game from '../game.js';
@@ -12,6 +12,7 @@ import { settleTopup, liveAds, publicAnnouncement } from './api.js';
 import multer from 'multer';
 import * as live from '../live.js';
 import * as music from '../music.js';
+import * as election from '../election.js';
 
 export const admin = express.Router();
 const DAY = 86400_000;
@@ -584,6 +585,39 @@ admin.delete('/phone-apps/:id', (req, res) => {
 });
 
 // -------------------------------------------------------------- audit
+// ------------------------------------------------------------ elections
+// Vote audit: who voted for whom, with the signals of a vote farm (new accounts, invited by the
+// candidate, shared networks). Strike votes, ban the alts, or unseat a mayor.
+admin.get('/elections', (req, res) => {
+  const period = req.query.period ? int(req.query.period) : electionPeriod();
+  const weeks = db.prepare(`SELECT m.period, m.city, m.votes, u.username FROM city_mayors m LEFT JOIN users u ON u.id = m.user_id
+    WHERE m.votes > 0 ORDER BY m.votes DESC LIMIT 20`).all();
+  res.json({ ...election.auditElection(period), top: weeks });
+});
+admin.post('/elections/void', (req, res) => {
+  const ids = (Array.isArray(req.body.voterIds) ? req.body.voterIds : []).map((x) => int(x)).filter(Boolean).slice(0, 2000);
+  const n = election.voidVotes(int(req.body.period), ids, req.body.restore !== true);
+  audit(req.user.id, req.body.restore ? 'election.restore_votes' : 'election.void_votes', 'election', int(req.body.period), { n, ids: ids.slice(0, 50) });
+  res.json({ ok: true, changed: n });
+});
+// Ban a batch of alt accounts in one go (their votes stop counting immediately).
+admin.post('/elections/ban', (req, res) => {
+  const ids = (Array.isArray(req.body.ids) ? req.body.ids : []).map((x) => int(x)).filter((x) => x && x !== req.user.id).slice(0, 500);
+  const reason = str(req.body.reason, 200) || 'Vote farming (alt accounts)';
+  const st = db.prepare('UPDATE users SET banned_at = ?, ban_reason = ?, token_version = token_version + 1 WHERE id = ? AND banned_at IS NULL AND is_admin = 0');
+  let n = 0;
+  for (const id of ids) if (st.run(now(), reason, id).changes) { n++; kick(id, 'banned'); }
+  game.clearLeaderboardCache();
+  audit(req.user.id, 'user.ban_batch', 'election', null, { n, reason, ids: ids.slice(0, 50) });
+  res.json({ ok: true, banned: n });
+});
+admin.post('/elections/unseat', (req, res) => {
+  const n = election.unseat(int(req.body.period), str(req.body.city, 8));
+  audit(req.user.id, 'election.unseat', 'election', int(req.body.period), { city: req.body.city });
+  worldChanged();
+  res.json({ ok: true, changed: n });
+});
+
 admin.get('/audit', (req, res) => {
   const { limit, offset, page: p } = page(req, 60);
   const total = db.prepare('SELECT COUNT(*) n FROM audit').get().n;

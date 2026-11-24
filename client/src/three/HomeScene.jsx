@@ -169,7 +169,7 @@ function Garden({ b }) {
       {/* Wide enough for the yard on the east side (and a grown home on the west). */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[5, -0.04, 0]} material={mat('#c7dca6')}><circleGeometry args={[28, 56]} /></mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2.5, -0.03, 6.6]} material={mat('#d6d3d1')}><planeGeometry args={[1.6, 3.2]} /></mesh>
-      {[[b.x1 - 3, b.z1 - 1], [9, -8], [b.x1 - 4, 5], [0.5, 15.5]].map(([x, z], i) => (
+      {[[b.x1 - 3, b.z1 - 1], [9, -8], [b.x1 - 4, 1], [3.5, 17]].map(([x, z], i) => (
         <group key={i} position={[x, 0, z]}>
           <mesh geometry={geo('cyl', 0.15, 0.2, 1.4, 6)} material={mat('#7c5a3a')} position={[0, 0.7, 0]} />
           <mesh geometry={geo('sphere', 1, 7, 5)} material={mat('#3f9b4a')} position={[0, 1.9, 0]} />
@@ -414,10 +414,27 @@ function Guests() {
   return list.map((g) => <Guest key={`${g.id}-${g.appearance?.outfit}`} g={g} />);
 }
 
-/** Your cars on the driveway (up to 3, best first). Tap one to drive it out into town. */
-function Driveway({ vehicles, mine }) {
+// Parking: marked bays in front of the house, nose-in, best car nearest the door. Bigger homes
+// get a carport roof over them. Tap a car to drive it out into town.
+const BAY_W = 3.4;
+const BAY_D = 6;
+const PARK_Z = 7.2; // front edge of the bays (the house front is at z = 5)
+const PARK_X = -1.2; // first bay's right edge
+const MAX_BAYS = 6;
+const LINE = new THREE.MeshBasicMaterial({ color: '#f8fafc' });
+// Tinted polycarbonate so you can still see your cars from above.
+const CANOPY = new THREE.MeshLambertMaterial({ color: '#94a3b8', transparent: true, opacity: 0.38, depthWrite: false });
+const CANOPY_DARK = new THREE.MeshLambertMaterial({ color: '#1f2937', transparent: true, opacity: 0.45, depthWrite: false });
+function Driveway({ vehicles, mine, level = 0 }) {
   const run = useStore((s) => s.run);
-  const cars = [...(vehicles || [])].filter((v) => vehicleById[v.model]).sort((a, b) => vehicleById[b.model].price - vehicleById[a.model].price).slice(0, 3);
+  const all = [...(vehicles || [])].filter((v) => vehicleById[v.model] && vehicleById[v.model].kind !== 'bike').sort((a, b) => vehicleById[b.model].price - vehicleById[a.model].price);
+  const cars = all.slice(0, MAX_BAYS);
+  const bays = Math.min(MAX_BAYS, Math.max(2, cars.length + (cars.length < MAX_BAYS ? 1 : 0))); // a spare bay for guests
+  const w = bays * BAY_W;
+  const cx = PARK_X - w / 2;
+  const cz = PARK_Z + BAY_D / 2;
+  const roof = level >= 2;
+  const sign = useMemo(() => labelTexture(all.length > MAX_BAYS ? `🅿️ +${all.length - MAX_BAYS}` : '🅿️', { size: 64, bold: 900, bg: '#1d4ed8', fg: '#fff' }), [all.length]);
   const driveOut = (v) => (e) => {
     if (!mine || e.delta > 10) return;
     e.stopPropagation();
@@ -427,11 +444,37 @@ function Driveway({ vehicles, mine }) {
   };
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-4.8, -0.02, 8.2]} material={mat('#9ca3af')}><planeGeometry args={[9, 5.6]} /></mesh>
+      {/* asphalt, kerb and the lane out */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.015, cz + 1.2]} material={mat('#52525b')}><planeGeometry args={[w + 0.6, BAY_D + 3]} /></mesh>
+      <mesh position={[cx, 0.06, PARK_Z - 0.15]} material={mat('#d4d4d8')}><boxGeometry args={[w + 0.6, 0.14, 0.3]} /></mesh>
+      {/* bay lines */}
+      {Array.from({ length: bays + 1 }, (_, i) => (
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[PARK_X - i * BAY_W, 0, cz]} material={LINE}><planeGeometry args={[0.12, BAY_D]} /></mesh>
+      ))}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0, PARK_Z + BAY_D]} material={LINE}><planeGeometry args={[w, 0.12]} /></mesh>
+      {/* wheel stops */}
+      {Array.from({ length: bays }, (_, i) => (
+        <mesh key={i} position={[PARK_X - (i + 0.5) * BAY_W, 0.07, PARK_Z + 0.5]} material={mat('#facc15')}><boxGeometry args={[1.4, 0.14, 0.22]} /></mesh>
+      ))}
+      {/* P sign */}
+      <group position={[PARK_X + 0.5, 0, PARK_Z + BAY_D + 0.6]}>
+        <mesh position={[0, 1.1, 0]} material={mat('#9ca3af')}><cylinderGeometry args={[0.05, 0.05, 2.2, 6]} /></mesh>
+        <sprite position={[0, 2.35, 0]} scale={[0.9 * sign.aspect, 0.9, 1]}><spriteMaterial map={sign.texture} depthWrite={false} /></sprite>
+      </group>
+      {/* carport roof for family houses and mansions */}
+      {roof && (
+        <group>
+          {Array.from({ length: bays + 1 }, (_, i) => [PARK_X - i * BAY_W, PARK_Z + BAY_D - 0.3]).map(([x, z]) => (
+            <mesh key={x} position={[x, 1.35, z]} material={mat('#374151')}><boxGeometry args={[0.14, 2.7, 0.14]} /></mesh>
+          ))}
+          <mesh position={[cx, 2.75, cz]} rotation={[0.06, 0, 0]} material={level >= 3 ? CANOPY_DARK : CANOPY}><boxGeometry args={[w + 0.4, 0.08, BAY_D + 0.4]} /></mesh>
+          <mesh position={[cx, 2.72, PARK_Z + BAY_D + 0.15]} material={mat('#374151')}><boxGeometry args={[w + 0.4, 0.16, 0.12]} /></mesh>
+        </group>
+      )}
       {cars.map((v, i) => {
         const d = vehicleById[v.model];
         return (
-          <group key={v.id} position={[-1.8 - i * 3, 0, 8.2]} rotation={[0, Math.PI, 0]} scale={0.9} onClick={driveOut(v)}>
+          <group key={v.id} position={[PARK_X - (i + 0.5) * BAY_W, 0, cz + 0.2]} rotation={[0, Math.PI, 0]} scale={0.92} onClick={driveOut(v)}>
             <Vehicle kind={d.kind} body={d.body} lux={d.lux} model={d.id} color={v.color} />
           </group>
         );
@@ -571,11 +614,19 @@ export function HomeScene({ me }) {
       <Yard yard={visiting ? hostYard : myYard} mine={!visiting} origin={HOME_ORIGIN} />
       <Ghost items={items} b={b} />
       <Sim me={me} items={items} layout={layout} />
-      {!visiting && me.npcPartner && me.npcPartner.status !== 'couple' && <Spouse npc={me.npcPartner} b={b} />}
-      {!visiting && (me.kids || []).map((k, i) => <Kid key={k.id} kid={k} i={i} b={b} />)}
+      {(() => {
+        // Whoever's home it is, their family is in it — visitors see the host's spouse and kids.
+        const fam = visiting ? visiting.host : me;
+        return (
+          <>
+            {fam.npcPartner && fam.npcPartner.status !== 'couple' && <Spouse npc={fam.npcPartner} b={b} />}
+            {(fam.kids || []).map((k, i) => <Kid key={k.id} kid={k} i={i} b={b} />)}
+          </>
+        );
+      })()}
       <Guests />
       {party && <PartyDecor event={party} home />}
-      <Driveway vehicles={visiting ? visiting.host.vehicles : me.vehicles} mine={!visiting} />
+      <Driveway vehicles={visiting ? visiting.host.vehicles : me.vehicles} mine={!visiting} level={layout.level} />
       <pointLight color="#fff7ed" intensity={10} distance={20} position={[0, 4, 0]} />
       </Shadows>
     </group>

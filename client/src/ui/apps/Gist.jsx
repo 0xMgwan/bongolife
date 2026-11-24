@@ -6,8 +6,26 @@ import { AppHead } from '../Phone.jsx';
 import { L } from '../../i18n.js';
 import { openCamera } from '../Camera.jsx';
 import { avatarEmoji } from '../../three/Avatar.jsx';
+import { cityById } from '@shared/world.js';
 
 const ago = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 60 ? `${m}m` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`; };
+
+// A trip check-in: no photo, a postcard of the city they just landed in.
+const POST = { dar: ['#0ea5e9', '#f59e0b'], znz: ['#06b6d4', '#fde68a'], aru: ['#65a30d', '#fef3c7'], mwz: ['#2563eb', '#a7f3d0'], pwa: ['#b45309', '#fde68a'] };
+const BY = { flight: ['kwa ndege ✈️', 'by plane ✈️'], heli: ['kwa helikopta 🚁', 'by helicopter 🚁'], ferry: ['kwa boti ⛴️', 'by ferry ⛴️'], bus: ['kwa basi 🚌', 'by coach 🚌'], car: ['kwa gari 🚗', 'by road 🚗'] };
+function Postcard({ c, place, who, onDoubleClick }) {
+  const city = cityById[c.city];
+  const [a, b] = POST[c.city] || POST.dar;
+  return (
+    <div className="postcard" style={{ background: `linear-gradient(160deg, ${a}, ${b})` }} onDoubleClick={onDoubleClick}>
+      <span className="pc-stamp">{city?.icon || '📍'}</span>
+      <small>{L('SALAMU KUTOKA', 'GREETINGS FROM')}</small>
+      <b>{city?.name || c.city}</b>
+      <span className="pc-line">📍 {L(`@${who} amefika ${place || city?.name}`, `@${who} checked in at ${place || city?.name}`)}</span>
+      <span className="pc-line">{L(BY[c.mode]?.[0] || '', BY[c.mode]?.[1] || '')}{c.family ? L(' · na familia 👨‍👩‍👧', ' · with the family 👨‍👩‍👧') : ''}</span>
+    </div>
+  );
+}
 
 function Post({ p, onChange }) {
   const run = useStore((s) => s.run);
@@ -21,7 +39,8 @@ function Post({ p, onChange }) {
     <div className="gist-post">
       <div className="gp-head"><span className="gp-av">{avatarEmoji(p.appearance)}</span><span className="grow"><b>@{p.username}</b><small>{p.place ? `📍 ${p.place} · ` : ''}{ago(p.at)}</small></span>
         {p.mine && <button className="btn btn-ghost btn-xs" onClick={async () => { if (await run(`/gist/${p.id}`, { method: 'DELETE' })) onChange(null); }}>🗑️</button>}</div>
-      <img src={p.image} alt="" loading="lazy" onDoubleClick={() => !p.liked && like()} />
+      {p.checkin ? <Postcard c={p.checkin} place={p.place} who={p.username} onDoubleClick={() => !p.liked && like()} />
+        : <img src={p.image} alt="" loading="lazy" onDoubleClick={() => !p.liked && like()} />}
       <div className="gp-acts">
         <button onClick={like}>{p.liked ? '❤️' : '🤍'} {p.likes}</button>
         <button onClick={showComments}>💬 {p.comments}</button>

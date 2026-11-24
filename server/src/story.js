@@ -38,7 +38,7 @@ export function progressOf(u, goal) {
   if (goal.plots != null) return { have: plotsOf.get(u.id).n, need: goal.plots };
   if (goal.house != null) return { have: plotsOf.get(u.id).built || 0, need: goal.house };
   if (goal.assets != null) return { have: bizOf.get(u.id).n + trucksOf.get(u.id).n + companiesOf(u.id), need: goal.assets };
-  if (goal.mayor != null) return { have: mayorFn()?.username === u.username ? 1 : 0, need: 1 };
+  if (goal.mayor != null) return { have: mayorFn(u.id) ? 1 : 0, need: 1 };
   return { have: 0, need: 1 };
 }
 

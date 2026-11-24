@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS pregnancies (
   user_id INTEGER PRIMARY KEY, partner_kind TEXT NOT NULL, partner_id TEXT NOT NULL,
   name TEXT NOT NULL, gender TEXT NOT NULL, due_at INTEGER NOT NULL, tried_at INTEGER NOT NULL
 );`);
+try { db.exec('ALTER TABLE users ADD COLUMN outing_until INTEGER'); } catch { /* exists */ }
 const q = {
   kids: db.prepare("SELECT * FROM children WHERE parent_a = ? OR (partner_kind = 'player' AND partner_id = ?) ORDER BY born_at"),
   kid: db.prepare('SELECT * FROM children WHERE id = ?'),
@@ -47,6 +48,8 @@ export function view(uid) {
     kids: kidsBrief(uid),
     rules: FAMILY,
     divorceCost: Math.max(FAMILY.divorceMin, Math.round(getUser(uid).money * FAMILY.divorcePct)),
+    outing: outingOf(uid),
+    partySize: familyParty(uid).length,
   };
 }
 
@@ -117,3 +120,34 @@ export const divorce = db.transaction((uid) => {
   db.prepare('DELETE FROM pregnancies WHERE user_id = ? OR (partner_kind = ? AND partner_id = ?)').run(uid, sp.kind, sp.id);
   return { spouse: sp, cost, ...view(uid) };
 });
+
+// ------------------------------------------------------------ family outings
+const kidScale = (age) => (age < 2 ? 0.42 : age < 5 ? 0.55 : age < 12 ? 0.7 : age < 20 ? 0.88 : 1);
+/** Who comes along: a game-character spouse and the kids (a player spouse walks for themselves). */
+export function familyParty(uid) {
+  const sp = spouseOf(uid);
+  const out = [];
+  if (sp?.kind === 'npc') out.push({ n: sp.name, look: sp.look, s: 1 });
+  for (const k of kidsBrief(uid)) out.push({ n: k.name, look: k.look, s: kidScale(k.age), baby: k.age < 2 });
+  return out;
+}
+/** The family walking with this player right now, or null. */
+export function outingOf(uid) {
+  const r = db.prepare('SELECT outing_until FROM users WHERE id = ?').get(uid);
+  if (!r?.outing_until || r.outing_until < now()) return null;
+  const party = familyParty(uid);
+  return party.length ? { until: r.outing_until, party } : null;
+}
+let onOuting = null;
+export const setOutingHook = (fn) => (onOuting = fn);
+/** Take the family out (hours > 0) or send them home (0). */
+export function setOuting(uid, hours, { free = false } = {}) {
+  if (hours > 0) {
+    if (!familyParty(uid).length) throw new GameError(['Huna familia ya kutoka nayo bado.', "You don't have a family to take out yet."]);
+    if (!free && !outingOf(uid)) addMoney(uid, -FAMILY.outingCost, 'spend', '👨‍👩‍👧 Matembezi ya familia');
+    db.prepare('UPDATE users SET outing_until = ? WHERE id = ?').run(now() + hours * 3600_000, uid);
+    db.prepare("UPDATE children SET joy = MIN(100, joy + 8) WHERE parent_a = ? OR (partner_kind = 'player' AND partner_id = ?)").run(uid, String(uid));
+  } else db.prepare('UPDATE users SET outing_until = NULL WHERE id = ?').run(uid);
+  onOuting?.(uid, outingOf(uid));
+  return { outing: outingOf(uid), ...view(uid) };
+}

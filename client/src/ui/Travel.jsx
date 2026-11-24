@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TRAVEL, placeById, travelCost, fuelCost, tripFuel, bestCar, fmtTsh, fmtShort, venueOf, vehicleById, TRIP_MODES, tripKey, cityAt, cityById } from '@shared/world.js';
+import { TRAVEL, placeById, travelCost, fuelCost, tripFuel, bestCar, fmtTsh, fmtShort, venueOf, vehicleById, TRIP_MODES, tripKey, cityAt, cityById, CAR_KINDS, FAMILY } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { local } from '../net.js';
 import { goToPlace, startRide, enterPlace } from '../nav.js';
@@ -72,17 +72,25 @@ export function TripOptions({ placeId, onDone }) {
   const from = cityAt(local.x, local.z)?.id || 'dar';
   const to = cityAt(...place.pos)?.id;
   const key = tripKey(from, to);
-  const car = bestCar(me.vehicles);
+  // Which car to drive: the one you're using now if it's road-worthy, else your best — or pick.
+  const cars = (me.vehicles || []).filter((v) => CAR_KINDS.includes(vehicleById[v.model]?.kind)).sort((a, b) => vehicleById[b.model].price - vehicleById[a.model].price);
+  const [carId, setCarId] = useState(() => (cars.find((v) => v.id === me.activeVehicle) || bestCar(me.vehicles))?.id);
+  const car = cars.find((v) => v.id === carId) || cars[0] || null;
   const priceOf = (m) => (m.own && car ? tripFuel(m.price[key], car.model) : m.price[key]);
   const modes = Object.entries(TRIP_MODES).filter(([id, m]) => m.price[key] && (!m.own || car));
   const [sel, setSel] = useState(modes.find(([id]) => id === 'car') ? 'car' : modes[0]?.[0]);
   const [ins, setIns] = useState(true);
+  // The family: a game-character spouse plus the kids (a player spouse travels on their own).
+  const famSize = (me.npcPartner?.status === 'married' ? 1 : 0) + (me.kids?.length || 0);
+  const [fam, setFam] = useState(false);
+  const [checkin, setCheckin] = useState(true);
   if (!modes.length) return <div className="hint">{L('Hakuna usafiri wa moja kwa moja.', 'No direct way to get there.')}</div>;
   const m = TRIP_MODES[sel];
-  const total = priceOf(m) + (ins ? m.ins : 0);
+  const famFare = fam && !m.own ? Math.round((m.price[key] * FAMILY.tripFarePerMember * famSize) / 1000) * 1000 : 0;
+  const total = priceOf(m) + famFare + (ins ? m.ins : 0);
   const cityName = cityById[to].name;
   const go = async () => {
-    const r = await run('/trip', { method: 'POST', body: { placeId, mode: sel, insured: ins } });
+    const r = await run('/trip', { method: 'POST', body: { placeId, mode: sel, insured: ins, vehicleId: m.own ? car?.id : undefined, family: fam, checkin } });
     if (!r) return;
     sfx(sel === 'car' ? 'horn' : 'open');
     onDone?.();
@@ -102,6 +110,36 @@ export function TripOptions({ placeId, onDone }) {
       </div>
       <div className="trip-panel">
         <p>{L(...TRIP_TEXT[sel](cityName, car ? vehicleById[car.model].name : ''))}</p>
+        {m.own && cars.length > 1 && (
+          <div className="trip-cars">
+            {cars.map((v) => {
+              const def = vehicleById[v.model];
+              return (
+                <button key={v.id} className={car?.id === v.id ? 'on' : ''} onClick={() => setCarId(v.id)}>
+                  <span className="dot" style={{ background: v.color }} />
+                  <b>{def.emoji} {def.name}</b>
+                  <small>⛽ {fmtShort(tripFuel(m.price[key], v.model))}</small>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {famSize > 0 && (
+          <div className="trip-ins">
+            <div>
+              <b>👨‍👩‍👧 {L('Safiri na familia', 'Bring the family')}</b>
+              <small>{m.own ? L(`Watu ${famSize} — viti vya bure kwenye gari lako. Watatembea nawe huko.`, `${famSize} of them — free seats in your car. They'll explore the city with you.`) : L(`Tiketi za watu ${famSize}: +${fmtShort(Math.round((m.price[key] * FAMILY.tripFarePerMember * famSize) / 1000) * 1000)}. Watatembea nawe huko.`, `Tickets for ${famSize}: +${fmtShort(Math.round((m.price[key] * FAMILY.tripFarePerMember * famSize) / 1000) * 1000)}. They'll explore the city with you.`)}</small>
+            </div>
+            <button className={`toggle ${fam ? 'on' : ''}`} onClick={() => setFam(!fam)} aria-pressed={fam} aria-label={L('Familia', 'Family')}><i /></button>
+          </div>
+        )}
+        <div className="trip-ins">
+          <div>
+            <b>📍 {L('Check-in kwenye Gist', 'Check in on Gist')}</b>
+            <small>{L('Ukifika, marafiki wataona postcard ya ulipofika.', "When you land, friends see a postcard of where you are.")}</small>
+          </div>
+          <button className={`toggle ${checkin ? 'on' : ''}`} onClick={() => setCheckin(!checkin)} aria-pressed={checkin} aria-label="Check-in"><i /></button>
+        </div>
         <div className="trip-ins">
           <div>
             <b>🛡️ {L('Bima ya safari', 'Travel insurance')}</b>

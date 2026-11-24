@@ -461,3 +461,81 @@ export function mapLabelTexture(text, emoji, color = '#ffffff') {
   labelCache.set(key, res);
   return res;
 }
+
+// ------------------------------------------------------- ground & wall surfaces
+// Small tiling noise textures so grass, tarmac, sand and plaster aren't flat colour. Cheap on
+// phones: one 128px texture each, tiled by UVs scaled to world metres (see tiledPlane).
+function noisy(base, spots, { size = 128, seed = 7 } = {}) {
+  let s = seed;
+  const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  return canvasTex(size, size, (ctx) => {
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, size, size);
+    for (const [color, n, rmin, rmax, alpha] of spots) {
+      ctx.fillStyle = color;
+      ctx.globalAlpha = alpha;
+      for (let i = 0; i < n; i++) {
+        const rad = rmin + r() * (rmax - rmin);
+        const x = r() * size;
+        const y = r() * size;
+        // draw wrapped so the tile is seamless
+        for (const dx of [-size, 0, size]) for (const dy of [-size, 0, size]) {
+          ctx.beginPath();
+          ctx.arc(x + dx, y + dy, rad, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+  }, { repeat: [1, 1] });
+}
+const surfaceCache = new Map();
+/** Lambert material with a tiling surface texture: 'grass' | 'tarmac' | 'sand' | 'paving'. */
+export function surfaceMat(kind, base) {
+  const key = kind + base;
+  if (surfaceCache.has(key)) return surfaceCache.get(key);
+  const c = new THREE.Color(base);
+  const lighter = '#' + c.clone().offsetHSL(0, -0.02, 0.06).getHexString();
+  const darker = '#' + c.clone().offsetHSL(0, 0.02, -0.08).getHexString();
+  const spots = {
+    grass: [[darker, 260, 0.6, 1.6, 0.5], [lighter, 220, 0.5, 1.4, 0.55], ['#a3c47a', 40, 2, 5, 0.18]],
+    tarmac: [['#6b7280', 900, 0.3, 0.8, 0.35], ['#d1d5db', 500, 0.3, 0.7, 0.3], [darker, 30, 3, 8, 0.12]],
+    sand: [[darker, 500, 0.3, 0.9, 0.35], [lighter, 400, 0.3, 0.9, 0.45]],
+    paving: [[darker, 200, 0.4, 1, 0.25]],
+  }[kind] || [];
+  const t = noisy(base, spots, { seed: kind.length * 97 + 13 });
+  if (kind === 'paving') {
+    const ctx = t.image.getContext('2d');
+    ctx.strokeStyle = darker;
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i <= 128; i += 32) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 128); ctx.moveTo(0, i); ctx.lineTo(128, i); ctx.stroke(); }
+    t.needsUpdate = true;
+  }
+  const m = new THREE.MeshLambertMaterial({ map: t });
+  surfaceCache.set(key, m);
+  return m;
+}
+const planeCache = new Map();
+/** A ground plane whose texture tiles every `tile` metres (UVs scaled to its size). */
+export function tiledPlane(w, h, tile = 8) {
+  const key = `${w}|${h}|${tile}`;
+  let g = planeCache.get(key);
+  if (!g) {
+    g = new THREE.PlaneGeometry(w, h);
+    const uv = g.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) * w) / tile, (uv.getY(i) * h) / tile);
+    planeCache.set(key, g);
+  }
+  return g;
+}
+let plasterTex;
+const plasterCache = new Map();
+/** Painted wall: the colour with a faint plaster grain. */
+export function plasterMat(color) {
+  if (plasterCache.has(color)) return plasterCache.get(color);
+  plasterTex ||= noisy('#ffffff', [['#d6d3d1', 700, 0.4, 1.2, 0.35], ['#a8a29e', 60, 1.5, 4, 0.08]], { seed: 31 });
+  const m = new THREE.MeshLambertMaterial({ color, map: plasterTex });
+  plasterCache.set(color, m);
+  return m;
+}

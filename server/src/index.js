@@ -13,7 +13,19 @@ import { api, settleTopup, applyTopupStatus } from './routes/api.js';
 import { verifyNtzsWebhook } from './payments/index.js';
 import { online, setIO, publicPlayer, broadcast, emitTo } from './presence.js';
 import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef, netWorth, homeOf } from './game.js';
-import { settleElection, currentMayor } from './election.js';
+import { settleElection, currentMayor, allMayors, isMayor } from './election.js';
+import { outingOf, setOutingHook } from './family.js';
+
+// Family walking with a player: just names, looks and sizes for everyone's screen.
+const famLite = (o) => (o ? o.party.map((m) => ({ n: m.n, look: m.look, s: m.s, baby: !!m.baby })) : null);
+setOutingHook((uid, o) => {
+  const p = online.get(uid);
+  if (p) p.fam = famLite(o);
+  broadcast('player:fam', { id: uid, fam: famLite(o) });
+});
+setInterval(() => {
+  for (const [uid, p] of online) if (p.fam && !outingOf(uid)) { p.fam = null; broadcast('player:fam', { id: uid, fam: null }); }
+}, 60_000).unref();
 import { isBlocked } from './crime.js';
 import { attachVoice, leaveVoice } from './voice.js';
 import { attachWatch, leaveWatch } from './watch.js';
@@ -114,7 +126,7 @@ io.on('connection', (socket) => {
     p = {
       sockets: new Set(), x: user.x, z: user.z, ry: 0, m: 0, name: user.name, username: user.username, appearance: user.appearance,
       vehicle: vehicleSummary(user.activeVehicle), busy: user.busy && user.busy.endsAt > now() ? { kind: user.busy.kind, id: user.busy.id, placeId: user.busy.placeId, emoji: user.busy.emoji, endsAt: user.busy.endsAt } : null,
-      inside: null, guards: guardOf(uid)?.men || 0,
+      inside: null, guards: guardOf(uid)?.men || 0, fam: famLite(outingOf(uid)),
       lastChat: 0, chatCount: 0,
     };
     online.set(uid, p);
@@ -403,15 +415,17 @@ setInterval(() => {
 }, NEED_TICK_SECONDS * 1000);
 
 // Mayor elections: decide last week's winner once the week rolls over.
-mayorRef.current = currentMayor;
+mayorRef.current = () => currentMayor('dar');
+mayorRef.all = allMayors;
+mayorRef.isMayor = isMayor;
 const checkElection = () => {
   try {
     const won = settleElection();
-    if (won) {
-      newsStory.mayor({ id: won.id, username: won.username }, won.votes);
-      broadcast('toast', { text: [`🏛️ @${won.username} ndiye Mkuu wa Mkoa mpya wa Dar! (kura ${won.votes})`, `🏛️ @${won.username} is Dar's new Mayor! (${won.votes} votes)`] });
-      broadcast('world', worldState());
+    for (const w of won) {
+      newsStory.mayor({ id: w.id, username: w.username }, w.votes, w.cityName);
+      broadcast('toast', { text: [`🏛️ @${w.username} ndiye Mkuu wa Mkoa mpya wa ${w.cityName}! (kura ${w.votes})`, `🏛️ @${w.username} is ${w.cityName}'s new Mayor! (${w.votes} votes)`] });
     }
+    if (won.length) broadcast('world', worldState());
   } catch (e) { console.error('[election]', e); }
 };
 checkElection();

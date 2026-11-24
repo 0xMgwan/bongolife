@@ -6,7 +6,7 @@ import {
   isWater, onRoad, buildingById, fmtShort, randomAppearance, AD_ROTATE_SECONDS, CITIES,
   cityAt, LANDMARKS,
 } from '@shared/world.js';
-import { mat, geo, emojiTexture, labelTexture, bubbleTexture, windowTexture, adTexture, mapLabelTexture } from './textures.js';
+import { mat, geo, emojiTexture, labelTexture, bubbleTexture, windowTexture, adTexture, mapLabelTexture, surfaceMat, tiledPlane, plasterMat } from './textures.js';
 import { Vehicle, Boat, Plane, Car } from './Vehicle.jsx';
 import { Avatar } from './Avatar.jsx';
 import { DetailedDistricts, zoneOf, ZONES, districtGlass, facadeBox, districtMat } from './Districts.jsx';
@@ -53,9 +53,7 @@ function Terrain({ onGround }) {
   };
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} material={mat(GRASS)} onClick={handle}>
-        <planeGeometry args={[WORLD_SIZE + 200, WORLD_SIZE + 200]} />
-      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} geometry={tiledPlane(WORLD_SIZE + 200, WORLD_SIZE + 200, 10)} material={surfaceMat('grass', GRASS)} onClick={handle} />
       {WATER.map((w) => (
         <mesh key={w.id} rotation={[-Math.PI / 2, 0, 0]} position={[(w.x1 + w.x2) / 2, 0.03, (w.z1 + w.z2) / 2]} material={mat(WATER_C)} onClick={handle}>
           <planeGeometry args={[w.x2 - w.x1, w.z2 - w.z1]} />
@@ -66,14 +64,10 @@ function Terrain({ onGround }) {
         <planeGeometry args={[200, 600]} />
       </mesh>
       {LAND_PATCHES.map((l) => (
-        <mesh key={l.id} rotation={[-Math.PI / 2, 0, 0]} position={[(l.x1 + l.x2) / 2, 0.05, (l.z1 + l.z2) / 2]} material={mat(GRASS)} onClick={handle}>
-          <planeGeometry args={[l.x2 - l.x1, l.z2 - l.z1]} />
-        </mesh>
+        <mesh key={l.id} rotation={[-Math.PI / 2, 0, 0]} position={[(l.x1 + l.x2) / 2, 0.05, (l.z1 + l.z2) / 2]} geometry={tiledPlane(l.x2 - l.x1, l.z2 - l.z1, 10)} material={surfaceMat('grass', GRASS)} onClick={handle} />
       ))}
       {BEACHES.map((b) => (
-        <mesh key={b.id} rotation={[-Math.PI / 2, 0, 0]} position={[(b.x1 + b.x2) / 2, 0.07, (b.z1 + b.z2) / 2]} material={mat(SAND)} onClick={handle}>
-          <planeGeometry args={[b.x2 - b.x1, b.z2 - b.z1]} />
-        </mesh>
+        <mesh key={b.id} rotation={[-Math.PI / 2, 0, 0]} position={[(b.x1 + b.x2) / 2, 0.07, (b.z1 + b.z2) / 2]} geometry={tiledPlane(b.x2 - b.x1, b.z2 - b.z1, 6)} material={surfaceMat('sand', SAND)} onClick={handle} />
       ))}
       {BRIDGES.map((b) => (
         <group key={b.id}>
@@ -137,14 +131,10 @@ const CityGround = memo(function CityGround({ city, onGround }) {
         </mesh>
       )}
       {land.map((r, i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[cx + (r.x1 + r.x2) / 2, 0.04, cz + (r.z1 + r.z2) / 2]} material={mat(city.ground || GRASS)} onClick={handle}>
-          <planeGeometry args={[r.x2 - r.x1, r.z2 - r.z1]} />
-        </mesh>
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[cx + (r.x1 + r.x2) / 2, 0.04, cz + (r.z1 + r.z2) / 2]} geometry={tiledPlane(r.x2 - r.x1, r.z2 - r.z1, 10)} material={surfaceMat('grass', city.ground || GRASS)} onClick={handle} />
       ))}
       {(city.beaches || []).map((b, i) => (
-        <mesh key={`b${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[cx + (b.x1 + b.x2) / 2, 0.07, cz + (b.z1 + b.z2) / 2]} material={mat(SAND)} onClick={handle}>
-          <planeGeometry args={[b.x2 - b.x1, b.z2 - b.z1]} />
-        </mesh>
+        <mesh key={`b${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[cx + (b.x1 + b.x2) / 2, 0.07, cz + (b.z1 + b.z2) / 2]} geometry={tiledPlane(b.x2 - b.x1, b.z2 - b.z1, 6)} material={surfaceMat('sand', SAND)} onClick={handle} />
       ))}
       <CityFiller city={city} />
       {city.id === 'aru' && <Mountains cx={cx} cz={cz} />}
@@ -244,9 +234,7 @@ function Roads({ onGround }) {
         const cz = (z1 + z2) / 2;
         return (
           <group key={i}>
-            <mesh position={[cx, 0.08, cz]} rotation={[-Math.PI / 2, 0, horiz ? 0 : Math.PI / 2]} material={mat('#9aa0a8')} onClick={handle}>
-              <planeGeometry args={[len, w]} />
-            </mesh>
+            <mesh position={[cx, 0.08, cz]} rotation={[-Math.PI / 2, 0, horiz ? 0 : Math.PI / 2]} geometry={tiledPlane(len, w, 7)} material={surfaceMat('tarmac', '#9aa0a8')} onClick={handle} />
             <RoadLine cx={cx} cz={cz} len={len} horiz={horiz} />
           </group>
         );
@@ -533,7 +521,8 @@ function Sign({ text, w, y, z, bg = '#ffffff', fg = '#111827' }) {
 }
 
 function Box({ w, h, d, color, y = 0, x = 0, z = 0, m }) {
-  return <mesh geometry={unitBox} material={m || mat(color)} position={[x, y, z]} scale={[w, h, d]} />;
+  // Big surfaces (walls) get a plaster grain; small trims stay flat colour.
+  return <mesh geometry={unitBox} material={m || (w * h > 12 || d * h > 12 ? plasterMat(color) : mat(color))} position={[x, y, z]} scale={[w, h, d]} />;
 }
 
 function Umbrella({ x, z, c }) {

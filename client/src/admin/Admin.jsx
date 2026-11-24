@@ -5,6 +5,7 @@ import { useStore } from '../store.js';
 import { Logo } from '../ui/Logo.jsx';
 import { Users, UserDetail } from './AdminUsers.jsx';
 import { Economy, Topups, Ads, Chat, Property, PhoneApps, Reports } from './AdminData.jsx';
+import Elections from './AdminElections.jsx';
 import './admin.css';
 
 // ------------------------------------------------------------ helpers
@@ -140,6 +141,7 @@ const SECTIONS = [
   ['chat', '💬', 'Chat'],
   ['reports', '⚑', 'Reports'],
   ['property', '🏘️', 'Property'],
+  ['elections', '🗳️', 'Elections'],
   ['apps', '📱', 'Phone apps'],
   ['music', '🎵', 'Music'],
   ['settings', '⚙️', 'Settings'],
@@ -640,6 +642,7 @@ export default function Admin() {
         {section === 'chat' && <Chat />}
         {section === 'reports' && <Reports />}
         {section === 'property' && <Property />}
+        {section === 'elections' && <Elections />}
         {section === 'apps' && <PhoneApps />}
         {section === 'music' && <MusicAdmin />}
         {section === 'settings' && <Settings />}

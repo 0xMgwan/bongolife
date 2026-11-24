@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fmtShort, fmtTsh } from '@shared/world.js';
+import { fmtShort, fmtTsh, CITIES, cityById } from '@shared/world.js';
 import { api } from '../../api.js';
 import { useStore } from '../../store.js';
 import { avatarEmoji } from '../../three/Avatar.jsx';
@@ -20,16 +20,17 @@ function Uchaguzi({ open }) {
   const me = useStore((s) => s.me);
   const run = useStore((s) => s.run);
   const [e, setE] = useState(null);
+  const [city, setCity] = useState(null); // null = the city you're in
   const [slogan, setSlogan] = useState('');
   const [msg, setMsg] = useState(null);
   useEffect(() => {
-    api('/election').then(setE).catch(() => {});
-  }, []);
+    api(`/election${city ? `?city=${city}` : ''}`).then(setE).catch(() => {});
+  }, [city]);
   if (!e) return <div className="small muted" style={{ padding: 12 }}>{L('Inapakia…', 'Loading…')}</div>;
   const total = e.candidates.reduce((a, c) => a + c.votes, 0) || 1;
   const vote = async (c) => {
     const r = await run('/election/vote', { method: 'POST', body: { username: c.username } });
-    if (r) { setE(r); sfx('cash'); useStore.getState().toast(L(`🗳️ Umempigia kura @${c.username}`, `🗳️ You voted for @${c.username}`)); }
+    if (r) { setE(await api(`/election?city=${e.city}`).catch(() => r)); sfx('cash'); useStore.getState().toast(L(`🗳️ Umempigia kura @${c.username}`, `🗳️ You voted for @${c.username}`)); }
   };
   const stand = async (ev) => {
     ev.preventDefault();
@@ -42,10 +43,20 @@ function Uchaguzi({ open }) {
   };
   const mayor = e.mayor;
   const iAmMayor = mayor?.id === me.id;
+  const cname = cityById[e.city]?.name || e.city;
+  const away = e.city !== e.here;
   return (
     <>
+      <div className="city-tabs">
+        {CITIES.map((c) => (
+          <button key={c.id} className={e.city === c.id ? 'on' : ''} onClick={() => setCity(c.id)}>
+            <span>{c.icon} {c.name.replace(' es Salaam', '')}{c.id === e.here ? ' 📍' : ''}</span>
+            <small>{e.mayors[c.id] ? `👑 @${e.mayors[c.id].username}` : L('Hakuna meya', 'No mayor')}</small>
+          </button>
+        ))}
+      </div>
       <div className="mayor-card">
-        <div className="small bold" style={{ color: '#92400e', marginBottom: 8 }}>🏛️ {L('MKUU WA MKOA WA DAR', 'MAYOR OF DAR')}</div>
+        <div className="small bold" style={{ color: '#92400e', marginBottom: 8 }}>🏛️ {L(`MKUU WA MKOA WA ${cname.toUpperCase()}`, `MAYOR OF ${cname.toUpperCase()}`)}</div>
         {mayor ? (
           <div className="row" style={{ gap: 12 }}>
             <span className="big-face">{avatarEmoji(mayor.appearance)}</span>
@@ -71,7 +82,7 @@ function Uchaguzi({ open }) {
         </div>
         <div className="mayor-perks">
           <b>{L('Marupurupu ya Mkuu wa Mkoa (wiki nzima)', "The Mayor's package (for the whole week)")}</b>
-          <span>💰 {L(`Mshahara ${fmtTsh(e.rules.salary)}`, `${fmtTsh(e.rules.salary)} salary`)}</span>
+          <span>💰 {L(`Mshahara ${fmtTsh(e.salary)}`, `${fmtTsh(e.salary)} salary`)}</span>
           <span>🕶️ {L('Walinzi wa VIP bure', 'Free VIP bodyguards')}</span>
           <span>🏷️ {L(`Punguzo ${Math.round(e.rules.perks.discount * 100)}% kwa viwanja, ujenzi na nguo`, `${Math.round(e.rules.perks.discount * 100)}% off plots, buildings & clothes`)}</span>
           <span>🏛️ {L('Hazina ya jiji: sehemu ya ada ya kila mauzo ya mali', "City treasury: a cut of every property sale's fee")}</span>
@@ -97,18 +108,20 @@ function Uchaguzi({ open }) {
               {e.myVote === c.id ? (
                 <span className="tag friend">✓ {L('Kura yako', 'Your vote')}</span>
               ) : (
-                <button className="btn btn-dark btn-xs" disabled={!e.canVote} onClick={() => vote(c)}>🗳️ {L('Piga kura', 'Vote')}</button>
+                <button className="btn btn-dark btn-xs" disabled={!e.canVote || c.id === me.id} onClick={() => vote(c)}>🗳️ {L('Piga kura', 'Vote')}</button>
               )}
             </div>
           </div>
         ))}
       </div>
-      {!e.canVote && <div className="hint">{L('Maliza shifti moja ya kazi ili upige kura.', 'Finish one work shift to be able to vote.')}</div>}
-      {e.myVote && <div className="hint">{L('Unaweza kubadilisha kura yako mpaka uchaguzi uishe.', 'You can change your vote until the election closes.')}</div>}
+      {e.voteBlock ? <div className="hint">{L(e.voteBlock[0], e.voteBlock[1])}</div>
+        : away && <div className="hint">🗳️ {L(`Kura hupigwa kituoni — safiri hadi ${cname} kupiga kura au kugombea hapa.`, `Votes are cast at the polling station — travel to ${cname} to vote or run here.`)}</div>}
+      {e.myVote && <div className="hint">{L(`Kura yako ya wiki hii iko ${cityById[e.myVoteCity]?.name || ''}. Unaweza kuibadilisha mpaka uchaguzi uishe.`, `Your vote this week is in ${cityById[e.myVoteCity]?.name || ''}. You can change it until the election closes.`)}</div>}
 
-      {!e.iAmCandidate && (
+      {e.myRace && e.myRace !== e.city && <div className="hint">🏛️ {L(`Unagombea ${cityById[e.myRace].name} wiki hii.`, `You're running in ${cityById[e.myRace].name} this week.`)}</div>}
+      {!e.myRace && !away && (
         <form className="box" onSubmit={stand} style={{ marginTop: 12 }}>
-          <b>🏛️ {L('Gombea Ukuu wa Mkoa', 'Run for Mayor')}</b>
+          <b>🏛️ {L(`Gombea Ukuu wa Mkoa wa ${cname}`, `Run for Mayor of ${cname}`)}</b>
           <div className="small muted" style={{ margin: '4px 0 8px' }}>{L(`Ada ya kampeni ${fmtTsh(e.rules.fee)}. Unahitaji shifti ${e.rules.candidateShifts}+ za kazi.`, `Campaign fee ${fmtTsh(e.rules.fee)}. You need ${e.rules.candidateShifts}+ work shifts.`)}</div>
           <input className="field" style={{ padding: '10px 14px', fontSize: 14 }} maxLength={e.rules.sloganMax} value={slogan} onChange={(ev) => setSlogan(ev.target.value)} placeholder={L('Kauli mbiu — mf. "Daladala bure Ijumaa!"', 'Slogan — e.g. "Free daladala Fridays!"')} />
           <button className="btn btn-green btn-block btn-sm" style={{ marginTop: 8 }} disabled={!e.canRun || me.money < e.rules.fee}>{L('Jiandikishe kugombea', 'Join the race')} · {fmtTsh(e.rules.fee)}</button>
@@ -131,7 +144,7 @@ export function Viongozi({ back, open }) {
   const rows = lb?.[tab] || [];
   return (
     <>
-      <AppHead title={L('Viongozi wa Dar', 'Leaders of Dar')} onBack={back} />
+      <AppHead title={L('Viongozi', 'Leaders')} onBack={back} />
       <div className="app-body">
         <div className="seg">
           <button className={tab === 'mayor' ? 'on' : ''} onClick={() => setTab('mayor')}>🗳️ {L('Meya', 'Mayor')}</button>

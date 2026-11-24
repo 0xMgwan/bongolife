@@ -58,6 +58,24 @@ export function Familia({ back, open }) {
           )}
         </div>
 
+        {d.partySize > 0 && (
+          <div className="box fam-out" style={{ marginTop: 10 }}>
+            <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+              <span style={{ fontSize: 28 }}>👨‍👩‍👧</span>
+              <div className="grow">
+                <b>{d.outing ? L('Familia iko nawe mjini', 'The family is out with you') : L('Toka na familia', 'Take the family out')}</b>
+                <small style={{ display: 'block' }}>{d.outing
+                  ? L(`Wanatembea nawe — kila mtu anawaona. Zimebaki ${left(d.outing.until - Date.now())}.`, `They walk with you and everyone can see them. ${left(d.outing.until - Date.now())} left.`)
+                  : L(`Mke/mume na watoto wanatembea nawe mjini kwa saa ${d.rules.outingHours} (${fmtShort(d.rules.outingCost)}). Au wachukue kwenye safari ya mkoa.`, `Your spouse and kids walk around town with you for ${d.rules.outingHours}h (${fmtShort(d.rules.outingCost)}). Or bring them on a trip upcountry.`)}</small>
+              </div>
+            </div>
+            <button className={`btn btn-sm btn-block ${d.outing ? 'btn-ghost' : 'btn-green'}`} style={{ marginTop: 8 }} onClick={async () => {
+              const r = await run('/family/outing', { method: 'POST', body: { on: !d.outing } });
+              if (r) { setD(r); sfx(d.outing ? 'close' : 'levelup'); }
+            }}>{d.outing ? L('🏠 Warudishe nyumbani', '🏠 Send them home') : L('🚶‍♀️ Twendeni matembezi', "🚶‍♀️ Let's go out")}</button>
+          </div>
+        )}
+
         {d.pregnancy && (
           <div className="fam-preg">
             <span>🤰🏾</span>

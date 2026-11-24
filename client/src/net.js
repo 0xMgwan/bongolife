@@ -330,6 +330,11 @@ export function connect() {
     if (r) { r.guards = guards; bump(); }
     if (id === st().myId) st().refreshMe?.().catch(() => {});
   });
+  socket.on('player:fam', ({ id, fam }) => {
+    const r = remotes.get(id);
+    if (r) { r.fam = fam; bump(); }
+    if (id === st().myId) st().refreshMe?.().catch(() => {});
+  });
   socket.on('player:wanted', ({ id, stars }) => {
     const r = remotes.get(id);
     if (r) r.wanted = stars;
