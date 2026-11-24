@@ -14,6 +14,7 @@ rememberRef();
 const Landing = lazy(() => import('./ui/Landing.jsx'));
 const Creator = lazy(() => import('./ui/Creator.jsx'));
 const Game = lazy(() => import('./ui/Game.jsx'));
+const Paywall = lazy(() => import('./ui/Premium.jsx').then((m) => ({ default: m.Paywall })));
 const Admin = lazy(() => import('./admin/Admin.jsx'));
 
 function Loading() {
@@ -43,7 +44,7 @@ export default function App() {
     if (path.startsWith('/admin')) return set({ screen: 'admin' });
     if (!token.get()) return set({ screen: 'landing' });
     api('/me')
-      .then((me) => set({ me, screen: me.onboarded ? 'game' : 'creator' }))
+      .then((me) => set({ me, screen: !me.onboarded ? 'creator' : me.sub && !me.sub.active ? 'paywall' : 'game' }))
       .catch((e) => {
         if (e.status === 401) token.set(null);
         set({ screen: 'landing' });
@@ -60,6 +61,7 @@ export default function App() {
         {screen === 'auth' && <Auth />}
         {screen === 'creator' && <Creator />}
         {screen === 'game' && <Game />}
+        {screen === 'paywall' && <Paywall />}
         {screen === 'legal' && <Legal />}
         {screen === 'admin' && <Admin />}
       </Suspense>

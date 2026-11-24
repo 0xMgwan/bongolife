@@ -2668,3 +2668,24 @@ export const LOANS = {
   ],
   lateFeePerDay: 0.05, maxLateDays: 10, graceDays: 2,
 };
+
+// ============================================================ subscription & perks
+// Bongo Life costs TZS 5,000 a month (real mobile money). New players get their first month free;
+// everyone who joined before the launch plays free until 1 Dec 2026 (00:00 EAT), or a month after they
+// joined if that is later. Admins are never charged.
+export const SUBSCRIPTION = {
+  priceTzs: 5_000,
+  days: 30,
+  trialDays: 30,
+  startsAt: Date.UTC(2026, 10, 30, 21, 0), // 1 Dec 2026, 00:00 in Dar es Salaam
+  plans: [1, 3, 6], // months you can pay for at once
+  remindDays: 5,
+};
+// Perks are bought with mobile money in the wallet. `days: 0` is instant.
+export const PERKS = [
+  { id: 'refill', emoji: '⚡', priceTzs: 1_000, days: 0, name: ['Nguvu kamili', 'Full recharge'], blurb: ['Njaa, nguvu, raha, usafi na jamii — zote 100% papo hapo.', 'Hunger, energy, fun, hygiene and social — all to 100% instantly.'] },
+  { id: 'doublepay', emoji: '💼', priceTzs: 3_000, days: 7, name: ['Mshahara mara mbili', 'Double pay'], blurb: ['Kila shifti inakulipa mara mbili kwa siku 7.', 'Every shift pays double for 7 days.'] },
+  { id: 'guards', emoji: '💪🏾', priceTzs: 3_000, days: 7, name: ['Bodyguards wiki nzima', 'Bodyguards for a week'], blurb: ['Mabaunsa wawili wanakulinda siku 7 — wezi hawakugusi.', 'Two bodyguards protect you for 7 days — no one can rob you.'] },
+  { id: 'vip', emoji: '⭐', priceTzs: 5_000, days: 30, name: ['VIP mwezi mzima', 'VIP for a month'], blurb: ['Punguzo la 10% kila duka na nyota ⭐ ya VIP kwa siku 30.', '10% off in every shop and a ⭐ VIP star for 30 days.'] },
+];
+export const perkById = Object.fromEntries(PERKS.map((p) => [p.id, p]));

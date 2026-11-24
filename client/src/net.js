@@ -36,16 +36,19 @@ export function connect() {
 
   socket.on('connect_error', (e) => {
     if (e.message === 'unauthorized') st().logout();
+    if (e.message === 'subscription') { socket.io.opts.reconnection = false; location.reload(); }
     if (e.message === 'maintenance') st().toast(L('Bongo Life iko kwenye matengenezo 🔧', 'Bongo Life is under maintenance 🔧'), 'err');
   });
   socket.on('kicked', ({ reason }) => {
     socket.io.opts.reconnection = false;
+    if (reason === 'subscription') return location.reload(); // back in on the pay screen
     const msg = {
       banned: L('Akaunti yako imefungiwa.', 'Your account has been banned.'),
       maintenance: L('Bongo Life iko kwenye matengenezo 🔧', 'Bongo Life is under maintenance 🔧'),
     }[reason] || L('Umetolewa kwenye mchezo. Ingia tena.', 'You were signed out. Please log in again.');
     import('./ui/Confirm.jsx').then(({ ask }) => ask({ icon: reason === 'maintenance' ? '🔧' : '🚪', title: msg, alert: true })).finally(() => st().logout());
   });
+  socket.on('subscription', (sub) => useStore.setState((s) => ({ me: s.me && { ...s.me, sub } })));
   socket.on('announcement', (announcement) => useStore.setState({ announcement }));
   socket.on('chat:delete', ({ ids }) => {
     const del = new Set(ids);

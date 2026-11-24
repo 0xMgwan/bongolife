@@ -58,8 +58,9 @@ export const dismiss = db.transaction((uid) => {
 export function grantGuards(uid, tierId, until) {
   const tier = guardById[tierId];
   const cur = guardOf(uid);
-  if (!tier || (cur && cur.perDay >= tier.perDay)) return;
-  const back = cur ? Math.floor((cur.until - now()) / DAY) * cur.perDay : 0;
+  if (!tier || (cur && (cur.perDay > tier.perDay || (cur.id === tier.id && cur.until >= until)))) return;
+  // A cheaper tier's unused paid days come back; the same tier is simply extended to `until`.
+  const back = cur && cur.id !== tier.id ? Math.floor((cur.until - now()) / DAY) * cur.perDay : 0;
   if (back > 0) addMoney(uid, back, 'refund', 'Marejesho ya ulinzi');
   q.set.run(uid, tier.id, until, now());
   announce(uid);

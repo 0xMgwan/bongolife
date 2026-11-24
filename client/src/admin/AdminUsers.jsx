@@ -135,6 +135,9 @@ export function UserDetail({ id, me }) {
               {u.isAdmin && <span className="bdg k">admin</span>}
               {u.bannedAt && <span className="bdg r">banned {ago(u.bannedAt)}{u.banReason ? ` · ${u.banReason}` : ''}</span>}
               {muted && <span className="bdg y">muted until {dt(u.mutedUntil)}</span>}
+              {u.sub && (u.sub.exempt ? <span className="bdg k">no subscription (admin)</span>
+                : <span className={`bdg ${u.sub.until > Date.now() ? 'g' : 'r'}`}>{u.sub.trial ? 'free month' : 'paid'} {u.sub.until > Date.now() ? 'until' : 'ended'} {dt(u.sub.until)}</span>)}
+              {Object.keys(u.perks || {}).map((k) => <span key={k} className="bdg y">{k} until {dt(u.perks[k])}</span>)}
               <span className="bdg">#{u.id}</span>
             </div>
           </div>
@@ -160,6 +163,10 @@ export function UserDetail({ id, me }) {
             const r = await run('/reset-code', { ok: '🔢 Reset code created' });
             if (r?.code) window.prompt(`Give @${u.username} this code (valid ${r.expiresInMin} min). They enter it under "Forgot password" → code + new password.`, r.code);
           }}>🔢 Reset code</button>
+          <button className="btn btn-outline" onClick={() => {
+            const d = window.prompt(`Give @${u.username} free days of Bongo Life:`, '30');
+            if (d) run('/subscription', { body: { days: Number(d) }, ok: `🎁 ${d} days added` });
+          }}>🎁 Free days</button>
           <button className="btn btn-outline" onClick={() => run('/needs', { ok: '💯 Needs restored' })}>💯 Restore needs</button>
           <button className="btn btn-outline" onClick={() => setModal('teleport')}>📍 Teleport</button>
           <button className="btn btn-outline" onClick={() => setModal('profile')}>✏️ Edit profile</button>

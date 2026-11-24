@@ -26,6 +26,7 @@ import { hustlePending, collectHustles, hustleValue } from './hustle.js';
 import { portfolioValue } from './stocks.js';
 import { story as newsStory } from './news.js';
 import { guardOf } from './guards.js';
+import * as premium from './premium.js';
 import * as familyMod from './family.js';
 import * as concertsMod from './concerts.js';
 
@@ -59,6 +60,7 @@ function plate() {
 function discount(user, price) {
   let p = user.trait === 'mjanja' ? price * 0.95 : price;
   if (mayorRef.isMayor?.(user.id)) p *= 1 - ELECTION.perks.discount; // any city's mayor
+  if (premium.hasPerk(user.id, 'vip')) p *= 0.9; // ⭐ VIP perk
   return Math.round(p);
 }
 
@@ -127,6 +129,8 @@ export function playerState(userId) {
     mood: moodOf(u.needs),
     fitness: gymMod.fitnessOf(userId),
     guards: guardOf(userId),
+    sub: premium.subOf(userId),
+    perks: premium.perksOf(userId),
     kids: familyMod.kidsBrief(userId),
     outing: familyMod.outingOf(userId),
     ...activeHome(userId),
@@ -613,7 +617,7 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
     const shifts = user.jobXp[busy.id] || 0;
     const before = jobLevel(shifts);
     let pay = shiftPay(job, { shifts, mood: moodOf(user.needs), trait: user.trait, fame: user.fame });
-    pay = Math.round((pay * eventMult(place, 'job') * perfMult(busy.perf, busy.done) * frac) / 100) * 100;
+    pay = Math.round((pay * eventMult(place, 'job') * perfMult(busy.perf, busy.done) * frac * (premium.hasPerk(userId, 'doublepay') ? 2 : 1)) / 100) * 100;
     addMoney(userId, pay, 'salary', `${jobTitle(job, shifts)} — ${place.name}`);
     fields.jobXp = { ...user.jobXp, [busy.id]: shifts + (frac >= 1 ? 1 : 0) };
     // Invite reward: the friend who brought you in gets paid on your first full shift.

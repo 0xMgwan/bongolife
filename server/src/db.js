@@ -311,6 +311,7 @@ export const DEFAULT_SETTINGS = {
   maintenance: false,
   signupsEnabled: true,
   topupsEnabled: true,
+  subscriptionsEnabled: true,
   chatEnabled: true,
   adsEnabled: true,
   announcement: '',
@@ -332,6 +333,11 @@ export function getSettings() {
 if (!db.prepare("SELECT 1 FROM settings WHERE key = 'migr_topups_paused'").get()) {
   db.prepare("INSERT INTO settings (key, value) VALUES ('topupsEnabled', 'false') ON CONFLICT(key) DO UPDATE SET value = 'false'").run();
   db.prepare("INSERT INTO settings (key, value) VALUES ('migr_topups_paused', 'true')").run();
+}
+// One-time: payments work again through PayGuard (Nov 2026) — reopen wallet top-ups.
+if (!db.prepare("SELECT 1 FROM settings WHERE key = 'migr_topups_reopened'").get()) {
+  db.prepare("INSERT INTO settings (key, value) VALUES ('topupsEnabled', 'true') ON CONFLICT(key) DO UPDATE SET value = 'true'").run();
+  db.prepare("INSERT INTO settings (key, value) VALUES ('migr_topups_reopened', 'true')").run();
 }
 export function setSettings(patch) {
   const up = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');

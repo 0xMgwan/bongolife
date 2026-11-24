@@ -5,6 +5,7 @@ import { api } from '../../api.js';
 import { AppHead } from '../Phone.jsx';
 import { L } from '../../i18n.js';
 import { VirtualNote } from '../VirtualNote.jsx';
+import { PerksTab } from '../Premium.jsx';
 
 const KIND = { loan: '🏦', loan_repay: '🏦', topup: '💳', salary: '💼', spend: '🛍️', purchase: '🧾', income: '🏦', gift: '🎁', transfer_in: '📥', transfer_out: '📤', travel: '🛺', ads: '📢' };
 
@@ -147,7 +148,7 @@ export function Pesa({ arg, back }) {
   const [data, setData] = useState(null);
   // Top-ups can be paused by the admin; the wallet (history, sending) stays open.
   const canTopup = useStore((s) => s.world?.walletOpen !== false);
-  const [tab, setTab] = useState(arg === 'topup' && canTopup ? 'topup' : arg?.send ? 'send' : 'history');
+  const [tab, setTab] = useState(arg === 'topup' && canTopup ? 'topup' : arg === 'perks' ? 'perks' : arg?.send ? 'send' : 'history');
   const load = () => api('/wallet').then(setData).catch(() => {});
   useEffect(() => {
     load();
@@ -168,8 +169,10 @@ export function Pesa({ arg, back }) {
         <div className="seg">
           <button className={tab === 'history' ? 'on' : ''} onClick={() => setTab('history')}>{L('Historia', 'History')}</button>
           {canTopup && <button className={tab === 'topup' ? 'on' : ''} onClick={() => setTab('topup')}>{L('Ongeza salio', 'Top up')}</button>}
+          <button className={tab === 'perks' ? 'on' : ''} onClick={() => setTab('perks')}>⭐ {L('Ofa', 'Perks')}</button>
           <button className={tab === 'send' ? 'on' : ''} onClick={() => setTab('send')}>{L('Tuma', 'Send')}</button>
         </div>
+        {tab === 'perks' && <PerksTab />}
         {tab === 'topup' && canTopup && (data?.topup ? <Topup info={data.topup} me={me} onDone={load} /> : <div className="box small muted">{data ? L('Malipo hayajawashwa kwenye server hii bado.', 'Payments are not enabled on this server yet.') : L('Inapakia…', 'Loading…')}</div>)}
         {tab === 'send' && <Send initial={arg?.send} onDone={load} />}
         {tab === 'history' && (

@@ -36,7 +36,7 @@ export function SidePop({ items }) {
     );
   }
   return (
-    <button key={idx} className={`side-pop ${item.tone} ${phase === 'out' ? 'leaving' : ''}`} onClick={() => setPhase('out')} role="status">
+    <button key={idx} className={`side-pop ${item.tone} ${phase === 'out' ? 'leaving' : ''}`} onClick={() => { item.onClick?.(); setPhase('out'); }} role="status">
       <span>{item.text}</span>
       <i style={{ animationDuration: `${SHOW}ms` }} />
     </button>

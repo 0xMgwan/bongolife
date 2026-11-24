@@ -187,6 +187,7 @@ function Overview() {
         <Kpi k="Online now" v={k.online} tone="#16a34a" />
         <Kpi k="DAU / WAU" v={`${k.dau} / ${k.wau}`} d={k.wau ? `${Math.round((k.dau / k.wau) * 100)}% stickiness` : ''} />
         <Kpi k="Revenue (all time)" v={tzs(k.revenueTzs)} d={`${tzs(k.revenue7dTzs)} last 7d`} tone="#16a34a" />
+        <Kpi k="Subscribers (paid now)" v={k.subscribers ?? 0} d={`${tzs(k.subRevenue30dTzs || 0)} subs · ${tzs(k.perkRevenue30dTzs || 0)} perks · 30d`} tone="#7c3aed" />
         <Kpi k="Paying players" v={k.payingUsers} d={`${k.conversion}% conversion · ARPPU ${tzs(k.arppu)}`} />
         <Kpi k="Pending top-ups" v={k.pendingTopups} tone={k.pendingTopups ? '#d97706' : undefined} />
         <Kpi k="Money supply" v={`TSh ${fmtShort(k.moneySupply)}`} d="in all wallets" />
@@ -463,6 +464,7 @@ function Settings() {
           {flag('maintenance', '🔧 Maintenance mode', 'Kicks every non-admin and blocks the game until turned off.', true)}
           {flag('signupsEnabled', 'Sign-ups', 'Allow new accounts.')}
           {flag('topupsEnabled', 'Wallet top-ups', 'Allow mobile money top-ups.')}
+          {flag('subscriptionsEnabled', 'Monthly subscription', 'Charge TZS 5,000/month after the free month (existing players from 1 Dec). Off = everyone plays free.')}
           {flag('chatEnabled', 'Public chat', 'Allow street chat messages.')}
           {flag('adsEnabled', 'New ads', 'Allow players to buy billboard ads.')}
           <h2 style={{ marginTop: 22 }}>💳 Payments (Wooble / PayGuard)</h2>

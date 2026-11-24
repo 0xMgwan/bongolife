@@ -42,6 +42,7 @@ import * as hustle from '../hustle.js';
 import * as stocks from '../stocks.js';
 import * as street from '../street.js';
 import * as news from '../news.js';
+import * as premium from '../premium.js';
 import * as guards from '../guards.js';
 import * as family from '../family.js';
 import * as concerts from '../concerts.js';
@@ -266,6 +267,28 @@ api.use((req, _res, next) => {
 });
 
 api.use('/admin', requireAdmin, admin);
+
+// Subscription: once a player's paid (or free) time runs out, only their account and the
+// pay-to-continue routes stay open until they pay.
+const OPEN_WHEN_LOCKED = /^\/(me|premium(\/.*)?|wallet\/topup\/\d+)$/;
+api.use((req, _res, next) => {
+  if (!OPEN_WHEN_LOCKED.test(req.path) && premium.isLocked(req.user.id))
+    return next(new GameError(['Muda wako wa Bongo Life umeisha. Lipia TZS 5,000 kuendelea kucheza.', 'Your Bongo Life time is up. Pay TZS 5,000 to keep playing.'], 402, 'subscription'));
+  next();
+});
+api.get('/premium', (req, res) => res.json(premium.view(req.user.id)));
+api.post('/premium/pay', rateLimit('premium-pay', 10, 10 * 60_000), wrap(async (req, res) => {
+  const phone = normalizePhone(req.body.phone);
+  if (!phone) throw new GameError(['Namba ya simu si sahihi (mfano 0712 345 678).', 'Invalid phone number (e.g. 0712 345 678).']);
+  const kind = req.body.kind === 'sub' ? 'sub' : 'perk';
+  res.status(201).json(await premium.startPayment(req.user, { kind, months: req.body.months, perkId: req.body.perkId, phone }));
+}));
+api.get('/premium/pay/:id', wrap(async (req, res) => {
+  const t = db.prepare("SELECT * FROM topups WHERE id = ? AND user_id = ? AND purpose IN ('sub', 'perk')").get(req.params.id, req.user.id);
+  if (!t) throw new GameError(['Malipo hayapo', 'Payment not found'], 404);
+  const status = await settleTopup(t);
+  res.json({ id: t.id, status, ...premium.view(req.user.id), me: game.playerState(req.user.id) });
+}));
 
 api.get('/me', (req, res) => {
   game.ensureStarterCar(req.user.id);
@@ -677,6 +700,14 @@ export function applyTopupStatus(t, status) {
       broadcast('ads', liveAds());
       emitTo(t.user_id, 'toast', { text: [`📢 Malipo yamepokelewa — "${ad.title}" iko hewani!`, `📢 Payment received — "${ad.title}" is live!`], refresh: true });
     }
+    return status;
+  }
+  if (t.purpose === 'sub' || t.purpose === 'perk') {
+    const text = db.transaction(() => {
+      const r = db.prepare(`UPDATE topups SET status = ?, credited_at = ? WHERE id = ? AND ${from}`).run(status, status === 'paid' ? now() : null, t.id);
+      return r.changes && status === 'paid' ? premium.applyPurchase(t) : null;
+    })();
+    if (text) emitTo(t.user_id, 'toast', { text, refresh: true });
     return status;
   }
   const credited = db.transaction(() => {

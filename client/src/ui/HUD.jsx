@@ -940,6 +940,12 @@ export function HUD() {
       {scene && scene.placeId && !['flight', 'heli', 'road', 'ferry', 'safari'].includes(scene.key) && <VoiceBar room={useStore.getState().insideHost && (scene.placeId === 'yacht' || scene.placeId === 'jet' || scene.placeId === 'block') ? `${scene.placeId}~${useStore.getState().insideHost}` : scene.placeId} />}
       {!shop && !riding && !clean && (
         <SidePop items={[
+          ...(me.sub?.enabled && !me.sub.exempt && me.sub.daysLeft <= me.sub.remindDays ? [{
+            key: 'sub', tone: 'amber', onClick: () => useStore.getState().openPhone('pesa', 'perks'),
+            text: me.sub.trial
+              ? L(`🎟️ Mwezi wako wa bure unaisha baada ya siku ${me.sub.daysLeft}. Gusa kulipia TZS 5,000.`, `🎟️ Your free month ends in ${me.sub.daysLeft} day${me.sub.daysLeft === 1 ? '' : 's'}. Tap to pay TZS 5,000.`)
+              : L(`🎟️ Uanachama unaisha baada ya siku ${me.sub.daysLeft}. Gusa kuongeza.`, `🎟️ Membership ends in ${me.sub.daysLeft} day${me.sub.daysLeft === 1 ? '' : 's'}. Tap to renew.`),
+          }] : []),
           ...(world?.event && town && !scene ? [{ key: 'event', tone: 'green', text: loc(world.event, 'text') }] : []),
           ...(announcement ? [{ key: 'announce', tone: 'amber', text: `📣 ${loc(announcement, 'text')}` }] : []),
         ]} />

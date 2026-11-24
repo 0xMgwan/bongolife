@@ -11,7 +11,8 @@ import { verifyToken } from './auth.js';
 import { registerInteractions } from './interact.js';
 import { api, settleTopup, applyTopupStatus } from './routes/api.js';
 import { verifyNtzsWebhook, PAYGUARD_CALLBACK_TOKEN } from './payments/index.js';
-import { online, setIO, publicPlayer, broadcast, emitTo } from './presence.js';
+import { online, setIO, publicPlayer, broadcast, emitTo, kick } from './presence.js';
+import { isLocked } from './premium.js';
 import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef, netWorth, homeOf } from './game.js';
 import { settleElection, currentMayor, allMayors, isMayor } from './election.js';
 import { outingOf, setOutingHook } from './family.js';
@@ -120,6 +121,7 @@ io.use((socket, next) => {
   if (!user) return next(new Error('unauthorized'));
   if (!user.onboarded) return next(new Error('not_onboarded'));
   if (getSettings().maintenance && !user.isAdmin) return next(new Error('maintenance'));
+  if (isLocked(user.id)) return next(new Error('subscription'));
   socket.data.userId = user.id;
   next();
 });
@@ -408,6 +410,11 @@ setInterval(() => {
 
 // Pre-generate the shared welcome phrases so the first welcome plays straight away.
 setTimeout(() => import('./live.js').then((m) => m.warmVoice()).catch(() => {}), 5000);
+
+// Subscription ran out mid-session: send the player to the pay screen.
+setInterval(() => {
+  for (const [uid] of online) if (isLocked(uid)) kick(uid, 'subscription');
+}, 60_000);
 
 // Needs decay for online players + position flush.
 setInterval(() => {

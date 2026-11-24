@@ -13,6 +13,7 @@ import multer from 'multer';
 import * as live from '../live.js';
 import * as music from '../music.js';
 import * as election from '../election.js';
+import * as premium from '../premium.js';
 
 export const admin = express.Router();
 const DAY = 86400_000;
@@ -71,6 +72,9 @@ admin.get('/overview', (_req, res) => {
     revenue7dTzs: one("SELECT COALESCE(SUM(amount_tzs),0) s FROM topups WHERE status = 'paid' AND credited_at > ?", t - 7 * DAY).s,
     payingUsers: one("SELECT COUNT(DISTINCT user_id) n FROM topups WHERE status = 'paid'").n,
     pendingTopups: one("SELECT COUNT(*) n FROM topups WHERE status = 'pending'").n,
+    subscribers: one('SELECT COUNT(*) n FROM users WHERE paid_until > ? AND is_admin = 0', t).n,
+    subRevenue30dTzs: one("SELECT COALESCE(SUM(amount_tzs),0) s FROM topups WHERE status = 'paid' AND purpose = 'sub' AND credited_at > ?", since30).s,
+    perkRevenue30dTzs: one("SELECT COALESCE(SUM(amount_tzs),0) s FROM topups WHERE status = 'paid' AND purpose = 'perk' AND credited_at > ?", since30).s,
     liveAds: liveAds().length,
     reportedAds: one("SELECT COUNT(*) n FROM ads WHERE reports > 0 AND status = 'live'").n,
     adSpend: one("SELECT COALESCE(-SUM(amount),0) s FROM transactions WHERE kind = 'ads'").s,
@@ -124,7 +128,7 @@ admin.get('/users/:id', (req, res) => {
   const u = userOr404(req.params.id);
   const id = u.id;
   res.json({
-    user: { ...u, online: online.has(id), position: online.get(id) ? [online.get(id).x, online.get(id).z] : [u.x, u.z] },
+    user: { ...u, sub: premium.subOf(id), perks: premium.perksOf(id), online: online.has(id), position: online.get(id) ? [online.get(id).x, online.get(id).z] : [u.x, u.z] },
     netWorth: game.netWorth(id),
     pendingIncome: game.pendingIncome(id),
     vehicles: db.prepare('SELECT * FROM vehicles WHERE user_id = ?').all(id),
@@ -139,6 +143,16 @@ admin.get('/users/:id', (req, res) => {
     audit: db.prepare("SELECT a.*, u.username admin FROM audit a JOIN users u ON u.id = a.admin_id WHERE a.target_type = 'user' AND a.target_id = ? ORDER BY a.id DESC LIMIT 50").all(String(id))
       .map((a) => ({ ...a, details: parse(a.details) })),
   });
+});
+
+admin.post('/users/:id/subscription', (req, res) => {
+  const u = userOr404(req.params.id);
+  const days = Math.floor(Number(req.body.days));
+  if (!(days >= 1 && days <= 365)) throw new GameError('Days must be 1–365');
+  const text = premium.extendSub(u.id, days, 'gift');
+  emitTo(u.id, 'toast', { text, refresh: true });
+  audit(req.user.id, 'user.subscription', 'user', u.id, { days });
+  res.json({ ok: true, sub: premium.subOf(u.id) });
 });
 
 admin.post('/users/:id/ban', (req, res) => {
@@ -512,7 +526,7 @@ admin.post('/users/:id/reset-code', (req, res) => {
 admin.put('/settings', (req, res) => {
   const before = getSettings();
   const patch = {};
-  for (const k of ['maintenance', 'signupsEnabled', 'topupsEnabled', 'chatEnabled', 'adsEnabled']) if (k in req.body) patch[k] = !!req.body[k];
+  for (const k of ['maintenance', 'signupsEnabled', 'topupsEnabled', 'subscriptionsEnabled', 'chatEnabled', 'adsEnabled']) if (k in req.body) patch[k] = !!req.body[k];
   for (const k of ['announcement', 'announcementEn', 'eventOverride', 'eventOverrideEn']) if (k in req.body) patch[k] = str(req.body[k], 160);
   if (Array.isArray(req.body.watchLinks)) patch.watchLinks = req.body.watchLinks.slice(0, 20).map((l) => ({ title: str(l.title, 80), url: str(l.url, 400), competition: str(l.competition, 40), live: !!l.live })).filter((l) => /^https:\/\//.test(l.url));
   if (req.body.radioDefault) {
