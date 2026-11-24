@@ -194,6 +194,9 @@ export async function diagnosePayguard() {
     secret: PG_SECRET ? { length: PG_SECRET.length, expected: 64 } : null,
     callbackToken: !!PAYGUARD_CALLBACK_TOKEN,
   };
+  // The address PayGuard sees us calling from — what has to be whitelisted for live.
+  out.egressIp = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(8000) })
+    .then((r) => r.json()).then((j) => j.ip).catch(() => null);
   if (!PG_KEY || !PG_SECRET) return { ...out, verdict: 'PAYGUARD_COLLECTION_KEY / PAYGUARD_COLLECTION_SECRET are not set on the server.' };
   out.configured = await tryLogin(PG_BASE);
   const other = PG_BASE === LIVE ? SANDBOX : LIVE;
