@@ -6,6 +6,7 @@
 //              payments still pending can settle (only if NTZS_API_KEY is still set).
 //  - demo:     simulated push for local development. Never enabled in production unless
 //              ALLOW_DEMO_TOPUP=true is set explicitly.
+import { ProxyAgent, fetch as undiciFetch } from 'undici';
 import crypto from 'node:crypto';
 
 const NTZS_BASE = process.env.NTZS_BASE_URL || 'https://www.ntzs.co.tz';
@@ -75,6 +76,11 @@ const PG_BASE = (process.env.PAYGUARD_BASE_URL || (PG_LIVE ? 'https://secure.pay
 // Trimmed: a stray space or newline from pasting into the dashboard would make every login fail.
 const PG_KEY = process.env.PAYGUARD_COLLECTION_KEY?.trim();
 const PG_SECRET = process.env.PAYGUARD_COLLECTION_SECRET?.trim();
+// Live PayGuard only accepts whitelisted IPs. Railway Hobby has no fixed egress IP, so
+// PAYGUARD_PROXY_URL (http://user:pass@host:port) sends PayGuard calls via a static-IP proxy.
+const PG_PROXY = process.env.PAYGUARD_PROXY_URL?.trim();
+const pgDispatcher = PG_PROXY ? new ProxyAgent(PG_PROXY) : null;
+const pgHttp = (url, opts) => (pgDispatcher ? undiciFetch(url, { ...opts, dispatcher: pgDispatcher }) : fetch(url, opts));
 /** Shared token in the callback URL (?token=…) — callbacks carry no signature of their own. */
 export const PAYGUARD_CALLBACK_TOKEN = process.env.PAYGUARD_CALLBACK_TOKEN;
 
@@ -82,7 +88,7 @@ export const PAYGUARD_CALLBACK_TOKEN = process.env.PAYGUARD_CALLBACK_TOKEN;
 let pgToken = null;
 async function pgAuth(force = false) {
   if (!force && pgToken && pgToken.until > Date.now()) return pgToken.value;
-  const res = await fetch(PG_BASE + '/api/client/auth/generate-token', {
+  const res = await pgHttp(PG_BASE + '/api/client/auth/generate-token', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ apiKey: PG_KEY, apiSecret: PG_SECRET }),
@@ -99,7 +105,7 @@ async function pgAuth(force = false) {
   return pgToken.value;
 }
 async function pgFetch(path, init = {}, retried = false) {
-  const res = await fetch(PG_BASE + path, {
+  const res = await pgHttp(PG_BASE + path, {
     ...init,
     headers: { 'content-type': 'application/json', authorization: `Bearer ${await pgAuth()}`, ...(init.headers || {}) },
     signal: AbortSignal.timeout(30_000),
@@ -178,7 +184,7 @@ export async function diagnosePayguard() {
   const LIVE = 'https://secure.payguard.tz';
   const tryLogin = async (base) => {
     try {
-      const res = await fetch(base + '/api/client/auth/generate-token', {
+      const res = await pgHttp(base + '/api/client/auth/generate-token', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ apiKey: PG_KEY, apiSecret: PG_SECRET }), signal: AbortSignal.timeout(20_000),
       });
@@ -189,13 +195,13 @@ export async function diagnosePayguard() {
     }
   };
   const out = {
-    env: PG_LIVE ? 'live' : 'sandbox', baseUrl: PG_BASE, active: provider?.id || null,
+    env: PG_LIVE ? 'live' : 'sandbox', baseUrl: PG_BASE, proxy: PG_PROXY ? PG_PROXY.replace(/\/\/[^@]*@/, '//') : null, active: provider?.id || null,
     key: PG_KEY ? { length: PG_KEY.length, starts: PG_KEY.slice(0, 4), ends: PG_KEY.slice(-2) } : null,
     secret: PG_SECRET ? { length: PG_SECRET.length, expected: 64 } : null,
     callbackToken: !!PAYGUARD_CALLBACK_TOKEN,
   };
   // The address PayGuard sees us calling from — what has to be whitelisted for live.
-  out.egressIp = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(8000) })
+  out.egressIp = await pgHttp('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(8000) })
     .then((r) => r.json()).then((j) => j.ip).catch(() => null);
   if (!PG_KEY || !PG_SECRET) return { ...out, verdict: 'PAYGUARD_COLLECTION_KEY / PAYGUARD_COLLECTION_SECRET are not set on the server.' };
   out.configured = await tryLogin(PG_BASE);

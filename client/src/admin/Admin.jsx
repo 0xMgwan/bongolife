@@ -673,7 +673,8 @@ function PaymentsTest() {
         <div className="small" style={{ marginTop: 10, lineHeight: 1.6 }}>
           <div style={{ fontWeight: 800, color: ok ? '#15803d' : '#b91c1c' }}>{ok ? '✅ ' : '⚠️ '}{r.verdict}</div>
           {r.env && <div>Environment: <b>{r.env}</b> · {r.baseUrl}</div>}
-          {r.egressIp && <div>Server's outgoing IP right now: <b>{r.egressIp}</b></div>}
+          {r.proxy && <div>Via proxy: {r.proxy}</div>}
+          {r.egressIp && <div>Outgoing IP PayGuard sees: <b>{r.egressIp}</b></div>}
           {r.key && <div>Key: {r.key.starts}…{r.key.ends} ({r.key.length} chars)</div>}
           {r.secret && <div>Secret: {r.secret.length} chars (expected {r.secret.expected})</div>}
           {r.configured && <div>Login on {r.env}: {r.configured.ok ? 'OK' : `${r.configured.status} ${r.configured.message || ''}`}</div>}
