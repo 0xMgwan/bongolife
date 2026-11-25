@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ambitionById, NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH, TRAVEL, flightPhase, findActivity, PLACES, DISTRICTS, CITIES, CITY_ARRIVAL, buildingById } from '@shared/world.js';
+import { ambitionById, NEEDS, gameClock, moodLabel, moodLabelEn, fmtTsh, fmtShort, vehicleById, BILLBOARDS, PLOTS, placeById, HEALTH, TRAVEL, flightPhase, findActivity, PLACES, DISTRICTS, CITIES, CITY_ARRIVAL, buildingById, cityAt } from '@shared/world.js';
 import { L, loc, pick, isEn } from '../i18n.js';
 import { useStore } from '../store.js';
 import { input, sendChat, sendEmote, setInside, remotes, local, view, jump } from '../net.js';
@@ -37,6 +37,16 @@ import { HomePicker, goHome } from './HomePicker.jsx';
 import { InvitePicker, BlockInviteModal } from './InvitePicker.jsx';
 import { NewsTicker } from './apps/Habari.jsx';
 import { ditchCar } from '../street.js';
+import { FishingGame } from './apps/Uvuvi.jsx';
+import { rainOf, isStorm } from '../three/Weather.jsx';
+
+/** A grey wash over the street while it rains where you are (not indoors). */
+function RainTint({ scene }) {
+  const code = useStore((st) => st.world?.weather?.[cityAt(local.x, local.z)?.id || 'dar']?.code);
+  const rain = rainOf(code);
+  if (!rain || scene) return null;
+  return <div className={`rain-tint ${isStorm(code) ? 'storm' : ''}`} style={{ opacity: 0.35 + rain * 0.5 }} />;
+}
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -377,6 +387,7 @@ function TopBar({ me }) {
   const visits = useStore((s) => s.visits);
   const clean = useStore((s) => s.cleanScreen);
   const night = clock.hour < 6 || clock.hour >= 19;
+  const wx = useStore((st) => { const c = cityAt(local.x, local.z)?.id || 'dar'; return st.world?.weather?.[c] || null; });
   const mood = (isEn() ? moodLabelEn : moodLabel)(me.mood ?? 60);
   const k = (n) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '')}k` : String(n || 0));
   // Collapsed by default to a glowing crown + balance; a tap reveals the full bar, which folds
@@ -405,7 +416,7 @@ function TopBar({ me }) {
           <Crown size={26} />
         </button>
         <div className="tb-extra" aria-hidden={!open}>
-          <span className="tb-time">{night ? '🌙' : '☀️'} {fmtTime(clock)}</span>
+          <span className="tb-time">{wx ? (night && wx.code <= 2 ? '🌙' : wx.emoji) : night ? '🌙' : '☀️'} {fmtTime(clock)}{wx ? <small className="tb-temp"> {wx.temp}°</small> : null}</span>
           <span className="tb-sep" />
           <button className="tb-mood" tabIndex={open ? 0 : -1} onClick={() => openPhone('mipangilio')}>{mood.emoji} <span>{mood.text}</span></button>
           <span className="tb-sep" />
@@ -959,6 +970,8 @@ export function HUD() {
         </div>
       )}
       <Busy me={me} />
+      <FishingGame />
+      <RainTint scene={scene} />
       {scene && scene.key === 'flight' && <FlightBar me={me} />}
       {!shop && !riding && <Dock me={me} scene={scene} />}
       {!shop && <NowPlaying />}

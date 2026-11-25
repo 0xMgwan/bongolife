@@ -39,6 +39,8 @@ import { Familia } from './apps/Familia.jsx';
 import { SokoMali } from './apps/SokoMali.jsx';
 import { Mkopo } from './apps/Mkopo.jsx';
 import { Matamasha } from './apps/Matamasha.jsx';
+import { Uvuvi } from './apps/Uvuvi.jsx';
+import { Harambee } from './apps/Harambee.jsx';
 import { Ulinzi } from './apps/Ulinzi.jsx';
 import { api } from '../api.js';
 
@@ -64,6 +66,8 @@ export const APPS = [
   { id: 'safari', name: 'Safari', nameEn: 'Travel', icon: '✈️', g: ['#38bdf8', '#1d4ed8'], C: Safari },
   { id: 'matukio', name: 'Matukio', nameEn: 'Events', icon: '🎉', g: ['#c084fc', '#7c3aed'], C: Matukio },
   { id: 'matamasha', name: 'Matamasha', nameEn: 'Concerts', icon: '🎤', g: ['#f0abfc', '#86198f'], C: Matamasha },
+  { id: 'uvuvi', name: 'Uvuvi', nameEn: 'Fishing', icon: '🎣', g: ['#67e8f9', '#0e7490'], C: Uvuvi },
+  { id: 'harambee', name: 'Harambee', nameEn: 'Harambee', icon: '🤝', g: ['#86efac', '#15803d'], C: Harambee },
   { id: 'familia', name: 'Familia', nameEn: 'Family', icon: '👨‍👩‍👧', g: ['#fda4af', '#9f1239'], C: Familia },
   { id: 'sokomali', name: 'Soko la Mali', nameEn: 'Property', icon: '🏘️', g: ['#6ee7b7', '#065f46'], C: SokoMali },
   { id: 'mkopo', name: 'Mikopo', nameEn: 'Loans', icon: '🏦', g: ['#93c5fd', '#1e3a8a'], C: Mkopo },

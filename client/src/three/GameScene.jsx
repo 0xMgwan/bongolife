@@ -15,6 +15,7 @@ import { MapPins } from './MapPins.jsx';
 import { StreetLayer } from './Street.jsx';
 import { GuardsLayer } from './Guards.jsx';
 import { useStore } from '../store.js';
+import { Rain, weatherHere, gloomOf, isStorm } from './Weather.jsx';
 import { local, view } from '../net.js';
 
 const zoom = { value: 1, target: 1 };
@@ -223,12 +224,14 @@ function CameraRig({ mode, sceneKey }) {
 const DAY_SKY = new THREE.Color('#cfe6f7');
 const DUSK_SKY = new THREE.Color('#f6c48f');
 const NIGHT_SKY = new THREE.Color('#2c3e66');
+const STORM_SKY = new THREE.Color('#6b7785');
 
 function DayNight({ interior }) {
   const { scene } = useThree();
   const hemi = useRef();
   const sun = useRef();
   const last = useRef(-1);
+  const flashUntil = useRef(0);
   useMemo(() => {
     scene.background = DAY_SKY.clone();
     scene.fog = new THREE.Fog(DAY_SKY.clone(), 220, 560);
@@ -246,17 +249,31 @@ function DayNight({ interior }) {
       if (interior.bg) return;
     }
     const { totalMin } = gameClock();
-    if (totalMin === last.current) return;
-    last.current = totalMin;
+    // Live weather: grey skies, closer fog, dimmer light; lightning flashes in storms.
+    const wx = weatherHere();
+    const gloom = gloomOf(wx?.code);
+    const t = performance.now();
+    if (isStorm(wx?.code) && t > flashUntil.current + 2500 && Math.random() < 0.004) flashUntil.current = t + 140;
+    if (t < flashUntil.current) {
+      hemi.current.intensity = 3.2;
+      scene.background.set('#c7d2fe');
+      last.current = -1;
+      return;
+    }
+    const key = totalMin * 100 + Math.round(gloom * 50);
+    if (key === last.current) return;
+    last.current = key;
     const h = totalMin / 60;
     // daylight 0..1 with soft dawn (5–7) and dusk (18–20)
     const day = h < 5 || h > 20 ? 0 : h < 7 ? (h - 5) / 2 : h > 18 ? (20 - h) / 2 : 1;
     const duskness = Math.max(0, 1 - Math.abs(h - 18.8) / 1.4) + Math.max(0, 1 - Math.abs(h - 6) / 1.2);
-    const sky = NIGHT_SKY.clone().lerp(DAY_SKY, day).lerp(DUSK_SKY, Math.min(0.55, duskness * 0.5));
+    const sky = NIGHT_SKY.clone().lerp(DAY_SKY, day).lerp(DUSK_SKY, Math.min(0.55, duskness * 0.5)).lerp(STORM_SKY, gloom * 0.65);
     scene.background.copy(sky);
     scene.fog.color.copy(sky);
-    hemi.current.intensity = 1.0 + day * 0.6;
-    sun.current.intensity = 0.55 + day * 1.2;
+    scene.fog.near = 220 - gloom * 150;
+    scene.fog.far = 560 - gloom * 320;
+    hemi.current.intensity = (1.0 + day * 0.6) * (1 - gloom * 0.35);
+    sun.current.intensity = (0.55 + day * 1.2) * (1 - gloom * 0.6);
     hemi.current.color.set(day > 0.3 ? '#ffffff' : '#9fb4ff');
     // Golden hour: a warm, low sun at dawn and dusk.
     sun.current.color.set('#fff6e8').lerp(GOLDEN, Math.min(1, duskness));
@@ -356,6 +373,7 @@ export default function GameScene({ mode = 'play', me, world, ads, onPlace, onPl
           mapMode={mode === 'map'}
           lowEnd={lowEnd}
         />
+        {mode === 'play' && <Rain lowEnd={lowEnd} />}
         </group>
         {home && me && <HomeScene me={me} />}
         {mode === 'map' && <MapPins me={me} onPlayer={onPlayer} />}

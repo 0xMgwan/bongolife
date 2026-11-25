@@ -7,6 +7,7 @@ import { STREET, CARJACK_MODEL, ROADS, cityAt, placeById, vehicleById } from '..
 import { online, broadcast, emitTo } from './presence.js';
 import { arrest, assertFree } from './crime.js';
 import { vehicleSummary } from './game.js';
+import { isRaining, RAIN_SURGE } from './weather.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS street_races (
   user_id INTEGER PRIMARY KEY, best_ms INTEGER NOT NULL, wins INTEGER NOT NULL DEFAULT 0, at INTEGER NOT NULL
@@ -124,8 +125,10 @@ export function startMission(uid, kind) {
   let len = 0;
   prev = from;
   for (const p of points) { len += dist(prev, p); prev = p; }
-  const pay = Math.round((def.base + def.perM * len) / 1000) * 1000;
-  s.mission = { kind, points, idx: 0, pay, start: now(), deadline: now() + Math.round((len / def.speed) * 1150 + 20_000), len: Math.round(len) };
+  // Rain surge: everyone wants a ride (or their parcel) when it's pouring.
+  const surge = (kind === 'taxi' || kind === 'delivery') && isRaining(cityAt(from[0], from[1])?.id || 'dar');
+  const pay = Math.round(((def.base + def.perM * len) * (surge ? RAIN_SURGE : 1)) / 1000) * 1000;
+  s.mission = { kind, points, idx: 0, pay, surge, start: now(), deadline: now() + Math.round((len / def.speed) * 1150 + 20_000), len: Math.round(len) };
   return { mission: s.mission };
 }
 function failMission(uid, why) {

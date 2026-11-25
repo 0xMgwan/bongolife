@@ -2732,6 +2732,7 @@ export const NEWS_CATS = {
   love: { emoji: '💘', name: ['Mapenzi', 'Love'], outlets: ['wasafa'] },
   politics: { emoji: '🏛️', name: ['Siasa', 'Politics'], outlets: ['tbx', 'mwanabongo', 'dailybongo'] },
   sport: { emoji: '🏁', name: ['Michezo', 'Sport'], outlets: ['mwanabongo', 'wasafa'] },
+  community: { emoji: '🤝', name: ['Jamii', 'Community'], outlets: ['dailybongo', 'mwanabongo', 'tbx'] },
 };
 // Net-worth milestones that make the papers.
 export const WEALTH_MARKS = [1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e18];
@@ -2801,3 +2802,62 @@ export const PERKS = [
   { id: 'vip', emoji: '⭐', priceTzs: 5_000, days: 30, name: ['VIP mwezi mzima', 'VIP for a month'], blurb: ['Punguzo la 10% kila duka na nyota ⭐ ya VIP kwa siku 30.', '10% off in every shop and a ⭐ VIP star for 30 days.'] },
 ];
 export const perkById = Object.fromEntries(PERKS.map((p) => [p.id, p]));
+
+// ============================================================ uvuvi (fishing)
+// Cast at a beach, port or the Lake Victoria shore, wait for the bite, then reel in with good timing.
+// Big fish fight back (more pulls to land). Keep your catch in the cool box, sell it at a fish market
+// or cook it. Each species has a national record that makes the news.
+export const FISHING = {
+  cooldownMs: 10_000, // between casts
+  energy: 2, // per cast
+  windowMs: 45_000, // to land a fish after the bite
+  boxMax: 30, // fish in the cool box
+  cookHunger: 25,
+  spots: ['coco', 'kigbeach', 'fishmarket', 'slipway', 'nungwi', 'zn-port', 'forodhani', 'mz-beach', 'mz-port', 'mz-fish', 'pw-jetty'],
+  markets: ['fishmarket', 'mz-fish', 'forodhani', 'pw-jetty'],
+};
+// weight: how common (higher = more often); kg: [min, max]; perKg: market price; pulls: timing rounds to land it.
+export const FISH = [
+  // Indian Ocean (Dar, Zanzibar, Pwani)
+  { id: 'changu', emoji: '🐟', name: ['Changu', 'Emperor fish'], waters: ['dar', 'znz', 'pwa'], weight: 30, kg: [0.4, 3], perKg: 6_000, pulls: 1 },
+  { id: 'kolekole', emoji: '🐠', name: ['Kolekole', 'Trevally'], waters: ['dar', 'znz', 'pwa'], weight: 18, kg: [1, 9], perKg: 7_000, pulls: 1 },
+  { id: 'pweza', emoji: '🐙', name: ['Pweza', 'Octopus'], waters: ['dar', 'znz'], weight: 14, kg: [0.5, 4], perKg: 9_000, pulls: 2 },
+  { id: 'kaa', emoji: '🦀', name: ['Kaa', 'Mud crab'], waters: ['dar', 'pwa'], weight: 10, kg: [0.3, 2], perKg: 16_000, pulls: 1 },
+  { id: 'nguru', emoji: '🐟', name: ['Nguru', 'Kingfish'], waters: ['dar', 'znz', 'pwa'], weight: 6, kg: [3, 25], perKg: 10_000, pulls: 2 },
+  { id: 'kamba', emoji: '🦞', name: ['Kamba mti', 'Lobster'], waters: ['znz', 'dar'], weight: 4, kg: [0.5, 2.5], perKg: 32_000, pulls: 2 },
+  { id: 'jodari', emoji: '🐋', name: ['Jodari', 'Yellowfin tuna'], waters: ['znz', 'dar'], weight: 1.5, kg: [12, 80], perKg: 14_000, pulls: 3 },
+  // Lake Victoria (Mwanza)
+  { id: 'sato', emoji: '🐟', name: ['Sato', 'Tilapia'], waters: ['mwz'], weight: 30, kg: [0.3, 3], perKg: 7_000, pulls: 1 },
+  { id: 'dagaa', emoji: '🐟', name: ['Dagaa', 'Lake sardines'], waters: ['mwz'], weight: 22, kg: [0.2, 1.2], perKg: 12_000, pulls: 1 },
+  { id: 'kambale', emoji: '🐡', name: ['Kambale', 'Catfish'], waters: ['mwz'], weight: 12, kg: [1, 22], perKg: 5_000, pulls: 2 },
+  { id: 'sangara', emoji: '🐋', name: ['Sangara', 'Nile perch'], waters: ['mwz'], weight: 5, kg: [3, 120], perKg: 8_000, pulls: 3 },
+];
+export const fishById = Object.fromEntries(FISH.map((f) => [f.id, f]));
+
+// ============================================================ harambee (community projects)
+// Every city raises money together for a real-feeling project. When it's fully funded, every shift
+// worked in that city pays more for a week, and each donor gains fame. Then the next project starts.
+export const HARAMBEE = { boostPay: 0.15, boostDays: 7, minGift: 10_000, maxGift: 500_000_000, famePerM: 1, fameCap: 15 };
+export const HARAMBEE_PROJECTS = {
+  dar: [
+    { id: 'daraja', emoji: '🌉', name: ['Daraja la watembea kwa miguu Ubungo', 'A footbridge at Ubungo'], goal: 400_000_000 },
+    { id: 'shule-temeke', emoji: '🏫', name: ['Madarasa mapya Temeke', 'New classrooms in Temeke'], goal: 600_000_000 },
+    { id: 'taa-barabarani', emoji: '💡', name: ['Taa za barabarani za sola Kariakoo', 'Solar street lights for Kariakoo'], goal: 800_000_000 },
+  ],
+  znz: [
+    { id: 'ukuta-forodhani', emoji: '🌊', name: ['Ukuta wa bahari Forodhani', 'A seawall at Forodhani'], goal: 250_000_000 },
+    { id: 'zahanati-nungwi', emoji: '🏥', name: ['Zahanati ya Nungwi', 'A clinic for Nungwi'], goal: 350_000_000 },
+  ],
+  aru: [
+    { id: 'maji-meru', emoji: '💧', name: ['Maji safi vijiji vya Meru', 'Clean water for Meru villages'], goal: 250_000_000 },
+    { id: 'uwanja-arusha', emoji: '⚽', name: ['Uwanja wa mpira wa vijana', 'A youth football pitch'], goal: 300_000_000 },
+  ],
+  mwz: [
+    { id: 'boti-wagonjwa', emoji: '🚤', name: ['Boti ya wagonjwa ziwani', 'A lake ambulance boat'], goal: 250_000_000 },
+    { id: 'soko-samaki', emoji: '🐟', name: ['Soko jipya la samaki Kirumba', 'A new fish market at Kirumba'], goal: 350_000_000 },
+  ],
+  pwa: [
+    { id: 'barabara-mapinga', emoji: '🛣️', name: ['Barabara ya lami Mapinga', 'Tarmac for the Mapinga road'], goal: 300_000_000 },
+    { id: 'chuo-ufundi', emoji: '🛠️', name: ['Chuo cha ufundi Kibaha', 'A vocational college in Kibaha'], goal: 400_000_000 },
+  ],
+};

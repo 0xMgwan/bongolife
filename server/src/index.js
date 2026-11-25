@@ -13,6 +13,7 @@ import { api, settleTopup, applyTopupStatus } from './routes/api.js';
 import { verifyNtzsWebhook, PAYGUARD_CALLBACK_TOKEN } from './payments/index.js';
 import { online, setIO, publicPlayer, broadcast, emitTo, kick } from './presence.js';
 import { isLocked } from './premium.js';
+import { startWeather } from './weather.js';
 import { decayNeeds, vehicleSummary, neglectHealth, worldState, mayorRef, netWorth, homeOf } from './game.js';
 import { settleElection, currentMayor, allMayors, isMayor } from './election.js';
 import { outingOf, setOutingHook } from './family.js';
@@ -410,6 +411,9 @@ setInterval(() => {
 
 // Pre-generate the shared welcome phrases so the first welcome plays straight away.
 setTimeout(() => import('./live.js').then((m) => m.warmVoice()).catch(() => {}), 5000);
+
+// Real weather in every city, pushed when it changes.
+startWeather((w) => broadcast('weather', w));
 
 // Subscription ran out mid-session: send the player to the pay screen.
 setInterval(() => {

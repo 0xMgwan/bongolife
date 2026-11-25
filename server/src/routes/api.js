@@ -43,6 +43,8 @@ import * as stocks from '../stocks.js';
 import * as street from '../street.js';
 import * as news from '../news.js';
 import * as premium from '../premium.js';
+import * as fishing from '../fishing.js';
+import * as harambee from '../harambee.js';
 import * as guards from '../guards.js';
 import * as family from '../family.js';
 import * as concerts from '../concerts.js';
@@ -277,6 +279,17 @@ api.use((req, _res, next) => {
   next();
 });
 api.get('/premium', (req, res) => res.json(premium.view(req.user.id)));
+
+// Harambee (community projects)
+api.get('/harambee', (req, res) => res.json(harambee.view(req.user.id)));
+api.post('/harambee/:city', rateLimit('harambee', 20, 10 * 60_000), (req, res) => res.json({ ...harambee.donate(req.user.id, str(req.params.city, 8), req.body.amount), ...harambee.view(req.user.id), me: game.playerState(req.user.id) }));
+
+// Uvuvi (fishing)
+api.get('/fish', (req, res) => res.json(fishing.view(req.user.id)));
+api.post('/fish/cast', rateLimit('fish-cast', 40, 5 * 60_000), (req, res) => res.json({ ...fishing.cast(req.user.id), me: game.playerState(req.user.id) }));
+api.post('/fish/reel', (req, res) => res.json({ ...fishing.reel(req.user.id, req.body.won), ...fishing.view(req.user.id) }));
+api.post('/fish/sell', (req, res) => res.json({ ...fishing.sellAll(req.user.id), ...fishing.view(req.user.id), me: game.playerState(req.user.id) }));
+api.post('/fish/cook/:id', (req, res) => res.json({ ...fishing.cook(req.user.id, req.params.id), ...fishing.view(req.user.id), me: game.playerState(req.user.id) }));
 api.post('/premium/pay', rateLimit('premium-pay', 10, 10 * 60_000), wrap(async (req, res) => {
   const phone = normalizePhone(req.body.phone);
   if (!phone) throw new GameError(['Namba ya simu si sahihi (mfano 0712 345 678).', 'Invalid phone number (e.g. 0712 345 678).']);

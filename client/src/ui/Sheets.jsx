@@ -6,6 +6,7 @@ import {
   adPriceTzs, NEEDS, HANGOUT_PLACES, INTERACTIONS, INTERACT_RANGE, CRIME, REPORT_REASONS, OUTFITS, AD_ROTATE_SECONDS, VEHICLES, VEHICLE_COLORS, BUILDINGS, ALLOWED_BUILDINGS, placeById, plotById, billboardById, buildingById,
   outfitFits, shiftPay, jobTitle, jobTitleEn, jobLevel, fmtTsh, fmtShort, vehicleById, TRAITS,
   jobLocks, HOUSE_UPGRADES, houseStats, liftSeats, ENTERABLE_BUILDINGS, PRIVATE_BUILDINGS,
+  FISHING,
 } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
@@ -233,6 +234,9 @@ function PlaceSheet({ id, onClose }) {
       {p.type === 'bank' && <button className="btn btn-dark btn-block" style={{ marginTop: 14 }} onClick={() => openPhone('mkopo')}>🏦 {L('Chukua mkopo / lipa mkopo', 'Take out or repay a loan')}</button>}
       {p.shop === 'outfits' && <OutfitShop me={me} />}
       {p.shop === 'vehicles' && <VehicleShop me={me} />}
+      {FISHING.spots.includes(p.id) && (
+        <button className="btn btn-block" style={{ marginTop: 14, background: '#0e7490', color: '#fff' }} onClick={() => { onClose?.(); useStore.setState({ fishing: Date.now() }); }}>🎣 {L('Vua samaki hapa', 'Fish here')}</button>
+      )}
       {p.shop === 'topup' && useStore.getState().world?.walletOpen !== false && (
         <button className="btn btn-green btn-block" style={{ marginTop: 14 }} onClick={() => openPhone('pesa', 'topup')}>💳 {L('Ongeza salio la wallet', 'Top up your wallet')}</button>
       )}

@@ -314,6 +314,7 @@ export function connect() {
   socket.on('online', (n) => useStore.setState({ online: n }));
   socket.on('world', (world) => useStore.setState({ world }));
   socket.on('ads', (ads) => useStore.setState({ ads }));
+  socket.on('weather', (weather) => useStore.setState((st) => ({ world: st.world && { ...st.world, weather } })));
   socket.on('teleport', ({ pos }) => {
     if (local.ride) return;
     local.x = pos[0];

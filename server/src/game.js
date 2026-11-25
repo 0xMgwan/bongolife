@@ -2,7 +2,7 @@ import {
   GAME, NEEDS, PLACES, PLOTS, VEHICLES, BUILDINGS, ALLOWED_BUILDINGS, VEHICLE_COLORS,
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob, CAR_KINDS, FAMILY, CONCERT, concertAt,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST, industryById, COMPANY,
-  furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, nearestHospital, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
+  furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, nearestHospital, HARAMBEE, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
   jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats, luxuryById, LUXURY_RESALE, HOME_LEVELS, homeBounds, HOME_WALLS, HOME_FLOORS, HOME_STYLE_PRICE, homeFeatureById, HOME_ACT_CD, PRIVATE_BUILDINGS,
   ELECTION,
 } from '../../shared/world.js';
@@ -27,6 +27,8 @@ import { portfolioValue } from './stocks.js';
 import { story as newsStory } from './news.js';
 import { guardOf } from './guards.js';
 import * as premium from './premium.js';
+import { current as weatherNow } from './weather.js';
+import { boostUntil as harambeeBoost } from './harambee.js';
 import * as familyMod from './family.js';
 import * as concertsMod from './concerts.js';
 
@@ -156,6 +158,7 @@ export function worldState() {
     businesses: Object.fromEntries(q.allBiz.all().map((b) => [b.id, { owner: b.username, ownerName: b.name }])),
     event: liveEvent(),
     walletOpen: !!getSettings().topupsEnabled, // the Bank app & top-ups are hidden while false
+    weather: weatherNow,
     mayor: (() => {
       const m = mayorRef.current?.();
       return m ? { username: m.username, name: m.name, message: m.message || null } : null;
@@ -617,7 +620,7 @@ export const finishAction = db.transaction((userId, { early = false } = {}) => {
     const shifts = user.jobXp[busy.id] || 0;
     const before = jobLevel(shifts);
     let pay = shiftPay(job, { shifts, mood: moodOf(user.needs), trait: user.trait, fame: user.fame });
-    pay = Math.round((pay * eventMult(place, 'job') * perfMult(busy.perf, busy.done) * frac * (premium.hasPerk(userId, 'doublepay') ? 2 : 1)) / 100) * 100;
+    pay = Math.round((pay * eventMult(place, 'job') * perfMult(busy.perf, busy.done) * frac * (premium.hasPerk(userId, 'doublepay') ? 2 : 1) * (harambeeBoost(cityAt(...place.pos)?.id) ? 1 + HARAMBEE.boostPay : 1)) / 100) * 100;
     addMoney(userId, pay, 'salary', `${jobTitle(job, shifts)} — ${place.name}`);
     fields.jobXp = { ...user.jobXp, [busy.id]: shifts + (frac >= 1 ? 1 : 0) };
     // Invite reward: the friend who brought you in gets paid on your first full shift.
