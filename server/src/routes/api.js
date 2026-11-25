@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  GAME, HAIRSTYLES, SKIN_TONES, HAIR_COLORS, OUTFITS, TRAITS, SPAWNS, BILLBOARDS, AD_MAX_DAYS,
+  GAME, HAIRSTYLES, BUILDS, BEARDS, SKIN_TONES, HAIR_COLORS, OUTFITS, TRAITS, SPAWNS, BILLBOARDS, AD_MAX_DAYS,
   billboardById, outfitById, ADS_PER_BOARD, adPriceTzs, adTzsPerDay, CRIME, plotById, togetherById, REFERRAL, ELECTION, EVENT_LIMITS, EVENT_PLACES, placeById,
   VIBES, VIBE_DAILY, vehicleById, buildingById, luxuryById, ENTERABLE_BUILDINGS, cityById, FAMILY,
 } from '../../../shared/world.js';
@@ -304,6 +304,8 @@ api.post('/me/profile', (req, res) => {
     hairColor: Math.max(0, Math.min(HAIR_COLORS.length - 1, a.hairColor | 0)),
     hair: HAIRSTYLES.some((h) => h.id === a.hair) ? a.hair : 'kiduku',
     outfit: outfitById[a.outfit] ? a.outfit : 'tshirt',
+    build: BUILDS.some((b) => b.id === a.build) ? a.build : 'avg',
+    beard: body === 'man' && BEARDS.some((b) => b.id === a.beard) ? a.beard : 'none',
   };
   const u = req.user;
   const outfit = outfitById[appearance.outfit];

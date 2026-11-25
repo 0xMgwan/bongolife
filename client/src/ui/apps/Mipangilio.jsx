@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { token } from '../../api.js';
 import { hapticsEnabled, setHaptics, onHaptics } from '../../haptics.js';
-import { HAIRSTYLES, HAIR_COLORS, OUTFITS, TRAITS, outfitFits, fmtShort } from '@shared/world.js';
+import { HAIRSTYLES, BUILDS, BEARDS, HAIR_COLORS, OUTFITS, TRAITS, outfitFits, fmtShort } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { AppHead } from '../Phone.jsx';
 import { AvatarPreview, Swatch } from '../Creator.jsx';
@@ -213,6 +213,18 @@ export function Kabati({ back }) {
         <div className="chips">
           {HAIRSTYLES.map((h) => <button key={h.id} className={`chip ${a.hair === h.id ? 'on' : ''}`} onClick={() => setA({ ...a, hair: h.id })}>{loc(h)}</button>)}
         </div>
+        <div className="label">{L('Umbo', 'Build')}</div>
+        <div className="chips">
+          {BUILDS.map((b) => <button key={b.id} className={`chip ${(a.build || 'avg') === b.id ? 'on' : ''}`} onClick={() => setA({ ...a, build: b.id })}>{loc(b)}</button>)}
+        </div>
+        {a.body === 'man' && (
+          <>
+            <div className="label">{L('Ndevu', 'Beard')}</div>
+            <div className="chips">
+              {BEARDS.map((b) => <button key={b.id} className={`chip ${(a.beard || 'none') === b.id ? 'on' : ''}`} onClick={() => setA({ ...a, beard: b.id })}>{loc(b)}</button>)}
+            </div>
+          </>
+        )}
         <div className="label">{L('Rangi ya nywele', 'Hair colour')}</div>
         <div className="swatches">
           {HAIR_COLORS.map((c, i) => <button key={c} className={`swatch ${a.hairColor === i ? 'on' : ''}`} style={{ background: c }} onClick={() => setA({ ...a, hairColor: i })} aria-label={c} />)}

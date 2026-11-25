@@ -201,6 +201,18 @@ export const TRAITS = [
 // --------------------------------------------------------------- avatars
 export const SKIN_TONES = ['#3b2219', '#4a2c20', '#5c3826', '#704532', '#8a5a3c', '#a26f4c'];
 export const HAIR_COLORS = ['#111111', '#2b1a12', '#5a3a22', '#8b5a2b', '#c9a227', '#7c2d12'];
+// Body build and facial hair (men) — chosen in the character creator.
+export const BUILDS = [
+  { id: 'slim', name: 'Mwembamba', nameEn: 'Slim' },
+  { id: 'avg', name: 'Wastani', nameEn: 'Average' },
+  { id: 'big', name: 'Mnene', nameEn: 'Big' },
+];
+export const BEARDS = [
+  { id: 'none', name: 'Hakuna', nameEn: 'None' },
+  { id: 'stubble', name: 'Kidevu kidogo', nameEn: 'Stubble' },
+  { id: 'goatee', name: 'Mbuzi', nameEn: 'Goatee' },
+  { id: 'full', name: 'Ndevu nzito', nameEn: 'Full beard' },
+];
 export const HAIRSTYLES = [
   { id: 'misuko', name: 'Misuko' },
   { id: 'afro', name: 'Afro' },
@@ -299,6 +311,8 @@ export function randomAppearance(seed = Math.random()) {
     skin: Math.floor(Math.random() * SKIN_TONES.length),
     hair: HAIRSTYLES[Math.floor(Math.random() * HAIRSTYLES.length)].id,
     hairColor: Math.floor(Math.random() * 3),
+    build: BUILDS[Math.floor(Math.random() * BUILDS.length)].id,
+    beard: body === 'man' ? BEARDS[Math.floor(Math.random() * BEARDS.length)].id : 'none',
     outfit: freeOutfits[Math.floor(Math.random() * freeOutfits.length)].id,
     accent: r(6),
   };

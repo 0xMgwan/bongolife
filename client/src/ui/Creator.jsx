@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { SKIN_TONES, HAIR_COLORS, HAIRSTYLES, OUTFITS, TRAITS, SPAWNS, GAME, REFERRAL, randomAppearance, fmtTsh, outfitById, outfitFits } from '@shared/world.js';
+import { SKIN_TONES, HAIR_COLORS, HAIRSTYLES, BUILDS, BEARDS, OUTFITS, TRAITS, SPAWNS, GAME, REFERRAL, randomAppearance, fmtTsh, outfitById, outfitFits } from '@shared/world.js';
 import { Avatar } from '../three/Avatar.jsx';
 import { useStore } from '../store.js';
 import { L, loc } from '../i18n.js';
@@ -149,6 +149,10 @@ export default function Creator() {
                   <button key={id} className={`chip grow ${a.body === id ? 'on' : ''}`} onClick={() => up({ body: id })}>{n}</button>
                 ))}
               </div>
+              <div className="label">{L('Umbo', 'Build')}</div>
+              <div className="row">
+                {BUILDS.map((b) => <button key={b.id} className={`chip grow ${(a.build || 'avg') === b.id ? 'on' : ''}`} onClick={() => up({ build: b.id })}>{loc(b)}</button>)}
+              </div>
               <div className="label">{L('Rangi ya ngozi', 'Skin tone')}</div>
               <div className="swatches">
                 {SKIN_TONES.map((c, i) => <button key={c} className={`swatch ${a.skin === i ? 'on' : ''}`} style={{ background: c }} onClick={() => up({ skin: i })} aria-label={`Ngozi ${i + 1}`} />)}
@@ -157,6 +161,14 @@ export default function Creator() {
               <div className="chips">
                 {HAIRSTYLES.map((h) => <button key={h.id} className={`chip ${a.hair === h.id ? 'on' : ''}`} onClick={() => up({ hair: h.id })}>{loc(h)}</button>)}
               </div>
+              {a.body === 'man' && (
+                <>
+                  <div className="label">{L('Ndevu', 'Beard')}</div>
+                  <div className="chips">
+                    {BEARDS.map((b) => <button key={b.id} className={`chip ${(a.beard || 'none') === b.id ? 'on' : ''}`} onClick={() => up({ beard: b.id })}>{loc(b)}</button>)}
+                  </div>
+                </>
+              )}
               <div className="label">{L('Rangi ya nywele', 'Hair colour')}</div>
               <div className="swatches">
                 {HAIR_COLORS.map((c, i) => <button key={c} className={`swatch ${a.hairColor === i ? 'on' : ''}`} style={{ background: c }} onClick={() => up({ hairColor: i })} aria-label={`Rangi ${i + 1}`} />)}
