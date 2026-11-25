@@ -1,6 +1,6 @@
 // Afya: health plans (30-day cover), therapy sessions, an online doctor and a pharmacy.
 import { db, getUser, addMoney, saveFields, GameError, now } from './db.js';
-import { HEALTH_PLANS, healthPlanById, AFYA, THERAPISTS, HOSPITAL_ID, HEALTH } from '../../shared/world.js';
+import { HEALTH_PLANS, healthPlanById, AFYA, THERAPISTS, HEALTH, placeById } from '../../shared/world.js';
 import { applyNeeds } from './game.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS health_plans (
@@ -27,7 +27,7 @@ export function planOf(uid) {
 const priced = (base, off) => Math.round((base * (1 - (off || 0))) / 100) * 100;
 /** Hospital activity price after cover. */
 export function hospitalPrice(uid, placeId, cost) {
-  if (placeId !== HOSPITAL_ID || !cost) return cost;
+  if (placeById[placeId]?.type !== 'hospital' || !cost) return cost; // cover works at every hospital
   return priced(cost, planOf(uid)?.hospitalOff);
 }
 

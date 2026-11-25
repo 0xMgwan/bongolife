@@ -1,4 +1,4 @@
-import { placeById, PLACES, HOSPITAL_ID, buildingById } from '@shared/world.js';
+import { placeById, PLACES, nearestHospital, buildingById } from '@shared/world.js';
 import { useStore } from '../store.js';
 import { api } from '../api.js';
 import { sendInvite, replyInvite, local, remotes } from '../net.js';
@@ -81,7 +81,7 @@ export function goToPlayer(username) {
 
 export function goHospital() {
   useStore.setState({ phone: null, sheet: null, accident: null, tab: 'town', cityView: 'follow', inside: null });
-  goToPlace(HOSPITAL_ID);
+  goToPlace(nearestHospital(local.x, local.z).id);
 }
 
 export async function callAmbulance() {
@@ -92,7 +92,8 @@ export async function callAmbulance() {
   local.target = null;
   local.knockedUntil = 0;
   local.teleported++;
-  useStore.setState({ accident: null, tab: 'town', cityView: 'follow', sheet: { type: 'place', id: HOSPITAL_ID } });
+  useStore.setState({ accident: null, tab: 'town', cityView: 'follow', sheet: { type: 'place', id: r.placeId } });
   sfx('horn');
-  toast(L('🚑 Umefika Muhimbili. Pata matibabu!', '🚑 You arrived at Muhimbili. Get treated!'));
+  const h = placeById[r.placeId];
+  toast(L(`🚑 Umefika ${h?.name || 'hospitali'}. Pata matibabu!`, `🚑 You arrived at ${loc(h) || 'the hospital'}. Get treated!`));
 }

@@ -2,7 +2,7 @@ import {
   GAME, NEEDS, PLACES, PLOTS, VEHICLES, BUILDINGS, ALLOWED_BUILDINGS, VEHICLE_COLORS,
   placeById, plotById, vehicleById, buildingById, outfitById, findActivity, findJob, CAR_KINDS, FAMILY, CONCERT, concertAt,
   shiftPay, jobLevel, jobTitle, jobTitleEn, moodOf, venueOf, fuelCost, tripFuel, bestCar, INVEST, industryById, COMPANY,
-  furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, HOSPITAL_ID, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
+  furnitureById, STARTER_HOME, homeFits, HOME, HEALTH, nearestHospital, currentEvent, travelCost, isWater, TRAVEL, STARTER_CAR, WORK, perfMult, REFERRAL, TRIP_MODES, tripKey, cityAt, cityById,
   jobLocks, HIRING, HOUSE_UPGRADES, houseFeatureById, houseStats, luxuryById, LUXURY_RESALE, HOME_LEVELS, homeBounds, HOME_WALLS, HOME_FLOORS, HOME_STYLE_PRICE, homeFeatureById, HOME_ACT_CD, PRIVATE_BUILDINGS,
   ELECTION,
 } from '../../shared/world.js';
@@ -946,14 +946,15 @@ export const accident = db.transaction((userId, { byUsername } = {}) => {
 /** Ambulance ride straight to the hospital entrance. */
 export const ambulance = db.transaction((userId) => {
   const u = getUser(userId);
-  const h = placeById[HOSPITAL_ID];
+  const [ux, uz] = positionOf(u);
+  const h = nearestHospital(ux, uz);
   const pos = [h.pos[0], h.pos[1] + h.size[1] / 2 + 3];
   const cost = health.planOf(userId)?.ambulance ? 0 : (u.health ?? 100) < HEALTH.injuredBelow ? HEALTH.ambulanceCost : HEALTH.ambulanceCost * 2;
   addMoney(userId, -Math.min(cost, u.money), 'travel', 'Gari la wagonjwa 🚑');
   saveFields(userId, { x: pos[0], z: pos[1] });
   const p = online.get(userId);
   if (p) Object.assign(p, { x: pos[0], z: pos[1], inside: null, host: null });
-  return { pos };
+  return { pos, placeId: h.id };
 });
 
 /** Neglect hurts: starving or exhausted players slowly lose health (called from the needs tick). */

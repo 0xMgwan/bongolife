@@ -158,6 +158,13 @@ export const DISTRICTS = [
   { id: 'kigamboni', name: 'Kigamboni', pos: [62, 95] },
   { id: 'mbezi', name: 'Mbezi', pos: [-88, -118] },
   { id: 'temeke', name: 'Temeke', pos: [0, 80] },
+  { id: 'mbweni', name: 'Mbweni', pos: Z(-31, 96) },
+  { id: 'mwanakwerekwe', name: 'Mwanakwerekwe', pos: Z(7, -66) },
+  { id: 'sakina', name: 'Sakina', pos: A(9, 96) },
+  { id: 'themi', name: 'Themi', pos: A(83, -29) },
+  { id: 'nyamagana', name: 'Nyamagana', pos: M(2, 105) },
+  { id: 'kiseke', name: 'Kiseke', pos: M(3, 30) },
+  { id: 'kongowe', name: 'Kongowe', pos: P(55, -48) },
 ];
 
 export const SPAWNS = {
@@ -445,6 +452,14 @@ export const PLOTS = [
   ...plotGrid('ism', 'Isamilo', [-110, -96, -82], [1615, 1629, 1643], 32_000_000),
   ...plotGrid('igm', 'Igoma', [-110, -92, -74], [1680, 1698], 28_000_000, 14),
   ...plotGrid('bsw', 'Buswelu', [56, 69, 82, 95], [1622, 1636], 10_000_000),
+  // New neighbourhoods (Nov 2026)
+  ...plotGrid('mbw', 'Mbweni', [1562, 1575], [70, 83, 96], 30_000_000),
+  ...plotGrid('mwk', 'Mwanakwerekwe', [1594, 1607, 1620], [-59, -46], 18_000_000),
+  ...plotGrid('skn', 'Sakina', [-1590, -1577], [70, 83, 96], 16_000_000),
+  ...plotGrid('thm', 'Themi', [-1530, -1517, -1504], [-23, -10], 26_000_000),
+  ...plotGrid('nyg', 'Nyamagana', [-4, 9], [1672, 1685, 1698], 24_000_000),
+  ...plotGrid('ksk', 'Kiseke', [-10, 3, 16], [1636, 1649], 12_000_000),
+  ...plotGrid('kgw', 'Kongowe', [41, 55, 69], [-1645, -1631], 12_000_000, 11),
 ];
 for (const p of PLOTS) { p.district = p.area; p.city = cityAt(p.pos[0], p.pos[1])?.id || 'dar'; }
 export const plotById = Object.fromEntries(PLOTS.map((p) => [p.id, p]));
@@ -473,6 +488,13 @@ export const ALLOWED_BUILDINGS = {
   Isamilo: ['banda', 'kisasa', 'villa', 'ghorofa', 'hostel', 'kontena', 'wazee', 'kesho'],
   Igoma: ['ghala', 'kiwanda-chakula', 'kiwanda-nguo', 'kiwanda-saruji', 'sola', 'shamba'],
   Buswelu: ['banda', 'kisasa', 'kontena', 'hostel', 'shamba', 'ghorofa'],
+  Mbweni: ['kisasa', 'villa', 'ghorofa', 'hostel', 'kesho', 'wazee'],
+  Mwanakwerekwe: ['banda', 'kisasa', 'ghorofa', 'hostel', 'kontena', 'ghala', 'shamba'],
+  Sakina: ['banda', 'kisasa', 'villa', 'hostel', 'shamba', 'kontena', 'wazee'],
+  Themi: ['kisasa', 'villa', 'ghorofa', 'hoteli', 'hostel', 'kesho'],
+  Nyamagana: ['kisasa', 'ghorofa', 'hostel', 'hoteli', 'kontena', 'kesho'],
+  Kiseke: ['banda', 'kisasa', 'kontena', 'shamba', 'hostel', 'wazee'],
+  Kongowe: ['banda', 'kisasa', 'villa', 'shamba', 'kontena', 'wazee'],
 };
 
 // ----------------------------------------------------------------- places
@@ -1176,6 +1198,58 @@ const CAREER_JOBS = {
   'zn-port': [{ id: 'afisa-forodha', title: 'Afisa Forodha', titles: ['Afisa forodha', 'Afisa mkuu', 'Kamishna wa forodha'], secs: 70, pay: 70_000, energy: 10, requires: { elimu: 2 } }],
   coffee: [{ id: 'mtaalamu-kahawa', title: 'Mtaalamu wa kahawa', titles: ['Mwonjaji wa kahawa', 'Mtaalamu', 'Msafirishaji wa kahawa'], secs: 70, pay: 65_000, energy: 10, requires: { elimu: 1 } }],
 };
+// ------------------------------------------------------------ city amenities
+// Zanzibar, Arusha, Mwanza and Pwani get their own hospital, police station, bank, salon, food and
+// more. Each one works like its Dar original (same activities, own business to buy, own jobs —
+// job ids get a city suffix so the experience and the payroll stay per place).
+const CITY_AMENITIES = [
+  // Zanzibar
+  ['hosp-znz', 'hospitali', 'znz', 17, -11, ['Hospitali ya Mnazi Mmoja', 'Mnazi Mmoja Hospital', 'Stone Town', 'Hospitali kuu ya Unguja — matibabu saa 24.', 'Unguja’s main hospital — treatment 24/7.']],
+  ['polisi-znz', 'polisi', 'znz', 43, 11, ['Kituo cha Polisi Madema', 'Madema Police Station', 'Madema', 'Ripoti tukio, lipa faini au omba kazi ya askari.', 'Report a crime, pay a fine or join the force.']],
+  ['bank-znz', 'bank', 'znz', -17, 11, ['NMB Bank — Darajani', 'NMB Bank — Darajani', 'Darajani', 'Weka pesa kwenye wallet yako kwa simu.', 'Top up your wallet by mobile money.']],
+  ['salon-znz', 'kinyozi', 'znz', 3, 9, ['Saluni ya Mkunazini', 'Mkunazini Salon', 'Mkunazini', 'Nyoa, suka na upendeze — na umbea wa mtaa.', 'Cuts, braids and the latest gossip.']],
+  ['food-znz', 'mamantilie', 'znz', 19, 9, ['Mama Lishe wa Mwembeladu', 'Mwembeladu Food Stall', 'Mwembeladu', 'Chipsi, wali na samaki wa kupaka — bei poa.', 'Chips, rice and coconut fish — cheap and tasty.']],
+  ['bar-znz', 'bar', 'znz', 1, 51, ['Baa ya Kiembe Samaki', 'Kiembe Samaki Bar', 'Kiembe Samaki', 'Mpira kwenye TV, nyama choma na soda baridi.', 'Football on TV, grilled meat and cold drinks.']],
+  // Arusha
+  ['hosp-aru', 'hospitali', 'aru', 16, -12, ['Hospitali ya Mount Meru', 'Mount Meru Hospital', 'Arusha CBD', 'Hospitali ya mkoa — matibabu saa 24.', 'The regional hospital — treatment 24/7.']],
+  ['polisi-aru', 'polisi', 'aru', 32, 10, ['Kituo cha Polisi Arusha Kati', 'Arusha Central Police', 'Arusha CBD', 'Ripoti tukio, lipa faini au omba kazi ya askari.', 'Report a crime, pay a fine or join the force.']],
+  ['bank-aru', 'bank', 'aru', 36, -10, ['NMB Bank — Arusha', 'NMB Bank — Arusha', 'Arusha CBD', 'Weka pesa kwenye wallet yako kwa simu.', 'Top up your wallet by mobile money.']],
+  ['salon-aru', 'kinyozi', 'aru', -10, -12, ['Saluni ya Kaloleni', 'Kaloleni Salon', 'Kaloleni', 'Nyoa, suka na upendeze — na umbea wa mtaa.', 'Cuts, braids and the latest gossip.']],
+  ['food-aru', 'mamantilie', 'aru', 10, -28, ['Mama Ntilie wa Soko Kuu', 'Central Market Food Stall', 'Soko Kuu', 'Ugali, maharage na chai ya maziwa ya Arusha.', 'Ugali, beans and Arusha milky tea.']],
+  ['chuo-aru', 'chuo', 'aru', -14, -46, ['Chuo cha Ufundi Arusha', 'Arusha Technical College', 'Njiro', 'Soma kozi upande elimu — fungua kazi kubwa zaidi.', 'Study courses to raise your education — unlock bigger jobs.']],
+  ['stage-aru', 'singeli', 'aru', 12, 46, ['Jukwaa la Muziki Arusha', 'Arusha Music Stage', 'Kijenge', 'Shows za live za Arusha — panda jukwaani!', 'Arusha’s live shows — get up on stage!']],
+  // Mwanza
+  ['hosp-mwz', 'hospitali', 'mwz', 6, 12, ['Bugando Medical Centre', 'Bugando Medical Centre', 'Bugando', 'Hospitali kubwa ya Kanda ya Ziwa — saa 24.', 'The Lake Zone’s big hospital — open 24/7.']],
+  ['polisi-mwz', 'polisi', 'mwz', 28, 14, ['Kituo cha Polisi Mwanza Kati', 'Mwanza Central Police', 'Mwanza CBD', 'Ripoti tukio, lipa faini au omba kazi ya askari.', 'Report a crime, pay a fine or join the force.']],
+  ['bank-mwz', 'bank', 'mwz', -12, -12, ['NMB Bank — Mwanza', 'NMB Bank — Mwanza', 'Mwanza CBD', 'Weka pesa kwenye wallet yako kwa simu.', 'Top up your wallet by mobile money.']],
+  ['salon-mwz', 'kinyozi', 'mwz', -38, 10, ['Saluni ya Kirumba', 'Kirumba Salon', 'Kirumba', 'Nyoa, suka na upendeze — na umbea wa mtaa.', 'Cuts, braids and the latest gossip.']],
+  ['food-mwz', 'mamantilie', 'mwz', 30, 32, ['Mama Ntilie wa Makoroboi', 'Makoroboi Food Stall', 'Makoroboi', 'Sato wa kukaanga na ugali — ladha ya Ziwa.', 'Fried tilapia and ugali — a taste of the Lake.']],
+  ['chuo-mwz', 'chuo', 'mwz', 0, -38, ['Chuo Kikuu cha Mwanza', 'Mwanza University', 'Nyegezi', 'Soma kozi upande elimu — fungua kazi kubwa zaidi.', 'Study courses to raise your education — unlock bigger jobs.']],
+  // Pwani
+  ['hosp-pwa', 'hospitali', 'pwa', -22, 12, ['Hospitali ya Tumbi', 'Tumbi Hospital', 'Kibaha', 'Hospitali ya mkoa wa Pwani — saa 24.', 'Pwani’s regional hospital — open 24/7.']],
+  ['polisi-pwa', 'polisi', 'pwa', 0, -12, ['Kituo cha Polisi Kibaha', 'Kibaha Police Station', 'Kibaha', 'Ripoti tukio, lipa faini au omba kazi ya askari.', 'Report a crime, pay a fine or join the force.']],
+  ['bank-pwa', 'bank', 'pwa', -20, -12, ['NMB Bank — Kibaha', 'NMB Bank — Kibaha', 'Kibaha', 'Weka pesa kwenye wallet yako kwa simu.', 'Top up your wallet by mobile money.']],
+  ['salon-pwa', 'kinyozi', 'pwa', 20, -10, ['Saluni ya Mlandizi', 'Mlandizi Salon', 'Mlandizi', 'Nyoa, suka na upendeze — na umbea wa mtaa.', 'Cuts, braids and the latest gossip.']],
+  ['food-pwa', 'mamantilie', 'pwa', 18, 10, ['Mama Ntilie wa Kibaha', 'Kibaha Food Stall', 'Kibaha', 'Chakula cha mchana kwa wafanyakazi wa viwanda.', 'Lunch for the factory crowd.']],
+  ['bar-pwa', 'bar', 'pwa', 20, 24, ['Baa ya Mapinga', 'Mapinga Bar', 'Mapinga', 'Mpira kwenye TV, nyama choma na soda baridi.', 'Football on TV, grilled meat and cold drinks.']],
+  ['gym-pwa', 'gym', 'pwa', -28, 34, ['Gym ya Kibaha', 'Kibaha Gym', 'Kibaha', 'Jenga misuli na stamina.', 'Build muscle and stamina.']],
+  ['hotel-pwa', 'zn-hotel', 'pwa', 42, -14, ['Kibaha Lodge', 'Kibaha Lodge', 'Kibaha', 'Spa, masaji na chumba cha kupumzika.', 'Spa, massage and a room to unwind.']],
+  ['msikiti-pwa', 'msikiti-dar', 'pwa', 18, 42, ['Msikiti wa Kibaha', 'Kibaha Mosque', 'Kibaha', 'Swala, darsa na sadaka.', 'Prayers, lessons and charity.']],
+  ['stage-pwa', 'singeli', 'pwa', -4, 50, ['Jukwaa la Pwani', 'Pwani Stage', 'Mapinga', 'Singeli na bongo flava ya Pwani — live!', 'Pwani singeli and bongo flava — live!']],
+];
+const CITY_POS = { znz: Z, aru: A, mwz: M, pwa: P };
+/** New job id → the Dar job it copies (for English titles and scenes). */
+export const CLONED_JOBS = {};
+for (const [id, base, city, x, z, [name, nameEn, district, blurb, blurbEn]] of CITY_AMENITIES) {
+  const b = PLACES.find((q) => q.id === base);
+  const copy = JSON.parse(JSON.stringify(b));
+  copy.jobs = (copy.jobs || []).map((j) => {
+    const nid = `${j.id}-${city}`;
+    CLONED_JOBS[nid] = j.id;
+    return { ...j, id: nid };
+  });
+  PLACES.push({ ...copy, id, pos: CITY_POS[city](x, z), name, nameEn, district, blurb, blurbEn, cloneOf: base });
+}
 for (const p of PLACES) if (CAREER_JOBS[p.id]) p.jobs = [...(p.jobs || []), ...CAREER_JOBS[p.id]];
 export const placeById = Object.fromEntries(PLACES.map((p) => [p.id, p]));
 
@@ -1590,6 +1664,16 @@ for (const p of PLACES) {
   }
   if (p.business?.label) p.business.labelEn = 'Wholesale Shop';
 }
+// City amenity copies take the English of the place and jobs they copy.
+for (const p of PLACES) {
+  if (!p.cloneOf) continue;
+  const b = placeById[p.cloneOf];
+  (p.activities || []).forEach((a, i) => { a.nameEn = b.activities?.[i]?.nameEn || a.nameEn; });
+  for (const j of p.jobs || []) {
+    const bj = (b.jobs || []).find((x) => x.id === CLONED_JOBS[j.id]);
+    if (bj) { j.titleEn = bj.titleEn; j.titlesEn = bj.titlesEn; }
+  }
+}
 
 export function jobTitleEn(job, shifts) {
   const lvl = jobLevel(shifts);
@@ -1644,6 +1728,11 @@ const ACTIVITY_SCENES = {
   serena: { massage: 'spa', suite: 'spa', rooftop: 'rooftop', dinner: 'dining' },
 };
 const JOB_SCENES = { konda: 'stand', dj: 'club', mhudumu: 'bar', msanii: 'studio', trainer: 'gym', chef: 'dining', msaidizi: 'dining', cashier: 'shop', machinga: 'market', nesi: 'hospital', daktari: 'hospital', teller: 'bank', karani: 'office', developer: 'office', mlinzi: 'stadium', mvuvi: 'beach', 'mhudumu-ndege': 'flight', rubani: 'flight' , lifeguard: 'waterpark', 'mpiga-ngoma': 'ngoma', caddie: 'golf', nahodha: 'dhow', fundi: 'karting', receptionist: 'spa' , 'mpishi-pizza': 'grill', mwongoza: null, croupier: 'casino', 'safari-guide': 'safari', porter: 'hike', barista: 'dining', mhasibu: 'office', 'afisa-uwekezaji': 'bank', designer: 'office', 'ai-engineer': 'office', mfamasia: 'hospital', 'daktari-bingwa': 'hospital', 'mhandisi-ndege': 'flight', mchezaji: 'stadium', producer: 'studio', promota: 'club', 'meneja-hoteli': 'spa', 'mtaalamu-kahawa': 'dining' };
+for (const [nid, bid] of Object.entries(CLONED_JOBS)) if (bid in JOB_SCENES) JOB_SCENES[nid] = JOB_SCENES[bid];
+for (const p of PLACES) if (p.cloneOf) {
+  if (ENTERABLE[p.cloneOf]) ENTERABLE[p.id] = ENTERABLE[p.cloneOf];
+  if (ACTIVITY_SCENES[p.cloneOf]) ACTIVITY_SCENES[p.id] = ACTIVITY_SCENES[p.cloneOf];
+}
 
 /** Scene for a busy state ({ kind, id, placeId }), or null to stay outdoors. */
 const TRIP_SCENES = { flight: 'flight', heli: 'heli', ferry: 'ferry', bus: 'road', car: 'road' };
@@ -1874,6 +1963,13 @@ export const HEALTH = {
   neglectDrain: 0.5, // per needs tick while starving or exhausted
 };
 export const HOSPITAL_ID = 'hospitali';
+/** The hospital in the city you're in (Muhimbili in Dar), else the closest one. */
+export function nearestHospital(x, z) {
+  const hs = PLACES.filter((p) => p.type === 'hospital');
+  const city = cityAt(x, z)?.id;
+  const here = hs.find((h) => cityAt(...h.pos)?.id === city);
+  return here || hs.reduce((a, b) => (Math.hypot(b.pos[0] - x, b.pos[1] - z) < Math.hypot(a.pos[0] - x, a.pos[1] - z) ? b : a));
+}
 
 // ---------------------------------------------------------------- Afya (health app)
 // Health plans last 30 days: cheaper hospital care, free ambulance, cheaper/free therapy.
@@ -2517,6 +2613,8 @@ export const CONCERT_VENUES = [
   { placeId: 'viavia', price: 25_000, crowd: 18 },
   { placeId: 'mz-beach', price: 20_000, crowd: 24 },
   { placeId: 'bagamoyo-old', price: 15_000, crowd: 24 },
+  { placeId: 'stage-aru', price: 15_000, crowd: 22 },
+  { placeId: 'stage-pwa', price: 10_000, crowd: 20 },
 ];
 export const concertSlot = (t = Date.now()) => Math.floor(t / CONCERT.slotMs);
 /** The show in a time slot: who plays, where, when. */

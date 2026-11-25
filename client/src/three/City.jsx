@@ -806,6 +806,34 @@ function PlaceModel({ place, owner }) {
           ))}
         </group>
       );
+    case 'hospital':
+      // White ward blocks with blue glazing, a red cross on the roof and over the door, an ambulance bay.
+      return (
+        <group>
+          <Box w={w} h={h * 0.7} d={d} color="#f8fafc" />
+          <Box w={w * 0.55} h={h} d={d * 0.8} color="#f1f5f9" x={-w * 0.18} z={-d * 0.05} />
+          {[0.25, 0.48, 0.7].map((k) => <Box key={k} w={w + 0.1} h={0.7} d={d + 0.1} color="#7dd3fc" y={h * 0.7 * k} />)}
+          {[0.4, 0.62, 0.84].map((k) => <Box key={`u${k}`} w={w * 0.55 + 0.1} h={0.7} d={d * 0.8 + 0.1} color="#7dd3fc" x={-w * 0.18} z={-d * 0.05} y={h * k} />)}
+          {/* entrance canopy */}
+          <Box w={6} h={0.3} d={3} color="#0f766e" y={3} z={d / 2 + 1.4} />
+          {[-1, 1].map((k) => <Box key={k} w={0.25} h={3} d={0.25} color="#e2e8f0" x={k * 2.7} z={d / 2 + 2.7} />)}
+          {/* red crosses */}
+          <group position={[-w * 0.18, h + 0.9, -d * 0.05]}>
+            <Box w={3} h={0.9} d={0.9} color="#dc2626" />
+            <Box w={0.9} h={0.9} d={3} color="#dc2626" />
+          </group>
+          <group position={[w * 0.3, h * 0.7 - 1.6, d / 2 + 0.15]}>
+            <Box w={1.8} h={0.5} d={0.1} color="#dc2626" y={0.65} />
+            <Box w={0.5} h={1.8} d={0.1} color="#dc2626" />
+          </group>
+          <mesh geometry={geo('box', 1.4, 0.3, 0.4)} material={NEON_CYAN} position={[0, 3.5, d / 2 + 2.6]} />
+          {/* ambulance */}
+          <group position={[w / 2 + 3, 0.1, d / 2 + 1]} rotation={[0, Math.PI / 2, 0]}><Car body="boxy" color="#f8fafc" /></group>
+          <mesh geometry={geo('box', 1.6, 0.08, 0.5)} material={mat('#dc2626')} position={[w / 2 + 3, 1.2, d / 2 + 1]} />
+          <mesh geometry={geo('box', 0.9, 0.18, 0.35)} material={NEON_BLUE} position={[w / 2 + 3, 1.95, d / 2 + 1]} />
+          <Sign text={loc(place)} w={w} y={h * 0.7 - 0.6} z={d / 2 + 0.25} bg="#0f766e" fg="#ffffff" />
+        </group>
+      );
     case 'police':
       return (
         <group>

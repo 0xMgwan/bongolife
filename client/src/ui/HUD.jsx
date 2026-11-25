@@ -440,7 +440,7 @@ function useTips(me) {
   const n = me.needs || {};
   const tips = [];
   if (me.busy) return tips;
-  if ((me.health ?? 100) < HEALTH.injuredBelow) tips.push({ icon: '🏥', c: '#ef4444', t: L('Umeumia!', "You're hurt!"), s: L('Nenda Muhimbili upate matibabu', 'Get treated at Muhimbili'), go: () => goHospital() });
+  if ((me.health ?? 100) < HEALTH.injuredBelow) tips.push({ icon: '🏥', c: '#ef4444', t: L('Umeumia!', "You're hurt!"), s: L('Nenda hospitali upate matibabu', 'Get treated at a hospital'), go: () => goHospital() });
   else if ((me.health ?? 100) < 70) tips.push({ icon: '❤️', c: '#f43f5e', t: L('Afya iko chini', 'Health is low'), s: L('Pita hospitali, kula & lala vizuri', 'Visit the hospital, eat & sleep well'), go: () => goHospital() });
   if ((n.energy ?? 100) < 35) tips.push({ icon: '😴', c: '#3b82f6', t: L('Umechoka', 'Tired'), s: L('Nenda Kwangu, gusa kitanda', 'Go home and tap your bed'), go: () => goHomeTo('sleep') });
   if ((n.hygiene ?? 100) < 35) tips.push({ icon: '🧼', c: '#06b6d4', t: L('Jisafishe', 'Freshen up'), s: L('Gusa ndoo au bafu Kwangu', 'Tap the bucket or shower at home'), go: () => goHomeTo('bath') });

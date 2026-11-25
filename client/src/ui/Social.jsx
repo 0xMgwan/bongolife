@@ -8,8 +8,8 @@ import { useStore } from '../store.js';
 import { avatarEmoji } from '../three/Avatar.jsx';
 import { L } from '../i18n.js';
 import { answerInvite, callAmbulance, goHospital, leaveVisit } from './social.js';
-import { placeById } from '@shared/world.js';
-import { replyHangout } from '../net.js';
+import { placeById, nearestHospital } from '@shared/world.js';
+import { replyHangout, local } from '../net.js';
 import { loc } from '../i18n.js';
 import { ConfirmModal } from './Confirm.jsx';
 import { KnockModals, TogetherBar } from './Neighbours.jsx';
@@ -173,7 +173,7 @@ function AccidentModal() {
         </p>
         <div style={{ display: 'grid', gap: 8 }}>
           <button className="btn btn-red" disabled={money <= 0} onClick={callAmbulance}>🚑 {L('Ita gari la wagonjwa', 'Call an ambulance')} · {fmtTsh(cost)}</button>
-          <button className="btn btn-white" style={{ border: '1px solid var(--line)' }} onClick={goHospital}>🚶 {L('Tembea hadi Muhimbili', 'Walk to Muhimbili')}</button>
+          <button className="btn btn-white" style={{ border: '1px solid var(--line)' }} onClick={goHospital}>🚶 {L(`Tembea hadi ${nearestHospital(local.x, local.z).name}`, `Walk to ${loc(nearestHospital(local.x, local.z))}`)}</button>
           <button className="btn btn-ghost" onClick={() => useStore.setState({ accident: null })}>{L('Niko poa, endelea', "I'm fine, carry on")}</button>
         </div>
       </div>

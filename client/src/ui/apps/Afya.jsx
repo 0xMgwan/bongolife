@@ -1,6 +1,7 @@
 // Afya (Health): your health, health plans, therapy sessions, an online doctor and a pharmacy.
 import { useEffect, useRef, useState } from 'react';
-import { fmtTsh, NEEDS, HEALTH, HOSPITAL_ID } from '@shared/world.js';
+import { fmtTsh, NEEDS, HEALTH, nearestHospital } from '@shared/world.js';
+import { local } from '../../net.js';
 import { useStore } from '../../store.js';
 import { api } from '../../api.js';
 import { AppHead } from '../Phone.jsx';
@@ -51,7 +52,7 @@ export function Afya({ back, close }) {
           </div>
         </div>
         {health < HEALTH.injuredBelow && (
-          <button className="btn btn-green btn-block" style={{ marginTop: 8 }} onClick={() => { close?.(); goToPlace(HOSPITAL_ID); }}>🏥 {L('Nenda Muhimbili sasa', 'Go to Muhimbili now')}</button>
+          <button className="btn btn-green btn-block" style={{ marginTop: 8 }} onClick={() => { close?.(); goToPlace(nearestHospital(local.x, local.z).id); }}>🏥 {L(`Nenda ${nearestHospital(local.x, local.z).name} sasa`, `Go to ${nearestHospital(local.x, local.z).nameEn} now`)}</button>
         )}
 
         <div className="section-t">{L('ONGEA NA MTAALAMU', 'TALK TO A THERAPIST')}</div>
