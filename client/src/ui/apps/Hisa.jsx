@@ -1,13 +1,14 @@
 // Soko la Hisa: the Dar stock exchange. Prices move every few minutes, news shakes sectors,
 // and holders get a small dividend each day.
 import { useEffect, useState } from 'react';
-import { fmtTsh, fmtShort } from '@shared/world.js';
+import { fmtTsh, fmtShort, stockQuote, stockMaxBuy } from '@shared/world.js';
 import { useStore } from '../../store.js';
 import { api } from '../../api.js';
 import { AppHead } from '../Phone.jsx';
 import { L } from '../../i18n.js';
 import { sfx } from '../../audio.js';
 
+const n0 = (n) => Math.round(n).toLocaleString('en-US');
 const pct = (x) => `${x >= 0 ? '+' : ''}${(x * 100).toFixed(1)}%`;
 function Spark({ data, w = 84, h = 28, up }) {
   if (!data || data.length < 2) return <svg width={w} height={h} />;
@@ -36,10 +37,12 @@ export function Hisa({ back }) {
     if (r) {
       setD(r);
       sfx('cash');
-      useStore.getState().toast(side === 'buy' ? L(`📈 Umenunua hisa ${qty} za ${s.id}`, `📈 Bought ${qty} ${s.id} shares`) : L(`📉 Umeuza hisa ${qty} za ${s.id}`, `📉 Sold ${qty} ${s.id} shares`));
+      useStore.getState().toast(side === 'buy' ? L(`📈 Umenunua hisa ${n0(qty)} za ${s.id}`, `📈 Bought ${n0(qty)} ${s.id} shares`) : L(`📉 Umeuza hisa ${n0(qty)} za ${s.id}`, `📉 Sold ${n0(qty)} ${s.id} shares`));
     }
   };
-  const max = s ? Math.max(1, Math.floor(me.money / (s.price * (1 + d.rules.feePct)))) : 0;
+  const max = s ? Math.max(1, stockMaxBuy(s, s.price, me.money)) : 0;
+  const buyQ = s && stockQuote(s, s.price, qty, 'buy');
+  const sellQ = s && stockQuote(s, s.price, qty, 'sell');
   return (
     <>
       <AppHead title={L('Soko la Hisa · DSE', 'Stock Exchange · DSE')} onBack={s ? () => setSel(null) : back} />
@@ -58,15 +61,20 @@ export function Hisa({ back }) {
               <div style={{ textAlign: 'right' }}><b>{fmtTsh(s.price)}</b><small style={{ display: 'block', color: s.change >= 0 ? '#16a34a' : '#dc2626' }}>{pct(s.change)}</small></div>
             </div>
             <div className="box" style={{ padding: 6 }}><Spark data={s.history} w={300} h={110} up={s.change >= 0} /></div>
-            {s.qty > 0 && <div className="small" style={{ margin: '8px 0' }}>{L('Unazo', 'You hold')} <b>{s.qty}</b> · {L('wastani', 'avg')} {fmtTsh(Math.round(s.avg))} · <b style={{ color: s.price >= s.avg ? '#16a34a' : '#dc2626' }}>{pct((s.price - s.avg) / s.avg)}</b></div>}
+            {s.qty > 0 && <div className="small" style={{ margin: '8px 0' }}>{L('Unazo', 'You hold')} <b>{n0(s.qty)}</b> · {L('wastani', 'avg')} {fmtTsh(Math.round(s.avg))} · <b style={{ color: s.price >= s.avg ? '#16a34a' : '#dc2626' }}>{pct((s.price - s.avg) / s.avg)}</b></div>}
             <div className="chips" style={{ margin: '10px 0' }}>
               {[1, 10, 100, 1000].map((n) => <button key={n} className={`chip ${qty === n ? 'on' : ''}`} onClick={() => setQty(n)}>{n}</button>)}
-              <button className={`chip ${qty === max ? 'on' : ''}`} onClick={() => setQty(max)}>MAX {max}</button>
+              <button className={`chip ${qty === max ? 'on' : ''}`} onClick={() => setQty(max)}>{L('Nunua MAX', 'Buy MAX')} {fmtShort(max)}</button>
+              {s.qty > 0 && <button className={`chip ${qty === s.qty ? 'on' : ''}`} onClick={() => setQty(s.qty)}>{L('Uza zote', 'Sell all')} {fmtShort(s.qty)}</button>}
             </div>
-            <input className="input" type="number" min="1" value={qty} onChange={(e) => setQty(Math.max(1, Math.floor(+e.target.value || 1)))} />
-            <div className="small muted" style={{ margin: '6px 0' }}>{L('Thamani', 'Value')} {fmtTsh(Math.round(qty * s.price))} · {L('ada', 'fee')} {fmtTsh(Math.max(500, Math.round(qty * s.price * d.rules.feePct)))}</div>
+            <input className="input" inputMode="numeric" value={n0(qty)} onChange={(e) => setQty(Math.max(1, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(+e.target.value.replace(/[^0-9]/g, '') || 1))))} />
+            <div className="small muted" style={{ margin: '6px 0' }}>
+              {L('Ukinunua', 'Buy')}: {L('bei ya wastani', 'avg fill')} {fmtTsh(Math.round(buyQ.fill))} · {L('jumla', 'total')} <b>{fmtTsh(buyQ.total)}</b> <span>({L('ada', 'fee')} {fmtTsh(buyQ.fee)})</span>
+              {s.qty > 0 && <><br />{L('Ukiuza', 'Sell')}: {L('bei ya wastani', 'avg fill')} {fmtTsh(Math.round(sellQ.fill))} · {L('unapokea', 'you get')} <b>{fmtTsh(sellQ.total)}</b> <span>({L('ada', 'fee')} {fmtTsh(sellQ.fee)})</span></>}
+              {buyQ.impact >= 0.005 && <><br />{L(`Oda kubwa inasogeza bei ${(buyQ.impact * 100).toFixed(1)}% — bei ya wastani imeshajumuishwa.`, `A big order moves the price ${(buyQ.impact * 100).toFixed(1)}% — already included in the avg fill.`)}</>}
+            </div>
             <div className="row" style={{ gap: 8 }}>
-              <button className="btn btn-green grow" disabled={me.money < qty * s.price} onClick={() => trade('buy')}>{L('Nunua', 'Buy')}</button>
+              <button className="btn btn-green grow" disabled={me.money < buyQ.total} onClick={() => trade('buy')}>{L('Nunua', 'Buy')}</button>
               <button className="btn btn-red grow" disabled={s.qty < qty} onClick={() => trade('sell')}>{L('Uza', 'Sell')}</button>
             </div>
           </div>

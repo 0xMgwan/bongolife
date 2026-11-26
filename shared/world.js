@@ -2682,6 +2682,23 @@ export const STOCKS = [
 ];
 export const stockById = Object.fromEntries(STOCKS.map((s) => [s.id, s]));
 export const MARKET = { tickMs: 5 * 60_000, feePct: 0.005, impact: 0.02, historyLen: 96 };
+/** What an order of `qty` shares really costs or pays. A big order walks the price (up to 5%), and
+ *  it fills at the average of the price before and after, so one big order and many small ones cost the same
+ *  and buying then dumping straight away can't print money. */
+export function stockQuote(stock, price, qty, side) {
+  const impact = Math.min(0.05, MARKET.impact * ((price * qty) / (stock.base * 2_000_000)));
+  const fill = price * (side === 'buy' ? 1 + impact / 2 : 1 - impact / 2);
+  const value = Math.round(fill * qty);
+  const fee = Math.max(500, Math.round(value * MARKET.feePct));
+  const after = price * (side === 'buy' ? 1 + impact : 1 - impact);
+  return { impact, fill, value, fee, total: side === 'buy' ? value + fee : Math.max(0, value - fee), after };
+}
+/** The most shares `money` buys, fees and price walk included. */
+export function stockMaxBuy(stock, price, money) {
+  let lo = 0, hi = Math.floor(money / price);
+  while (lo < hi) { const m = Math.ceil((lo + hi) / 2); if (stockQuote(stock, price, m, 'buy').total <= money) lo = m; else hi = m - 1; }
+  return lo;
+}
 
 // ============================================================ street life: wanted, missions, heists
 export const STREET = {

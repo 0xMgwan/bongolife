@@ -1,7 +1,7 @@
 // Soko la Hisa: a small stock exchange. Prices random-walk every few minutes with occasional
 // market news; big trades nudge the price; holders earn a dividend once a day.
 import { db, getUser, addMoney, GameError, now } from './db.js';
-import { STOCKS, stockById, MARKET } from '../../shared/world.js';
+import { STOCKS, stockById, MARKET, stockQuote } from '../../shared/world.js';
 import { broadcast, online, emitTo } from './presence.js';
 
 db.exec(`CREATE TABLE IF NOT EXISTS stock_prices (
@@ -99,22 +99,21 @@ export function view(uid) {
 export const trade = db.transaction((uid, sym, side, qtyIn) => {
   const s = stockById[sym];
   const qty = Math.floor(Number(qtyIn));
-  if (!s || !(qty > 0) || qty > 10_000_000) throw new GameError(['Ombi si sahihi', 'Invalid order']);
+  if (!s || !Number.isSafeInteger(qty) || qty <= 0) throw new GameError(['Ombi si sahihi', 'Invalid order']);
   const r = q.price.get(sym);
   const h = q.hold.get(uid, sym) || { qty: 0, avg: 0 };
-  const value = r.price * qty;
-  const fee = Math.max(500, Math.round(value * MARKET.feePct));
+  const o = stockQuote(s, r.price, qty, side);
+  if (!Number.isSafeInteger(o.total)) throw new GameError(['Oda ni kubwa mno', 'That order is too big']);
+  const fee = o.fee;
   if (side === 'buy') {
-    addMoney(uid, -(value + fee), 'purchase', `📈 Hisa ${qty} za ${sym}`);
-    q.setHold.run(uid, sym, h.qty + qty, (h.avg * h.qty + value) / (h.qty + qty));
+    addMoney(uid, -o.total, 'purchase', `📈 Hisa ${qty} za ${sym}`);
+    q.setHold.run(uid, sym, h.qty + qty, (h.avg * h.qty + o.value) / (h.qty + qty));
   } else {
     if (h.qty < qty) throw new GameError(['Huna hisa za kutosha.', "You don't have that many shares."]);
     q.setHold.run(uid, sym, h.qty - qty, h.qty - qty ? h.avg : 0);
-    addMoney(uid, Math.max(0, value - fee), 'sale', `📉 Umeuza hisa ${qty} za ${sym}`);
+    addMoney(uid, o.total, 'sale', `📉 Umeuza hisa ${qty} za ${sym}`);
   }
-  // Big orders move the price a little (more for small companies).
-  const impact = Math.min(0.05, MARKET.impact * (value / (s.base * 2_000_000)));
-  const np = round(r.price * (side === 'buy' ? 1 + impact : 1 - impact));
+  const np = round(o.after);
   const hist = JSON.parse(r.history);
   hist[hist.length - 1] = np;
   q.upsert.run({ id: sym, price: np, open: r.open, history: JSON.stringify(hist), t: now() });
